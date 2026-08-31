@@ -33,7 +33,7 @@ class WeeklyReviewGuard(unittest.TestCase):
         ns = {"datetime": datetime, "timedelta": timedelta, "json": json, "SNAP_FILE": snap_file}
         # _week_anchor (Sunday-anchored weeks, added 2026-08-10) sits just above the guard.
         exec(_extract("weekly-measurement-review.py",
-                      "def _week_anchor", "def recommend("), ns)
+                      "def _week_anchor", "def _svc_headers("), ns)
         return ns["_already_ran_this_week"]
 
     def _with_lines(self, lines):

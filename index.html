@@ -8182,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.20.00';
+const APP_VERSION = '30.20.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18399,7 +18399,7 @@ async function loadAdminExperiments() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem;flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-weight:500;">${escHtml(x.name)}</div>
             <div style="color:var(--muted);font-family:monospace;font-size:.7rem;word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
-          <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${escHtml(x.decision)})</span>` : ''}</div>
+          <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span style="color:var(--muted);">· knob trial, judged Sundays</span>` : ''}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem .6rem;margin:.6rem 0;">
           ${cell('Rollout', pctCell)}
@@ -31092,7 +31092,7 @@ function initTgSourceSelector() {
       set('tg-knob-maxwin', _tgConvKnob('tg_maxwin'));
       set('tg-knob-agreeband', _tgKnob('tg_agreeband', 12));
       set('tg-knob-confirmband', _tgKnob('tg_confirmband', 999));
-      set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 1)));
+      set('tg-knob-guardmode', String(_tgKnob0('tg_guardmode', 1)));
       set('tg-knob-gatemaxrej', _tgKnob('tg_gatemaxrej', 1));
       set('tg-knob-acquiremax', _tgKnob('tg_acquiremax', 15));
     } else knobPanel.style.display = 'none';
@@ -33712,18 +33712,60 @@ function sendMsrTuning() {
     // (rejected 30% bad vs 34% good — bad locks are stable within a session), T3 at 0.5
     // catches nothing and T4's runway is contradicted by first-lock timing.
     tgConfirmBand: _tgKnob('tg_confirmband', 999), // T1 disjoint-segment confirm band (s/d); 999 = off. Refuted 2026-08-23 — shadow keeps logging lc=/lr=
-    tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 1),   // T2: 0 = median fallback (2.4), 1 = refuse — LIVE fleet-wide since 2026-08-23 (2.5+ binaries)
+    tgGuardMode: _tgKnob0('tg_guardmode', 1),   // T2: 0 = median fallback (2.4), 1 = refuse — fleet default since 2026-08-23 (2.5+ binaries); under A/B via tgknob_guardmode_0 from 2026-08-30
     tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1),     // T3 convergence block above this σ-reject fraction; 1 = off
     tgAcquireMax: _tgKnob('tg_acquiremax', 15)     // T4 pre-lock runway seconds; 15 = off
   });
 }
-function _tgKnob(k, d) { const v = Number(safeLS.get(k)); return Number.isFinite(v) && v > 0 ? v : d; }
+// ── Knob trials (self-healing accuracy loop; mirrored verbatim in wrotate_test.js) ──
+// An experiment keyed `tgknob_<knob>_<value>` runs its treatment arm with tg_<knob>
+// at <value> (integer, or a decimal with 'p' for '.': tgknob_sigma_0p0005). The
+// Sunday job creates, judges and closes these rows; the client only reads them.
+function parseTgTrialKey(key) {
+  const m = /^tgknob_([a-z]+)_(\d+(?:p\d+)?)$/.exec(key || '');
+  if (!m) return null;
+  return { knob: 'tg_' + m[1], value: Number(m[2].replace('p', '.')) };
+}
+// Every knob value the caller is in the treatment arm for: {tg_stabwin: 8, ...}
+function tgTrialKnobs(state, overrides) {
+  const out = {};
+  for (const key of Object.keys(state || {})) {
+    const p = parseTgTrialKey(key);
+    if (p && resolveExperiment(state, overrides, key)) out[p.knob] = p.value;
+  }
+  return out;
+}
+// Precedence for one knob read. personalRaw = the localStorage string (null when
+// unset), trial = the treatment value or null, dflt = the code default.
+//   default:    personal > trial > default   (a personal override is deliberate)
+//   trialFirst: trial > personal > default   (preset knobs: the preset migration wrote
+//               every user's LS, so "personal wins" would exempt the whole fleet)
+//   allowZero:  0 is a legal personal value (tg_guardmode 0 = 2.4 median fallback)
+function resolveTgKnob(personalRaw, trial, dflt, opts) {
+  const o = opts || {};
+  const hasTrial = trial !== null && trial !== undefined && Number.isFinite(trial);
+  const v = (personalRaw === null || personalRaw === undefined || personalRaw === '') ? NaN : Number(personalRaw);
+  const personal = Number.isFinite(v) && (o.allowZero ? v >= 0 : v > 0) ? v : null;
+  if (o.trialFirst && hasTrial) return trial;
+  if (personal !== null) return personal;
+  if (hasTrial) return trial;
+  return dflt;
+}
+function _tgTrial(k) { const t = tgTrialKnobs(EXPERIMENTS, _expOverrides()); return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null; }
+function _tgKnob(k, d) { return resolveTgKnob(safeLS.get(k), _tgTrial(k), d); }
+function _tgKnob0(k, d) { return resolveTgKnob(safeLS.get(k), _tgTrial(k), d, { allowZero: true }); }
 // Pro V2 convergence knob with the `balanced` preset as its fallback. Every read of
 // tg_wallmin / tg_stabwin / tg_stabth / tg_maxwin goes through here so a user who never
 // opened the precision panel gets the same numbers as one who picked Balanced. These
 // defaults were previously repeated as literals at ten call sites, one edit away from
 // the panel and the no-panel path disagreeing.
-function _tgConvKnob(k) { return _tgKnob(k, PROV2_DEFAULTS[k]); }
+function _tgConvKnob(k) {
+  // A knob trial reaches the preset knobs only for users on the default preset; someone
+  // who chose strict/quick keeps their choice, and the Sunday job judges the trial on
+  // balanced sessions only (scripts/accuracy_loop.py PRESET_KNOBS) for the same reason.
+  const balanced = (safeLS.get('tg_precision') || 'balanced') === 'balanced';
+  return resolveTgKnob(safeLS.get(k), balanced ? _tgTrial(k) : null, PROV2_DEFAULTS[k], { trialFirst: true });
+}
 // Wall-clock ceiling for a Pro V2 run. The Standard engine's maxDuration (45s default) is
 // tuned for a regression that needs a long baseline; Pro V2 needs whatever its own precision
 // preset asks for, and a fixed 45s cap would guillotine Strict (30s wall-min + 8s stability)

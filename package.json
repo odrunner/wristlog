@@ -12,7 +12,7 @@
     "test:smoke": "node scripts/smoke-test-functions.js",
     "test:functions": "deno test --allow-read supabase/functions/",
     "test:coverage": "vitest run --coverage",
-    "test:scripts": "python3 scripts/test-python-helpers.py"
+    "test:scripts": "python3 scripts/test-python-helpers.py && python3 scripts/test-accuracy-loop.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

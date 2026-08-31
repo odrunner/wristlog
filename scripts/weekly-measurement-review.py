@@ -21,17 +21,32 @@ long since passed (Pro V2 IS the engine), its failure-mode table was dominated b
 retired legacy detector (weak_signal = pre-2.4), its ⭐ recommendation repeated a change
 shipped 2026-06-28 every week, and the onboarding-4 email section was a dead campaign.
 
-Anti-recency rules: every per-user figure counts a user once; the recommendation
-follows the gate-candidate table (population-wide), never one watch.
+Anti-recency rules: every per-user figure counts a user once; candidate selection
+follows the gate-candidate table over the WHOLE tg era, never one watch or one week.
 
-After editing, copy to the deployed path:
+Self-healing loop (2026-08-30, spec docs/superpowers/specs/2026-08-30-self-healing-accuracy-loop-design.md):
+the job no longer recommends — it acts. Each Sunday it (A) judges the running knob
+trial (an `experiments` row `tgknob_<knob>_<value>`, 50/50 A/B, arm read from each
+session's [TGTUNE] echo, judged on every session since it started) and promotes /
+reverts / extends it; (B) when nothing is running, starts the best whole-era gate
+candidate that has never been tried; (C) emails what it did. Rules + pure logic in
+scripts/accuracy_loop.py. Writes need the service-role key
+(~/.config/wrotate/supabase.env); without it the loop runs read-only and says so.
+
+After editing, copy BOTH files to the deployed path:
   cp scripts/weekly-measurement-review.py ~/.local/bin/wrotate-weekly-review.py
-Flags: --force (ignore the once-per-week guard)  --dry-run (print only: no email, no snapshot)
+  cp scripts/accuracy_loop.py ~/.local/bin/accuracy_loop.py
+Flags: --force (ignore the once-per-week guard)  --dry-run (print only: no email, no
+snapshot, no experiment writes)  --start tgknob_<knob>_<value> (start this trial by
+hand instead of the picker — used for the first trial, tgknob_guardmode_0, which
+tests an already-live default and so can never come out of the picker)
 """
 import json, re, subprocess, sys, os, traceback
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import statistics as st
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import accuracy_loop as al
 
 BASE_URL = "https://api.wrotate.com"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
@@ -55,6 +70,22 @@ def _test_account_password():
 
 
 AUTH_PASS = _test_account_password()
+
+
+def _service_env():
+    """(url, service_role_key) from ~/.config/wrotate/supabase.env, or (None, None).
+    Same file cost-report.py reads; launchd can reach ~/.config (no TCC)."""
+    vals = {}
+    try:
+        with open(os.path.expanduser("~/.config/wrotate/supabase.env")) as fh:
+            for line in fh:
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.split("=", 1)
+                    vals[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return vals.get("SUPABASE_URL"), vals.get("SUPABASE_SERVICE_ROLE_KEY")
 REPORT_TO = "ozgurdogan@gmail.com"
 TG_ERA = "2026-08-02"                      # 2.4 release — Pro V2 (tg) became the default engine
 RELEASE_DATE = TG_ERA                      # fetch/cumulative window start
@@ -140,9 +171,11 @@ def analyze(blob):
     stop = ("plateau" if "plateau" in blob else "cap" if "duration_cap" in blob
             else "stopped" if ("user_stopped" in blob or "user_quit" in blob) else "?")
     end = (re.search(r'"stop_reason"\s*:\s*"([^"]+)"', blob) or [None, None])[1]
+    tune = re.search(r'\[TGTUNE\][^\n]*', blob)
     return dict(uid=uid, wid=wid, bph=bph, final=final, n_acc=n_acc,
                 pair_rej=pair_rej, phase_rej=phase_rej, auto=auto, stop=stop, end=end,
-                build=build_of(blob), precision=(re.search(r'"precision"\s*:\s*"(\w+)"', blob) or [None, None])[1])
+                build=build_of(blob), precision=(re.search(r'"precision"\s*:\s*"(\w+)"', blob) or [None, None])[1],
+                tune=tune.group(0) if tune else None)
 
 
 def build_of(blob):
@@ -329,8 +362,8 @@ def wrong_attribution(sessions, refs, per):
 # Candidate convergence gates — each is something the engine already exposes as a JS
 # knob or a shadow verdict, evaluated on CONVERGED sessions against the per-watch truth.
 # (knob, description, predicate over v2 stats)
-# Knobs already at the fleet default are reported but never re-recommended.
-LIVE_KNOBS = {"tg_guardmode=1": "live since 2026-08-23"}
+# A row whose value equals the fleet default (won trials folded in) is marked LIVE and
+# never picked; a key that was ever a trial is never re-tried (accuracy_loop.pick_candidate).
 GATE_CANDIDATES = [
     ("tg_guardmode=1",   "harmonic guard fired: windows disagree → refuse",   lambda v: (v["guard_fires"] or 0) > 0),
     ("tg_stabwin=8",     "rate moved > 3 s/d over the last ~8 s (delay)",    lambda v: v["range8"] is not None and v["range8"] > 3),
@@ -342,6 +375,14 @@ GATE_CANDIDATES = [
     ("tg_confirmband=6", "T1 shadow: lock ever REJECTED (lr>0)",             lambda v: None if v["lc"] is None else ((v["lr"] or 0) > 0 or (v["lrej"] or 0) > 0)),
     ("tg_confirmband=6", "T1 shadow: lock never CONFIRMED (lc≠1)",           lambda v: None if v["lc"] is None else not (v["lc"] == 1 or (v["lconf"] or 0) > 0)),
 ]
+
+
+def is_live_row(knob_label, defaults):
+    """A gate-table row whose value is the fleet default (won trials folded in) is LIVE."""
+    kv = al.parse_gate_label(knob_label)
+    if not kv or kv[0] not in defaults:
+        return False
+    return abs(kv[1] - float(defaults[kv[0]])) < 1e-9
 
 
 def gate_candidate_table(sessions, refs):
@@ -437,36 +478,149 @@ def _already_ran_this_week():
     return False
 
 
-def recommend(rows, n_bad, n_good, W, attribution):
-    """ONE evidence-backed next step. A knob qualifies when it would have blocked >= 15%
-    of this era's bad locks at <= 10% good-lock cost and with >= 10 bad sessions behind
-    it; the best ratio wins. Otherwise say plainly that no logged signal clears the bar."""
+def _svc_headers(key):
+    return [f"apikey: {key}", f"Authorization: Bearer {key}", "Content-Type: application/json", "Prefer: return=representation"]
+
+
+def svc_call(url, key, path, method="GET", body=None):
+    return curl(f"{url}{path}", _svc_headers(key), method, body)
+
+
+def fetch_trials(url, key):
+    rows = svc_call(url, key, "/rest/v1/experiments?key=like.tgknob_*&select=key,name,status,rollout_pct,started_at,decided_at,created_at,hypothesis,last_eval&order=created_at.asc")
+    if isinstance(rows, dict):
+        raise RuntimeError(f"experiments read failed: {rows}")
+    return rows
+
+
+def record_decision(url, key, exp_key, verdict, snapshot):
+    svc_call(url, key, "/rest/v1/experiment_decisions", "POST",
+             json.dumps({"experiment_key": exp_key, "verdict": verdict, "snapshot": snapshot, "actor": "weekly-review"}))
+
+
+def loop_sessions(cum):
+    """Session dicts in the shape accuracy_loop.arm_table wants (native tg sessions only)."""
+    return [dict(tune=a.get("tune"), uid=a.get("uid"), t=a.get("t"), outcome=outcome(a),
+                 conv=bool(a["v2"]["conv"]), precision=a.get("precision")) for a in cum if is_tg(a)]
+
+
+def run_loop(cum, rows_g, now, dry, start_key=None):
+    """Phases A (judge) and B (start). Returns (lines, trials, defaults, snapshot_bits).
+    Every write is skipped under --dry-run and without the service key."""
     L = []
-    ok = [r for r in rows if r["pb"] is not None and r["pg"] is not None and r["bb"] >= 10
-          and r["pb"] >= 15 and r["pg"] <= 10 and not r["knob"].startswith("(") and r["knob"] not in LIVE_KNOBS]
-    ok.sort(key=lambda r: -(r["ratio"] or 0))
-    none_share = (W["oc"]["none"] / W["n"]) if W["n"] else 0
-    live = [r for r in rows if r["knob"] in LIVE_KNOBS]
-    for r in live:
-        L.append(f"- `{r['knob']}` is {LIVE_KNOBS[r['knob']]} — judge it on wrong-of-converged and b2b wild-pair share, this week vs prior, not on its table row.")
-    if ok:
-        r = ok[0]
-        L.append(f"- **Flip `{r['knob']}`** — \"{r['desc']}\" would have blocked {r['bb']}/{r['nb']} bad locks ({round(r['pb'])}%) "
-                 f"at a cost of {r['gb']}/{r['ng']} good ones ({round(r['pg'])}%), {r['ratio']:.1f}× separation. One knob; re-check next Sunday "
-                 f"(metric: wrong-of-converged ↓, b2b wild-pair count ↓).")
+    url, key = _service_env()
+    can_write = bool(url and key) and not dry
+    if not (url and key):
+        L.append("- ⚠️ service-role key missing (~/.config/wrotate/supabase.env) — loop is READ-ONLY this week: nothing judged, nothing started.")
+        return L, [], al.FLEET_DEFAULTS, {}
+    trials = fetch_trials(url, key)
+    defaults = al.effective_defaults(trials)
+    sessions = loop_sessions(cum)
+    snap = {}
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+    # ── A. judge ──
+    run = al.running_trial(trials)
+    if run:
+        knob, val = al.parse_trial_key(run["key"])
+        ctrl = defaults.get(knob)
+        arms = al.arm_table(sessions, knob, val, ctrl, since=(run.get("started_at") or "")[:19])
+        weeks = al.weeks_since(run.get("started_at"), now.replace(tzinfo=None))
+        j = al.judge(arms, weeks)
+        ev = dict(key=run["key"], verdict=j["verdict"], reason=j["reason"], weeks_running=weeks,
+                  control=arms["control"], treatment=arms["treatment"], stats=j["stats"], evaluated_at=now_iso,
+                  knob=knob, treatment_value=val, control_value=ctrl)
+        L.append(f"**Trial under test: `{run['key']}`** — {knob} {ctrl:g} (control) vs {val:g} (treatment), 50/50 since {(run.get('started_at') or '?')[:10]}, week {weeks} of {al.MAX_WEEKS}. All sessions since start; arm read from each session's [TGTUNE] echo.")
+        L += al.fmt_arm_table(arms)
+        L.append(f"Verdict: **{j['verdict'].upper()}** — {j['reason']}")
+        action = j["action"]
+        if action == "won":
+            L.append(f"→ Action: PROMOTED. `{run['key']}` set to won / rollout 100% — every user now measures with {knob}={val:g}. Bake it into the code default at the next cleanup and archive the row.")
+        elif action == "killed":
+            L.append(f"→ Action: REVERTED. `{run['key']}` set to killed / rollout 0% — everyone is back on {knob}={ctrl:g}. This key will never be retried.")
+        else:
+            L.append("→ Action: none — the trial keeps running; judged again next Sunday.")
+        snap.update(trial=run["key"], trial_verdict=j["verdict"], trial_action=action)
+        if can_write:
+            patch = {"last_eval": ev}
+            if action == "won":
+                patch.update(status="won", rollout_pct=100, decision="auto", decided_at=now_iso)
+            elif action == "killed":
+                patch.update(status="killed", rollout_pct=0, decision="auto", decided_at=now_iso)
+            r = svc_call(url, key, f"/rest/v1/experiments?key=eq.{run['key']}", "PATCH", json.dumps(patch))
+            if isinstance(r, dict):
+                raise RuntimeError(f"experiment PATCH failed: {r}")
+            record_decision(url, key, run["key"], j["verdict"], ev)
+            for t in trials:
+                if t["key"] == run["key"]:
+                    t.update({k: v for k, v in patch.items() if k != "last_eval"}); t["last_eval"] = ev
+        else:
+            L.append("  (dry run — nothing written)")
+        defaults = al.effective_defaults(trials)
     else:
-        L.append(f"- **No JS knob clears the bar** (≥15% of bad locks blocked at ≤10% good cost, n≥10). The bad locks are stable "
-                 f"within a session and only show up between sessions, so a convergence gate built from the logged signals "
-                 f"cannot separate them well enough — the estimator itself has to improve, and that needs raw-audio captures "
-                 f"from field sessions to iterate offline (mic raw-capture build). Do not flip a knob on this week's data.")
-    if none_share >= 0.25:
-        L.append(f"- {round(100*none_share)}% of this week's sessions ended with NO reading; section 4 says late locks are "
-                 f"rarely right, so the win there is honesty, not patience: tell the user to reposition by ~6–8 s instead of grinding to 15 s.")
-    return L
+        L.append("No trial was running this week.")
+
+    # ── B. start ──
+    if al.running_trial(trials):
+        return L, trials, defaults, snap
+    pick = None
+    if start_key:
+        kv = al.parse_trial_key(start_key)
+        if not kv:
+            raise RuntimeError(f"--start {start_key}: not a tgknob_<knob>_<value> key")
+        if start_key in {t["key"] for t in trials}:
+            raise RuntimeError(f"--start {start_key}: that key already exists ({[t['status'] for t in trials if t['key']==start_key][0]}) — never retried")
+        knob, val = kv
+        row = next((r for r in rows_g if al.parse_gate_label(r["knob"]) == (knob, defaults.get(knob))), None)
+        hyp = (f"Started by hand ({now.strftime('%Y-%m-%d')}): {knob}={defaults.get(knob):g} is the live default; treatment runs {val:g}. "
+               + (f"Gate table: '{row['desc']}' fires on {row['pb']:.0f}% of bad locks vs {row['pg']:.0f}% of good ({(row['ratio'] or 0):.1f}×)." if row else ""))
+        pick = (start_key, knob, val, dict(desc=hyp, pb=None, pg=None, ratio=None, bb=None, nb=None, gb=None, ng=None))
+        name = f"{knob} = {val:g} vs live {defaults.get(knob):g} (manual start)"
+        L.append(f"\n**Started today (by hand): `{start_key}`** — {hyp}")
+    else:
+        pick = al.pick_candidate(rows_g, trials, defaults)
+        if pick:
+            k, knob, val, r = pick
+            hyp = (f"Gate table (whole tg era, converged sessions): '{r['desc']}' would have blocked {r['bb']}/{r['nb']} bad locks "
+                   f"({r['pb']:.0f}%) at a cost of {r['gb']}/{r['ng']} good ones ({r['pg']:.0f}%), {(r['ratio'] or 0):.1f}× separation. "
+                   f"Treatment runs {knob}={val:g} (live default {defaults.get(knob):g}). Judged Sundays on wrong-of-converged; guardrails converged% and no-reading%.")
+            name = f"{knob} = {val:g} vs live {defaults.get(knob):g}"
+            L.append(f"\n**Started today: `{k}`** — {hyp}")
+        else:
+            L.append("\n**Nothing started.** No untried JS knob clears the bar on the whole era (≥15% of bad locks blocked at ≤10% good cost, n≥10) — "
+                     "every qualifying key has already been tried. The next gain needs native work (the estimator itself; raw-audio field captures to iterate offline).")
+    if pick:
+        k, knob, val, r = pick
+        snap.update(started=k)
+        if can_write:
+            body = {"key": k, "name": name, "hypothesis": hyp, "status": "running", "rollout_pct": al.START_ROLLOUT,
+                    "metric_key": "tg_bad_lock", "min_users_per_arm": al.MIN_USERS_PER_ARM, "min_days": 7,
+                    "owner": "weekly_review", "started_at": now_iso}
+            resp = svc_call(url, key, "/rest/v1/experiments", "POST", json.dumps(body))
+            if isinstance(resp, dict):
+                raise RuntimeError(f"experiment INSERT failed: {resp}")
+            record_decision(url, key, k, "started", dict(rollout_pct=al.START_ROLLOUT, hypothesis=hyp, by="manual" if start_key else "picker"))
+            trials.append(dict(body, last_eval=None, decided_at=None, created_at=now_iso))
+            L.append(f"→ Action: running at {al.START_ROLLOUT}% (new logins assigned from now; sticky per user). First judgement next Sunday.")
+        else:
+            L.append("  (dry run — not started)")
+    return L, trials, defaults, snap
+
+
+def append_ledger_row(text):
+    """Best-effort: add a row to docs/measurement-changelog.md when the repo copy is
+    readable (manual runs; launchd is TCC-blocked — the DB rows are the record then)."""
+    try:
+        with open(LEDGER, "a") as f:
+            f.write(text + "\n")
+        return True
+    except OSError:
+        return False
 
 
 def main():
     dry = "--dry-run" in sys.argv
+    start_key = sys.argv[sys.argv.index("--start") + 1] if "--start" in sys.argv and sys.argv.index("--start") + 1 < len(sys.argv) else None
     if _already_ran_this_week() and "--force" not in sys.argv and not dry:
         print("[weekly-review] Already ran this review week — skipping (use --force to override).")
         return
@@ -507,8 +661,12 @@ def main():
     C, W, P = summarize(cum), summarize(week), summarize(prior)
     refs, per = watch_refs([a for a in cum if is_tg(a)])
     date_str = now.strftime("%Y-%m-%d")
+    rows_g, n_good, n_bad = gate_candidate_table(cum, refs)
+    loop_lines, trials, defaults, loop_snap = run_loop(cum, rows_g, now, dry, start_key)
     L = []
     L.append(f"# WRotate Weekly Measurement Review — {date_str}\n")
+    L.append("## What the loop did this week")
+    L += loop_lines
     L.append(f"Engine in the field: Pro V2 tg core (default since 2.4, {TG_ERA}). All figures are external users' "
              f"native tg sessions; 'sane' = |rate| ≤ {GOOD_MAX_RATE} s/d; no Weishi truth, so lock quality is judged "
              f"against each watch's own sane readings (≥{REF_MIN_SANE}; good ≤{REF_GOOD_DEV:.0f} s/d off, bad >{REF_BAD_DEV:.0f}).")
@@ -551,17 +709,20 @@ def main():
                  + "  ← a real out-of-spec watch repeats within ~5 s/d; a spread ≥15 means the lock is wrong there too")
 
     # 3. Gate candidates
-    rows_g, n_good, n_bad = gate_candidate_table(cum, refs)
     L.append(f"\n## 3. What would have caught the bad locks at convergence? (tg era, converged sessions: {n_good} good / {n_bad} bad by watch reference)")
     L.append("Each row: had this gate been on, how many bad-lock convergences it would have stopped (or delayed) vs how many good ones it would have held up.")
     L.append(f"{'knob':<20}{'signal':<50}{'blocks bad':>12}{'blocks good':>13}{'sep':>11}")
     for r in rows_g:
         sep = "—" if r["ratio"] is None else ("∞" if r["ratio"] == float("inf") else f"{r['ratio']:.1f}×")
-        if r["knob"] in LIVE_KNOBS: sep += " LIVE"
+        if is_live_row(r["knob"], defaults): sep += " LIVE"
         L.append(f"{r['knob']:<20}{r['desc']:<50}{(str(r['bb'])+' ('+str(round(r['pb']))+'%)') if r['pb'] is not None else '—':>12}"
                  f"{(str(r['gb'])+' ('+str(round(r['pg']))+'%)') if r['pg'] is not None else '—':>13}{sep:>11}")
-    if any(r["knob"] in LIVE_KNOBS for r in rows_g):
+    if any(is_live_row(r["knob"], defaults) for r in rows_g):
         L.append("(a LIVE knob's row is no longer counterfactual: on sessions run under it, a fire means the engine refused and re-acquired)")
+    tried = {t["key"] for t in trials}
+    tried_rows = [r["knob"] for r in rows_g if al.parse_gate_label(r["knob"]) and al.trial_key(*al.parse_gate_label(r["knob"])) in tried]
+    if tried_rows:
+        L.append("(already tried, never retried: " + ", ".join(sorted(set(tried_rows))) + ")")
     t1 = [r for r in rows_g if r["knob"] == "tg_confirmband=6"]
     if t1 and all(r["ratio"] is not None and r["ratio"] < 1.5 for r in t1):
         L.append("→ T1 lock confirmation (8-s disjoint segment, 6 s/d band) does NOT separate bad locks from good: bad locks are stable "
@@ -587,7 +748,8 @@ def main():
             "cum_good_pct": round(100 * C["oc"]["sane"] / C["n"]) if C["n"] else 0,
             "cum_sessions": C["n"], "cum_users": C["users"],
             "wk_good_pct": round(100 * W["oc"]["sane"] / W["n"]) if W["n"] else 0,
-            "b2b_p50": C["b2b"]["p50"] if C["b2b"] else None, "b2b_n": C["b2b"]["n"] if C["b2b"] else 0}
+            "b2b_p50": C["b2b"]["p50"] if C["b2b"] else None, "b2b_n": C["b2b"]["n"] if C["b2b"] else 0,
+            **loop_snap}
     hist = []
     try:
         hist = [json.loads(l) for l in open(SNAP_FILE).read().splitlines() if l.strip()]
@@ -606,9 +768,16 @@ def main():
         with open(SNAP_FILE, "w") as f:
             f.write("\n".join(json.dumps(s) for s in hist) + "\n")
 
-    # 6. Recommendation
-    L.append("\n## ⭐ Next step (ONE)")
-    L += recommend(rows_g, n_bad, n_good, W, at)
+    # 6. Trial ledger (DB = the record the job reads; never retried once here)
+    L.append("\n## Trial ledger (every knob trial ever run)")
+    L += al.fmt_ledger(trials)
+    if not dry and (loop_snap.get("trial_action") in ("won", "killed") or loop_snap.get("started")):
+        bits = []
+        if loop_snap.get("trial_action") in ("won", "killed"):
+            bits.append(f"`{loop_snap['trial']}` {loop_snap['trial_verdict']} → {loop_snap['trial_action']}")
+        if loop_snap.get("started"):
+            bits.append(f"started `{loop_snap['started']}` at {al.START_ROLLOUT}%")
+        append_ledger_row(f"| {date_str} | **Loop:** {'; '.join(bits)} | auto | see experiments / experiment_decisions | wrong-of-converged (A/B) | judged next Sunday |")
 
     # 7. Ledger tail
     L.append("\n## Change ledger (most recent)")

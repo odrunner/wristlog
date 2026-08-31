@@ -187,12 +187,14 @@ describe('surface + attribution plumbing', () => {
     // T1 confirm band was refuted by the shadow A/B (rejected 30% of bad locks vs 34% of
     // good) — it must stay 999 so the engine keeps shadow-logging lc=/lr= without enforcing.
     expect(html).toContain("tgConfirmBand: _tgKnob('tg_confirmband', 999)");
-    // T2 is the one evidence-backed flip: guard fired in 19% of bad-lock convergences vs 3% good.
-    expect(html).toContain("tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 1)");
+    // T2 is the code default (guard fired in 19% of bad-lock convergences vs 3% good); since
+    // 2026-08-30 it is read through the knob-trial path so the self-healing loop can A/B it
+    // (tgknob_guardmode_0) — 0 is a legal value, hence _tgKnob0.
+    expect(html).toContain("tgGuardMode: _tgKnob0('tg_guardmode', 1)");
     expect(html).toContain("tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1)");
     expect(html).toContain("tgAcquireMax: _tgKnob('tg_acquiremax', 15)");
     // the admin panel must show the same default it sends, or a personal override looks like none
-    expect(html).toContain("set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 1)))");
+    expect(html).toContain("set('tg-knob-guardmode', String(_tgKnob0('tg_guardmode', 1)))");
   });
 
   it('the admin knob panel exposes all four (personal-stage flip UI)', () => {

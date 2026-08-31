@@ -3510,6 +3510,41 @@ export function resolveExperiment(state, overrides, key) {
   return !!state && state[key] === 'treatment';
 }
 
+// ── Knob trials (self-healing accuracy loop; mirrored verbatim in index.html) ──
+// An experiment keyed `tgknob_<knob>_<value>` runs its treatment arm with tg_<knob>
+// at <value> (integer, or a decimal with 'p' for '.': tgknob_sigma_0p0005). The
+// Sunday job creates, judges and closes these rows; the client only reads them.
+export function parseTgTrialKey(key) {
+  const m = /^tgknob_([a-z]+)_(\d+(?:p\d+)?)$/.exec(key || '');
+  if (!m) return null;
+  return { knob: 'tg_' + m[1], value: Number(m[2].replace('p', '.')) };
+}
+// Every knob value the caller is in the treatment arm for: {tg_stabwin: 8, ...}
+export function tgTrialKnobs(state, overrides) {
+  const out = {};
+  for (const key of Object.keys(state || {})) {
+    const p = parseTgTrialKey(key);
+    if (p && resolveExperiment(state, overrides, key)) out[p.knob] = p.value;
+  }
+  return out;
+}
+// Precedence for one knob read. personalRaw = the localStorage string (null when
+// unset), trial = the treatment value or null, dflt = the code default.
+//   default:    personal > trial > default   (a personal override is deliberate)
+//   trialFirst: trial > personal > default   (preset knobs: the preset migration wrote
+//               every user's LS, so "personal wins" would exempt the whole fleet)
+//   allowZero:  0 is a legal personal value (tg_guardmode 0 = 2.4 median fallback)
+export function resolveTgKnob(personalRaw, trial, dflt, opts) {
+  const o = opts || {};
+  const hasTrial = trial !== null && trial !== undefined && Number.isFinite(trial);
+  const v = (personalRaw === null || personalRaw === undefined || personalRaw === '') ? NaN : Number(personalRaw);
+  const personal = Number.isFinite(v) && (o.allowZero ? v >= 0 : v > 0) ? v : null;
+  if (o.trialFirst && hasTrial) return trial;
+  if (personal !== null) return personal;
+  if (hasTrial) return trial;
+  return dflt;
+}
+
 // JS mirror of the SQL verdict ladder in evaluate_experiment(), so the admin tab can
 // re-derive a verdict from a snapshot. Order matters: too_early → guardrail → win → lose.
 // Note: A win occurs when (1) lift_pct >= gate AND significant, OR (2) control mean = 0
