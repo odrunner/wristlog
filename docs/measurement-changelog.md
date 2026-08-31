@@ -24,3 +24,4 @@ next Sunday. Record every change here so we can tell what moved the needle.
 failure modes by distinct users will be filled in by the first review run; the next
 shipped change goes in a new row with its target metric, then we check it the
 following Sunday.
+| 2026-08-31 | **Loop:** started `tgknob_guardmode_0` at 50% | auto | see experiments / experiment_decisions | wrong-of-converged (A/B) | judged next Sunday |
