@@ -206,9 +206,12 @@ is never *named or pictured* — that setting is about the watch, not about who
 the profile is shared with. The podium can therefore be shorter than the unique
 count implies, which is correct.
 
-The token is minted during boot, not on the Share tap: `navigator.share` must be
+The token is minted ahead of the Share tap — at boot, and again when the card
+renders (a session left open across the 1st renders the card without a boot;
+that is how 2026-09-01's "link not ready" happened): `navigator.share` must be
 called from the user's gesture, and an `await` in between loses that gesture on
-iOS Safari.
+iOS Safari. The tap itself mints as a last resort, and if the gesture was lost
+the link is copied instead.
 
 The page carries `noindex`. The counting rules in `computeRecap()` mirror
 `monthRecap()` exactly; a sharer who sends their July and then sees different

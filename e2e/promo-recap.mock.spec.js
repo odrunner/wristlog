@@ -411,13 +411,71 @@ test.describe('month-in-review card — sharing', () => {
     expect(shared[0].url).toContain('t=a%20b%26c');
   });
 
-  // The token is minted during boot. If that hasn't landed, sending a link that
+  // No token in hand and none mintable (signed out here): sending a link that
   // resolves to nothing is worse than asking for another tap.
   test('says so rather than sharing a link with no token', async ({ page }) => {
     await mount(page);
     const { shared, toasts } = await armShare(page, { token: null });
     expect(shared).toHaveLength(0);
     expect(toasts[0][0]).toContain('not ready');
+  });
+
+  // A session left open across the 1st renders the card without a boot, so the
+  // boot-time mint never ran (2026-09-01). The tap mints on demand.
+  test('mints the token on demand when boot never did', async ({ page }) => {
+    await mount(page);
+    await page.evaluate(() => {
+      window.__mintedFor = [];
+      ensureRecapShareToken = async (period) => { window.__mintedFor.push(period); return 'late-tok'; };
+    });
+    const { shared } = await armShare(page, { token: null });
+    const minted = await page.evaluate(() => window.__mintedFor);
+    expect(minted).toEqual(['2026-07']);
+    expect(shared).toHaveLength(1);
+    expect(shared[0].url).toContain('t=late-tok');
+  });
+
+  // The await before navigator.share can cost the user gesture on iOS Safari;
+  // the link is copied rather than the tap ending in an error.
+  test('copies the link when the share sheet refuses a lost gesture', async ({ page }) => {
+    await mount(page);
+    await page.evaluate(() => {
+      window.__copied = [];
+      navigator.clipboard.writeText = async (t) => { window.__copied.push(t); };
+    });
+    await page.evaluate(() => {
+      ensureRecapShareToken = async () => 'late-tok';
+      window.__shareErr = Object.assign(new Error('gesture'), { name: 'NotAllowedError' });
+    });
+    await page.evaluate(() => {
+      myProfile = { username: 'od' };
+      _promoRecapShare = null;
+      window.__toasts = [];
+      navigator.share = async () => { throw window.__shareErr; };
+      window.toast = (msg, kind) => { window.__toasts.push([msg, kind]); };
+      toast = window.toast;
+    });
+    await page.locator('#recap-host [data-recap-share]').click();
+    const { copied, toasts } = await page.evaluate(() => ({ copied: window.__copied, toasts: window.__toasts }));
+    expect(copied).toEqual(['https://api.wrotate.com/functions/v1/share-recap?t=late-tok']);
+    expect(toasts[0][0]).toContain('copied');
+  });
+
+  // Rendering primes the mint too, once per period — the path a long-lived
+  // session takes when the feed refreshes after midnight on the 1st.
+  test('rendering the card primes the share token once per period', async ({ page }) => {
+    await mount(page);
+    const calls = await page.evaluate((slot) => {
+      let n = 0;
+      loadRecapLikes = () => { n++; _promoRecapPrimed = '2026-07'; };
+      currentUser = { id: 'u1' };
+      _promoRecapPrimed = null;
+      window.renderPromoCard(slot);
+      window.renderPromoCard(slot);
+      currentUser = null;
+      return n;
+    }, SLOT);
+    expect(calls).toBe(1);
   });
 
   test('the composer explainer has no share button', async ({ page }) => {

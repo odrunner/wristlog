@@ -8188,7 +8188,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.21.44';
+const APP_VERSION = '01.06.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13041,8 +13041,12 @@ async function shareMonthRecap() {
   // and it keeps the username out of the URL. Minted during boot
   // (ensureRecapShareToken), so this is a cache read, not a round trip: an
   // await here would lose the user gesture navigator.share needs on iOS.
-  const token = (_promoRecapShare && _promoRecapShare.period === recap.period)
+  let token = (_promoRecapShare && _promoRecapShare.period === recap.period)
     ? _promoRecapShare.token : null;
+  // Last resort when neither boot nor render primed it. The await may cost the
+  // gesture on iOS Safari — navigator.share then rejects with NotAllowedError
+  // and the link is copied instead, which still beats an error.
+  if (!token) token = await ensureRecapShareToken(recap.period);
   if (!token) { toast('Share link not ready — try again in a moment', 'error'); return; }
 
   const monthName = new Date(recap.year, recap.month, 1)
@@ -13055,7 +13059,11 @@ async function shareMonthRecap() {
     try {
       await navigator.share({ title, text, url });
     } catch (e) {
-      if (e.name !== 'AbortError') toast('Could not open share sheet', 'error');
+      if (e.name === 'AbortError') return;
+      if (e.name === 'NotAllowedError' && navigator.clipboard) {
+        try { await navigator.clipboard.writeText(url); toast('Recap link copied!'); return; } catch (_) {}
+      }
+      toast('Could not open share sheet', 'error');
     }
   } else if (navigator.clipboard) {
     await navigator.clipboard.writeText(url);
@@ -13192,6 +13200,12 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
       <div class="promo-recap-note">Nothing to show right now. This card appears on the 1st–${RECAP_WINDOW_DAYS}th of a month, recapping the month just gone, and only once that month has ${RECAP_MIN_WEARS}+ wears across ${RECAP_MIN_WATCHES}+ watches.</div>
     </div>`;
   }
+
+  // Boot is not the only way to reach this card: a session left open across
+  // the 1st renders it on the next feed refresh (the memo is keyed on the day)
+  // with no boot-time mint behind it, so Share had nothing to send until a
+  // reload (2026-09-01). Prime here — fire-and-forget, once per period.
+  if (currentUser && _promoRecapPrimed !== recap.period) loadRecapLikes();
 
   const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const monthName = new Date(recap.year, recap.month, 1)
@@ -13615,10 +13629,12 @@ function currentMonthRecap() {
 // never runs. Failure is non-fatal — the top-post slide is simply absent, the
 // rest of the card is unaffected.
 let _promoRecapLikes = null;      // { period, counts: { [logId]: n } }
+let _promoRecapPrimed = null;     // period loadRecapLikes() last ran for — renderRecapCard() re-primes on a new one
 async function loadRecapLikes() {
   if (!currentUser) return;
   const provisional = monthRecap({ now: Date.now(), logs, watches });
   if (!provisional) return;
+  _promoRecapPrimed = provisional.period;
   // Minted here, not on the Share tap: navigator.share must be called from the
   // user's gesture, and an await in between loses that gesture on iOS Safari.
   // By the time the button exists the token is already in hand.
@@ -31130,6 +31146,7 @@ function clearUserState() {
   _promoIsInternal = false;      // re-evaluated for whoever signs in next
   _promoRecapMemo = null;        // A's month must never render in B's feed
   _promoRecapLikes = null;       // ...nor A's like counts
+  _promoRecapShare = null; _promoRecapPrimed = null;  // ...nor A's share link: B must mint their own
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
