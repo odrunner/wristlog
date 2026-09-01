@@ -29,7 +29,7 @@ const tst = readFileSync(join(root, 'wrotate_test.js'), 'utf8');
 
 const VERBATIM = [
   'TG_ALG_VERSION', 'TG_PRESETS', 'autoSuggestTags', 'buildGameQueue',
-  'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'decodeAuthUserId', 'eloExpected',
+  'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'decodeAuthUserId', 'eloExpected', 'followNeedsRequest',
   'badgeRevealNames', 'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
   'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
   'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',

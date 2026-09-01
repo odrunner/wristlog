@@ -1359,6 +1359,18 @@ export function getFriendStatus(userId, { friends, sentRequests, receivedRequest
 }
 
 /**
+ * Does following a profile need the owner's approval?
+ * `followers`, `private` and `friends_only` profiles take a follow request;
+ * `public` (or an unset value) can be followed directly.
+ *
+ * @param {string|null|undefined} privacy - profiles.profile_privacy
+ * @returns {boolean}
+ */
+export function followNeedsRequest(privacy) {
+  return privacy === 'followers' || privacy === 'private' || privacy === 'friends_only';
+}
+
+/**
  * Compute the set of user IDs who are mutual friends with currentUserId.
  * A friendship is active when BOTH sides of the friend_request row are verified
  * AND the current user follows the other person (mutual-follow prerequisite).

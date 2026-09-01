@@ -8182,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.20.37';
+const APP_VERSION = '31.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11080,9 +11080,9 @@ async function followFromNotif(userId, notifId) {
   if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id || following.has(userId)) return;
   const notif = userNotifs.find(n => n.id === notifId);
-  const isPrivate = notif?.actor?.profile_privacy === 'private';
-  if (window.posthog) posthog.capture('follow_from_notif', { type: notif?.type || null, request: isPrivate });
-  if (isPrivate) {
+  const needsRequest = followNeedsRequest(notif?.actor?.profile_privacy);
+  if (window.posthog) posthog.capture('follow_from_notif', { type: notif?.type || null, request: needsRequest });
+  if (needsRequest) {
     await sendFollowRequest(userId, null);
     if (pendingRequests.has(userId)) userNotifs.forEach(n => { if (n.actor_id === userId) n._requested = true; });
     renderNotificationPanel();
@@ -11092,6 +11092,13 @@ async function followFromNotif(userId, notifId) {
 }
 async function followBackFromNotif(userId, notifId) {
   if (!currentUser || following.has(userId)) return;
+  // A follower with a restricted profile still has to approve you following them back.
+  const notif = userNotifs.find(n => n.id === notifId);
+  if (followNeedsRequest(notif?.actor?.profile_privacy)) {
+    await sendFollowRequest(userId, null);
+    renderNotificationPanel();
+    return;
+  }
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
   if (error) { toast('Could not follow back', 'error'); return; }
   following.add(userId);
@@ -11334,11 +11341,11 @@ function renderNotificationPanel() {
           onclick="event.stopPropagation();followBackFromNotif('${n.actor_id}','${n.id}')">Follow Back</button>
       </div>`
       // Someone engaged with your post and you don't follow them: one tap to reciprocate
-      // (Request for private profiles). 239 of 289 such pairs were unfollowed on 2026-08-16.
+      // (Request for restricted profiles). 239 of 289 such pairs were unfollowed on 2026-08-16.
       : ENGAGE_NOTIF_TYPES.includes(n.type) && n.actor && n.actor_id !== currentUser?.id && !following.has(n.actor_id) && !n._followedBack && !pendingRequests.has(n.actor_id) && !n._requested ? `
       <div class="notif-follow-actions">
-        <button class="follow-btn follow notif-follow-inline" title="${n.actor.profile_privacy === 'private' ? 'Send a follow request' : 'Follow'} ${escAttr(n.actor.display_name || n.actor.username || '')}"
-          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${n.actor.profile_privacy === 'private' ? 'Request' : '+ Follow'}</button>
+        <button class="follow-btn follow notif-follow-inline" title="${followNeedsRequest(n.actor.profile_privacy) ? 'Send a follow request' : 'Follow'} ${escAttr(n.actor.display_name || n.actor.username || '')}"
+          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${followNeedsRequest(n.actor.profile_privacy) ? 'Request' : '+ Follow'}</button>
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
@@ -16925,12 +16932,17 @@ async function renderFollowingList() {
   const { data } = await db.from('profiles').select('id, username, display_name, avatar_url, profile_privacy, is_official').in('id', ids);
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
+// Does following this profile need the owner's approval? Single rule for every
+// follow button (Discover, profile, bell rows). Mirrored in wrotate_test.js.
+function followNeedsRequest(privacy) {
+  return privacy === 'followers' || privacy === 'private' || privacy === 'friends_only';
+}
 function friendActionBtn(u) {
   if (currentUser && u.id === currentUser.id) return '<span style="font-size:.78rem;color:var(--muted);font-style:italic;">You</span>';
   const isFrd = friendships.has(u.id);
   const isFlw = following.has(u.id);
   const isPending = pendingRequests.has(u.id);
-  const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
+  const restricted = followNeedsRequest(u.profile_privacy);
   if (isFrd)     return `<button class="follow-btn friends-pill" onclick="confirmUnfriend('${u.id}',this)">Close Friends</button>`;
   if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
   if (isPending) return `<button class="follow-btn requested" onclick="confirmCancelRequest('${u.id}',this)">Requested</button>`;

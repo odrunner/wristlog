@@ -2,10 +2,35 @@ import { describe, it, expect } from 'vitest';
 import {
   computeFriendState, getFriendStatus,
   computeFriendships,
+  followNeedsRequest,
   aggregateLikes, aggregateCommentCounts,
   reorderList,
   parseCountResponse,
 } from '../wrotate_test.js';
+
+// ── followNeedsRequest ───────────────────────────────────────────────────────
+// One rule for "does following this profile need their approval?". The bell-row
+// Follow pill (2026-08-16) only checked `private`, so `followers` profiles were
+// followed without approval — 7 unapproved follows on 3 accounts by 2026-08-31.
+
+describe('followNeedsRequest', () => {
+  it('public profiles can be followed directly', () => {
+    expect(followNeedsRequest('public')).toBe(false);
+  });
+  it('a missing privacy value means public', () => {
+    expect(followNeedsRequest(undefined)).toBe(false);
+    expect(followNeedsRequest(null)).toBe(false);
+  });
+  it('followers-only profiles need a request', () => {
+    expect(followNeedsRequest('followers')).toBe(true);
+  });
+  it('private profiles need a request', () => {
+    expect(followNeedsRequest('private')).toBe(true);
+  });
+  it('friends_only profiles need a request', () => {
+    expect(followNeedsRequest('friends_only')).toBe(true);
+  });
+});
 
 // ── computeFriendState ───────────────────────────────────────────────────────
 

@@ -149,3 +149,34 @@ describe('loadMyProfile null guard', () => {
     expect(guard).toBeLessThan(assign);
   });
 });
+
+// ── 2026-08-31: bell-row Follow bypassed follow approval ───────────────────────
+// followFromNotif (added 2026-08-16) decided request-vs-follow with
+// `profile_privacy === 'private'`, so a `followers` profile got a direct follows
+// insert — Steve (@crash) gained four followers he never approved. The older
+// "Follow back" button (followBackFromNotif, 2026-02-28) never checked at all.
+// Every client follow path must go through followNeedsRequest().
+describe('Notification follow buttons honour profile privacy', () => {
+  it('followFromNotif routes through followNeedsRequest, not a private-only check', () => {
+    const fn = fnBody('followFromNotif');
+    expect(fn).toContain('followNeedsRequest(');
+    expect(fn).not.toMatch(/=== 'private'/);
+  });
+
+  it('followBackFromNotif sends a request when the follower is restricted', () => {
+    const fn = fnBody('followBackFromNotif');
+    expect(fn).toContain('followNeedsRequest(');
+    expect(fn).toContain('sendFollowRequest(');
+  });
+
+  it('friendActionBtn uses the same rule', () => {
+    expect(fnBody('friendActionBtn')).toContain('followNeedsRequest(');
+  });
+
+  it('the bell pill label does not decide on private alone', () => {
+    const start = html.indexOf('class="follow-btn follow notif-follow-inline"');
+    const pill = html.slice(start, html.indexOf('</button>', start));
+    expect(pill).not.toMatch(/profile_privacy === 'private'/);
+    expect(pill).toContain('followNeedsRequest(');
+  });
+});
