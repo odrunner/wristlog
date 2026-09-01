@@ -38,6 +38,7 @@ import {
 import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { sendBatch } from "../_shared/mailer.ts";
+import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -305,6 +306,8 @@ async function deliver(
     if (wantsFact) {
       for (const r of batch) facts.set(r.uid, await resolveFact(supabase, r.uid, factBudget));
     }
+    // One lookup per batch, not per recipient; see _shared/tracked.ts.
+    const tracked = await fetchTrackedUids(supabase, batch.map((r) => r.uid));
 
     const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", UNSUB_KEY);
@@ -328,6 +331,7 @@ async function deliver(
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
+        ...(tracked.has(r.uid) ? { configSet: TRACKED_CONFIG_SET } : {}),
       };
     }));
 

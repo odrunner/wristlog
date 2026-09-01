@@ -54,7 +54,7 @@ import {
 } from "../_shared/email-personalize.ts";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
-import { TRACKED_CONFIG_SET, trackedUidSet } from "../_shared/tracked-lib.ts";
+import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -108,24 +108,6 @@ async function fetchAllRows<T>(
 // watch, no complete pool fact, or a free-text name that would embarrass in a
 // subject line ("Omega Fake Omega - Likely ETA 2824-2") get the curated
 // fallback — never a broken email, never a dropped recipient.
-// Which of these users get the click-tracked config set (iOS 2.6+ install on
-// record). Fails open to UNTRACKED: on a query error every message keeps the
-// default set, so a DB blip can never route a CTA through the tracking host
-// for someone whose build would mishandle it.
-async function fetchTrackedUids(
-  supabase: ReturnType<typeof createClient>,
-  uids: string[],
-): Promise<Set<string>> {
-  if (uids.length === 0) return new Set();
-  const { data, error } = await supabase
-    .from("device_tokens")
-    .select("user_id, app_version")
-    .in("user_id", uids)
-    .not("app_version", "is", null);
-  if (error) return new Set();
-  return trackedUidSet(data as Array<{ user_id: string; app_version: string | null }>);
-}
-
 async function factVarsFor(
   // deno-lint-ignore no-explicit-any
   supabase: any,

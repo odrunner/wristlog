@@ -1,6 +1,7 @@
 // share-comments — the IO half (DB, email). Pure logic is in share-comments-lib.ts.
 // Both share pages call handleCommentPost for POST and loadComments for GET.
 import { sendEmail } from "./mailer.ts";
+import { trackedConfigSet } from "./tracked.ts";
 import { hmacSign, unsubUrl } from "../send-wear-reminders/lib.ts";
 import {
   buildCommentEmail, EMAIL_WINDOW_MS, hashIp, IP_LIMIT, IP_WINDOW_MS, isHoneypotTripped, isRateLimited,
@@ -109,7 +110,11 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
           kind, { name: v.name, body: v.body }, share.label,
           unsubUrl(opts.supabaseUrl, share.user_id, sig, "share_comments"),
         );
-        const r = await sendEmail({ from: FROM_EMAIL, to: [to], subject, html });
+        const r = await sendEmail({
+          from: FROM_EMAIL, to: [to], subject, html,
+          // Click tracking only for an iOS 2.6+ install; see ./tracked.ts.
+          ...(await trackedConfigSet(db, share.user_id)),
+        });
         if (!r.ok) console.warn("[share-comments] email failed:", r.error);
       }
     }

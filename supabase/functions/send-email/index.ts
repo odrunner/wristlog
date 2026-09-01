@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { sendEmail } from "../_shared/mailer.ts";
+import { trackedConfigSet } from "../_shared/tracked.ts";
 import {
   base64UrlEncode,
   buildEmailContent,
@@ -169,6 +170,8 @@ serve(async (req) => {
         "List-Unsubscribe": `<${unsubUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
+      // Click tracking only for an iOS 2.6+ install; see _shared/tracked.ts.
+      ...(await trackedConfigSet(supabase, user_id)),
     });
 
     if (!result.ok) {
