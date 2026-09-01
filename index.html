@@ -2596,6 +2596,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .follow-btn.following:hover { border-color: var(--danger); color: var(--danger); }
       .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger); }
     }
+    .follow-btn.remove-follower { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-left: .35rem; }
+      .follow-btn.remove-follower:hover { border-color: var(--danger); color: var(--danger); }
     .follow-btn.requested {
       background: transparent; color: var(--muted);
       border: 1.5px solid var(--border);
@@ -2899,6 +2901,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Remove a Follower</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Open <strong>Followers</strong> on your own profile and each person now has a <strong>Remove</strong> button &#8212; tap twice to confirm. They aren&#8217;t notified, and if your profile approves its followers they&#8217;ll need to send a new request to follow you again.</div>
+      </div>
       <div style="margin-bottom:.75rem;">
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
@@ -4492,7 +4498,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Collection &amp; Wishlist visibility</div>
-              <div class="help-step-desc">Set each independently: <strong>Public</strong> shows it to anyone who views your profile, <strong>Followers</strong> shows it only to your followers, <strong>Close Friends</strong> shows it only to your close friends, <strong>Private</strong> keeps it hidden from everyone. Wishlist is private by default.</div>
+              <div class="help-step-desc">Set each independently: <strong>Public</strong> shows it to anyone who views your profile, <strong>Followers</strong> shows it only to your followers, <strong>Close Friends</strong> shows it only to your close friends, <strong>Private</strong> keeps it hidden from everyone. Wishlist is private by default. To drop someone who follows you, open <strong>Followers</strong> on your profile and tap <strong>Remove</strong> next to their name (twice to confirm).</div>
             </div>
           </div>
           <div class="help-step">
@@ -8182,7 +8188,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.18.11';
+const APP_VERSION = '31.18.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10774,11 +10780,66 @@ async function openFollowersModal(userId) {
     .select('id, username, display_name, avatar_url, profile_privacy')
     .in('id', ids);
 
-  list.innerHTML = (profiles || []).map(u => userCardHtml(u)).join('');
+  // Only your own list can remove people — they follow you, you decide.
+  const removable = !!(currentUser && userId === currentUser.id);
+  list.innerHTML = (profiles || []).map(u => userCardHtml(u, { removable })).join('');
 }
 
 function closeFollowersModal() {
   document.getElementById('followers-modal').classList.add('hidden');
+}
+
+// Remove a follower (Strava-style): two taps, no notification. They can follow
+// again — which for a profile that approves its followers means a fresh request.
+function confirmRemoveFollower(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    removeFollower(userId, btn);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Remove?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Remove';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
+}
+async function removeFollower(userId, btn) {
+  if (demoGuard()) return;
+  if (!currentUser || userId === currentUser.id) return;
+  if (btn) btn.disabled = true;
+  const { error } = await db.from('follows').delete()
+    .eq('follower_id', userId).eq('following_id', currentUser.id);
+  if (error) {
+    toast('Could not remove — please try again', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Remove'; btn.style.borderColor = ''; btn.style.color = ''; }
+    return;
+  }
+  // Close friends need the mutual follow, so the friendship goes with the follow — silently.
+  try {
+    await db.from('friend_requests').delete()
+      .or(`and(initiator_id.eq.${currentUser.id},target_id.eq.${userId}),and(initiator_id.eq.${userId},target_id.eq.${currentUser.id})`);
+  } catch (_) {}
+  friendships.delete(userId);
+  friendRequests = friendRequests.filter(r =>
+    !((r.initiator_id === currentUser.id && r.target_id === userId) ||
+      (r.initiator_id === userId && r.target_id === currentUser.id)));
+  const list = document.getElementById('followers-list');
+  btn?.closest('.user-card')?.remove();
+  if (list && !list.querySelector('.user-card')) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No followers yet.</div>';
+  }
+  // Keep the Followers stat on the profile header honest without a reload.
+  const stat = document.querySelector('#page-profile .profile-stat-btn[onclick*="openFollowersModal"] .profile-stat-value');
+  if (stat) stat.textContent = Math.max(0, (parseInt(stat.textContent, 10) || 0) - 1);
+  if (window.posthog) posthog.capture('follower_removed');
+  toast('Removed — they can request to follow again');
 }
 
 
@@ -11110,17 +11171,28 @@ async function followBackFromNotif(userId, notifId) {
   toast('Following!');
   loadFeed();
 }
+// Follow or request, decided by the target's current privacy (one small lookup).
+// Used where the button has no profile row at hand, e.g. re-follow after unfollow.
+async function followByPrivacy(userId, btn) {
+  if (demoGuard()) return;
+  if (!currentUser || userId === currentUser.id) return;
+  if (_followInFlight.has(userId)) return;
+  const { data } = await db.from('profiles').select('profile_privacy').eq('id', userId).maybeSingle();
+  if (followNeedsRequest(data?.profile_privacy)) return sendFollowRequest(userId, btn);
+  return followUser(userId, btn);
+}
 function confirmUnfollow(userId, btn) {
   if (_followInFlight.has(userId)) return;
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
     // Optimistically show Follow immediately — no confusing "Following" flash.
-    // Re-follow is always direct (followUser) since they were already accepted once.
+    // Re-follow is NOT always direct: a restricted profile (or one that removed
+    // you as a follower) needs a fresh request, so look the privacy up on tap.
     btn.className = 'follow-btn follow';
     btn.textContent = 'Follow';
     btn.style.borderColor = '';
     btn.style.color = '';
-    btn.onclick = function() { followUser(userId, this); };
+    btn.onclick = function() { followByPrivacy(userId, this); };
     unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
@@ -16950,15 +17022,16 @@ function friendActionBtn(u) {
   return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
 }
 
-function userCardHtml(u) {
+function userCardHtml(u, { removable = false } = {}) {
   return `
-    <div class="user-card">
+    <div class="user-card" data-uid="${u.id}">
       <div class="feed-user-avatar" onclick="viewUserProfile('${u.id}')" style="cursor:pointer;">${profileInitials(u)}</div>
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
         <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
         <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
       </div>
       ${friendActionBtn(u)}
+      ${removable ? `<button class="follow-btn remove-follower" title="Remove this follower" onclick="event.stopPropagation();confirmRemoveFollower('${u.id}',this)">Remove</button>` : ''}
     </div>`;
 }
 
