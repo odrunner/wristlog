@@ -262,7 +262,7 @@ export function isCredentialFailure(status: number): boolean {
 // ANY non-retryable failure, however few.
 //
 // Two earlier, weaker rules both left a real window open. An absolute
-// okCount === 0 rule is right for Resend (a whole batch is ONE HTTP request,
+// okCount === 0 rule was right for Resend (a whole batch was ONE HTTP request,
 // so every message shares a single verdict — a transport failure is always
 // 100%), but SES's _shared/ses.ts sendSesBatch sends individually, in waves
 // of 10 with a pause between waves, so a mid-batch failure (a paused
@@ -352,7 +352,7 @@ export function splitFirstBatch<T>(rows: T[], firstBatch: unknown): { pending: T
   return { pending: rows.slice(0, n), held: rows.slice(n) };
 }
 
-// UTC midnight for "today" — the Resend quota window start.
+// UTC midnight for "today" — the DAILY_EMAIL_LIMIT quota window start.
 export function utcDayStart(nowMs: number): string {
   const d = new Date(nowMs);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();

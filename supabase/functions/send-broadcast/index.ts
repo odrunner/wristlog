@@ -5,7 +5,7 @@
 // Otherwise, sends to all users who have not disabled marketing emails.
 //
 // Required Supabase secrets:
-//   RESEND_API_KEY             — API key from resend.com
+//   SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_REGION / SES_CONFIG_SET — see _shared/ses.ts
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
@@ -52,8 +52,7 @@ import {
   watchLabel,
   watchPhrase,
 } from "../_shared/email-personalize.ts";
-// Transport: ../_shared/mailer.ts — provider chosen at runtime by the
-// EMAIL_PROVIDER secret (defaults to Resend).
+// Transport: ../_shared/mailer.ts (AWS SES).
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
 import { TRACKED_CONFIG_SET, trackedUidSet } from "../_shared/tracked-lib.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
@@ -382,7 +381,7 @@ serve(async (req) => {
     // next chunk of what remains. History-based exclusion can't double-send even
     // if a batch is re-clicked or the recipient list changed between batch runs.
     // Caveats: keep the subject identical across the campaign's batches, and
-    // leave a few minutes between batches (Resend webhook ingestion lag).
+    // leave a few minutes between batches (SES → SNS → ses-webhook ingestion lag).
     let filteredRecipients: typeof cappedRecipients;
     const batchInfo = parseBatchSuffix(segment);
     if (batchInfo) {
@@ -457,7 +456,7 @@ serve(async (req) => {
       });
     }
 
-    // Send via Resend in chunks of 100 (tracking upserts stay ≤100 rows each)
+    // Send via SES in chunks of 100 (tracking upserts stay ≤100 rows each)
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
@@ -520,7 +519,7 @@ serve(async (req) => {
 });
 
 // Nightly drain: send queued broadcast rows with whatever daily quota remains.
-// used_today comes from email_events (the Resend webhook logs every send from every
+// used_today comes from email_events (ses-webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
 async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string, quotaOnly = false) {
   // Unsubscribe links use a dedicated secret when set, else the service-role key.
@@ -687,7 +686,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       await supabase.from("broadcast_queue")
         .update({ status: "sent", sent_at: new Date().toISOString(), claimed_at: null }).in("id", okIds);
     }
-    // Failures are rare; one update per row keeps each row's own Resend error.
+    // Failures are rare; one update per row keeps each row's own send error.
     for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
         .update({

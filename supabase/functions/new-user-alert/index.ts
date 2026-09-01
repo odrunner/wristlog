@@ -3,7 +3,7 @@
 // Sends an email to the admin when a new user signs up.
 //
 // Required Supabase secrets:
-//   RESEND_API_KEY             — API key from resend.com
+//   SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_REGION / SES_CONFIG_SET — see _shared/ses.ts
 //   ADMIN_EMAIL                — Admin email to receive alerts
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided

@@ -36,7 +36,7 @@ Run with `npm run test:functions` (= `deno test supabase/functions/`).
 All ✅: identify-watch, search-watch-image, send-broadcast, share-collection, send-email,
 send-push, share-post, watch-value, run-campaign, auto-add-brand, extract-url-meta,
 feedback-to-github, new-user-alert, email-unsubscribe, report-notify, demo-login,
-send-report, delete-user, resend-webhook.
+send-report, delete-user, resend-webhook (retired 2026-08-31).
 
 **Mechanism chosen:** Deno (`deno test`), installed locally (2.8.1). Tests the real code
 with no module-system fork.

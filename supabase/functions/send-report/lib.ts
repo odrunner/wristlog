@@ -1,7 +1,7 @@
 // send-report — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
 //
-// This function is a thin admin-only relay to Resend, so the pure logic is
+// This function is a thin admin-only email relay (SES), so the pure logic is
 // limited to request parsing/validation and outgoing payload shaping.
 
 export const FROM_EMAIL = "WRotate <notifications@wrotate.com>";

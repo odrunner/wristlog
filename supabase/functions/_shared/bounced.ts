@@ -18,10 +18,9 @@ type BounceRow = { email_to: string | null; created_at?: string | null; bounce_t
 type DeliveryRow = { email_to: string | null; created_at?: string | null };
 
 // Anything that is not explicitly "Transient" is treated as permanent —
-// including a null/unknown bounceType. Null shows up for non-SES webhook
-// payloads (the Resend rollback path writes a different `raw` shape), and for
-// a bounce we cannot classify the safe default is to stop sending, not to keep
-// sending. SES's own third value, "Undetermined", lands here for the same reason.
+// including a null/unknown bounceType. Null shows up for pre-SES rows (the
+// retired Resend webhook wrote a different `raw` shape), and for a bounce we
+// cannot classify the safe default is to stop sending, not to keep sending. SES's own third value, "Undetermined", lands here for the same reason.
 export function isPermanentBounce(bounceType: string | null | undefined): boolean {
   return (bounceType ?? "").trim().toLowerCase() !== "transient";
 }

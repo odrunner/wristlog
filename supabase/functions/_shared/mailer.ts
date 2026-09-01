@@ -1,25 +1,18 @@
 // _shared/mailer — the single email transport entry point.
 //
-// Every sending edge function imports sendEmail/sendBatch from here. Which
-// provider they reach is decided at runtime by the EMAIL_PROVIDER secret, so
-// switching providers (or rolling back) is a secret flip, not a redeploy:
-//
-//   npx supabase secrets set EMAIL_PROVIDER=ses      # cut over
-//   npx supabase secrets set EMAIL_PROVIDER=resend   # roll back
-//
-// Unset or unrecognised => resend (see resolveProvider).
+// Every sending edge function imports sendEmail/sendBatch from here rather
+// than from ses.ts directly, so the transport stays swappable behind one seam.
+// Since 2026-07-30 the only transport is AWS SES (Resend was retired
+// 2026-08-31 after a month of 100% SES sends with clean bounce/complaint
+// rates), so this is a plain re-export.
 
-import { resolveProvider } from "./mailer-lib.ts";
-import { sendResendBatch, sendResendEmail } from "./resend.ts";
 import { sendSesBatch, sendSesEmail } from "./ses.ts";
 
 export type { MailMessage, MailResult, Provider } from "./mailer-lib.ts";
 
-// Resolved once per isolate. Exported so handlers can report which provider is
-// actually live — otherwise the only way to know is grepping a deployed bundle.
-export const currentProvider = resolveProvider(Deno.env.get("EMAIL_PROVIDER"));
+// Reported by send-broadcast's quota_only introspection so the live provider
+// is visible without grepping a deployed bundle.
+export const currentProvider: import("./mailer-lib.ts").Provider = "ses";
 
-const useSes = currentProvider === "ses";
-
-export const sendEmail = useSes ? sendSesEmail : sendResendEmail;
-export const sendBatch = useSes ? sendSesBatch : sendResendBatch;
+export const sendEmail = sendSesEmail;
+export const sendBatch = sendSesBatch;

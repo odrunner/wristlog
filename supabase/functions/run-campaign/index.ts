@@ -1,7 +1,7 @@
 // Supabase Edge Function: run-campaign
 // Invoked daily (via cron or manual trigger) to send drip campaign emails.
 // For each active campaign, finds users who signed up `delay_days` ago
-// and haven't been sent yet. Sends via the Resend batch API.
+// and haven't been sent yet. Sends via SES (_shared/mailer.ts).
 // Campaigns with backfill_daily > 0 also drain existing members (older than
 // the signup window) at that rate per run, newest first, until exhausted.
 //
@@ -36,8 +36,7 @@ import {
 // Same grounded-search prompt + JSON extractor the in-app fun-fact path uses, so
 // a fact minted for the email is indistinguishable from one minted on a wear log.
 import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
-// Transport: ../_shared/mailer.ts — provider chosen at runtime by the
-// EMAIL_PROVIDER secret (defaults to Resend).
+// Transport: ../_shared/mailer.ts (AWS SES).
 import { sendBatch } from "../_shared/mailer.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
@@ -283,7 +282,7 @@ async function advanceFactCursors(
   if (error) console.error(`[run-campaign] fact cursor advance failed:`, error);
 }
 
-// Send personalized campaign emails via the Resend batch API, recording each
+// Send personalized campaign emails via sendBatch (SES), recording each
 // successful recipient in email_campaign_sends immediately.
 async function deliver(
   supabase: Db,
@@ -333,10 +332,8 @@ async function deliver(
     }));
 
     const { results } = await sendBatch(messages);
-    // Track ONLY the recipients whose send succeeded. Resend validates a batch
-    // as a unit, so results are uniform within a chunk today — reading them
-    // per-recipient keeps this correct either way, and unchanged if the
-    // transport switches to SES (which does report per-recipient).
+    // Track ONLY the recipients whose send succeeded. SES reports a verdict
+    // per recipient, so read the results per-recipient rather than per chunk.
     const okRecipients = batch.filter((_, idx) => results[idx].ok);
     sent += okRecipients.length;
     failed += batch.length - okRecipients.length;
@@ -350,7 +347,7 @@ async function deliver(
     }
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
-      if (!r.ok) console.error(`[run-campaign] Resend send failed for ${batch[idx].uid}:`, r.error);
+      if (!r.ok) console.error(`[run-campaign] send failed for ${batch[idx].uid}:`, r.error);
     }
     if (okRecipients.length) {
       const trackRows = okRecipients.map((r) => ({ campaign_id: campaign.id, user_id: r.uid }));
@@ -542,14 +539,14 @@ async function backfillPass(
 // The daily drip only reaches new signups. To reach the existing members it
 // never covered, we render the same personalized email per recipient and hand
 // the rows to send-broadcast's queue, whose 21:30 UTC drain sends whatever the
-// Resend daily quota has left (100 − used_today − 10 reserve). That drain is
+// daily quota has left (DAILY_EMAIL_LIMIT − used_today − 10 reserve). That drain is
 // the right slot: ~95% of the day's transactional email lands after 10:00 UTC,
 // so run-campaign's own window can't safely claim the day's quota.
 //
 // Fact generation is deliberately NOT done at drain time — 183 uncovered models
 // × a grounded Gemini call would blow the function's wall clock. prewarmFacts()
 // fills the shared pool first (which also benefits every future wearer of those
-// models in-app), then enqueue is pure DB reads and Resend is the only limit.
+// models in-app), then enqueue is pure DB reads and the daily quota is the only limit.
 const STREAK_CAMPAIGN_ID = "14a9156c-f132-435c-9beb-32800b8c97cb";
 
 type AudienceRow = {
@@ -753,7 +750,7 @@ Deno.serve(async (req: Request) => {
 
     // Auth: the daily cron sends a shared secret header (x-campaign-secret); a
     // manual admin trigger (db.functions.invoke) sends the admin's JWT. An open
-    // trigger can burn Resend quota and email the whole signup cohort on demand.
+    // trigger can burn the daily email quota and email the whole signup cohort on demand.
     // Enforce only once CAMPAIGN_TRIGGER_SECRET is configured; until then warn and
     // run, so deploying this can't break the daily cron before the secret is set +
     // the cron is updated to send the header (then enforcement is automatic).

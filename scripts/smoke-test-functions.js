@@ -198,11 +198,10 @@ async function run() {
   });
 
   // Email transport. `quota_only` is a read-only introspection call — it sends
-  // nothing — and reports which provider _shared/mailer.ts actually resolved from
-  // the EMAIL_PROVIDER secret. That is the only way to know the live provider
-  // without grepping a deployed bundle, and a wrong flip is otherwise silent
-  // until real mail goes out. Needs the cron secret, so export it to get the full
-  // assertion: CAMPAIGN_TRIGGER_SECRET=… npm run test:smoke
+  // nothing — and reports which provider _shared/mailer.ts is serving (always
+  // `ses` since Resend was retired 2026-08-31; a stale pre-retirement bundle
+  // could still answer `resend`). Needs the cron secret, so export it to get the
+  // full assertion: CAMPAIGN_TRIGGER_SECRET=… npm run test:smoke
   const cronSecret = process.env.CAMPAIGN_TRIGGER_SECRET;
   if (cronSecret) {
     await check('send-broadcast (quota_only → provider is ses)', async () => {

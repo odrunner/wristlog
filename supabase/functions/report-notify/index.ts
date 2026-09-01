@@ -3,7 +3,7 @@
 // Sends an email to the admin when new content is reported.
 //
 // Required Supabase secrets (set via `supabase secrets set`):
-//   RESEND_API_KEY     — Resend API key for sending emails
+//   SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_REGION / SES_CONFIG_SET — see _shared/ses.ts
 //   ADMIN_EMAIL        — Admin email address to receive report notifications
 //   SUPABASE_URL       — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY — auto-provided

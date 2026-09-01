@@ -1,16 +1,15 @@
 // Supabase Edge Function: send-email
 // Triggered by Database Webhook on INSERT into notifications table.
-// Sends an email notification via Resend to the target user.
+// Sends an email notification via SES to the target user.
 //
 // Required Supabase secrets (set via `supabase secrets set`):
-//   RESEND_API_KEY             — API key from resend.com
+//   SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_REGION / SES_CONFIG_SET — see _shared/ses.ts
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// Transport: ../_shared/mailer.ts — provider chosen at runtime by the
-// EMAIL_PROVIDER secret (defaults to Resend).
+// Transport: ../_shared/mailer.ts (AWS SES).
 import { sendEmail } from "../_shared/mailer.ts";
 import {
   base64UrlEncode,
@@ -160,7 +159,7 @@ serve(async (req) => {
 
     const html = buildHtmlEmail(content.subject, content.body, unsubUrl);
 
-    // Send via Resend
+    // Send via SES
     const result = await sendEmail({
       from: FROM_EMAIL,
       to: [recipientEmail],
@@ -173,7 +172,7 @@ serve(async (req) => {
     });
 
     if (!result.ok) {
-      console.error("[send-email] Resend error:", result.error);
+      console.error("[send-email] send error:", result.error);
       return new Response(JSON.stringify({ error: "email send failed", details: result.error }), { status: 500 });
     }
 
