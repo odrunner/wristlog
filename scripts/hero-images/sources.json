@@ -7,5 +7,270 @@
     "image_url": "https://www.cartier.com/dw/image/v2/BGTJ_PRD/on/demandware.static/-/Sites-cartier-master/default/dwf0220830/images/large/b66edd509d8d5796a5828ef84e9d3586.png",
     "credit": null,
     "ambiguous_note": "Chose medium steel / silvered dial (WSSA0029). Collection has 72 refs; large steel black dial and large titanium were the runners-up."
+  },
+  {
+    "slug": "rolex-datejust-36",
+    "brand": "Rolex",
+    "model": "Datejust 36",
+    "page_url": "https://www.rolex.com/en-us/watches/datejust/m126200-0005",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m126200-0005",
+    "credit": null,
+    "ambiguous_note": "Oystersteel on Jubilee, ref 126200-0005 (bright blue dial). Many dial variants — chose the all-steel reference."
+  },
+  {
+    "slug": "rolex-yacht-master-40",
+    "brand": "Rolex",
+    "model": "Yacht-Master 40",
+    "page_url": "https://www.rolex.com/en-us/watches/yacht-master/m126622-0001",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m126622-0001",
+    "credit": null,
+    "ambiguous_note": "Rolesium (steel + platinum bezel), ref 126622 — the standard steel YM40."
+  },
+  {
+    "slug": "rolex-yacht-master-37",
+    "brand": "Rolex",
+    "model": "Yacht-Master 37",
+    "page_url": "https://www.rolex.com/en-us/watches/yacht-master/m268622-0002",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m268622-0002",
+    "credit": null,
+    "ambiguous_note": "Rolesium ref 268622, slate dial — steel equivalent of the 40."
+  },
+  {
+    "slug": "rolex-day-date",
+    "brand": "Rolex",
+    "model": "Day-Date",
+    "page_url": "https://www.rolex.com/en-us/watches/day-date/m228238-0042",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m228238-0042",
+    "credit": null,
+    "ambiguous_note": "No steel Day-Date exists — chose yellow gold 40, ref 228238. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "rolex-day-date-36",
+    "brand": "Rolex",
+    "model": "Day-Date 36",
+    "page_url": "https://www.rolex.com/en-us/watches/day-date/m128238-0069",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m128238-0069",
+    "credit": null,
+    "ambiguous_note": "Gold only — yellow gold 36, ref 128238. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "rolex-sea-dweller",
+    "brand": "Rolex",
+    "model": "Sea-Dweller",
+    "page_url": "https://www.rolex.com/en-us/watches/sea-dweller/m126600-0002",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m126600-0002",
+    "credit": null,
+    "ambiguous_note": "Oystersteel 43mm ref 126600. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "rolex-sea-dweller-deepsea",
+    "brand": "Rolex",
+    "model": "Sea-Dweller Deepsea",
+    "page_url": "https://www.rolex.com/en-us/watches/deepsea/m136660-0006",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-c/m136660-0006",
+    "credit": null,
+    "ambiguous_note": "Deepsea 44mm Oystersteel, intense black dial ref 136660-0006 (classic dial); runner-up D-Blue 136660-0005. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "tudor-black-bay",
+    "brand": "Tudor",
+    "model": "Black Bay",
+    "page_url": "https://www.tudorwatch.com/en/watches/black-bay/m7941a1a0ru-0001",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-cb-with-drop-shadow/tudor-m7941a1a0ru-0001",
+    "credit": null,
+    "ambiguous_note": "41mm steel, burgundy bezel, 3-link steel bracelet, M7941A1A0RU-0001."
+  },
+  {
+    "slug": "tudor-pelagos",
+    "brand": "Tudor",
+    "model": "Pelagos",
+    "page_url": "https://www.tudorwatch.com/en/watches/pelagos/m25600tn-0001",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-cb-with-drop-shadow/tudor-m25600tn-0001",
+    "credit": null,
+    "ambiguous_note": "Titanium is the only case — 42mm black, M25600TN. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "tudor-pelagos-39",
+    "brand": "Tudor",
+    "model": "Pelagos 39",
+    "page_url": "https://www.tudorwatch.com/en/watches/pelagos/m25407n-0001",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-cb-with-drop-shadow/tudor-m25407n-0001",
+    "credit": null,
+    "ambiguous_note": "Titanium 39mm, M25407N. Replaces the Wikimedia image."
+  },
+  {
+    "slug": "tudor-pelagos-fxd-gmt",
+    "brand": "Tudor",
+    "model": "Pelagos FXD GMT",
+    "page_url": "https://www.tudorwatch.com/en/watches/pelagos-fxd/m2542gxx7nu-0002",
+    "image_url": "",
+    "browser": true,
+    "image_match": "upright-cb-with-drop-shadow/tudor-m2542gxx7nu-0002",
+    "credit": null,
+    "ambiguous_note": "Pelagos FXD GMT — ref M2542GXX7NU-0002 from the Pelagos FXD family page (fabric strap is the only option). Replaces the Wikimedia image."
+  },
+  {
+    "slug": "hamilton-khaki-king",
+    "brand": "Hamilton",
+    "model": "Khaki Field King Auto 40mm",
+    "page_url": "https://www.hamiltonwatch.com/en-us/h64455133-khaki-field-king-auto.html",
+    "image_url": "https://www.hamiltonwatch.com/media/catalog/product/h/6/h64455133.png",
+    "credit": null,
+    "ambiguous_note": "Chose H64455133 (black dial, steel bracelet); runner-up H64455533 (same dial, alternate bracelet). | verified image/png 2000x2000"
+  },
+  {
+    "slug": "longines-hydroconquest",
+    "brand": "Longines",
+    "model": "HydroConquest 41mm",
+    "page_url": "https://www.longines.com/en-us/p/watch-hydroconquest-l3-781-4-56-6",
+    "image_url": "https://api.ecom.longines.com/media/catalog/product/w/a/watch-collection-hydroconquest-l3-781-4-56-6-d65499-hero.png",
+    "credit": null,
+    "ambiguous_note": "Chose L3.781.4.56.6 (41mm, black dial, black ceramic bezel, steel bracelet); runner-up L3.781.4.05.6. | verified image/png 2000x2000"
+  },
+  {
+    "slug": "longines-spirit-zulu-time",
+    "brand": "Longines",
+    "model": "Spirit Zulu Time 42mm",
+    "page_url": "https://www.longines.com/en-us/p/watch-longines-spirit-zulu-time-l3-812-4-53-6",
+    "image_url": "https://api.ecom.longines.com/media/catalog/product/w/a/watch-collection-longines-spirit-zulu-time-l3-812-4-53-6-163029-hero.png",
+    "credit": null,
+    "ambiguous_note": "Chose 42mm L3.812.4.53.6 (black dial, steel bracelet); runner-up 39mm L3.802.4.53.6. | verified image/png 2000x2000"
+  },
+  {
+    "slug": "bulova-lunar-pilot",
+    "brand": "Bulova",
+    "model": "Lunar Pilot Chronograph 96B258",
+    "page_url": "https://www.bulova.com/global/product/96B258.html",
+    "image_url": "https://citizenwatch.widen.net/content/9peiqjvk4r/jpeg/Lunar+Pilot.jpeg?u=41zuoe&width=1600&height=2000&quality=80&crop=false&keep=c&color=F9F8F6",
+    "credit": null,
+    "ambiguous_note": "Chose 96B258 as briefed (page title says brown strap; photos show the steel bracelet). Runner-up 96K111 (current 43.5mm). Image on the Citizen Group DAM bulova.com embeds. | verified image/jpeg 1600x2000"
+  },
+  {
+    "slug": "bulova-marine-star",
+    "brand": "Bulova",
+    "model": "Marine Star Chronograph 96B256",
+    "page_url": "https://www.bulova.com/us/en/product/96B256.html",
+    "image_url": "https://citizenwatch.widen.net/content/lto4mzvyuw/jpeg?u=41zuoe&width=1600&height=2000&quality=80&crop=false&keep=c&color=F9F8F6",
+    "credit": null,
+    "ambiguous_note": "Chose 96B256 (44mm steel, steel bracelet, blue dial); rejected 98A227 (rose-gold tone on silicone). | verified image/jpeg 1600x2000"
+  },
+  {
+    "slug": "tissot-prx-powermatic-80",
+    "brand": "Tissot",
+    "model": "PRX Powermatic 80 40mm",
+    "page_url": "https://www.tissotwatches.com/en-us/T1374071104100.html",
+    "image_url": "https://www.tissotwatches.com/on/demandware.static/-/Sites-Tissot-Catalogue/default/dw95c4331d/product-pictures/63f42767-a9f5-4cdd-b952-8ea7b82b7e0c_T137-407-11-041-00_shadow.png",
+    "credit": null,
+    "ambiguous_note": "T137.407.11.041.00 blue dial; runner-up T137.407.11.051.00 (black). | verified image/png 1680x1680"
+  },
+  {
+    "slug": "baltic-aquascaphe",
+    "brand": "Baltic",
+    "model": "Aquascaphe Classic Black Gilt",
+    "page_url": "https://baltic-watches.com/en/products/aquascaphe-classic-black-gilt",
+    "image_url": "https://cdn.shopify.com/s/files/1/0012/9299/2583/files/Baltic_Aquascaphe_Mk1_Gilt_Face_1353x2000_BOR.png?v=1745846946",
+    "credit": null,
+    "ambiguous_note": "Black Gilt on beads-of-rice bracelet — the only black-dial Classic still listed; runner-up Blue Gilt. | verified image/png 1353x2000"
+  },
+  {
+    "slug": "mr-jones-watches-a-perfectly-useless-afternoon",
+    "brand": "Mr Jones Watches",
+    "model": "A Perfectly Useless Afternoon",
+    "page_url": "https://www.mrjoneswatches.com/products/a-perfectly-useless-afternoon",
+    "image_url": "https://cdn.shopify.com/s/files/1/1348/3759/files/103-V0-A-Perfectly-Useless-Afternoon_menu_1.jpg?v=1756455011",
+    "credit": null,
+    "ambiguous_note": "Single reference; steel mesh bracelet version. Native 940x1200. | verified image/jpeg 940x1200"
+  },
+  {
+    "slug": "zodiac-sea-wolf",
+    "brand": "Zodiac",
+    "model": "Super Sea Wolf 53 Compression ZO9288",
+    "page_url": "https://www.zodiacwatches.com/products/super-sea-wolf-53-compression-automatic-stainless-steel-watch",
+    "image_url": "https://fossil.scene7.com/is/image/FossilPartners/ZO9288_main?wid=1500&hei=1500&fmt=jpeg&qlt=90",
+    "credit": null,
+    "ambiguous_note": "ZO9288 (black dial/bezel, steel five-link bracelet); runners-up ZO9286, ZO9266 (navy). Image from the Fossil Group image server zodiacwatches.com uses. | verified image/jpeg 1500x1500"
+  },
+  {
+    "slug": "invicta-pro-diver",
+    "brand": "Invicta",
+    "model": "Pro Diver 8926OB",
+    "page_url": "https://www.invictawatch.com/watches/detail/8926ob-invicta-pro-diver-men-40mm-stainless-steel-stainless-steel-black-dial-nh35a-automatic",
+    "image_url": "https://www.invictawatch.com/storage/products/8926/catalogshot_l.webp",
+    "credit": null,
+    "ambiguous_note": "8926OB (40mm steel bracelet, black dial). Largest rendition Invicta serves is 477x850 — above the 600px floor, below the 1200px preference. | verified image/webp 477x850"
+  },
+  {
+    "slug": "vostok-amphibia",
+    "brand": "Vostok",
+    "model": "Amphibia 420059",
+    "page_url": "",
+    "image_url": "",
+    "credit": null,
+    "ambiguous_note": "no official source — vostok-inc.com serves a JS challenge redirecting to ad domains; vostok.watch/Meranom are dealers (excluded)."
+  },
+  {
+    "slug": "sea-gull-1963",
+    "brand": "Sea-Gull",
+    "model": "1963 Chronograph 37.3mm (819.17.1963A)",
+    "page_url": "https://en.seagullwatch.com/products/seagull-1963-chronograph-watch-times-edition-reissue-37-3mm-1963a",
+    "image_url": "https://cdn.shopify.com/s/files/1/0936/7142/4279/files/img003_815fd7e7-cfd0-48a2-af48-2ab7639f3fc8.jpg?v=1750814372",
+    "credit": null,
+    "ambiguous_note": "70th Anniversary Reissue 819.17.1963A — cream dial, ST1901, 37.3mm; runner-up 40mm Times Edition. Leather strap only. | verified image/jpeg 1200x1200"
+  },
+  {
+    "slug": "timex-viscount",
+    "brand": "Timex",
+    "model": "Viscount (vintage automatic)",
+    "page_url": "",
+    "image_url": "",
+    "credit": null,
+    "ambiguous_note": "no official source — discontinued 1960s–70s line; timex.com has no product page."
+  },
+  {
+    "slug": "omega-speedmaster",
+    "brand": "Omega",
+    "model": "Speedmaster '57 40.5mm",
+    "page_url": "https://www.omegawatches.com/en-us/watch-omega-speedmaster-57-co-axial-master-chronometer-chronograph-40-5-mm-33210415101001",
+    "image_url": "https://www.omegawatches.com/media/catalog/product/o/m/omega-speedmaster-_57-co-axial-master-chronometer-chronograph-40-5-mm-33210415101001-33a18b.png?w=1500",
+    "credit": null,
+    "ambiguous_note": "Non-Professional Speedmaster family: chose Speedmaster '57 332.10.41.51.01.001 (steel bracelet, black dial); runners-up '57 blue/green, Racing. Replaces the Wikimedia image. | agent verified image/png 1500x1500"
+  },
+  {
+    "slug": "breitling-navitimer-b01-chronograph-43",
+    "brand": "Breitling",
+    "model": "Navitimer B01 Chronograph 43",
+    "page_url": "https://www.breitling.com/us-en/watches/navitimer/navitimer-b01-chronograph-43-my22/AB0138211B1A1/",
+    "image_url": "https://www-breitling.eu.saleor.cloud/media/products/ab0138211b1a1-soldier_7d7651b2.png",
+    "credit": null,
+    "ambiguous_note": "Steel bracelet, black dial AB0138211B1A1; runner-up blue AB0138241C1A1. Replaces the Wikimedia image. | agent verified image/png 2100x2100"
+  },
+  {
+    "slug": "rolex-gmt-master",
+    "brand": "Rolex",
+    "model": "GMT-Master (1955–1999)",
+    "page_url": "",
+    "image_url": "",
+    "credit": null,
+    "ambiguous_note": "no official source — discontinued line; rolex.com lists only GMT-Master II, which must not be substituted. Wikimedia image left in place pending a manual upload."
   }
 ]

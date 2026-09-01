@@ -252,25 +252,57 @@ def load_sources(path):
     return {e["slug"]: e for e in json.loads(path.read_text())}
 
 
+def fetch_via_chrome(entry, res):
+    """Rolex/Tudor: page + CDN 403 scripted fetches; go through a real Chrome session."""
+    import subprocess, tempfile
+    tmp = tempfile.NamedTemporaryFile(suffix=".bin", delete=False).name
+    cmd = ["node", str(SCRIPT_DIR / "fetch_via_chrome.cjs"), entry["page_url"], tmp]
+    if entry.get("image_match"):
+        cmd.append(entry["image_match"])
+    out = subprocess.run(cmd, capture_output=True, text=True, timeout=180).stdout.strip().splitlines()
+    info = json.loads(out[-1]) if out else {"error": "no output"}
+    if info.get("error"):
+        res.note(f"chrome fetch: {info['error']}")
+        return None, None
+    res.strategy = "chrome"
+    res.source_page = entry["page_url"]
+    return info["url"], Path(tmp).read_bytes()
+
+
 def process(row, entry, session, args):
     res = Result(slug=row["slug"], model_id=row["id"])
     if entry.get("ambiguous_note"):
         res.ambiguous = True
         res.note(entry["ambiguous_note"])
-    url = resolve_image_url(entry, res, session)
-    if not url:
-        res.status = "failed"
-        return res
-    url = upscale_hint(url)
-    res.image_url = url
-    try:
-        r = session.get(url, timeout=REQUEST_TIMEOUT)
-        r.raise_for_status()
-        raw = r.content
-    except Exception as e:
-        res.status = "failed"
-        res.note(f"image fetch failed: {e}")
-        return res
+    raw = None
+    if entry.get("browser"):
+        url, raw = fetch_via_chrome(entry, res)
+        if not raw:
+            res.status = "failed"
+            return res
+        res.image_url = url
+    else:
+        url = resolve_image_url(entry, res, session)
+        if not url:
+            res.status = "failed"
+            return res
+        url = upscale_hint(url)
+        res.image_url = url
+        try:
+            r = session.get(url, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            raw = r.content
+        except Exception as e:
+            # Some hosts (Hamilton, Longines) stall browser UAs but serve a plain client.
+            try:
+                r = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": "curl/8.4.0"})
+                r.raise_for_status()
+                raw = r.content
+                res.note("fetched with plain UA after browser-UA failure")
+            except Exception as e2:
+                res.status = "failed"
+                res.note(f"image fetch failed: {e2}")
+                return res
     try:
         jpeg = to_jpeg(raw, res)
     except Exception as e:
