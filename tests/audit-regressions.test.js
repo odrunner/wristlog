@@ -179,4 +179,11 @@ describe('Notification follow buttons honour profile privacy', () => {
     expect(pill).not.toMatch(/profile_privacy === 'private'/);
     expect(pill).toContain('followNeedsRequest(');
   });
+
+  it('the bell pill says what is being requested', () => {
+    const start = html.indexOf('class="follow-btn follow notif-follow-inline"');
+    const pill = html.slice(start, html.indexOf('</button>', start));
+    expect(pill).toContain("'Request to follow'");
+    expect(pill).not.toContain("'Request'");
+  });
 });

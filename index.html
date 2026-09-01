@@ -2928,7 +2928,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Follow From the Bell</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When someone likes or comments on your post and you don&#8217;t follow them yet, the notification now carries a one-tap <strong>Follow</strong> (or <strong>Request</strong> for private profiles) &#8212; no detour through their profile. New sign-ups with Google also start with their Google photo as avatar (change or remove it any time in your profile).</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When someone likes or comments on your post and you don&#8217;t follow them yet, the notification now carries a one-tap <strong>Follow</strong> (or <strong>Request to follow</strong> for profiles that approve their followers) &#8212; no detour through their profile. New sign-ups with Google also start with their Google photo as avatar (change or remove it any time in your profile).</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Value on Stats</div>
@@ -8182,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.18.06';
+const APP_VERSION = '31.18.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11345,7 +11345,7 @@ function renderNotificationPanel() {
       : ENGAGE_NOTIF_TYPES.includes(n.type) && n.actor && n.actor_id !== currentUser?.id && !following.has(n.actor_id) && !n._followedBack && !pendingRequests.has(n.actor_id) && !n._requested ? `
       <div class="notif-follow-actions">
         <button class="follow-btn follow notif-follow-inline" title="${followNeedsRequest(n.actor.profile_privacy) ? 'Send a follow request' : 'Follow'} ${escAttr(n.actor.display_name || n.actor.username || '')}"
-          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${followNeedsRequest(n.actor.profile_privacy) ? 'Request' : '+ Follow'}</button>
+          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${followNeedsRequest(n.actor.profile_privacy) ? 'Request to follow' : '+ Follow'}</button>
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
