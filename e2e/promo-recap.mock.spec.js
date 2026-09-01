@@ -521,6 +521,23 @@ test.describe('month-in-review card — thumbs up/down', () => {
     await expect(q(page, '[data-recap-vote]')).toHaveCount(0);
   });
 
+  // The slot row lives forever but each month's card is a new card. A vote on
+  // July's card (logged in early August) must not answer for August's card in
+  // September — it did on 2026-09-01.
+  test('a vote from last month\'s window asks the question again', async ({ page }) => {
+    await mount(page);   // Date.now = 2026-08-03 → window opened 2026-08-01
+    await armVote(page, [{ slot_id: 'r1', event: 'thumbs_up', created_at: '2026-07-09T01:26:35Z' }]);
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(2);
+    await expect(q(page, '.promo-recap-vote--done')).toHaveCount(0);
+  });
+
+  test('a vote from this month\'s window is remembered', async ({ page }) => {
+    await mount(page);
+    await armVote(page, [{ slot_id: 'r1', event: 'thumbs_down', created_at: '2026-08-02T10:00:00Z' }]);
+    await expect(q(page, '.promo-recap-vote--done')).toContainText('noted');
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(0);
+  });
+
   test('records a thumbs down without a cheerful reply', async ({ page }) => {
     await mount(page);
     await armVote(page);

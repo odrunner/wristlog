@@ -8188,7 +8188,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.06.52';
+const APP_VERSION = '01.08.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13130,9 +13130,19 @@ function recapThumb(w, cls) {
 // aggregate it and nothing new has to be built to read it. Votes never count
 // against max_impressions (logPromoEvent only counts impressions), so nobody
 // retires their own card by having an opinion about it.
+//
+// Scoped to the current month's window, exactly as the impression cap is: the
+// slot row is permanent but each month's card is a new card, so a vote on
+// July's must not answer for August's (it did, 2026-09-01 — "Glad you liked
+// it" on a card the voter had never seen). A row with no readable timestamp
+// counts, the same rule as eligiblePromoSlots().
 function recapVoteOf(slotId) {
+  const recap = currentMonthRecap();
+  const since = recap ? recap.windowStart : 0;
   for (const e of (_promoEvents || [])) {
-    if (e.slot_id === slotId && (e.event === 'thumbs_up' || e.event === 'thumbs_down')) return e.event;
+    if (e.slot_id !== slotId || (e.event !== 'thumbs_up' && e.event !== 'thumbs_down')) continue;
+    const at = Date.parse(e.created_at);
+    if (isNaN(at) || at >= since) return e.event;
   }
   return null;
 }
