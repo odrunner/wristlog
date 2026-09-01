@@ -1,0 +1,2 @@
+slug,model_id,status,strategy,src_format,src_size,out_size,out_kb,ambiguous,source_page,image_url,hero_image,notes
+casio-duro,949d719e-a54b-4ec0-8611-abf091066eab,failed,,,,,0,yes,,,,MDV106-1AV black dial on resin strap (the only official option). casio.com is behind Akamai; fetched through a real Chrome session. | chrome fetch: no matching image

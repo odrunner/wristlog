@@ -90,44 +90,44 @@
     "brand": "Tudor",
     "model": "Black Bay",
     "page_url": "https://www.tudorwatch.com/en/watches/black-bay/m7941a1a0ru-0001",
-    "image_url": "",
-    "browser": true,
-    "image_match": "upright-cb-with-drop-shadow/tudor-m7941a1a0ru-0001",
+    "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m7941a1a0ru-0001",
+    "browser": false,
+    "image_match": "upright-ob/tudor-m7941a1a0ru-0001",
     "credit": null,
-    "ambiguous_note": "41mm steel, burgundy bezel, 3-link steel bracelet, M7941A1A0RU-0001."
+    "ambiguous_note": "41mm steel, burgundy bezel, 3-link steel bracelet, M7941A1A0RU-0001. Unbranded upright-ob asset (the og variant carries a logo overlay)."
   },
   {
     "slug": "tudor-pelagos",
     "brand": "Tudor",
     "model": "Pelagos",
     "page_url": "https://www.tudorwatch.com/en/watches/pelagos/m25600tn-0001",
-    "image_url": "",
-    "browser": true,
-    "image_match": "upright-cb-with-drop-shadow/tudor-m25600tn-0001",
+    "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m25600tn-0001",
+    "browser": false,
+    "image_match": "upright-ob/tudor-m25600tn-0001",
     "credit": null,
-    "ambiguous_note": "Titanium is the only case — 42mm black, M25600TN. Replaces the Wikimedia image."
+    "ambiguous_note": "Titanium is the only case — 42mm black, M25600TN. Replaces the Wikimedia image. Unbranded upright-ob asset (the og variant carries a logo overlay)."
   },
   {
     "slug": "tudor-pelagos-39",
     "brand": "Tudor",
     "model": "Pelagos 39",
     "page_url": "https://www.tudorwatch.com/en/watches/pelagos/m25407n-0001",
-    "image_url": "",
-    "browser": true,
-    "image_match": "upright-cb-with-drop-shadow/tudor-m25407n-0001",
+    "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m25407n-0001",
+    "browser": false,
+    "image_match": "upright-ob/tudor-m25407n-0001",
     "credit": null,
-    "ambiguous_note": "Titanium 39mm, M25407N. Replaces the Wikimedia image."
+    "ambiguous_note": "Titanium 39mm, M25407N. Replaces the Wikimedia image. Unbranded upright-ob asset (the og variant carries a logo overlay)."
   },
   {
     "slug": "tudor-pelagos-fxd-gmt",
     "brand": "Tudor",
     "model": "Pelagos FXD GMT",
     "page_url": "https://www.tudorwatch.com/en/watches/pelagos-fxd/m2542gxx7nu-0002",
-    "image_url": "",
-    "browser": true,
-    "image_match": "upright-cb-with-drop-shadow/tudor-m2542gxx7nu-0002",
+    "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m2542gxx7nu-0002",
+    "browser": false,
+    "image_match": "upright-ob/tudor-m2542gxx7nu-0002",
     "credit": null,
-    "ambiguous_note": "Pelagos FXD GMT — ref M2542GXX7NU-0002 from the Pelagos FXD family page (fabric strap is the only option). Replaces the Wikimedia image."
+    "ambiguous_note": "Pelagos FXD GMT — ref M2542GXX7NU-0002 from the Pelagos FXD family page (fabric strap is the only option). Replaces the Wikimedia image. Unbranded upright-ob asset (the og variant carries a logo overlay)."
   },
   {
     "slug": "hamilton-khaki-king",
@@ -272,5 +272,171 @@
     "image_url": "",
     "credit": null,
     "ambiguous_note": "no official source — discontinued line; rolex.com lists only GMT-Master II, which must not be substituted. Wikimedia image left in place pending a manual upload."
+  },
+  {
+    "slug": "omega-constellation",
+    "brand": "Omega",
+    "model": "Constellation 41mm",
+    "page_url": "https://www.omegawatches.com/en-us/watch-omega-constellation-co-axial-master-chronometer-41-mm-13130412101001",
+    "image_url": "https://www.omegawatches.com/media/catalog/product/o/m/omega-constellation-co-axial-master-chronometer-41-mm-13130412101001-edc6ff.png?w=1600",
+    "credit": null,
+    "ambiguous_note": "131.30.41.21.01.001 (steel + steel bracelet, black dial, black ceramic bezel); runner-up blue 131.30.41.21.03.001. Collection spans 150+ models. | agent verified image/png 1600x1600"
+  },
+  {
+    "slug": "audemars-piguet-royal-oak-selfwinding",
+    "brand": "Audemars Piguet",
+    "model": "Royal Oak Selfwinding 41mm",
+    "page_url": "https://www.audemarspiguet.com/us/en/watch-collection/royal-oak/15510ST.OO.1320ST.01",
+    "image_url": "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/15510ST.OO.1320ST.01?wid=1500&hei=1500&fmt=png-alpha",
+    "credit": null,
+    "ambiguous_note": "15510ST.OO.1320ST.01 (steel, steel bracelet, blue Grande Tapisserie). | agent verified image/png 1500x1500"
+  },
+  {
+    "slug": "audemars-piguet-royal-oak-perpetual-calendar",
+    "brand": "Audemars Piguet",
+    "model": "Royal Oak Perpetual Calendar 41mm",
+    "page_url": "https://www.audemarspiguet.com/us/en/watch-collection/royal-oak/26674ST.OO.1320ST.01",
+    "image_url": "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/watch-1097?wid=1500&hei=1500&fmt=png-alpha",
+    "credit": null,
+    "ambiguous_note": "26574ST is no longer on the site; chose current 26674ST.OO.1320ST.01 (2025, Cal. 7138, steel, blue). Runner-up 26574ST.OO.1220ST.03 (asset watch-707). | agent verified image/png 1500x1500"
+  },
+  {
+    "slug": "patek-philippe-nautilus",
+    "brand": "Patek Philippe",
+    "model": "Nautilus",
+    "page_url": "https://www.patek.com/en/collection/nautilus/5726-1a-014",
+    "image_url": "https://patek-res.cloudinary.com/dfsmedia/0906caea301d42b3b8bd23bd656d1711/202222-51889",
+    "credit": null,
+    "ambiguous_note": "AMBIGUOUS: no steel three-hand Nautilus is in the current catalogue (5711/1A gone, 5811 is white gold). Chose 5726/1A-014 (steel, steel bracelet, blue gradient dial, annual calendar) per the steel rule; runners-up 5811/1G-001 (white gold, closest to the 5711 look) and 5990/1A-011. Revisit if you'd rather show the white-gold 5811. | agent verified image/png 1920x2691"
+  },
+  {
+    "slug": "jaeger-lecoultre-master-ultra-thin-moon",
+    "brand": "Jaeger-LeCoultre",
+    "model": "Master Ultra Thin Moon 39mm",
+    "page_url": "https://www.jaeger-lecoultre.com/us-en/watches/master-ultra-thin/master-ultra-thin-moon-stainless-steel-q1368430",
+    "image_url": "https://img.jaeger-lecoultre.com/product-grid-hero-xl-4/o-dpr-2/feda2d4cfa9d81aecca13ab79693bfcf5a925c72.jpg",
+    "credit": null,
+    "ambiguous_note": "Q1368420 no longer hosted; chose current Q1368430 (39mm steel, silvered dial, blue alligator — no bracelet offered); runners-up Q1368471 (black), Q1368480 (blue). | agent verified image 1700x1700"
+  },
+  {
+    "slug": "vacheron-constantin-overseas",
+    "brand": "Vacheron Constantin",
+    "model": "Overseas self-winding 41mm",
+    "page_url": "https://www.vacheron-constantin.com/us/en/collections/overseas/4520v-210a-b128.html",
+    "image_url": "https://www.vacheron-constantin.com/dam/rcq/vac/os/Cb/fi/ew/uU/ym/am/PZ/Qu/r_/NQ/osCbfiewuUymamPZQur_NQ.png",
+    "credit": null,
+    "ambiguous_note": "4500V/110A-B128 redirects now; chose current 4520V/210A-B128 (41mm steel, steel bracelet, blue dial). | agent verified image/png 2829x4000 Only the 960x1357 rendition could be retrieved (the 4000px original times out on their DAM).",
+    "browser": true,
+    "image_match": "osCbfiewuUymamPZQur_NQ"
+  },
+  {
+    "slug": "seiko-5-sports",
+    "brand": "Seiko",
+    "model": "5 Sports",
+    "page_url": "https://www.seikowatches.com/us-en/products/5sports/srpd55",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/02/20/02/14/SRPD55K1/SRPD55K1.png",
+    "credit": null,
+    "ambiguous_note": "SRPD55K1 black dial on steel bracelet. | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-5-sports-field",
+    "brand": "Seiko",
+    "model": "5 Sports Field",
+    "page_url": "https://www.seikowatches.com/us-en/products/5sports/srpg27",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/02/20/02/37/SRPG27K1/SRPG27K1.png",
+    "credit": null,
+    "ambiguous_note": "SRPG27 (black dial, steel bracelet); SRPG35 is on a nylon NATO so fails the bracelet rule. | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-5-sports-gmt",
+    "brand": "Seiko",
+    "model": "5 Sports GMT",
+    "page_url": "https://www.seikowatches.com/us-en/products/5sports/ssk001",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/06/02/11/39/SSK001K1/SSK001K1.png",
+    "credit": null,
+    "ambiguous_note": "SSK001 black on jubilee; runner-up SSK003 blue. | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-alpinist",
+    "brand": "Seiko",
+    "model": "Alpinist",
+    "page_url": "https://www.seikowatches.com/us-en/products/prospex/spb117j1",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/02/20/00/45/SPB117J1/SPB117J1.png",
+    "credit": null,
+    "ambiguous_note": "AMBIGUOUS: chose SPB117J1 (black dial, steel bracelet) per the bracelet rule; the iconic green SPB121J1 is on brown leather (image .../America/Seiko/prospex/SPB121J1/SPB121J1.png if you prefer the green). | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-prospex-1965-diver-s-modern-re-interpretation",
+    "brand": "Seiko",
+    "model": "Prospex 1965 Diver's Modern Re-interpretation",
+    "page_url": "https://www.seikowatches.com/us-en/products/prospex/1965diver",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/America/Seiko/prospex/SPB143J1/SPB143J1.png",
+    "credit": null,
+    "ambiguous_note": "SPB143J1 on steel bracelet; product page retired, line page used. | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-prospex-speedtimer-solar-chronograph",
+    "brand": "Seiko",
+    "model": "Prospex Speedtimer Solar Chronograph",
+    "page_url": "https://www.seikowatches.com/us-en/products/prospex/special/speedtimer/solar/",
+    "image_url": "https://www.seikowatches.com/jp-ja/-/media/Images/Product--Image/All/Seiko/2022/02/19/11/10/SBDL085/SBDL085.png",
+    "credit": null,
+    "ambiguous_note": "AMBIGUOUS: SSC813 panda on bracelet; no SSC813 packshot survives on seikowatches.com, so the image is Seiko Japan's packshot of SBDL085, its JDM twin (identical case/dial/bracelet). | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "seiko-skx007",
+    "brand": "Seiko",
+    "model": "SKX007",
+    "page_url": "https://www.seikowatches.com/global-en/products/5sports/special/heritage_in_motion/skx_series/",
+    "image_url": "",
+    "credit": null,
+    "ambiguous_note": "no usable official source — discontinued; the only official image is a 450x450 archive photo on a dark background (below the 600px floor). Left null."
+  },
+  {
+    "slug": "seiko-turtle",
+    "brand": "Seiko",
+    "model": "Turtle",
+    "page_url": "https://www.seikowatches.com/us-en/products/prospex/srpe93",
+    "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/02/20/02/27/SRPE93K1/SRPE93K1.png",
+    "credit": null,
+    "ambiguous_note": "AMBIGUOUS: SRPE93K1 black dial on silicone — Seiko US lists no black-dial Turtle on bracelet today; the only bracelet Turtle live is the PADI Pepsi SRPE99K1. SRP777 has no official page. | agent verified image/png 1102x1102"
+  },
+  {
+    "slug": "orient-kamasu",
+    "brand": "Orient",
+    "model": "Kamasu",
+    "page_url": "https://orient-watch.com/en/orient/collection/sports/diver-design/RA-AA0001B/",
+    "image_url": "https://www.orientwatchusa.com/cdn/shop/files/kamasu-4336362.png?v=1787002521",
+    "credit": null,
+    "ambiguous_note": "RA-AA0001B (black dial, steel bracelet) — RA-AA0004E is the green one; runner-up blue RA-AA0002L. Image from Orient Watch USA (Orient's own US site). | agent verified image/png 1600x1067"
+  },
+  {
+    "slug": "casio-duro",
+    "brand": "Casio",
+    "model": "Duro",
+    "page_url": "https://www.casio.com/us/watches/casio/product.MDV-106-1AV/",
+    "image_url": "",
+    "browser": true,
+    "image_match": "MDV106-1A\\.png\\.transform/main",
+    "credit": null,
+    "ambiguous_note": "MDV106-1AV black dial on resin strap (the only official option). casio.com is behind Akamai; fetched through a real Chrome session."
+  },
+  {
+    "slug": "citizen-promaster-diver",
+    "brand": "Citizen",
+    "model": "Promaster Diver",
+    "page_url": "https://www.citizenwatch.com/us/en/product/BN0150-28E",
+    "image_url": "https://citizenwatch.widen.net/content/t0dosari4z/webp",
+    "credit": null,
+    "ambiguous_note": "BN0150-28E black dial on polyurethane strap — no bracelet variant is on the US site (BN0150-61E / BN0151-17L 404). | agent verified image/webp 1251x2048"
+  },
+  {
+    "slug": "citizen-chandler",
+    "brand": "Citizen",
+    "model": "Chandler",
+    "page_url": "https://www.citizenwatch.com/us/en/product/BM8180-03E",
+    "image_url": "https://citizenwatch.widen.net/content/gzoliud0hm/webp",
+    "credit": null,
+    "ambiguous_note": "BM8180-03E black dial on green nylon — the only official configuration (Citizen US now calls it 'Garrison'). | agent verified image/webp 1160x2048"
   }
 ]
