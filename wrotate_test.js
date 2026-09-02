@@ -728,6 +728,7 @@ export function rowToLog(r) {
     useCase: r.use_case || 'unspecified', notes: r.notes || null,
     strapId: r.strap_id || null, photoUrl: r.photo_url || null,
     visibility: r.visibility || 'public',
+    location: r.location || null,
     clubId: r.club_id || null,
     badgeRefs: r.badge_refs || null,
     factId: r.fact_id || null,

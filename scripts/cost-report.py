@@ -226,6 +226,73 @@ def email_health():
         return fail_html
 
 
+def cron_health():
+    """Server-side cron pipeline health via the cron_http_failures() RPC.
+
+    pg_cron marks a run "succeeded" as soon as the net.http_post request is
+    queued, so an edge function that is genuinely failing looks identical to a
+    healthy one in cron.job_run_details. The RPC (service_role-only,
+    sql/2026-09-01-cron-http-timeout-and-health.sql) reads net._http_response
+    (status null/>=400) and non-succeeded cron runs for the last 24h.
+
+    Like email_health, this must never raise, and a failed lookup renders as
+    "unknown", never as healthy.
+    """
+    fail_html = (
+        '<h3 style="margin-top:24px">Cron pipeline (24h)'
+        '<span style="color:#d29922"> &mdash; check failed</span></h3>'
+        '<p style="color:#d29922">Could not call cron_http_failures() this run '
+        "&mdash; cron health is unknown, not necessarily healthy.</p>"
+    )
+    try:
+        url, key = supabase_creds()
+        if not url or not key:
+            return ""
+        r = subprocess.run(
+            ["curl", "-s", "--fail", f"{url}/rest/v1/rpc/cron_http_failures",
+             "-H", f"apikey: {key}",
+             "-H", f"Authorization: Bearer {key}",
+             "-H", "Content-Type: application/json",
+             "-d", '{"p_hours": 24}'],
+            capture_output=True, text=True, timeout=30,
+        )
+        if r.returncode != 0 or not r.stdout.strip():
+            return fail_html
+        data = json.loads(r.stdout)
+        http = data.get("http") or {}
+        total = http.get("total")
+        failed = http.get("failed")
+        runs = data.get("failed_runs") or []
+        if total is None or failed is None:
+            return fail_html
+        bad = (failed or 0) > 0 or runs
+        colour = "#f85149" if bad else "#2ea043"
+        flag = " &mdash; FAILURES" if bad else ""
+        out = (
+            f'<h3 style="margin-top:24px">Cron pipeline (24h)<span style="color:{colour}">{flag}</span></h3>'
+            f'<p style="color:{colour}">'
+            f"HTTP calls <b>{total}</b>, failed <b>{failed}</b> &middot; "
+            f"failed cron runs <b>{len(runs)}</b></p>"
+        )
+        last = http.get("last_failure")
+        if last:
+            err = str(last.get("error") or "")[:160]
+            out += (
+                f'<p style="color:#888;font-size:12px;">last failure '
+                f'{last.get("created", "?")} status={last.get("status")} — {err}</p>'
+            )
+        for run in runs[:5]:
+            out += (
+                f'<p style="color:#f85149;font-size:12px;">{run.get("jobname")} '
+                f'{run.get("status")} at {run.get("start_time")} — '
+                f'{str(run.get("message") or "")[:160]}</p>'
+            )
+        return out
+    except Exception as e:
+        print(f"[cron_health] skipped section — {type(e).__name__}: {e}")
+        return fail_html
+
+
 def supabase_access_token():
     """Management-API token from ~/.config/supabase/env (`export KEY=value`)."""
     try:
@@ -773,6 +840,7 @@ def main():
     write_history(yday, y_total, y_searches, engines)
     html += autofix_html(prs)
     html += email_health()
+    html += cron_health()
     send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
 

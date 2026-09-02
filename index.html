@@ -7861,6 +7861,7 @@ function logToRow(l) {
     notes: l.notes||null, strap_id: l.strapId||null,
     photo_url: l.photoUrl||null,
     visibility: vis,
+    location: l.location || null,
     club_id: l.clubId || null,
     badge_refs: l.badgeRefs || null,
     fact_id: l.factId || null,
@@ -7872,6 +7873,7 @@ function rowToLog(r) {
     useCase: r.use_case||'unspecified', notes: r.notes||null,
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
     visibility: r.visibility || 'public',
+    location: r.location || null,
     clubId: r.club_id || null,
     badgeRefs: r.badge_refs || null,
     factId: r.fact_id || null,
@@ -8188,7 +8190,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.08.08';
+const APP_VERSION = '01.18.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9332,7 +9334,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           return '';
         })();
         const clickAttr = isOwn
-          ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"`
+          ? `data-wid="${escAttr(w.id)}" onclick="cycleWishPrivacy(this.dataset.wid)"`
           : `onclick="previewWishFromEl(this)" style="cursor:pointer;"
              data-wish-brand="${escHtml(w.brand||'')}"
              data-wish-name="${escHtml(w.name||'')}"
@@ -9365,7 +9367,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-card">
         <div class="profile-page-section-title">Posts</div>
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
-        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:.5rem;font-size:.78rem;padding:.4rem;" onclick="loadMoreProfilePosts('${escHtml(profile.id)}', ${isOwn})">Load more</button>` : ''}
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:.5rem;font-size:.78rem;padding:.4rem;" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
@@ -10398,8 +10400,8 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem;z-index:999;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
   menu.innerHTML = `
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
-    <button onclick="promoteToOwner('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
-    <button onclick="removeMember('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger);">Remove member</button>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger);">Remove member</button>
     <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--muted);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
@@ -10548,13 +10550,16 @@ async function searchInviteUsers(query, clubId) {
     const avatarHtml = p.avatar_url
       ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
-    const name = escAttr(p.display_name || p.username || 'User');
+    const rawName = p.display_name || p.username || 'User';
+    const name = escAttr(rawName);
+    // Handler args go through data- attributes, never template literals (SEC-8)
+    const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
-      onclick="rescindClubInvite('${p.id}','${name}','${clubId}',this)">Rescind</button>`;
-    else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
-      onclick="sendClubInvite('${p.id}','${name}','${clubId}',this)">Invite</button>`;
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" ${dataAttrs}
+      onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
+    else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;" ${dataAttrs}
+      onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
     return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
       ${avatarHtml}
       <span style="flex:1;font-size:.82rem;">${name}</span>
@@ -10575,8 +10580,8 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
-    onclick="rescindClubInvite('${escAttr(inviteeId)}','${escAttr(inviteeName)}','${escAttr(clubId)}',this)">Rescind</button>`; }
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+    onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
   toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
 }
@@ -10591,8 +10596,8 @@ async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
     .eq('user_id', inviteeId).eq('type', 'club_invite')
     .eq('actor_id', currentUser.id).eq('ref_id', clubId);
   if (btn) {
-    btn.outerHTML = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
-      onclick="sendClubInvite('${escAttr(inviteeId)}','${escAttr(inviteeName)}','${escAttr(clubId)}',this)">Invite</button>`;
+    btn.outerHTML = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+      onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
   }
   toast(`Invite to ${escHtml(inviteeName)} rescinded`);
   renderPendingInvites(clubId);
@@ -10609,16 +10614,17 @@ async function renderPendingInvites(clubId) {
     + invites.map(inv => {
       const p = inv.profiles;
       if (!p) return '';
-      const name = escAttr(p.display_name || p.username || 'User');
-      const initStr = (name[0] || '?').toUpperCase();
+      const rawName = p.display_name || p.username || 'User';
+      const name = escAttr(rawName);
+      const initStr = (rawName[0] || '?').toUpperCase();
       const avatarHtml = p.avatar_url
         ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
-        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${escHtml(initStr)}</div>`;
       return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
         ${avatarHtml}
         <span style="flex:1;font-size:.82rem;">${name}</span>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
-          onclick="rescindClubInvite('${p.id}','${name}','${clubId}',this)">Rescind</button>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
+          onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>
       </div>`;
     }).join('');
 }
@@ -10681,7 +10687,7 @@ async function renderClubsPage() {
         const initStr = (c.name || '?').slice(0, 2).toUpperCase();
         const count = myClubCountMap[c.id] || 0;
         return `<div class="club-card" onclick="openClubDetail('${c.id}')">
-          <div class="club-card-avatar">${c.image_url ? `<img ${thumbSrcAttrs(c.image_url)} alt="${escAttr(c.name || '')}" onerror="this.replaceWith(document.createTextNode('${escAttr(initStr)}'))">` : escHtml(initStr)}</div>
+          <div class="club-card-avatar">${c.image_url ? `<img ${thumbSrcAttrs(c.image_url)} alt="${escAttr(c.name || '')}" data-init="${escAttr(initStr)}" onerror="this.replaceWith(document.createTextNode(this.dataset.init))">` : escHtml(initStr)}</div>
           <div>
             <div class="club-card-name">${escHtml(c.name)}</div>
             <div class="club-card-meta">${c.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public'}${c.role === 'owner' ? ' · owner' : ''} · ${count} member${count !== 1 ? 's' : ''}</div>
@@ -11421,17 +11427,17 @@ function renderNotificationPanel() {
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary"
-          onclick="event.stopPropagation();acceptClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Accept</button>
-        <button class="btn btn-ghost"
-          onclick="event.stopPropagation();declineClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Decline</button>
+        <button class="btn btn-primary" data-actor="${escAttr(n.actor_id || '')}" data-ref="${escAttr(n.ref_id || '')}" data-nid="${escAttr(n.id)}"
+          onclick="event.stopPropagation();acceptClubJoinRequest(this.dataset.actor,this.dataset.ref,this.dataset.nid)">Accept</button>
+        <button class="btn btn-ghost" data-actor="${escAttr(n.actor_id || '')}" data-ref="${escAttr(n.ref_id || '')}" data-nid="${escAttr(n.id)}"
+          onclick="event.stopPropagation();declineClubJoinRequest(this.dataset.actor,this.dataset.ref,this.dataset.nid)">Decline</button>
       </div>`
       : n.type === 'club_invite' ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary"
-          onclick="event.stopPropagation();acceptClubInvite('${n.ref_id}','${n.id}')">Join Club</button>
-        <button class="btn btn-ghost"
-          onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
+        <button class="btn btn-primary" data-ref="${escAttr(n.ref_id || '')}" data-nid="${escAttr(n.id)}"
+          onclick="event.stopPropagation();acceptClubInvite(this.dataset.ref,this.dataset.nid)">Join Club</button>
+        <button class="btn btn-ghost" data-ref="${escAttr(n.ref_id || '')}" data-nid="${escAttr(n.id)}"
+          onclick="event.stopPropagation();declineClubInvite(this.dataset.ref,this.dataset.nid)">Decline</button>
       </div>`
       : (n.type === 'friend_request' && !n._declined && !n._accepted && !friendships.has(n.actor_id) && friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending')) ? `
       <div class="notif-follow-actions">
@@ -11440,20 +11446,22 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost"
           onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>` : '';
+    // ref_id is TEXT and written by the sending user's client — it must never
+    // be interpolated into handler JS (SEC-8). It rides on data-ref instead.
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'comment_like' || n.type === 'mention')
-      ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
+      ? `toggleNotifPanel();scrollToFeedPost(this.dataset.ref)`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request' || n.type === 'system') ? ''
-      : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
+      : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail(this.dataset.ref)`
       : n.type === 'badge_earned' ? `toggleNotifPanel();openBadgeWall()`
-      : n.type === 'share_comment' ? `toggleNotifPanel();openShareCommentsFromNotif('${escAttr(n.ref_id || '')}')`
-      : `viewUserProfile('${n.actor_id}')`;
+      : n.type === 'share_comment' ? `toggleNotifPanel();openShareCommentsFromNotif(this.dataset.ref)`
+      : `viewUserProfile(this.dataset.actor)`;
     const avatarHtml = n.type === 'badge_earned'
       ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
       : n.type === 'share_comment'
       ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">💬</div>`
       : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
     return `
-      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
+      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" data-ref="${escAttr(n.ref_id || '')}" data-actor="${escAttr(n.actor_id || '')}" onclick="${notifClick}">
         ${avatarHtml}
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
@@ -12995,7 +13003,7 @@ function expandPromoImages(body, images) {
 // Single document-level delegated click handler for every promo card,
 // installed at most once (guarded by _promoClickDelegated). Cards use
 // data-promo-cta + closest() instead of an inline
-// onclick="...('${escAttr(slot.id)}')": escAttr closes the HTML-attribute
+// onclick handler interpolating escAttr(slot.id): escAttr closes the HTML-attribute
 // context but not the JS string literal nested inside an onclick value — the
 // HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
 // inline JS is compiled, so a crafted id containing a quote could break out
@@ -14630,7 +14638,11 @@ function renderFeedCard(item) {
   }
 
   // Compact wear: inline watch row inside header
-  const displayName = escHtml(p?.username || p?.display_name || 'User') + officialBadgeHtml(p);
+  // rawName is plain text for handlers (report/block confirm dialogs render via
+  // textContent); displayName is HTML for the card header. Handler attributes
+  // must only ever receive values through data- attributes (audit S3/SEC-8).
+  const rawName = p?.username || p?.display_name || 'User';
+  const displayName = escHtml(rawName) + officialBadgeHtml(p);
   let headerBody;
   if (compactWear) {
     const wThumb = w.image
@@ -14689,7 +14701,7 @@ function renderFeedCard(item) {
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
-                <div class="feed-menu-item" role="button" tabindex="0" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
+                <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report a comment</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
                   ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
@@ -14697,8 +14709,8 @@ function renderFeedCard(item) {
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
-                <div class="feed-menu-item" role="button" tabindex="0" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
-                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block User</div>
+                <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
+                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
                   ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
@@ -16243,6 +16255,11 @@ async function saveNewPost() {
   const _npBtn = document.querySelector('#new-post-modal .btn-primary');
   if (_npBtn?.disabled) return;
   if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
+  // Hoisted so the catch below can roll back a post that never reached the
+  // server (audit REL-N2: a throw used to skip the rollback entirely, leaving
+  // a phantom local-only post).
+  let entry = null;
+  let _postSynced = false;
   try {
   const vis = getVisChip('np-vis-chips');
   // Don't snapshot the tag until identification has had its say — see
@@ -16257,7 +16274,7 @@ async function saveNewPost() {
   // when a watch is tagged on a normal post. Measurement shares stay 'measurement'.
   const useCase = _npSource === 'measurement' ? 'measurement' : (trackWatchId ? npUseCase : 'unspecified');
   const strapId = trackWatchId ? npStrapId : null;
-  const entry = {
+  entry = {
     id: uid(), watchId: trackWatchId, date: todayStr(),
     useCase, notes: body || null,
     strapId,
@@ -16321,6 +16338,20 @@ async function saveNewPost() {
       club_id: null,
     }, { onConflict: 'id' });
     if (error) {
+      // A PostgREST error carries a code (RLS, constraint, bad column): the
+      // server genuinely rejected the post — roll back as before. No code
+      // means the request never got through (offline, timeout): keep the post
+      // locally and let the cloudSync pipeline retry with backoff, the same
+      // durability wear logs get (audit REL-N2). Mentions are skipped on the
+      // offline path — they need the server anyway.
+      if (!error.code) {
+        markDirty('logs', entry.id);
+        _postSynced = true; // local copy is authoritative now; don't roll back
+        cloudSync();
+        toast('No connection — post saved and will sync');
+        closeNewPost();
+        return;
+      }
       // Rollback local state
       const idx = logs.findIndex(l => l.id === entry.id);
       if (idx >= 0) logs.splice(idx, 1);
@@ -16332,6 +16363,7 @@ async function saveNewPost() {
       toast('Post failed — ' + error.message, 'error');
       return;
     }
+    _postSynced = true;
     // Send mention notifications for @usernames in the post
     if (body) {
       const mentionedUsernames = [...new Set((body.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
@@ -16379,6 +16411,23 @@ async function saveNewPost() {
   feedLoadedAt = 0; // force feed to re-fetch after posting
   updateStreakChip();
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
+  } catch (e) {
+    // A throw before the upsert succeeded used to leave a phantom local-only
+    // post (the try had only a finally). Roll the local copy back; a throw
+    // AFTER the upsert (or after the post was queued for sync) leaves state
+    // alone — the post is real.
+    console.error('[WristLog] saveNewPost error:', e);
+    if (entry && !_postSynced) {
+      const idx = logs.findIndex(l => l.id === entry.id);
+      if (idx >= 0) {
+        logs.splice(idx, 1);
+        _dataGen++;
+        rebuildLogsByWatch();
+        safeSetJSON(STORE_L, logs);
+      }
+      if (entry.photoUrl) { deletePostPhotos(entry.photoUrl); }
+    }
+    toast('Post failed — ' + (e?.message || 'unexpected error'), 'error');
   } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
 }
 
@@ -18288,7 +18337,7 @@ function renderDevFlags() {
         <div style="font-size:.72rem;color:var(--muted);font-family:monospace;">${escHtml(key)}</div>
       </div>
       <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
-        <input type="checkbox" ${on ? 'checked' : ''} onchange="setFeatureFlag('${escHtml(key)}',this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
+        <input type="checkbox" ${on ? 'checked' : ''} data-flag="${escAttr(key)}" onchange="setFeatureFlag(this.dataset.flag,this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
         <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:11px;transition:background .2s;"></span>
         <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
@@ -18307,7 +18356,7 @@ function renderDevExperiments() {
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);">
       <div><div style="font-size:.85rem;font-family:monospace;">${escHtml(k)}</div>
            <div style="font-size:.72rem;color:var(--muted);">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
-      <select onchange="setExperimentOverride('${escAttr(k)}', this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
+      <select data-key="${escAttr(k)}" onchange="setExperimentOverride(this.dataset.key, this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
     </div>`;
   }).join('');
 }
@@ -18495,17 +18544,19 @@ async function loadAdminExperiments() {
       const pctCell = editablePct
         ? `<input id="adm-exp-pct-${escAttr(x.key)}" type="number" min="0" max="100" value="${x.rollout_pct}" style="width:4.5rem;">`
         : `${x.rollout_pct}%`;
-      const b = (label, onclick, danger) => `<button class="btn ${danger ? 'btn-danger' : 'btn-ghost'} btn-sm" onclick="${onclick}">${label}</button>`;
+      // The experiment key rides on data-key; the handler only names the
+      // function + status literal (SEC-8: no user/DB text inside handler JS).
+      const b = (label, onclick, danger) => `<button class="btn ${danger ? 'btn-danger' : 'btn-ghost'} btn-sm" data-key="${escAttr(x.key)}" onclick="${onclick}">${label}</button>`;
       const actions = [];
-      if (x.status === 'draft') actions.push(b('Start', `adminExpAction('${escAttr(x.key)}','running')`));
+      if (x.status === 'draft') actions.push(b('Start', `adminExpAction(this.dataset.key,'running')`));
       if (x.status === 'running') {
-        actions.push(b('Change %', `adminExpAction('${escAttr(x.key)}','running')`));
-        actions.push(b('Roll out', `adminExpAction('${escAttr(x.key)}','won')`));
-        actions.push(b('Kill', `adminExpAction('${escAttr(x.key)}','killed')`, true));
-        actions.push(b('Refresh', `adminExpRefresh('${escAttr(x.key)}')`));
+        actions.push(b('Change %', `adminExpAction(this.dataset.key,'running')`));
+        actions.push(b('Roll out', `adminExpAction(this.dataset.key,'won')`));
+        actions.push(b('Kill', `adminExpAction(this.dataset.key,'killed')`, true));
+        actions.push(b('Refresh', `adminExpRefresh(this.dataset.key)`));
       }
-      if (x.status === 'won' || x.status === 'killed') actions.push(b('Archive', `adminExpAction('${escAttr(x.key)}','archived')`));
-      actions.push(b('Log', `adminExpToggleLog('${escAttr(x.key)}')`));
+      if (x.status === 'won' || x.status === 'killed') actions.push(b('Archive', `adminExpAction(this.dataset.key,'archived')`));
+      actions.push(b('Log', `adminExpToggleLog(this.dataset.key)`));
       return `<div class="adm-exp-card" style="border:0.5px solid var(--border);border-radius:10px;padding:.7rem .8rem;margin-bottom:.7rem;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem;flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-weight:500;">${escHtml(x.name)}</div>
@@ -18707,7 +18758,7 @@ function renderReportCard(r) {
         <div style="display:flex;gap:.4rem;margin-top:.5rem;">
           <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
           <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
-          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger);" onclick="adminSuspendUser('${r.reported_user_id}','${escAttr(reportedName)}')">Suspend User</button>
+          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
 }
@@ -18741,10 +18792,10 @@ async function adminRestoreContent(reportId, contentType, contentId) {
 async function adminSuspendUser(userId, name) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   if (!await showConfirm(`${name} will not be able to use the app.`, { title: `Suspend ${name}?`, confirmLabel: 'Suspend' })) return;
-  const { error } = await db.from('profiles').update({
-    is_suspended: true,
-    suspended_at: new Date().toISOString()
-  }).eq('id', userId);
+  // is_suspended/suspended_at are no longer client-updatable columns
+  // (sql/2026-09-01-profiles-grants-lockdown.sql) — suspension goes through the
+  // admin-checked SECURITY DEFINER RPC.
+  const { error } = await db.rpc('admin_set_suspended', { p_user: userId, p_suspend: true });
   if (error) { toast('Failed to suspend', 'error'); return; }
   toast(`${name} suspended`);
 }
@@ -19311,7 +19362,7 @@ async function openAdminUserDetail(userId) {
   } catch(e) {
     body.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
       <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" onclick="openAdminUserDetail('${escAttr(userId)}')" style="font-size:.78rem;">Retry</button>
+      <button class="btn btn-ghost" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)" style="font-size:.78rem;">Retry</button>
     </div>`;
   }
 }
@@ -19961,7 +20012,7 @@ async function loadExploreBrands() {
   const el = document.getElementById('explore-brands');
   if (!data || !el) return;
   el.innerHTML = `<button class="chip${_exploreBrand === null ? ' selected' : ''}" data-brand="" onclick="exploreSelectBrand(null)">All</button>` +
-    data.map(b => `<button class="chip${_exploreBrand === b.brand ? ' selected' : ''}" data-brand="${escAttr(b.brand)}" onclick="exploreSelectBrand('${escAttr(b.brand)}')" style="white-space:nowrap;">${escHtml(b.brand)}</button>`).join('');
+    data.map(b => `<button class="chip${_exploreBrand === b.brand ? ' selected' : ''}" data-brand="${escAttr(b.brand)}" onclick="exploreSelectBrand(this.dataset.brand)" style="white-space:nowrap;">${escHtml(b.brand)}</button>`).join('');
 }
 
 function exploreSelectBrand(brand) {
@@ -19988,7 +20039,7 @@ async function loadExploreModels(reset) {
   if (error) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:2rem 0;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
   const rows = data || [];
   const cards = rows.map(m => `
-    <div class="watch-card explore-card" style="cursor:pointer;" onclick="openModelPage('${escAttr(m.id)}')">
+    <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
         ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
@@ -21783,7 +21834,7 @@ async function setPromoStatus(id, status) {
 
 // Single delegated click handler for the slot list, installed at most once
 // (guarded by _promoAdminListDelegated). Buttons carry data-* attributes and
-// closest() instead of an inline onclick="...('${escAttr(s.id)}')" — that
+// closest() instead of an inline onclick interpolating escAttr(s.id) — that
 // exact shape (escAttr inside a JS string literal inside an HTML attribute)
 // was a real XSS elsewhere in this feature, fixed by moving to delegation:
 // the HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
@@ -24190,7 +24241,7 @@ function _getTagNow() { const t = Date.now(); if (t - _tagNow.ts > 60000) { _tag
 // A/B enhance_nudge: muted per-card affordance to fill in the missing specs.
 function enhChipHTML(w) {
   if (!experiment('enhance_nudge') || !needsEnhance(w)) return '';
-  return `<button type="button" class="enh-chip" title="Add movement, case size and history" onclick="event.stopPropagation();enhanceFromGrid('${escAttr(w.id)}')">&#65291; details</button>`;
+  return `<button type="button" class="enh-chip" title="Add movement, case size and history" data-wid="${escAttr(w.id)}" onclick="event.stopPropagation();enhanceFromGrid(this.dataset.wid)">&#65291; details</button>`;
 }
 
 function watchCardTagsHTML(w, wLogs) {
@@ -25237,7 +25288,7 @@ function renderNeglectedStrip() {
   const list = neglectedWatches({ watches, logs, today: todayStr(), minDays: 30, limit: 5, excluded });
   if (!list.length) { wrap.style.display = 'none'; return; }
   el.innerHTML = list.map(({ w, days, neverWorn }) => `
-    <button onclick="openTrackModal('${escAttr(w.id)}'); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
+    <button data-wid="${escAttr(w.id)}" onclick="openTrackModal(this.dataset.wid); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
       style="flex:0 0 auto;display:flex;align-items:center;gap:.4rem;max-width:230px;padding:.35rem .6rem .35rem .4rem;border:1px solid var(--border);background:var(--surface);border-radius:999px;cursor:pointer;font-family:inherit;color:var(--text);min-height:36px;">
       <span style="width:24px;height:24px;border-radius:50%;background:${escAttr(w.color || '#94a3b8')};flex-shrink:0;display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}</span>
       <span style="font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
@@ -25305,8 +25356,9 @@ function renderWearLeaderboard(fl) {
     // Name on its own line, stats beneath: the single-line layout truncated 4 of
     // 6 names at 390px ("Audemars Piguet R…"), which defeats the card's purpose.
     return `<div class="wlb-row" data-wid="${escAttr(w.id)}" role="button" tabindex="0"
-                 onclick="openEditWatch('${escAttr(w.id)}')"
-                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEditWatch('${escAttr(w.id)}')}"
+                 data-wid="${escAttr(w.id)}"
+                 onclick="openEditWatch(this.dataset.wid)"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEditWatch(this.dataset.wid)}"
                  style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border);cursor:pointer;${dim}">
       <span style="min-width:1.9rem;font-size:.78rem;font-weight:700;color:var(--muted);flex-shrink:0;">#${r.rank}</span>
       ${thumb}
@@ -28881,8 +28933,8 @@ function renderWishlistShareLinks() {
           <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
           <div style="font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('wishlist', s.token)}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="copyWishlistShareUrl('${escAttr(s.token)}')">Copy</button>
-        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeWishlistShare('${escAttr(s.token)}')">Revoke</button>
+        <button class="btn btn-ghost btn-sm" data-token="${escAttr(s.token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
+        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeWishlistShare(this.dataset.revoke)">Revoke</button>
       </div>
       ${shareThreadHtml('wishlist', s.token)}
       </div>`).join('')}`;
@@ -28927,8 +28979,8 @@ async function mintWishlistShare() {
     <div style="font-size:.86rem;margin-bottom:.5rem;">Your link is ready.</div>
     <div id="wl-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:.5rem;margin-bottom:.75rem;">${escHtml(url)}</div>
     <div style="display:flex;gap:.5rem;">
-      <button class="btn btn-primary" style="flex:1;" onclick="shareWishlistUrl('${escAttr(token)}')">Share</button>
-      <button class="btn btn-ghost" style="flex:1;" onclick="copyWishlistShareUrl('${escAttr(token)}')">Copy</button>
+      <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareWishlistUrl(this.dataset.token)">Share</button>
+      <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
     </div>`;
   exitWishlistSelect();
   loadWishlistShareLinks();
@@ -29074,7 +29126,7 @@ async function loadShareComments(kind) {
 function shareCommentChipHtml(kind, token) {
   const th = groupCommentsByToken(_shareComments[kind]).get(token) || [];
   if (!th.length) return '';
-  return `<button class="btn btn-ghost btn-sm" style="padding:.1rem .45rem;font-size:.68rem;" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}','${escAttr(token)}')">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
+  return `<button class="btn btn-ghost btn-sm" style="padding:.1rem .45rem;font-size:.68rem;" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
 }
 
 // The expanded thread under a link row (only when _shareThreadOpen === token).
@@ -29088,7 +29140,7 @@ function shareThreadHtml(kind, token) {
         <div style="font-size:.72rem;color:var(--muted);"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
         <div style="font-size:.82rem;white-space:pre-wrap;word-break:break-word;">${escHtml(c.body)}</div>
       </div>
-      <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}','${escAttr(c.id)}')">Delete</button>
+      <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}',this.dataset.deleteComment)">Delete</button>
     </div>`).join('')}</div>`;
 }
 
@@ -29184,8 +29236,8 @@ function renderCollectionShareLinks() {
           <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
           <div style="font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('collection', s.token)}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="copyCollectionShareUrl('${escAttr(s.token)}')">Copy</button>
-        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeCollectionShare('${escAttr(s.token)}')">Revoke</button>
+        <button class="btn btn-ghost btn-sm" data-token="${escAttr(s.token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
+        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeCollectionShare(this.dataset.revoke)">Revoke</button>
       </div>
       ${shareThreadHtml('collection', s.token)}
       </div>`).join('')}`;
@@ -29224,8 +29276,8 @@ async function mintCollectionShare() {
     <div style="font-size:.86rem;margin-bottom:.5rem;">Your link is ready.</div>
     <div id="coll-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:.5rem;margin-bottom:.75rem;">${escHtml(url)}</div>
     <div style="display:flex;gap:.5rem;">
-      <button class="btn btn-primary" style="flex:1;" onclick="shareCollectionUrl('${escAttr(token)}')">Share</button>
-      <button class="btn btn-ghost" style="flex:1;" onclick="copyCollectionShareUrl('${escAttr(token)}')">Copy</button>
+      <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareCollectionUrl(this.dataset.token)">Share</button>
+      <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
     </div>`;
   exitCollectionSelect();
   loadCollectionShareLinks();
@@ -29811,7 +29863,8 @@ function previewWatch(w) {
   if (modelRow) {
     modelRow.innerHTML = (w.modelId && featureFlag('watch_db'))
       ? `<div role="button" tabindex="0" style="margin-top:.75rem;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:.5rem;"
-             onclick="closeWatchPreview();openModelPage('${escAttr(w.modelId)}')">
+             data-mid="${escAttr(w.modelId)}"
+             onclick="closeWatchPreview();openModelPage(this.dataset.mid)">
            <span>See this model — who else owns it</span><span style="color:var(--muted);">→</span>
          </div>`
       : '';
@@ -30878,7 +30931,43 @@ new MutationObserver(mutations => {
       if (!document.querySelector('.overlay:not(.hidden)')) document.body.style.overflow = '';
     }
   }
+  _syncInert();
 }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+
+// ── Background inert while a modal or the auth screen is up (audit A1/A2) ──
+// aria-modal already tells screen readers the background is gone; `inert`
+// makes it true for the keyboard too. Before this, Tab walked out of every
+// open dialog and through the hidden app shell behind the logged-out auth
+// screen (~10 phantom stops). Live regions (toasts, offline banner) and the
+// @mention autocomplete stay interactive; elements appended to body at
+// runtime (popups) are untouched. Older browsers without `inert` simply
+// ignore the attribute.
+function _syncInert() {
+  const anyOverlay = !!document.querySelector('body > .overlay:not(.hidden)');
+  const authEl = document.getElementById('auth-screen');
+  const authUp = !!authEl && getComputedStyle(authEl).display !== 'none';
+  for (const el of document.body.children) {
+    const tag = el.tagName;
+    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK') continue;
+    if (el.id === 'toast' || el.id === 'badge-toast' || el.id === 'offline-banner' || el.id === 'mention-ac') continue;
+    let makeInert;
+    if (el.classList.contains('overlay')) {
+      makeInert = false; // open overlays stay interactive; hidden ones are display:none
+    } else if (el === authEl) {
+      makeInert = anyOverlay; // welcome/EULA modal can sit above the auth screen
+    } else {
+      makeInert = anyOverlay || authUp;
+    }
+    if (makeInert) el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  }
+}
+_syncInert();
+// auth-screen toggles via style.display, which the class observer can't see
+if (document.getElementById('auth-screen')) {
+  new MutationObserver(_syncInert).observe(document.getElementById('auth-screen'),
+    { attributes: true, attributeFilter: ['style'] });
+}
 
 // ── Global: click overlay background to close, Escape to close topmost modal ──
 const _overlayCloseMap = {
@@ -32795,7 +32884,7 @@ function renderMsrHistoryView() {
         const extra = [r.amplitude ? 'Amp ' + r.amplitude + '°' : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0 .3rem 1rem;font-size:.78rem;border-top:1px dashed var(--border);">
           <div><span style="font-weight:600;">${_fmtRateSigned(r.rate)}</span>${extra ? `<span style="color:var(--muted);margin-left:.4rem;">${extra}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.7rem;">${t}</span></div>
-          <button onclick="event.stopPropagation(); discardHistoryReading('${escAttr(r.id)}')" aria-label="Discard reading" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+          <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
         </div>`; }).join('') : '';
       return `<div class="card" style="padding:.55rem .85rem;margin-bottom:.45rem;cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
         <div style="display:flex;align-items:center;justify-content:space-between;font-size:.82rem;">

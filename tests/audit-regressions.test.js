@@ -187,3 +187,20 @@ describe('Notification follow buttons honour profile privacy', () => {
     expect(pill).not.toContain("'Request'");
   });
 });
+
+// ── Audit 2026-09-01 SEC-8: user text must never reach a JS string inside an
+// inline event handler. escAttr() encodes ' as &#39;, which the HTML parser
+// decodes back to ' BEFORE the handler's JS is parsed — so
+// onclick="fn('${escAttr(name)}')" executes a crafted display_name (proved in
+// Chromium for audit S3, ec5bfe6; nine more sinks of the same shape were found
+// and converted 2026-09-01). The safe pattern is data-name="${escAttr(name)}"
+// + fn(this.dataset.name). This lint keeps the dangerous shape at zero.
+describe('No escaped-user-text inside handler JS strings (SEC-8)', () => {
+  it("index.html has zero '${escAttr(...)} JS-string interpolations", () => {
+    expect(html.split("'${escAttr(").length - 1).toBe(0);
+  });
+
+  it("index.html has zero '${escHtml(...)} JS-string interpolations", () => {
+    expect(html.split("'${escHtml(").length - 1).toBe(0);
+  });
+});
