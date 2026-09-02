@@ -20,8 +20,10 @@ import {
   dormantCutoffMs,
   drainBudget,
   effectiveLimit as computeEffectiveLimit,
+  EMPTY_STREAK,
   excludeAlreadyEmailed,
   excludeIds,
+  groupOutcomeRows,
   isCredentialFailure,
   keepIds,
   filterNeverMeasured,
@@ -35,7 +37,9 @@ import {
   segmentUserId,
   shouldTripBreaker,
   splitFirstBatch,
+  streakTripped,
   unsubUrl,
+  updateFailureStreak,
   withUnsubFooter,
   utcDayStart,
   validateBroadcastInput,
@@ -572,7 +576,8 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   // nothing to retry.
   const drainBounced = await fetchBouncedEmails(supabase);
   const liveRows = excludeBounced(rows, drainBounced);
-  const bouncedRows = rows.filter((r) => !liveRows.includes(r));
+  const liveIds = new Set(liveRows.map((r: { id: number }) => r.id));
+  const bouncedRows = rows.filter((r: { id: number }) => !liveIds.has(r.id));
   if (bouncedRows.length > 0) {
     await supabase.from("broadcast_queue")
       .update({ status: "failed", error: "suppressed: permanent bounce on record" })
@@ -609,6 +614,11 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   let sent = 0, failed = 0, deferred = 0;
   const errors: string[] = [];
   const batchSize = 100;
+  // Runs across batches: N consecutive identical transport failures (e.g. a
+  // dead credential, which classifies as a DEFERRAL and so never touches the
+  // rawFailedRows breaker) end the run early instead of grinding every queued
+  // row through a transport that fails the same way each time.
+  let failureStreak = EMPTY_STREAK;
   for (let i = 0; i < claimed.length; i += batchSize) {
     const batch = claimed.slice(i, i + batchSize);
     const tracked = await fetchTrackedUids(supabase, batch.map((r) => r.uid));
@@ -629,6 +639,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     }));
 
     const { results } = await sendBatch(messages);
+    failureStreak = updateFailureStreak(failureStreak, results);
     const okIds: number[] = [];
     const rawFailedRows: { id: number; error: string }[] = [];
     // Transient failures (throttling, 5xx, network) stay `pending` so a later
@@ -668,22 +679,27 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       await supabase.from("broadcast_queue")
         .update({ status: "sent", sent_at: new Date().toISOString(), claimed_at: null }).in("id", okIds);
     }
-    // Failures are rare; one update per row keeps each row's own send error.
-    for (const fr of failedRows) {
+    // One UPDATE per distinct (error, attempts) payload — not per row. Rows
+    // sharing a verdict (the common case: a whole batch failing identically)
+    // collapse into a single write; rows with their own error still get it,
+    // because a different error is a different group.
+    for (const g of groupOutcomeRows(failedRows)) {
       await supabase.from("broadcast_queue")
         .update({
           status: "failed",
-          error: fr.error.slice(0, 500),
+          error: g.error.slice(0, 500),
           claimed_at: null,
-          attempts: fr.attempts ?? 1,
-        }).in("id", [fr.id]);
-      // Name the recipient in the log. A row reaching `failed` is someone who
-      // will never receive this send, and that must not be silent.
+          attempts: g.attempts ?? 1,
+        }).in("id", g.ids);
+    }
+    // Name each recipient in the log. A row reaching `failed` is someone who
+    // will never receive this send, and that must not be silent.
+    for (const fr of failedRows) {
       console.warn(`[send-broadcast] Retiring row ${fr.id} after ${fr.attempts ?? 1} permanent verdict(s): ${fr.error.slice(0, 200)}`);
     }
     // Rows are 'sending' now (claimed above), so a retryable failure MUST be
     // reset to pending — otherwise it strands in 'sending' until the reaper.
-    for (const dr of deferredRows) {
+    for (const g of groupOutcomeRows(deferredRows)) {
       // Carry the incremented count back to `pending`. Without this the fold
       // discards it every drain and the row retries forever — the exact failure
       // the counter exists to stop. Rows deferred for a transient reason have no
@@ -691,10 +707,10 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       const upd: Record<string, unknown> = {
         status: "pending",
         claimed_at: null,
-        error: `retrying: ${dr.error.slice(0, 480)}`,
+        error: `retrying: ${g.error.slice(0, 480)}`,
       };
-      if (typeof dr.attempts === "number") upd.attempts = dr.attempts;
-      await supabase.from("broadcast_queue").update(upd).in("id", [dr.id]);
+      if (typeof g.attempts === "number") upd.attempts = g.attempts;
+      await supabase.from("broadcast_queue").update(upd).in("id", g.ids);
     }
 
     // Circuit breaker. shouldTripBreaker() uses the same predicate
@@ -708,15 +724,24 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     // this drain — back to `pending` and stop: those rows would be walking
     // into the same suspect transport, and leaving them in `sending` would
     // strand them until the reaper.
-    if (shouldTripBreaker(rawFailedRows.length, batch.length)) {
+    // Second trigger, same abort: a run of identical transport failures. A
+    // dead credential (401/403) is classified as a DEFERRAL on purpose — see
+    // isCredentialFailure — so it never shows up in rawFailedRows and the
+    // breaker above stays blind to it; before this check a bad key ground
+    // through every queued row (up to 2,000 failed SES calls and ~3 min of
+    // wave sleeps) just to defer them all. This batch's rows are already
+    // written (deferred → pending), so ending the run costs nothing.
+    const transportDead = streakTripped(failureStreak);
+    if (shouldTripBreaker(rawFailedRows.length, batch.length) || transportDead) {
       const remaining = claimed.slice(i + batchSize).map((r) => r.id);
       if (remaining.length) {
         await supabase.from("broadcast_queue")
           .update({ status: "pending", claimed_at: null }).in("id", remaining);
       }
       console.error(
-        `[send-broadcast] Drain: batch of ${batch.length} had ${rawFailedRows.length} non-retryable failure(s) ` +
-          `(${okIds.length} sent, ${deferredRows.length} deferred, 0 marked failed) — aborting, ` +
+        `[send-broadcast] Drain: batch of ${batch.length} had ${rawFailedRows.length} non-retryable failure(s)` +
+          (transportDead ? ` and ${failureStreak.count} consecutive identical transport failures` : "") +
+          ` (${okIds.length} sent, ${deferredRows.length} deferred, ${failedRows.length} marked failed) — aborting, ` +
           `${remaining.length} additional rows released to pending`,
       );
       break;

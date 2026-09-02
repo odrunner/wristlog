@@ -34,6 +34,11 @@ export const SHARED_LIGHT = {
   '--muted': '#6a6a84',
   '--danger': '#e05555',
   '--success': '#4caf7d',
+  // Danger/success as TEXT, same split as --gold-text: the base values measure
+  // 3.27–3.75 and 2.37–2.71 on the light surfaces. #b03636 / #27714b clear
+  // 4.5:1 on all three. Audit 2026-09-01 A3.
+  '--danger-text': '#b03636',
+  '--success-text': '#27714b',
   '--radius': '10px',
   '--overlay-bg': 'rgba(245,245,248,.96)',
   '--space-1': '4px',
@@ -87,6 +92,10 @@ export const SHARED_DARK = {
   // one value. Declared, not inherited — an alias written only in :root resolves
   // against the light value (see the aliases note below).
   '--gold-text': 'var(--gold)',
+  // Dark danger/success already pass as text (4.51+ / 6.23+), so text and
+  // surface share one value each. Audit 2026-09-01 A3.
+  '--danger-text': 'var(--danger)',
+  '--success-text': 'var(--success)',
   '--gold-lt': '#dbbe72',
   '--gold-dim': 'color-mix(in srgb, var(--gold) 12%, transparent)',
   '--text': '#e6e6f0',

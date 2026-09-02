@@ -25,3 +25,33 @@ describe('profilePostCellHTML', () => {
     expect(body).not.toMatch(/src="\$\{escHtml\(w\.image\)\}"/);
   });
 });
+
+// The standalone public profile page renders the same collection grid and
+// slipped through the 08-22 fix because this test only read index.html
+// (2026-09-01 perf audit, CLIENT-N3). Pin the share page too.
+describe('profile/index.html watch grid', () => {
+  const share = readFileSync(join(root, 'profile', 'index.html'), 'utf8');
+  it('uses the thumb (with full-size fallback) for grid watch images', () => {
+    expect(share).toMatch(/<img class="watch-card-img" \$\{thumbSrcAttrs\(w\.image, escHtml\)\}[^>]*loading="lazy"/);
+  });
+  it('never requests the full-size watch image directly', () => {
+    expect(share).not.toMatch(/watch-card-img" src="\$\{escHtml\(w\.image\)\}"/);
+  });
+});
+
+// The model-page hero is a 1500 px original rendered into a 180 px box — the
+// page's LCP element (CLIENT-N2). It must go through the Storage render
+// transform sized for the box at 2x DPR, keeping the original as data-full
+// fallback if the transform errors.
+describe('model-page.js hero image', () => {
+  const shared = readFileSync(join(root, 'model-page.js'), 'utf8');
+  it('routes the hero through heroSrcAttrs (render transform + data-full fallback)', () => {
+    expect(shared).toMatch(/<img \$\{heroSrcAttrs\(heroImg\)\}/);
+    expect(shared).toContain("'/storage/v1/render/image/public/media/'");
+    expect(shared).toContain('width=960&height=360&resize=cover');
+    expect(shared).toContain('data-full');
+  });
+  it('never embeds the raw hero URL as src', () => {
+    expect(shared).not.toMatch(/src="\$\{escAttr\(heroImg\)\}"/);
+  });
+});

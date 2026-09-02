@@ -70,6 +70,32 @@ Deno.test("computeWearCounts — null/empty input yields empty object", () => {
   assertEquals(computeWearCounts([]), {});
 });
 
+Deno.test("computeWearCounts — allowedIds drops logs of private/deleted watches", () => {
+  // The logs query now fetches by user_id alone (so it can run in parallel with
+  // the watches query); a private watch's logs must not leak into the counts —
+  // they would inflate the OG description's total wears.
+  const logs = [
+    { watch_id: "pub", date: "2026-06-01" },
+    { watch_id: "pub", date: "2026-06-01" }, // duplicate, still ignored
+    { watch_id: "priv", date: "2026-06-01" },
+    { watch_id: "deleted", date: "2026-06-02" },
+  ];
+  assertEquals(computeWearCounts(logs, new Set(["pub"])), { pub: 1 });
+});
+
+Deno.test("computeWearCounts — an empty allowedIds set counts nothing", () => {
+  const logs = [{ watch_id: "a", date: "2026-06-01" }];
+  assertEquals(computeWearCounts(logs, new Set()), {});
+});
+
+Deno.test("computeWearCounts — omitting allowedIds keeps the old count-everything behaviour", () => {
+  const logs = [
+    { watch_id: "a", date: "2026-06-01" },
+    { watch_id: "b", date: "2026-06-01" },
+  ];
+  assertEquals(computeWearCounts(logs), { a: 1, b: 1 });
+});
+
 Deno.test("sortByWears — orders by descending wear count", () => {
   const watches = [{ id: "a" }, { id: "b" }, { id: "c" }];
   const out = sortByWears(watches, { a: 1, b: 5, c: 3 });

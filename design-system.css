@@ -28,6 +28,13 @@
   --muted: #6a6a84;
   --danger: #e05555;
   --success: #4caf7d;
+  /* Danger/success used as TEXT need darker values than the surface/border
+     uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75
+     and --success #4caf7d only 2.37–2.71 on the light surfaces — both under
+     the 4.5:1 AA floor. #b03636 (5.34–6.13) and #27714b (5.16–5.92) clear it
+     on all three. Audit 2026-09-01 A3. */
+  --danger-text: #b03636;
+  --success-text: #27714b;
   --radius: 10px;
   --overlay-bg: rgba(245,245,248,.96);
 
@@ -66,6 +73,11 @@
      surface can share one value here. Declared rather than inherited: an alias
      written only in :root resolves against the LIGHT value (see the note below). */
   --gold-text: var(--gold);
+  /* Dark danger/success already pass as text (4.51+ / 6.23+ on every dark
+     surface), so text and surface share one value — declared, not inherited,
+     for the alias-resolution reason documented below. */
+  --danger-text: var(--danger);
+  --success-text: var(--success);
   --gold-lt: #dbbe72;
   --gold-dim: color-mix(in srgb, var(--gold) 12%, transparent);
   --text: #e6e6f0;

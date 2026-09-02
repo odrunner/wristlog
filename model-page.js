@@ -9,6 +9,31 @@
   const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const escAttr = escHtml;
 
+  // Hero images are stored as 1500 px originals (~170-245 KB) but render in a
+  // 180 px-tall box (max 480 px wide). Supabase Storage render transforms
+  // downscale on the fly — /storage/v1/render/image/public/media/…?width=960&
+  // height=360&resize=cover returns the box at 2x DPR (never upscaled; ~49 KB
+  // vs 245 KB measured). data-full carries the original: on any transform
+  // error the capture listener below swaps it back in — the same fallback
+  // pattern as index.html's initThumbFallback (both listeners are idempotent,
+  // so the pair coexists inside the app).
+  const MEDIA_MARKER = '/storage/v1/object/public/media/';
+  function heroSrcAttrs(url) {
+    if ((url || '').indexOf(MEDIA_MARKER) < 0) return `src="${escAttr(url)}"`;
+    const t = url.replace(MEDIA_MARKER, '/storage/v1/render/image/public/media/')
+      + (url.indexOf('?') >= 0 ? '&' : '?') + 'width=960&height=360&resize=cover';
+    return `src="${escAttr(t)}" data-full="${escAttr(url)}"`;
+  }
+  document.addEventListener('error', e => {
+    const el = e.target;
+    if (!el || el.tagName !== 'IMG') return;
+    const full = el.getAttribute('data-full');
+    if (!full || el.getAttribute('src') === full) return;
+    el.removeAttribute('data-full');
+    el.src = full;
+    e.stopPropagation();
+  }, true);
+
 // ── helpers — VERBATIM mirrors of wrotate_test.js (tests/model-page-shared.test.js) ──
 function sparklinePath(series, w = 120, h = 32, pad = 2) {
   const pts = (series || []).map(p => Number(p.median)).filter(v => Number.isFinite(v));
@@ -106,7 +131,7 @@ function renderModelPage(el, ctx, h) {
     (st.specs_agg || {}).movement_type ? st.specs_agg.movement_type.v : '',
     (o.era_min && o.era_max && o.era_min !== o.era_max) ? `${o.era_min}–${o.era_max}` : ''].filter(Boolean);
   const hero = `<div style="position:relative;height:180px;background:var(--surface2);overflow:hidden;">
-    ${heroImg ? `<img src="${escAttr(heroImg)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
+    ${heroImg ? `<img ${heroSrcAttrs(heroImg)} alt="" fetchpriority="high" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
     <div style="position:absolute;inset:0;background:linear-gradient(to right, rgba(8,8,12,.9) 0%, rgba(8,8,12,.35) 55%, rgba(8,8,12,.1) 100%);pointer-events:none;"></div>
     <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.85);">
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="back">‹ Back</span>

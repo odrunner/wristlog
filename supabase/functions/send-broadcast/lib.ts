@@ -334,6 +334,72 @@ export function resolveBatchOutcome(
   return { sentIds: okIds, failedRows, deferredRows };
 }
 
+// ── Batched outcome writes ────────────────────────────────────────────────────
+// The drain used to issue one UPDATE per failed/deferred row "to keep each
+// row's own send error". At the 2,000-row limit a run where every send fails
+// identically (a dead credential) became ~2,000 serial UPDATEs — minutes of
+// grinding against a 406 MB database. Grouping rows that would receive the
+// IDENTICAL update payload (same error text, same attempts value) collapses
+// that to one UPDATE ... WHERE id IN (...) per distinct payload, while every
+// row still ends up with exactly the values the per-row writes gave it —
+// per-row error fidelity is preserved because rows with different errors land
+// in different groups. First-seen order, so logs stay chronological.
+export function groupOutcomeRows(
+  rows: { id: number; error: string; attempts?: number }[],
+): { ids: number[]; error: string; attempts?: number }[] {
+  const groups = new Map<string, { ids: number[]; error: string; attempts?: number }>();
+  for (const r of rows) {
+    const key = `${r.attempts === undefined ? "" : r.attempts}|${r.error}`;
+    const g = groups.get(key);
+    if (g) g.ids.push(r.id);
+    else groups.set(key, { ids: [r.id], error: r.error, ...(r.attempts === undefined ? {} : { attempts: r.attempts }) });
+  }
+  return [...groups.values()];
+}
+
+// ── Transport-failure streak breaker ──────────────────────────────────────────
+// shouldTripBreaker() only sees NON-RETRYABLE verdicts, and a credential
+// failure (401/403) is deliberately classified as a deferral (see
+// isCredentialFailure) — so a dead SES key used to sail past the breaker and
+// grind through every queued row: up to 2,000 failed SES calls and ~3 minutes
+// of wave sleeps, all to defer everything. The tell for a dead transport is
+// that every verdict is THE SAME failure: N consecutive identical
+// (status, error) failures — successes and differing failures both reset the
+// run — mean the next send will fail the same way, so the drain should stop
+// and leave the rest `pending` for a drain with a working transport.
+//
+// This breaker only ever ends the run early; it never changes how any row is
+// classified. Rows it stops short of stay `pending` (the claim is released),
+// so nobody can be lost to it — the worst case of a false trip is a night's
+// delay, the same cost the deferral path already accepts.
+//
+// The threshold is 25: comfortably above any plausible run of coincidentally
+// identical per-recipient failures, and low enough that a dead credential
+// (100 identical failures in the first batch) trips on batch one.
+export const TRANSPORT_FAILURE_STREAK_LIMIT = 25;
+
+export type FailureStreak = { count: number; key: string | null };
+export const EMPTY_STREAK: FailureStreak = { count: 0, key: null };
+
+// Fold one batch's send results (in send order) into the running streak.
+export function updateFailureStreak(
+  streak: FailureStreak,
+  results: { ok: boolean; status?: number; error?: string }[],
+): FailureStreak {
+  let { count, key } = streak;
+  for (const r of results) {
+    if (r.ok) { count = 0; key = null; continue; }
+    const k = `${r.status ?? 0}|${r.error ?? ""}`;
+    count = k === key ? count + 1 : 1;
+    key = k;
+  }
+  return { count, key };
+}
+
+export function streakTripped(streak: FailureStreak, limit = TRANSPORT_FAILURE_STREAK_LIMIT): boolean {
+  return streak.count >= limit;
+}
+
 // ── Staged sends ──────────────────────────────────────────────────────────────
 // Split a queue insert into what goes out now and what waits for the operator's
 // go-ahead. Held rows carry status 'held', which the drain never selects (it

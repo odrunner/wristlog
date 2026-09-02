@@ -69,10 +69,20 @@ async function fetchRecapData(
     return null;
   }
 
-  const { data: watchRows } = await db
-    .from("watches")
-    .select("id, brand, name, image, watch_privacy")
-    .eq("user_id", profile.id);
+  // Watches and the month's logs both key on profile.id alone — run them in
+  // parallel. The logs read is bounded to the month, so it stays a small read
+  // however long the account has been going.
+  const [{ data: watchRows }, { data: logs }] = await Promise.all([
+    db.from("watches")
+      .select("id, brand, name, image, watch_privacy")
+      .eq("user_id", profile.id),
+    db.from("logs")
+      .select("watch_id, date, use_case")
+      .eq("user_id", profile.id)
+      .gte("date", `${period}-01`)
+      .lte("date", `${period}-31`)
+      .limit(2000),
+  ]);
 
   const watches = watchRows || [];
   // Owned decides what counts; public decides what may be named. See computeRecap.
@@ -82,16 +92,6 @@ async function fetchRecapData(
       .filter((w: { watch_privacy?: string | null }) => !w.watch_privacy || w.watch_privacy === "public")
       .map((w: { id: string }) => w.id),
   );
-
-  // Bounded to the month, so this stays a small read however long the account
-  // has been going.
-  const { data: logs } = await db
-    .from("logs")
-    .select("watch_id, date, use_case")
-    .eq("user_id", profile.id)
-    .gte("date", `${period}-01`)
-    .lte("date", `${period}-31`)
-    .limit(2000);
 
   const recap = computeRecap(logs, ownedIds, publicIds, period);
   // deno-lint-ignore no-explicit-any

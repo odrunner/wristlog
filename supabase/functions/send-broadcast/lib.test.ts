@@ -5,8 +5,10 @@ import {
   COHORTS,
   dormantCutoffMs,
   effectiveLimit,
+  EMPTY_STREAK,
   excludeAlreadyEmailed,
   excludeIds,
+  groupOutcomeRows,
   filterNeverMeasured,
   isCredentialFailure,
   keepIds,
@@ -22,7 +24,10 @@ import {
   segmentUserId,
   shouldTripBreaker,
   splitFirstBatch,
+  streakTripped,
+  TRANSPORT_FAILURE_STREAK_LIMIT,
   unsubFooter,
+  updateFailureStreak,
   withUnsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -677,4 +682,156 @@ Deno.test("withUnsubFooter — targets the LAST </body>, not one inside the copy
   const out = withUnsubFooter(html, "https://u/x");
   assertEquals(out.endsWith("</body></html>"), true);
   assertEquals(out.indexOf("Unsubscribe") > out.indexOf("write"), true);
+});
+
+// ── groupOutcomeRows ──────────────────────────────────────────────────────────
+
+Deno.test("groupOutcomeRows — rows with the identical payload collapse into one group", () => {
+  // The dead-credential case: a whole batch deferred with the same error must
+  // become ONE update, not one per row.
+  const rows = [
+    { id: 1, error: "403 SignatureDoesNotMatch" },
+    { id: 2, error: "403 SignatureDoesNotMatch" },
+    { id: 3, error: "403 SignatureDoesNotMatch" },
+  ];
+  assertEquals(groupOutcomeRows(rows), [
+    { ids: [1, 2, 3], error: "403 SignatureDoesNotMatch" },
+  ]);
+});
+
+Deno.test("groupOutcomeRows — a different error is a different group (per-row fidelity kept)", () => {
+  const rows = [
+    { id: 1, error: "bad address" },
+    { id: 2, error: "mailbox full" },
+    { id: 3, error: "bad address" },
+  ];
+  assertEquals(groupOutcomeRows(rows), [
+    { ids: [1, 3], error: "bad address" },
+    { ids: [2], error: "mailbox full" },
+  ]);
+});
+
+Deno.test("groupOutcomeRows — same error but different attempts do not merge", () => {
+  // attempts is written to the row, so rows at different counts need their own
+  // update or one of them would get the wrong counter.
+  const rows = [
+    { id: 1, error: "rejected", attempts: 1 },
+    { id: 2, error: "rejected", attempts: 3 },
+    { id: 3, error: "rejected", attempts: 1 },
+  ];
+  assertEquals(groupOutcomeRows(rows), [
+    { ids: [1, 3], error: "rejected", attempts: 1 },
+    { ids: [2], error: "rejected", attempts: 3 },
+  ]);
+});
+
+Deno.test("groupOutcomeRows — absent attempts is its own group, distinct from any number", () => {
+  // A transient deferral (no attempts field) leaves the row's counter untouched;
+  // merging it with an attempts-carrying row would overwrite that counter.
+  const rows = [
+    { id: 1, error: "throttled" },
+    { id: 2, error: "throttled", attempts: 1 },
+  ];
+  const groups = groupOutcomeRows(rows);
+  assertEquals(groups.length, 2);
+  assertEquals(groups[0], { ids: [1], error: "throttled" });
+  assertEquals("attempts" in groups[0], false);
+  assertEquals(groups[1], { ids: [2], error: "throttled", attempts: 1 });
+});
+
+Deno.test("groupOutcomeRows — empty input yields no groups (no empty UPDATE)", () => {
+  assertEquals(groupOutcomeRows([]), []);
+});
+
+// ── transport-failure streak breaker ──────────────────────────────────────────
+
+Deno.test("updateFailureStreak — identical failures accumulate in order", () => {
+  const results = [
+    { ok: false, status: 403, error: "sig" },
+    { ok: false, status: 403, error: "sig" },
+    { ok: false, status: 403, error: "sig" },
+  ];
+  assertEquals(updateFailureStreak(EMPTY_STREAK, results), { count: 3, key: "403|sig" });
+});
+
+Deno.test("updateFailureStreak — a success resets the streak to nothing", () => {
+  const results = [
+    { ok: false, status: 403, error: "sig" },
+    { ok: false, status: 403, error: "sig" },
+    { ok: true },
+  ];
+  assertEquals(updateFailureStreak(EMPTY_STREAK, results), { count: 0, key: null });
+});
+
+Deno.test("updateFailureStreak — a DIFFERENT failure restarts the count at 1, not 0", () => {
+  const results = [
+    { ok: false, status: 400, error: "bad address" },
+    { ok: false, status: 403, error: "sig" },
+  ];
+  assertEquals(updateFailureStreak(EMPTY_STREAK, results), { count: 1, key: "403|sig" });
+});
+
+Deno.test("updateFailureStreak — same error text but different status is a different failure", () => {
+  const results = [
+    { ok: false, status: 429, error: "slow down" },
+    { ok: false, status: 500, error: "slow down" },
+  ];
+  assertEquals(updateFailureStreak(EMPTY_STREAK, results), { count: 1, key: "500|slow down" });
+});
+
+Deno.test("updateFailureStreak — the streak carries across batches", () => {
+  // A failure starting late in one batch and continuing into the next must
+  // still be seen as one run — batch boundaries are an implementation detail.
+  const first = updateFailureStreak(EMPTY_STREAK, [
+    { ok: true },
+    { ok: false, status: 403, error: "sig" },
+    { ok: false, status: 403, error: "sig" },
+  ]);
+  const second = updateFailureStreak(first, [
+    { ok: false, status: 403, error: "sig" },
+  ]);
+  assertEquals(second, { count: 3, key: "403|sig" });
+});
+
+Deno.test("updateFailureStreak — missing status/error still key consistently", () => {
+  const a = updateFailureStreak(EMPTY_STREAK, [{ ok: false }]);
+  const b = updateFailureStreak(a, [{ ok: false }]);
+  assertEquals(b.count, 2);
+});
+
+Deno.test("updateFailureStreak — an empty batch leaves the streak untouched", () => {
+  const streak = { count: 7, key: "403|sig" };
+  assertEquals(updateFailureStreak(streak, []), { count: 7, key: "403|sig" });
+});
+
+Deno.test("updateFailureStreak — does not mutate its input", () => {
+  const streak = { count: 1, key: "403|sig" };
+  updateFailureStreak(streak, [{ ok: false, status: 403, error: "sig" }]);
+  assertEquals(streak, { count: 1, key: "403|sig" });
+});
+
+Deno.test("streakTripped — trips exactly at the limit, never below it", () => {
+  assertEquals(streakTripped({ count: TRANSPORT_FAILURE_STREAK_LIMIT - 1, key: "403|sig" }), false);
+  assertEquals(streakTripped({ count: TRANSPORT_FAILURE_STREAK_LIMIT, key: "403|sig" }), true);
+  assertEquals(streakTripped({ count: TRANSPORT_FAILURE_STREAK_LIMIT + 50, key: "403|sig" }), true);
+  assertEquals(streakTripped(EMPTY_STREAK), false);
+});
+
+Deno.test("streakTripped — a dead credential trips within one 100-row batch", () => {
+  // The scenario this breaker exists for: every send fails identically, all
+  // deferred, rawFailedRows empty — the old breaker never fired.
+  const results = Array.from({ length: 100 }, () => ({ ok: false, status: 403, error: "InvalidClientTokenId" }));
+  const streak = updateFailureStreak(EMPTY_STREAK, results);
+  assertEquals(streakTripped(streak), true);
+});
+
+Deno.test("streakTripped — scattered mixed failures never trip", () => {
+  // 24 identical failures, then a success, then 24 more: retryable noise on a
+  // live transport must not end the run.
+  const run = (n: number) => Array.from({ length: n }, () => ({ ok: false, status: 429, error: "throttled" }));
+  let streak = updateFailureStreak(EMPTY_STREAK, run(TRANSPORT_FAILURE_STREAK_LIMIT - 1));
+  assertEquals(streakTripped(streak), false);
+  streak = updateFailureStreak(streak, [{ ok: true }]);
+  streak = updateFailureStreak(streak, run(TRANSPORT_FAILURE_STREAK_LIMIT - 1));
+  assertEquals(streakTripped(streak), false);
 });

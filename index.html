@@ -132,6 +132,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+    .skip-link { position: absolute; left: -9999px; top: .75rem; z-index: 4000; background: var(--surface); color: var(--gold-text); border: 1px solid var(--gold); border-radius: 8px; padding: .55rem 1rem; font-weight: 600; text-decoration: none; }
+    .skip-link:focus { left: .75rem; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
     }
@@ -324,11 +326,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: box-shadow .15s, background .15s;
     }
     .btn-apple:hover { box-shadow: 0 1px 6px rgba(0,0,0,.3); background: #1a1a1a; }
-    .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: var(--danger); font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+    .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: var(--danger-text); font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
     .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; line-height: 1.5; }
 
     .btn-signout { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
-    .btn-signout:hover { border-color: var(--danger); color: var(--danger); }
+    .btn-signout:hover { border-color: var(--danger); color: var(--danger-text); }
     .server-dot {
       width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
       background: var(--success); box-shadow: 0 0 6px var(--success);
@@ -365,10 +367,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: .73rem; margin-top: .3rem; min-height: 1.1em;
       transition: color .15s;
     }
-    .username-status.available { color: var(--success); }
-    .username-status.taken { color: var(--danger); }
+    .username-status.available { color: var(--success-text); }
+    .username-status.taken { color: var(--danger-text); }
     .username-status.checking { color: var(--muted); }
-    .username-status.invalid { color: var(--danger); }
+    .username-status.invalid { color: var(--danger-text); }
 
     /* ── LAYOUT ── */
     /* --page-gutter mirrors main's horizontal padding so a full-bleed child
@@ -420,7 +422,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .form-group { margin-bottom: .9rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
     .field-error input, .field-error select, .field-error textarea { border-color: var(--danger) !important; }
-    .field-error-msg { color: var(--danger); font-size: .72rem; margin-top: .2rem; animation: fieldErrorIn .25s ease; }
+    .field-error-msg { color: var(--danger-text); font-size: .72rem; margin-top: .2rem; animation: fieldErrorIn .25s ease; }
     @keyframes fieldShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
     @keyframes fieldErrorIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
     .field-shake { animation: fieldShake .35s ease; }
@@ -504,9 +506,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-post-vis.followers { background:color-mix(in srgb, var(--gold) 40%, transparent); color:#fff; }
     .profile-post-vis.friends { background:rgba(167,123,250,.4); color:#fff; }
     .profile-post-vis.private { background:rgba(224,85,85,.4); color:#fff; }
-    .showcase-priv-label.pub  { color:var(--success); }
+    .showcase-priv-label.pub  { color:var(--success-text); }
     .showcase-priv-label.fri  { color:var(--gold-text); }
-    .showcase-priv-label.priv { color:var(--danger); }
+    .showcase-priv-label.priv { color:var(--danger-text); }
     .showcase-priv-label.inh  { color:var(--muted); }
     .showcase-priv-label.frd  { color:var(--vis-friends); } /* friends — purple */
 
@@ -561,11 +563,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
     .btn-ghost:hover { border-color: var(--gold); color: var(--gold-text); }
     .btn-label-short { display: none; }
-    .btn-danger { background: rgba(224,85,85,.1); color: var(--danger); border: 1px solid rgba(224,85,85,.25); }
+    .btn-danger { background: rgba(224,85,85,.1); color: var(--danger-text); border: 1px solid rgba(224,85,85,.25); }
     .btn-danger:hover { background: rgba(224,85,85,.2); }
     .btn-sm { padding: .38rem .8rem; font-size: .78rem; }
     .btn-icon { padding: .4rem .5rem; background: none; border: none; color: var(--muted); cursor: pointer; font-size: .8rem; line-height: 1; transition: color .15s; }
-    .btn-icon:hover { color: var(--danger); }
+    .btn-icon:hover { color: var(--danger-text); }
 
     /* URL input row */
     .url-row { display: flex; gap: .5rem; align-items: center; }
@@ -755,7 +757,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tl-row   { display: flex; gap: .75rem; }
     .tl-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .4rem; }
     .tl-opt   { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); opacity: .7; }
-    .tl-worn-notice { margin-top: .35rem; font-size: .75rem; color: var(--success); min-height: 1em; }
+    .tl-worn-notice { margin-top: .35rem; font-size: .75rem; color: var(--success-text); min-height: 1em; }
     .tl-photo { aspect-ratio: unset; height: 80px; }
     .tl-photo .log-photo-placeholder { font-size: .8rem; }
 
@@ -797,7 +799,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .watch-worn-badge {
       font-size: .65rem;
       background: rgba(76,175,125,.15);
-      color: var(--success);
+      color: var(--success-text);
       border: 1px solid rgba(76,175,125,.3);
       padding: .15rem .45rem;
       border-radius: var(--radius);
@@ -932,7 +934,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: inherit; cursor: pointer; transition: background .1s;
     }
     .photo-menu-item:hover { background: var(--surface2); }
-    .photo-menu-item.danger { color: var(--danger); }
+    .photo-menu-item.danger { color: var(--danger-text); }
     .watch-card-top { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
     .watch-card-name  { font-weight: 700; font-size: .98rem; }
     .watch-card-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
@@ -1022,7 +1024,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .fb-card.status-ignored  { opacity:.4; }
     .fb-card-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; flex-wrap:wrap; }
     .fb-type-badge { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:var(--radius-pill); flex-shrink:0; }
-    .fb-type-badge.bug     { background:rgba(224,85,85,.15); color:var(--danger); }
+    .fb-type-badge.bug     { background:rgba(224,85,85,.15); color:var(--danger-text); }
     .fb-type-badge.feature { background:rgba(129,140,248,.15); color:#818cf8; }
     .fb-type-badge.rating  { background:rgba(245,158,11,.15); color:#f59e0b; }
     .fb-title { font-size:.88rem; font-weight:600; flex:1; min-width:0; }
@@ -1069,7 +1071,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .strap-on-btn          { background: none; border: 1px solid var(--border); border-radius: var(--radius); font-size: .68rem; padding: .15rem .5rem; cursor: pointer; color: var(--muted); font-family: inherit; white-space: nowrap; flex-shrink: 0; }
     .strap-on-btn.active   { border-color: var(--gold); color: var(--gold-text); }
     .strap-del-btn         { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .8rem; padding: .1rem .3rem; flex-shrink: 0; }
-    .strap-del-btn:hover   { color: var(--danger); }
+    .strap-del-btn:hover   { color: var(--danger-text); }
     .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
     .strap-row:hover .strap-edit-btn { opacity: 1; }
     @media (hover: none) {
@@ -1185,8 +1187,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .mp-value { font-weight: 700; flex-shrink: 0; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
     .mp-delta { font-weight: 600; font-size: .7rem; padding: .1rem .4rem;
                 border-radius: var(--radius); white-space: nowrap; flex-shrink: 0; }
-    .mp-up    { color: var(--success); background: rgba(76,175,125,.12); }
-    .mp-down  { color: var(--danger);  background: rgba(224,85,85,.12); }
+    .mp-up    { color: var(--success-text); background: rgba(76,175,125,.12); }
+    .mp-down  { color: var(--danger-text);  background: rgba(224,85,85,.12); }
     .mp-src   { color: var(--muted); font-size: .65rem; margin-left: auto; white-space: nowrap; flex-shrink: 0; }
 
     /* ── PORTFOLIO VS MARKET TABLE ── */
@@ -1197,8 +1199,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pvm-td { padding: .5rem .55rem; border-bottom: 1px solid var(--border); font-size: .83rem; vertical-align: middle; text-align: right; }
     .pvm-td:first-child { text-align: left; }
     .pvm-tr:last-child .pvm-td { border-bottom: none; }
-    .pvm-gain { color: var(--success); }
-    .pvm-loss { color: var(--danger); }
+    .pvm-gain { color: var(--success-text); }
+    .pvm-loss { color: var(--danger-text); }
     .pvm-na   { color: var(--muted); font-style: italic; }
 
     /* ── INSURANCE INDICATOR (subtle, in card header) ── */
@@ -1286,8 +1288,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transform: translateY(80px); opacity: 0; transition: all .25s;
       pointer-events: none;
     }
-    .toast.success { border-color: rgba(76,175,125,.45); color: var(--success); }
-    .toast.error   { border-color: rgba(224,85,85,.45);  color: var(--danger);  }
+    .toast.success { border-color: rgba(76,175,125,.45); color: var(--success-text); }
+    .toast.error   { border-color: rgba(224,85,85,.45);  color: var(--danger-text);  }
     .toast.show    { transform: translateY(0); opacity: 1; }
 
     /* Badge toast */
@@ -1447,7 +1449,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: inline-flex; align-items: center; gap: .3rem;
     }
     .btn-quicklog:hover { background: color-mix(in srgb, var(--gold) 20%, transparent); border-color: var(--gold); }
-    .btn-quicklog.logged { background: rgba(76,175,125,.1); border-color: rgba(76,175,125,.3); color: var(--success); cursor: default; }
+    .btn-quicklog.logged { background: rgba(76,175,125,.1); border-color: rgba(76,175,125,.3); color: var(--success-text); cursor: default; }
     .btn-rec-skip {
       background: none; border: none; color: var(--muted); font-size: .75rem; font-family: inherit;
       cursor: pointer; padding: .2rem .1rem; transition: color .15s;
@@ -1533,7 +1535,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-conf { font-size:.68rem; font-weight:600; padding:.15rem .5rem; border-radius:var(--radius-sm); text-transform:capitalize; }
     .pi-card-conf.high { background:rgba(52,211,153,.12); color:#34d399; }
     .pi-card-conf.medium { background:rgba(251,191,36,.12); color:#fbbf24; }
-    .pi-card-conf.low { background:rgba(239,68,68,.12); color:var(--danger); }
+    .pi-card-conf.low { background:rgba(239,68,68,.12); color:var(--danger-text); }
     .pi-card-actions { display:flex; gap:.4rem; flex-shrink:0; }
     .funfact-card{display:flex;gap:.5rem;align-items:flex-start;background:var(--badge-bg);border:.5px solid var(--badge-border);border-radius:8px;padding:.5rem .6rem;font-size:.8rem;line-height:1.45;color:var(--text);}
     .funfact-bulb{flex:0 0 auto;}
@@ -1575,7 +1577,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-specs { font-size:11px; color:var(--tertiary, var(--muted)); margin-top:2px; }
     .af2-status { font-size:11px; margin-top:3px; }
     .af2-status-gold { color:var(--badge-accent); }
-    .af2-status-green { color:var(--success); }
+    .af2-status-green { color:var(--success-text); }
     .af2-status-muted { color:var(--muted); }
     .af2-actions { display:flex; flex-direction:column; gap:4px; flex-shrink:0; align-items:flex-end; }
     .af2-btn-confirm { background:var(--badge-accent); color:#fff; border:none; font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
@@ -1583,7 +1585,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-btn-skip { background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 4px; line-height:1; }
     .af2-btn-undo { background:none; border:none; color:var(--badge-accent); font-size:11px; cursor:pointer; font-family:inherit; padding:2px 4px; }
     .af2-check-gold { color:var(--gold-text); font-size:14px; }
-    .af2-check-green { color:var(--success); font-size:13px; }
+    .af2-check-green { color:var(--success-text); font-size:13px; }
     .af2-theater-text { transition:opacity .2s; }
     .af2-warn-chip { display:inline-block; background:#fde68a; color:#7c2d12; font-size:10px; font-weight:500; padding:2px 6px; border-radius:4px; margin-top:3px; }
     .af2-strikethrough { text-decoration:line-through; }
@@ -1881,7 +1883,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: all .15s;
     }
     .feed-action-btn:hover { background: var(--hover); color: var(--text); }
-    .feed-action-btn.liked  { color: var(--danger); }
+    .feed-action-btn.liked  { color: var(--danger-text); }
 
     /* Caption (Instagram style — bold username inline) */
     .feed-caption { padding: .1rem 1rem .45rem; font-size: .85rem; line-height: 1.5; word-break: break-word; }
@@ -2418,7 +2420,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding:.15rem .5rem; border-radius:var(--radius-pill); font-weight:600; margin: 0 1rem .6rem; }
     .vis-badge.followers { background:color-mix(in srgb, var(--gold) 15%, transparent); color:var(--gold-text); }
     .vis-badge.friends { background:rgba(167,123,250,.15); color:var(--vis-friends); }
-    .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
+    .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger-text); }
     /* Overlay variant — sits top-right inside the post photo so own posts keep
        the same card height as everyone else's */
     .vis-badge--overlay { position:absolute; top:8px; right:8px; margin:0; z-index:3;
@@ -2514,7 +2516,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: inherit; transition: color .15s;
     }
     .comment-heart-btn:hover { color: var(--text); }
-    .comment-heart-btn.liked { color: var(--danger); }
+    .comment-heart-btn.liked { color: var(--danger-text); }
     .comment-heart-btn svg { width: 12px; height: 12px; }
     .comment-heart-count { font-size: .62rem; color: var(--muted); line-height: 1; }
     .comment-menu-wrap { position: relative; flex-shrink: 0; padding-top: .15rem; }
@@ -2593,11 +2595,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       border: 1px solid var(--border);
     }
     @media (hover: hover) {
-      .follow-btn.following:hover { border-color: var(--danger); color: var(--danger); }
-      .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger); }
+      .follow-btn.following:hover { border-color: var(--danger); color: var(--danger-text); }
+      .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger-text); }
     }
     .follow-btn.remove-follower { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-left: .35rem; }
-      .follow-btn.remove-follower:hover { border-color: var(--danger); color: var(--danger); }
+      .follow-btn.remove-follower:hover { border-color: var(--danger); color: var(--danger-text); }
     .follow-btn.requested {
       background: transparent; color: var(--muted);
       border: 1.5px solid var(--border);
@@ -2792,6 +2794,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to content</a>
 <noscript><div style="padding:3rem 1.5rem;text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
@@ -3229,7 +3232,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="eyebrow" style="margin-bottom:1rem;">Feedback</div>
       <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">What could be better?</div>
       <div style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1rem;">We read every response. Tell us what's on your mind.</div>
-      <textarea id="review-feedback-text" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;resize:vertical;margin-bottom:1rem;font-family:inherit;"></textarea>
+      <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;resize:vertical;margin-bottom:1rem;font-family:inherit;"></textarea>
       <div style="display:flex;gap:.5rem;">
         <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="flex:1;border-color:var(--border);color:var(--muted);">Skip</button>
         <button class="btn btn-ghost" onclick="submitReviewFeedback()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Send</button>
@@ -3458,7 +3461,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </button>
     <button id="admin-nav-btn" onclick="showAdminPage()" title="Admin" style="display:none;" aria-label="Admin portal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <nav aria-label="Main navigation">
-      <button class="active" data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
+      <button class="active" aria-current="page" data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
       <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
       <button               data-page="collection"   onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
       <button id="nav-measure-btn" data-page="measure" onclick="nav(this)" style="display:none;"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
@@ -3469,13 +3472,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="msr-badge" class="msr-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg><span id="msr-badge-time"></span></span>
-      <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
-      <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
+      <button id="theme-btn" aria-label="Toggle theme" onclick="cycleTheme()" title="Toggle theme"></button>
+      <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
-      <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
+      <button class="profile-btn" id="profile-btn" aria-label="My profile" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
       <button class="btn-signout" id="signout-btn" onclick="signOut()" style="display:none;">Sign out</button>
     </div>
     <!-- Notification panel (position:absolute relative to .header-inner) -->
@@ -3493,7 +3496,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Floating Post button: fixed top-right over the feed, shown on scroll. -->
 <button id="feed-post-fab" onclick="openNewPost()" title="New Post" aria-label="New Post"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 
-<main>
+<main id="main-content" tabindex="-1">
 
   <!-- ════ DEMO MODE BANNER ════ -->
   <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:.6rem 1.2rem;margin:-.8rem .8rem .5rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;font-size:.8rem;font-weight:600;border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.12);">
@@ -3521,10 +3524,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="warranty-banner" class="reminder-banner hidden" style="border-color:rgba(76,175,125,.35);background:rgba(76,175,125,.06);">
     <div class="reminder-banner-icon"></div>
     <div class="reminder-banner-body">
-      <div class="reminder-banner-title" style="color:var(--success);">Warranty Expiring Soon</div>
+      <div class="reminder-banner-title" style="color:var(--success-text);">Warranty Expiring Soon</div>
       <div class="reminder-banner-sub" id="warranty-banner-sub"></div>
     </div>
-    <button class="reminder-banner-close" onclick="dismissWarrantyBanner()" title="Dismiss">✕</button>
+    <button class="reminder-banner-close" aria-label="Dismiss" onclick="dismissWarrantyBanner()" title="Dismiss">✕</button>
   </div>
 
   <!-- ════ TRACK PAGE ════ -->
@@ -3571,10 +3574,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <h1 class="page-title">My Collection</h1>
       <div style="display:flex;gap:.45rem;align-items:center;">
         <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
-        <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;padding:.45rem .7rem;font-size:.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:.45rem .7rem;font-size:.8rem;align-items:center;gap:.35rem;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
-        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;padding:.45rem .75rem;font-size:.9rem;">$</button>
+        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;padding:.45rem .75rem;font-size:.9rem;">$</button>
         <button id="coll-share-btn" class="btn btn-ghost" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;align-items:center;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
@@ -3631,7 +3634,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <h1 style="font-size:1.1rem;font-weight:700;">Watches</h1>
     </div>
     <div class="form-group" style="margin-bottom:.7rem;">
-      <input type="text" id="explore-search" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
+      <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
     <div id="explore-brands" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.5rem;-webkit-overflow-scrolling:touch;"></div>
     <div id="explore-grid" class="watches-grid"></div>
@@ -3773,7 +3776,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
                ondrop="event.preventDefault();this.classList.remove('dragover');handleOfficialPhotoDrop(event)">
             <div id="official-photo-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><div>Click to upload, drag &amp; drop, or paste an image</div></div>
             <img id="official-photo-preview" style="display:none;" alt="">
-            <button type="button" class="photo-clear" id="official-photo-clear" style="display:none;" onclick="event.stopPropagation();clearOfficialPhoto()">✕</button>
+            <button type="button" class="photo-clear" id="official-photo-clear" aria-label="Remove photo" style="display:none;" onclick="event.stopPropagation();clearOfficialPhoto()">✕</button>
           </div>
           <input type="file" id="official-photo-file" accept="image/*" style="display:none" onchange="handleOfficialPhotoFile(this)">
         </div>
@@ -4714,8 +4717,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="measure-content" style="display:none;">
       <!-- Watch + BPH selection — compact row -->
       <div style="display:grid;grid-template-columns:1fr auto;gap:.5rem;margin-bottom:.75rem;">
-        <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
-        <select id="msr-bph-select" onchange="onMsrBphChange()" style="padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <select id="msr-watch-select" aria-label="Watch to measure" onchange="onMsrWatchChange()" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
+        <select id="msr-bph-select" aria-label="Beat rate" onchange="onMsrBphChange()" style="padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
           <option value="0" selected>Auto</option>
           <option value="18000">18,000</option>
           <option value="19800">19,800</option>
@@ -4779,7 +4782,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity .3s;pointer-events:none;">
             <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;">
               <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.6rem;font-weight:700;color:#4ade80;text-shadow:0 0 12px rgba(74,222,128,.3);line-height:1;">—</div>
-              <div style="font-size:.6rem;color:rgba(74,222,128,.5);letter-spacing:.05em;">s/day</div>
+              <div style="font-size:.6rem;color:rgba(74,222,128,.7);letter-spacing:.05em;">s/day</div>
             </div>
           </div>
           <!-- PRELIMINARY / CONVERGED badge — top center -->
@@ -4788,8 +4791,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <!-- Beat error + BPH — top left -->
           <div style="position:absolute;top:10px;left:12px;pointer-events:none;">
             <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
-            <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
-            <div id="msr-live-amp-wrap" style="display:none;font-size:.62rem;color:rgba(74,222,128,.5);margin-top:2px;letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:700;color:#4ade80;">—</span></div>
+            <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.7);display:none;"></span>
+            <div id="msr-live-amp-wrap" style="display:none;font-size:.62rem;color:rgba(74,222,128,.7);margin-top:2px;letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:700;color:#4ade80;">—</span></div>
           </div>
           <!-- Signal quality indicator — bottom left -->
           <div id="msr-signal-bars" style="position:absolute;bottom:8px;left:12px;display:none;pointer-events:none;">
@@ -4835,7 +4838,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div id="msr-progress-fill" style="height:100%;width:0%;border-radius:0 0 8px 8px;transition:width .5s ease-out, background .3s;background:rgba(74,222,128,.5);"></div>
         </div>
       </div>
-      <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:var(--danger);margin-bottom:.5rem;line-height:1.4;"></div>
+      <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:var(--danger-text);margin-bottom:.5rem;line-height:1.4;"></div>
       <!-- Live status container (hidden, used by JS to toggle visibility) -->
       <div id="msr-live-status" style="display:none;"></div>
       <!-- Hidden tuning inputs (used by remote tuning) -->
@@ -5086,7 +5089,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="stats-top">
       <h1 class="page-title">Stats</h1>
       <div class="stats-filters">
-        <select class="filter-select" id="report-period" onchange="renderStats(true)">
+        <select class="filter-select" id="report-period" aria-label="Stats period" onchange="renderStats(true)">
           <option value="all">All Time</option>
           <option value="30">1M</option>
           <option value="90">3M</option>
@@ -5152,7 +5155,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
-      <button onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;padding:0 0 0 .5rem;cursor:pointer;line-height:1;">&times;</button>
+      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;padding:0 0 0 .5rem;cursor:pointer;line-height:1;">&times;</button>
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;margin-bottom:0;">
@@ -5422,8 +5425,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="strap-list"></div>
         <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:.45rem">+ Add Strap</button>
         <div id="add-strap-row" class="add-strap-row hidden">
-          <input type="text" id="strap-name-input" placeholder="Name (e.g. Black Rubber)" maxlength="60">
-          <input type="text" id="strap-mat-input" placeholder="Material (optional)" maxlength="40">
+          <input type="text" id="strap-name-input" aria-label="Strap name" placeholder="Name (e.g. Black Rubber)" maxlength="60">
+          <input type="text" id="strap-mat-input" aria-label="Strap material" placeholder="Material (optional)" maxlength="40">
           <button type="button" class="btn btn-primary btn-sm" onclick="confirmAddStrap()">Add</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="hideAddStrapRow()">Cancel</button>
         </div>
@@ -5584,7 +5587,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Add Flow V2 — State Preview</span>
-      <button type="button" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
+      <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
     </div>
     <div id="af2-debug-rows" style="max-height:70vh;overflow-y:auto;"></div>
   </div>
@@ -5830,7 +5833,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="discover-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
     <div class="form-group" style="margin-bottom:1rem;">
-      <input type="text" id="discover-search" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
+      <input type="text" id="discover-search" aria-label="Search people" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
     </div>
     <div id="discover-results"></div>
     <div style="margin-top:1.25rem;">
@@ -5849,7 +5852,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="club-invite-modal-title">Invite Members</div>
     <div class="form-group" style="margin-bottom:1rem;">
-      <input type="text" id="club-invite-search" placeholder="Search by name or username…"
+      <input type="text" id="club-invite-search" aria-label="Search people to invite" placeholder="Search by name or username…"
         oninput="debounceInviteSearch(this.value, _clubInviteModalId)" autocomplete="off">
     </div>
     <div id="club-invite-results"></div>
@@ -5899,7 +5902,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div class="form-group">
-      <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
+      <textarea id="np-body" aria-label="Post text" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
@@ -5909,7 +5912,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
         </div>
-        <input type="text" id="np-location-input" placeholder="Add a location…" maxlength="60"
+        <input type="text" id="np-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('np')"
           style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
       </div>
@@ -5975,7 +5978,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div class="form-group">
-      <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
+      <textarea id="ep-body" aria-label="Post text" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
@@ -5985,7 +5988,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
         </div>
-        <input type="text" id="ep-location-input" placeholder="Add a location…" maxlength="60"
+        <input type="text" id="ep-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('ep')"
           style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
       </div>
@@ -6004,7 +6007,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="margin-top:.85rem;text-align:center;">
       <button id="ep-delete-btn" onclick="this.dataset.confirm ? confirmDeletePost() : deletePostFromFeed()"
-        style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:.3rem .6rem;font-family:inherit;">
+        style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:.82rem;padding:.3rem .6rem;font-family:inherit;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete post
       </button>
     </div>
@@ -6016,7 +6019,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="da-step-1" class="del-acct-step">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-account-modal-title" style="color:var(--danger);">Delete Account?</div>
+      <div class="modal-title" id="delete-account-modal-title" style="color:var(--danger-text);">Delete Account?</div>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
@@ -6025,7 +6028,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-      <div class="modal-title" style="color:var(--danger);">Absolutely sure?</div>
+      <div class="modal-title" style="color:var(--danger-text);">Absolutely sure?</div>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
@@ -6040,7 +6043,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="rec-settings-modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Pick Settings</span>
-      <button type="button" class="btn-ghost" onclick="closeRecSettings()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+      <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
     </div>
     <div id="rec-settings-body" style="max-height:60vh;overflow-y:auto;padding-right:.75rem;"></div>
   </div>
@@ -6051,7 +6054,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-club-modal-title" style="color:var(--danger);">Delete this club?</div>
+      <div class="modal-title" id="delete-club-modal-title" style="color:var(--danger-text);">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:700;margin:.25rem 0 .75rem;"></p>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.25rem;">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
       <button class="btn" style="width:100%;margin-bottom:.6rem;background:var(--danger);color:#fff;border:none;padding:.65rem;" onclick="deleteClub()">Yes, Delete This Club</button>
@@ -6073,7 +6076,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chip" data-val="feature" onclick="setFeedbackType('feature')">&#128161; Feature Request</div>
     </div>
     <div class="form-group" style="margin-bottom:.25rem;">
-      <textarea id="fb-desc" placeholder="Describe the issue or idea…" style="height:110px;" maxlength="2000"></textarea>
+      <textarea id="fb-desc" aria-label="Describe the issue or idea" placeholder="Describe the issue or idea…" style="height:110px;" maxlength="2000"></textarea>
     </div>
 
     <div class="modal-actions">
@@ -6108,7 +6111,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <div class="form-group" style="margin-bottom:.5rem;">
-      <textarea id="report-details" placeholder="Additional details (optional)" style="height:70px;" maxlength="500"></textarea>
+      <textarea id="report-details" aria-label="Additional details" placeholder="Additional details (optional)" style="height:70px;" maxlength="500"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" id="report-submit-btn" onclick="submitReport()">Submit Report</button>
@@ -6215,7 +6218,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="track-photo-area" class="log-photo-area tl-photo" onclick="if(demoGuard())return;document.getElementById('track-photo-input').click()">
         <div id="track-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
         <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-        <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
+        <button type="button" id="track-photo-clear" aria-label="Remove photo" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
       </div>
       <input type="file" id="track-photo-input" accept="image/*"
@@ -6225,7 +6228,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Caption -->
     <div class="tl-field">
       <div class="tl-label">Caption <span class="tl-opt">shown in feed</span></div>
-      <textarea id="track-notes" placeholder="What are you up to today… (@ to mention)" rows="2" maxlength="500"
+      <textarea id="track-notes" aria-label="Notes" placeholder="What are you up to today… (@ to mention)" rows="2" maxlength="500"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
 
@@ -7166,7 +7169,10 @@ function streakChipTap() {
 
 function maybeFreezeToast() {
   const t = todayStr();
-  const sk = computeStreaksFrozen(logs, t);
+  // weekendEarn=true, like every other caller (displayStreak, badges) — audit
+  // F1: without it the toast used a no-rest-day model, fired for weekends the
+  // chip never spent a freeze on, and burned the one-shot LS key on it.
+  const sk = computeStreaksFrozen(logs, t, true);
   const recent = [addDaysStr(t, -1), addDaysStr(t, -2)];
   const hit = sk.frozen.find(d => recent.includes(d));
   if (!hit) return;
@@ -8190,7 +8196,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.18.31';
+const APP_VERSION = '01.19.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8773,12 +8779,18 @@ async function loadAndRenderProfile(userId) {
   // toggles), but this one query serves both views — so viewing anyone else used
   // to fetch their notification settings too. Ask for it only when it's ours.
   const PROFILE_COLS = 'id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility';
-  const { data: profile } = await withTimeout(db.from('profiles')
+  const { data: profile, error: profileErr } = await withTimeout(db.from('profiles')
     .select(PROFILE_COLS)
     .eq('id', userId).single());
   // Notification toggles render from your own prefs, which live on myProfile (loaded
   // via the my_profile() RPC) — email_prefs is not readable from the table.
   if (profile && isOwn) profile.email_prefs = myProfile?.email_prefs;
+  // Audit REL-N4: only claim the account is gone when the server actually said
+  // "no row" (PGRST116). A timeout or network error is not evidence of deletion.
+  if (!profile && profileErr && profileErr.code !== 'PGRST116') {
+    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Could not load this profile — check your connection and try again.</div>';
+    return;
+  }
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
     return;
@@ -8812,7 +8824,8 @@ async function loadAndRenderProfile(userId) {
   const visibility = (rawColVis && VALID_COL_VIS.has(rawColVis)) ? rawColVis : 'followers';
   // Persist the default to DB if the stored value is missing or invalid so it sticks next time.
   if (isOwn && visibility !== rawColVis) {
-    db.from('profiles').update({ collection_visibility: 'followers' }).eq('id', currentUser.id).then(() => {});
+    db.from('profiles').update({ collection_visibility: 'followers' }).eq('id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] persist default visibility:', error.message); });
   }
 
   // ── Fire all independent queries in parallel ────────────────────────────
@@ -9052,7 +9065,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
          ${friendIconHtml}
        </div>
        <div style="margin-top:.4rem;">
-         <button class="btn btn-ghost" style="font-size:.72rem;padding:.25rem .6rem;color:var(--danger);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
+         <button class="btn btn-ghost" style="font-size:.72rem;padding:.25rem .6rem;color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
        </div>`
     : '';
 
@@ -9371,7 +9384,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       </div>`;
   }
 
-  const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="profile-edit-icon" onclick="sharePublicProfile()" title="Share profile link"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : '';
+  const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile" aria-label="Edit profile"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="profile-edit-icon" onclick="sharePublicProfile()" title="Share profile link" aria-label="Share profile link"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : '';
 
   const adminLink = (isOwn && currentUser?.id === ADMIN_USER_ID)
     ? `<button style="background:none;border:none;color:var(--gold-text);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;font-weight:600;" onclick="showAdminPage()">⚙ Admin</button>`
@@ -9683,7 +9696,11 @@ let blockedUsers = new Set();
 
 async function loadBlockedUsers() {
   if (!currentUser) return;
-  const { data } = await db.from('user_blocks').select('blocked_id').eq('blocker_id', currentUser.id);
+  const { data, error } = await db.from('user_blocks').select('blocked_id').eq('blocker_id', currentUser.id);
+  // Fail CLOSED (audit REL-N3): on a failed read, keep whatever block list we
+  // already have instead of replacing it with an empty set — a transient error
+  // must not make blocked users' posts reappear in the feed.
+  if (error) { console.error('[WristLog] loadBlockedUsers:', error.message); return; }
   blockedUsers = new Set((data || []).map(b => b.blocked_id));
 }
 
@@ -9923,7 +9940,7 @@ function friendIconBtnHTML(userId, req) {
     svgPath = `<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
                <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>`;
   }
-  return `<button class="friend-icon-btn fi-${state}" title="${title}"
+  return `<button class="friend-icon-btn fi-${state}" title="${title}" aria-label="${title}"
     onclick="openFriendPopover(this,'${userId}')">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>
@@ -10401,7 +10418,7 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.innerHTML = `
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
     <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
-    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger);">Remove member</button>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger-text);">Remove member</button>
     <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--muted);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
@@ -10556,7 +10573,7 @@ async function searchInviteUsers(query, clubId) {
     const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" ${dataAttrs}
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
     else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;" ${dataAttrs}
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
@@ -10580,7 +10597,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
     onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
   toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
@@ -10623,7 +10640,7 @@ async function renderPendingInvites(clubId) {
       return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
         ${avatarHtml}
         <span style="flex:1;font-size:.82rem;">${name}</span>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
           onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>
       </div>`;
     }).join('');
@@ -10701,7 +10718,7 @@ async function renderClubsPage() {
     ${myClubsHtml}
     <div class="club-section-label" style="margin-top:1.5rem;">Discover</div>
     <div class="form-group" style="margin-bottom:.75rem;">
-      <input type="text" id="club-search-input" placeholder="Search clubs\u2026" oninput="searchClubs(this.value)" autocomplete="off">
+      <input type="text" id="club-search-input" aria-label="Search clubs" placeholder="Search clubs\u2026" oninput="searchClubs(this.value)" autocomplete="off">
     </div>
     <div id="club-search-results"><div style="color:var(--muted);font-size:.82rem;padding:.25rem 0;">Type to search for clubs.</div></div>`;
 }
@@ -10772,10 +10789,14 @@ async function openFollowersModal(userId) {
   modal.classList.remove('hidden');
   list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
 
-  const { data: rows } = await db.from('follows')
+  const { data: rows, error: rowsErr } = await db.from('follows')
     .select('follower_id')
     .eq('following_id', userId);
-
+  // Audit REL-N4: an error is not an empty follower list
+  if (rowsErr) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Could not load followers — try again.</div>';
+    return;
+  }
   const ids = (rows || []).map(r => r.follower_id);
   if (!ids.length) {
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No followers yet.</div>';
@@ -11183,8 +11204,16 @@ async function followByPrivacy(userId, btn) {
   if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id) return;
   if (_followInFlight.has(userId)) return;
-  const { data } = await db.from('profiles').select('profile_privacy').eq('id', userId).maybeSingle();
-  if (followNeedsRequest(data?.profile_privacy)) return sendFollowRequest(userId, btn);
+  const { data, error } = await db.from('profiles').select('profile_privacy').eq('id', userId).maybeSingle();
+  // Fail CLOSED (audit REL-N3/F2): a failed privacy lookup must not turn into
+  // a direct follow of a restricted profile — that reopens the exact loophole
+  // e570fc1 closed. Abort and let the user tap again.
+  if (error || !data) {
+    console.error('[WristLog] followByPrivacy lookup failed:', error?.message || 'no row');
+    toast('Could not check this profile — try again', 'error');
+    return;
+  }
+  if (followNeedsRequest(data.profile_privacy)) return sendFollowRequest(userId, btn);
   return followUser(userId, btn);
 }
 function confirmUnfollow(userId, btn) {
@@ -11996,9 +12025,12 @@ async function loadFeed() {
     const myClubIds = myClubs.map(c => c.id);
     rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
     if (myClubIds.length) {
-      const { data: clubLogData } = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
+      const { data: clubLogData, error: clubLogErr } = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .in('club_id', myClubIds)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100), 8000);
+      // Audit REL-N4: club posts silently vanishing from the feed on a failed
+      // fetch is indistinguishable from "no club posts" — at least say so.
+      if (clubLogErr) console.error('[WristLog] club feed fetch:', clubLogErr.message);
       if (clubLogData && clubLogData.length) {
         const merged = new Map();
         [...rawLogs, ...clubLogData].forEach(l => merged.set(l.id, l));
@@ -13124,7 +13156,7 @@ function promoSizeOf(slot) {
 function recapThumb(w, cls) {
   if (!w) return `<div class="promo-recap-thumb ${cls}" aria-hidden="true"></div>`;
   if (w.image) {
-    return `<div class="promo-recap-thumb ${cls}"><img loading="lazy" src="${escAttr(w.image)}" alt="" onerror="this.style.display='none'"></div>`;
+    return `<div class="promo-recap-thumb ${cls}"><img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" onerror="this.style.display='none'"></div>`;
   }
   const bg = w.color || '#c9a84c';
   return `<div class="promo-recap-thumb ${cls} promo-recap-thumb--initials" style="background:${escAttr(bg)};color:${escAttr(initialsTextColor(bg))}">${escHtml(initials(w.brand || '', w.name || ''))}</div>`;
@@ -14406,7 +14438,7 @@ function renderFeedCard(item) {
   }
   if (item.moderation_status === 'removed' && isMe) {
     return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.5;text-align:center;padding:1.5rem 1rem;">
-      <div style="font-size:.88rem;color:var(--danger);line-height:1.5;">This post was removed for violating our Terms of Use.</div>
+      <div style="font-size:.88rem;color:var(--danger-text);line-height:1.5;">This post was removed for violating our Terms of Use.</div>
     </div>`;
   }
   if (item.moderation_status && !isMe && !myProfile?.is_admin) return ''; // RLS backup: hide flagged/removed posts from others
@@ -14499,7 +14531,7 @@ function renderFeedCard(item) {
   if (editingCaption) {
     captionHtml = `
       <div class="feed-caption-edit">
-        <textarea id="feed-caption-ta-${item.id}" class="feed-caption-textarea" rows="2"
+        <textarea id="feed-caption-ta-${item.id}" class="feed-caption-textarea" aria-label="Photo caption" rows="2"
           placeholder="Add a caption…">${escHtml(item.notes || '')}</textarea>
         <div class="feed-caption-edit-actions">
           <button class="btn btn-primary btn-sm" onclick="saveFeedCaption('${item.id}')">Save</button>
@@ -14584,7 +14616,7 @@ function renderFeedCard(item) {
         return `<div class="comment-item" style="opacity:.6;"><div style="font-size:.78rem;color:var(--muted);padding:.2rem 0;">Your comment has been flagged and is under review.</div></div>`;
       }
       if (c.moderation_status === 'removed' && cIsMe) {
-        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:.78rem;color:var(--danger);padding:.2rem 0;">This comment was removed for violating our Terms of Use.</div></div>`;
+        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:.78rem;color:var(--danger-text);padding:.2rem 0;">This comment was removed for violating our Terms of Use.</div></div>`;
       }
       if (c.moderation_status && !cIsMe) return ''; // hide flagged/removed from others
       // Filter blocked user comments
@@ -14597,7 +14629,7 @@ function renderFeedCard(item) {
         ? `<div class="comment-menu-wrap">
             <button class="comment-menu-btn" onclick="event.stopPropagation();toggleFeedMenu('cmt-${c.id}')" title="Comment options" aria-label="Comment options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
             <div class="feed-menu hidden" id="feed-menu-cmt-${c.id}">
-              <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
+              <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger-text);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
             </div>
           </div>`
         : '';
@@ -14623,10 +14655,10 @@ function renderFeedCard(item) {
       : '';
     const inputHtml = showAll
       ? `<div class="comment-input-row">
-          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment… (@ to mention)" maxlength="500"
+          <input class="comment-input" id="comment-input-${item.id}" aria-label="Add a comment" placeholder="Add a comment… (@ to mention)" maxlength="500"
             oninput="mentionOnInput(this,'${item.id}')"
             onkeydown="mentionOnKeydown(event,'${item.id}')">
-          <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
+          <button class="comment-send-btn" aria-label="Post comment" onclick="postComment('${item.id}')">↑</button>
         </div>`
       : `<div class="comments-add-prompt" onclick="toggleComments('${item.id}')">Add a comment…</div>`;
     commentsHtml = `
@@ -14677,7 +14709,7 @@ function renderFeedCard(item) {
   }
 
   const addPhotoAction = (isMe && compactWear)
-    ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
+    ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo" aria-label="Add photo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
     : '';
 
   let badgeRibbon = '';
@@ -14697,7 +14729,7 @@ function renderFeedCard(item) {
         ${heroIsPhoto ? '' : visBadgeInline}
         <div class="feed-dots-wrap" style="position:relative;">
           ${isMe
-            ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+            ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post" aria-label="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
@@ -14706,11 +14738,11 @@ function renderFeedCard(item) {
                   ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
               </div>`
-            : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+            : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options" aria-label="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
-                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
+                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger-text);" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
                   ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
@@ -14727,7 +14759,7 @@ function renderFeedCard(item) {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${cCount ? `<span>${cCount}</span>` : ''}
         </button>
         ${addPhotoAction}
-        ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : ''}
+        ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post" aria-label="Share post"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : ''}
       </div>
       ${captionHtml}
       ${badgeRibbon}
@@ -14950,6 +14982,12 @@ function feedThumbTap(logId, idx, urls) {
 let _videoObserver = null;
 function observeFeedVideo(v) {
   if (!v) return;
+  // Once per element (audit PERF-CLIENT-N1): refreshFeedCard and loadMoreFeed
+  // sweep every feed video, so without this each like/page-append stacked
+  // another error listener + 600ms timer on every already-wired video. A
+  // replaced card gets a fresh <video> node without the flag and re-wires.
+  if (v.dataset.vObserved) return;
+  v.dataset.vObserved = '1';
   if (!_videoObserver) {
     _videoObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
@@ -15301,11 +15339,11 @@ function renderEpThumbstrip() {
       ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
       ${media}
       ${isVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
-      <button type="button" class="np-thumb-remove" onclick="removeEpPhoto(${i})">✕</button>
+      <button type="button" class="np-thumb-remove" aria-label="Remove photo" onclick="removeEpPhoto(${i})">✕</button>
     </div>`;
   }
   if (epFiles.length < 6) {
-    html += `<button type="button" class="np-thumb-add" onclick="document.getElementById('ep-photo-input').click()">+</button>`;
+    html += `<button type="button" class="np-thumb-add" aria-label="Add photo" onclick="document.getElementById('ep-photo-input').click()">+</button>`;
   }
   strip.innerHTML = html;
   // iOS Safari requires explicit load()/play() on videos injected via innerHTML
@@ -15934,11 +15972,11 @@ function renderNpThumbstrip() {
       ondrop="npThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
       ${media}
       ${fileIsVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
-      <button type="button" class="np-thumb-remove" onclick="removeNpPhoto(${i})">✕</button>
+      <button type="button" class="np-thumb-remove" aria-label="Remove photo" onclick="removeNpPhoto(${i})">✕</button>
     </div>`;
   }
   if (newPostFiles.length < 6) {
-    html += `<button type="button" class="np-thumb-add" onclick="document.getElementById('np-photo-input').click()">+</button>`;
+    html += `<button type="button" class="np-thumb-add" aria-label="Add photo" onclick="document.getElementById('np-photo-input').click()">+</button>`;
   }
   strip.innerHTML = html;
   // iOS Safari requires explicit load()/play() on videos injected via innerHTML
@@ -16524,7 +16562,12 @@ async function showLikers(logId) {
   document.querySelector('#following-modal .modal-title').textContent = 'Liked by';
   modal.classList.remove('hidden');
   list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
-  const { data: rows } = await db.from('likes').select('user_id').eq('log_id', logId);
+  const { data: rows, error: rowsErr } = await db.from('likes').select('user_id').eq('log_id', logId);
+  // Audit REL-N4: an error is not an empty like list
+  if (rowsErr) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Could not load likes — try again.</div>';
+    return;
+  }
   const ids = (rows || []).map(r => r.user_id);
   if (!ids.length) {
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No likes yet.</div>';
@@ -16609,7 +16652,10 @@ async function toggleComments(logId) {
   fetchComments(logId).then(() => refreshFeedCard(logId)).catch(() => {});
 }
 async function fetchComments(logId) {
-  const { data } = await db.from('comments').select('*').eq('log_id', logId).order('created_at', { ascending: true });
+  const { data, error } = await db.from('comments').select('*').eq('log_id', logId).order('created_at', { ascending: true });
+  // Audit REL-N4: a failed refetch must not wipe the cached thread — that made
+  // a just-posted comment vanish from under its author on a network blip.
+  if (error) { console.error('[WristLog] fetchComments:', error.message); return; }
   if (!data || !data.length) { feedComments[logId] = []; return; }
   const uids = [...new Set(data.map(c => c.user_id))];
   const { data: profiles } = await db.from('profiles').select('id, username, display_name').in('id', uids);
@@ -16787,8 +16833,11 @@ document.addEventListener('focusin', e => {
 });
 
 async function viewUserByUsername(username) {
-  const { data } = await db.from('profiles').select('id').eq('username', username).single();
-  if (data?.id) viewUserProfile(data.id);
+  const { data, error } = await db.from('profiles').select('id').eq('username', username).single();
+  if (data?.id) { viewUserProfile(data.id); return; }
+  // Audit REL-N4: a dead tap tells the user nothing. PGRST116 = genuinely no
+  // such user; anything else is a transient failure.
+  toast(error && error.code !== 'PGRST116' ? 'Could not open profile — try again' : `@${username} not found`, 'error');
 }
 
 // Instagram/Strava model: you can delete a comment if you wrote it, or if you
@@ -17049,7 +17098,7 @@ async function doSearchUsers(query) {
     .limit(10);
   if (error) {
     console.error('[WristLog] Search error:', error.message, error);
-    if (el) el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Search failed: ${escHtml(error.message)}</div>`;
+    if (el) el.innerHTML = `<div style="color:var(--danger-text);font-size:.82rem;padding:.4rem 0;">Search failed: ${escHtml(error.message)}</div>`;
     return;
   }
   // Hide private accounts that aren't already friends
@@ -17212,10 +17261,11 @@ function toggleProfSection(sectionId, storageKey) {
 async function saveEmailPref(category, enabled) {
   if (demoGuard()) return;
   if (!currentUser) return;
-  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true, reminders: true, share_comments: true };
-  prefs[category] = enabled;
-  const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
-  if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
+  // Server-side key-level merge (audit REL-N9): writing the whole object let
+  // two quick toggles race and one silently lose. Readers default missing keys,
+  // so patching only the toggled key is correct.
+  const { data, error } = await db.rpc('merge_profile_pref', { p_field: 'email_prefs', p_patch: { [category]: enabled } });
+  if (!error && window.myProfile) window.myProfile.email_prefs = data || { ...(myProfile.email_prefs || {}), [category]: enabled };
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 async function saveShareAchievements(enabled) {
@@ -17239,9 +17289,10 @@ async function saveRecSetting(key, value) {
   const settings = getRecSettings();
   settings[key] = value;
   if (currentUser) {
-    const { error } = await db.from('profiles').update({ rec_settings: settings }).eq('id', currentUser.id);
+    // Key-level server merge — see saveEmailPref (audit REL-N9)
+    const { data, error } = await db.rpc('merge_profile_pref', { p_field: 'rec_settings', p_patch: { [key]: value } });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
-    if (myProfile) myProfile.rec_settings = settings;
+    if (myProfile) myProfile.rec_settings = data || settings;
   }
   renderWatchRecommendation();
   renderRecSettingsBody();
@@ -17254,9 +17305,11 @@ async function toggleRecExclude(watchId) {
   if (excluded.has(watchId)) excluded.delete(watchId); else excluded.add(watchId);
   settings.excluded = [...excluded];
   if (currentUser) {
-    const { error } = await db.from('profiles').update({ rec_settings: settings }).eq('id', currentUser.id);
+    // Key-level server merge — only the excluded list is written, so a toggle
+    // can no longer clobber a concurrent change to another setting (REL-N9)
+    const { data, error } = await db.rpc('merge_profile_pref', { p_field: 'rec_settings', p_patch: { excluded: settings.excluded } });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
-    if (myProfile) myProfile.rec_settings = settings;
+    if (myProfile) myProfile.rec_settings = data || settings;
   }
   renderWatchRecommendation();
   renderRecSettingsBody();
@@ -18408,7 +18461,7 @@ async function loadAdminModels() {
         <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
         <label class="chip" style="cursor:pointer;">Upload hero photo <input type="file" accept="image/*" style="display:none;" onchange="adminUploadModelHero('${m.id}', this)"></label>
         <input type="text" id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;width:auto;">
-        ${m.hero_image ? `<img src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:6px;">` : ''}
+        ${m.hero_image ? `<img loading="lazy" src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:6px;">` : ''}
       </div>
     </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:.4rem;">Showing 200 of ${rows.length}</div>` : '');
 }
@@ -18634,7 +18687,7 @@ async function loadAdminFeatured() {
   if (!el) return;
   el.innerHTML = 'Loading…';
   const { data, error } = await db.rpc('admin_featured_queue');
-  if (error) { el.innerHTML = `<div style="color:var(--danger);">${escHtml(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div style="color:var(--danger-text);">${escHtml(error.message)}</div>`; return; }
   const rows = data || [];
   if (!rows.length) { el.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:.5rem 0;">No featured posts. Use a post’s ★ menu to feature one.</div>'; return; }
   el.innerHTML = rows.map(r => {
@@ -18672,7 +18725,7 @@ async function loadAdminReports() {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(1000), 10000);
-  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger-text);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
   _adminReportsData = data || [];
 
   // Fetch profiles for reporters and reported users
@@ -18727,7 +18780,7 @@ function renderReportCard(r) {
   const date = new Date(r.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
   const reporterName = r._reporter?.display_name || r._reporter?.username || 'Unknown';
   const reportedName = r._reported?.display_name || r._reported?.username || 'Unknown';
-  const statusCls = r.status === 'pending' ? 'color:var(--gold-text)' : r.status === 'actioned' ? 'color:var(--success)' : 'color:var(--muted)';
+  const statusCls = r.status === 'pending' ? 'color:var(--gold-text)' : r.status === 'actioned' ? 'color:var(--success-text)' : 'color:var(--muted)';
 
   let contentPreview = '';
   if (r._content) {
@@ -18758,7 +18811,7 @@ function renderReportCard(r) {
         <div style="display:flex;gap:.4rem;margin-top:.5rem;">
           <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
           <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
-          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
+          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
 }
@@ -19133,7 +19186,7 @@ async function loadAdminStats(force = false) {
             <div style="cursor:pointer;flex-shrink:0;" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
             <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:var(--success);font-weight:700;' : ''}">${cell}</td>`; }).join('')}
+          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:var(--success-text);font-weight:700;' : ''}">${cell}</td>`; }).join('')}
         </tr>`;
       }).join('');
       const container = document.getElementById(tableId);
@@ -19224,7 +19277,7 @@ async function loadAdminStats(force = false) {
       ${renderAdminUserTable('admin-internal', internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
-      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load stats: ${escHtml(e.message)}</div>
+      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:.75rem;">Failed to load stats: ${escHtml(e.message)}</div>
       <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:.78rem;">↻ Retry</button>
     </div>`;
   }
@@ -19308,7 +19361,7 @@ async function openAdminUserDetail(userId) {
           <div style="font-weight:700;font-size:.95rem;">${escHtml(name)}</div>
           <div style="font-size:.72rem;color:var(--muted);">@${escHtml(p.username || '—')}</div>
           <div style="font-size:.68rem;color:var(--muted);">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
-          ${p.is_suspended ? '<div style="font-size:.68rem;color:var(--danger);font-weight:600;">SUSPENDED</div>' : ''}
+          ${p.is_suspended ? '<div style="font-size:.68rem;color:var(--danger-text);font-weight:600;">SUSPENDED</div>' : ''}
         </div>
       </div>
 
@@ -19318,7 +19371,7 @@ async function openAdminUserDetail(userId) {
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastActiveAgo + ')</span>' : ''))}
         ${row('Last open', lastOpen + (lastOpenAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastOpenAgo + ')</span>' : ''))}
         ${row('Active days', d.active_days)}
-        ${row('Repeat user', isRepeat ? '<span style="color:var(--success);">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
+        ${row('Repeat user', isRepeat ? '<span style="color:var(--success-text);">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
@@ -19333,7 +19386,7 @@ async function openAdminUserDetail(userId) {
         <div class="eyebrow" style="margin-bottom:.35rem;">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + msrRate + ' success)</span>' : ''))}
         ${row('Advanced mode', d.advanced_sessions > 0
-          ? '<span style="color:var(--success);">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
+          ? '<span style="color:var(--success-text);">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
           : '<span style="color:var(--muted);">No</span>')}
         ${row('Enhances', d.enhances)}
         ${row('Value checks', d.price_checks)}
@@ -19361,7 +19414,7 @@ async function openAdminUserDetail(userId) {
       </div>`;
   } catch(e) {
     body.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
-      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load: ${escHtml(e.message)}</div>
+      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:.75rem;">Failed to load: ${escHtml(e.message)}</div>
       <button class="btn btn-ghost" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)" style="font-size:.78rem;">Retry</button>
     </div>`;
   }
@@ -19467,7 +19520,7 @@ async function renderAdminTraffic(force = false) {
       ${renderEmailEngagement(emailEventsR.data || {})}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
-      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load traffic: ${escHtml(e.message)}</div>
+      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:.75rem;">Failed to load traffic: ${escHtml(e.message)}</div>
       <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:.78rem;">↻ Retry</button>
     </div>`;
   }
@@ -19529,7 +19582,7 @@ function renderEmailClickthrough(rows) {
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.campaign)}${legacy ? '<span style="color:var(--muted);font-size:.66rem;margin-left:.35rem;">untagged era</span>' : ''}</span>
       <span style="font-variant-numeric:tabular-nums;white-space:nowrap;">
         <span style="color:var(--muted);font-size:.68rem;margin-right:.5rem;">${ago(r.last_visit)}</span>
-        <span style="color:var(--gold-text);font-weight:600;">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success);font-size:.68rem;font-weight:600;margin-left:.3rem;">+${r.visits_24h}</span>` : ''}
+        <span style="color:var(--gold-text);font-weight:600;">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success-text);font-size:.68rem;font-weight:600;margin-left:.3rem;">+${r.visits_24h}</span>` : ''}
       </span>
     </div>`;
   }).join('');
@@ -19846,7 +19899,7 @@ async function loadAdminFeedback() {
     withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
   ]);
   const { data, error } = fbRes;
-  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger-text);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
   // Normalize review-prompt feedback (app_feedback) into the same card shape
   const appFeedback = (appFbRes?.data || []).map(a => ({
     id: a.id,
@@ -19940,10 +19993,17 @@ function nav(btn) {
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
   document.getElementById('page-' + page).classList.add('active');
   btn.classList.add('active');
+  btn.setAttribute('aria-current', 'page');
   window.scrollTo(0, 0);
+  // A6: move focus to the new view's heading so screen readers announce the page change
+  const _navHeading = document.querySelector('#page-' + page + ' .page-title');
+  if (_navHeading) {
+    if (!_navHeading.hasAttribute('tabindex')) _navHeading.setAttribute('tabindex', '-1');
+    _navHeading.focus({ preventScroll: true });
+  }
   if (page === 'collection') renderCollection();
   if (page === 'track')    { _trackHistoryLimit = 50; renderTrack(); }
   if (page === 'wishlist') renderWishlist();
@@ -20223,8 +20283,8 @@ function updateOfficialPreview() {
       </div>
       ${heroHtml}
       <div class="feed-actions" style="padding:.3rem 1rem;">
-        <button class="feed-action-btn" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-        <button class="feed-action-btn" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+        <button class="feed-action-btn" disabled aria-label="Like"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+        <button class="feed-action-btn" disabled aria-label="Comment"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
       </div>
       ${captionHtml}
     </div>`;
@@ -20239,7 +20299,7 @@ async function loadOfficialDrafts() {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(1000);
-  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div style="color:var(--danger-text);">Error: ${escHtml(error.message)}</div>`; return; }
   _officialDrafts = data || [];
   renderOfficialDrafts();
 }
@@ -20270,14 +20330,14 @@ function renderOfficialDrafts() {
     const statusBadge = d.status === 'published'
       ? '<span style="color:#4caf7d;font-weight:600;">Published</span>'
       : d.status === 'rejected'
-        ? '<span style="color:var(--danger);font-weight:600;">Rejected</span>'
+        ? '<span style="color:var(--danger-text);font-weight:600;">Rejected</span>'
         : '<span style="color:var(--gold-text);font-weight:600;">Draft</span>';
     const actions = d.status === 'draft' ? `
       <div class="draft-actions">
         <button class="btn btn-primary btn-sm" onclick="approveOfficialDraft('${d.id}')">Approve & Publish</button>
         <button class="btn btn-ghost btn-sm" onclick="previewOfficialDraft('${d.id}')">Preview</button>
         <button class="btn btn-ghost btn-sm" onclick="editOfficialDraft('${d.id}')">Edit</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger-text);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
       </div>` : '';
     const sourceLink = d.source_url
       ? `<div class="draft-info" style="margin-top:.2rem;"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" style="color:var(--gold-text);">Source ↗</a></div>`
@@ -20323,8 +20383,8 @@ function previewOfficialDraft(draftId) {
         </div>
         ${heroHtml}
         <div class="feed-actions" style="padding:.3rem 1rem;">
-          <button class="feed-action-btn" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-          <button class="feed-action-btn" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+          <button class="feed-action-btn" disabled aria-label="Like"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button class="feed-action-btn" disabled aria-label="Comment"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
         </div>
         ${captionHtml}
       </div>
@@ -20478,7 +20538,7 @@ async function deleteOfficialDraft(draftId) {
     <div style="text-align:center;padding:.5rem;">
       <div style="font-size:.84rem;margin-bottom:.5rem;">Delete this draft?</div>
       <div class="draft-actions" style="justify-content:center;">
-        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="confirmDeleteDraft('${draftId}')">Delete</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger-text);" onclick="confirmDeleteDraft('${draftId}')">Delete</button>
         <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">Cancel</button>
       </div>
     </div>`;
@@ -20989,10 +21049,10 @@ async function sendBroadcastTest() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    statusEl.innerHTML = `<span style="color:var(--success);">Test email sent to ${user.email}</span>`;
+    statusEl.innerHTML = `<span style="color:var(--success-text);">Test email sent to ${user.email}</span>`;
     toast('Test email sent! Check your inbox.');
   } catch (e) {
-    statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
+    statusEl.innerHTML = `<span style="color:var(--danger-text);">Error: ${escHtml(e.message)}</span>`;
     toast('Failed to send test: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
@@ -21021,7 +21081,7 @@ async function sendBroadcastAll() {
     ? `First batch of ${n}, rest held for your review.`
     : 'Everyone at once — no review step.';
   statusEl.innerHTML = `<div style="padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
-    <div style="color:var(--danger);font-weight:600;margin-bottom:.2rem;">Send to ${escHtml(segmentLabel)}?</div>
+    <div style="color:var(--danger-text);font-weight:600;margin-bottom:.2rem;">Send to ${escHtml(segmentLabel)}?</div>
     <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">${escHtml(plan)}</div>
     <div style="display:flex;gap:.5rem;">
       <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, queue it</button>
@@ -21084,12 +21144,12 @@ async function confirmBroadcastAll() {
     // would promise a review gate that doesn't exist.
     const held = Number(data.held) || 0;
     statusEl.innerHTML = held
-      ? `<span style="color:var(--success);">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
-      : `<span style="color:var(--success);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
+      ? `<span style="color:var(--success-text);">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
+      : `<span style="color:var(--success-text);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
     toast(held ? `First batch of ${data.first_batch} queued, ${held} held` : `Broadcast queued for ${data.queued} users`);
     renderBroadcastQueueStatus();
   } catch (e) {
-    statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
+    statusEl.innerHTML = `<span style="color:var(--danger-text);">Error: ${escHtml(e.message)}</span>`;
     toast('Broadcast failed: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
@@ -21311,8 +21371,8 @@ function renderTrackHistory() {
         </div>
       </td>
       <td style="white-space:nowrap">
-        <button class="btn-icon" title="Edit" onclick="openEditLog('${log.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="btn-icon" title="Delete" onclick="deleteLog('${log.id}',this)">✕</button>
+        <button class="btn-icon" title="Edit" aria-label="Edit entry" onclick="openEditLog('${log.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon" title="Delete" aria-label="Delete entry" onclick="deleteLog('${log.id}',this)">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -22976,7 +23036,7 @@ async function openUpdatePrices() {
       // and can be applied. Mark this row and keep going.
       if (data.error === 'daily_limit') {
         const limCell = document.getElementById('upr-val-' + w.id);
-        if (limCell) limCell.innerHTML = '<span style="color:var(--danger);font-size:.7rem;">Daily limit</span>';
+        if (limCell) limCell.innerHTML = '<span style="color:var(--danger-text);font-size:.7rem;">Daily limit</span>';
         if (done === eligible.length) {
           status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found (daily limit hit for the rest).`;
           if (Object.keys(_priceUpdateResults).length > 0) actions.style.display = 'flex';
@@ -23018,7 +23078,7 @@ async function openUpdatePrices() {
         ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
-      if (valCell) valCell.innerHTML = '<span style="color:var(--danger);">Error</span>';
+      if (valCell) valCell.innerHTML = '<span style="color:var(--danger-text);">Error</span>';
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
@@ -23236,13 +23296,13 @@ function renderCollection(force) {
           const hasImg = !!cardImg;
           const imgBlock = hasImg ? `<div class="watch-card-img-wrap">
           <img loading="lazy" src="${escHtml(cardImg)}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img"${isRanking ? ' draggable="false"' : ''} onerror="this.style.display='none'">
-          <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+          <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo" aria-label="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
           const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
           const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-            <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+            <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo" aria-label="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
           </div>` : '';
           return `${imgBlock}
         <div class="watch-card-top">
@@ -23708,8 +23768,8 @@ function renderStrapList() {
     if (i === wEditingStrapIdx) {
       return `
         <div class="strap-row add-strap-row" style="margin-top:0;border-bottom:1px solid var(--border);padding:.3rem 0;">
-          <input type="text" id="strap-edit-name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;" maxlength="60">
-          <input type="text" id="strap-edit-mat"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;" maxlength="40">
+          <input type="text" id="strap-edit-name" aria-label="Strap name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;" maxlength="60">
+          <input type="text" id="strap-edit-mat" aria-label="Strap material"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;" maxlength="40">
           <button type="button" class="btn btn-primary btn-sm" onclick="saveStrapEdit(${i})">Save</button>
           <button type="button" class="btn btn-ghost btn-sm"   onclick="cancelStrapEdit()">Cancel</button>
         </div>`;
@@ -23718,9 +23778,9 @@ function renderStrapList() {
       <div class="strap-row${s.isOn ? ' strap-on' : ''}">
         <span class="strap-name clickable" onclick="editStrap(${i})"><span>${escHtml(s.name)}</span></span>
         ${s.material ? `<span class="strap-mat">${escHtml(s.material)}</span>` : ''}
-        <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit" aria-label="Edit strap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
-        <button type="button" class="strap-del-btn" onclick="removeStrap(${i})" title="Remove">✕</button>
+        <button type="button" class="strap-del-btn" onclick="removeStrap(${i})" title="Remove" aria-label="Remove strap">✕</button>
       </div>`;
   }).join('');
   if (wEditingStrapIdx !== null) {
@@ -24369,7 +24429,7 @@ function renderValueSection() {
   html += `<div style="display:flex;align-items:flex-end;gap:.5rem;">
     <div class="form-group" style="margin-bottom:0;flex:1;">
       <label>${mpLabel}</label>
-      <input type="text" inputmode="decimal" id="w-mp-display" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
+      <input type="text" inputmode="decimal" id="w-mp-display" aria-label="Market price" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
     </div>
     <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--fg);font-size:11px;font-family:inherit;padding:5px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
   </div>`;
@@ -24784,9 +24844,9 @@ function renderYearInReview() {
     <div class="yir-header">
       <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:.3rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Year in Review</div>
       <div class="yir-year-nav">
-        <button class="yir-year-btn" onclick="yirNav(-1)" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
+        <button class="yir-year-btn" onclick="yirNav(-1)" aria-label="Previous year" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
         <span class="yir-year-label">${yirYear}</span>
-        <button class="yir-year-btn" onclick="yirNav(1)"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
+        <button class="yir-year-btn" onclick="yirNav(1)" aria-label="Next year"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
       </div>
     </div>`;
 
@@ -24862,9 +24922,9 @@ function renderMonthlyReview() {
   const hdr = `<div class="yir-header">
     <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:.3rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Review</div>
     <div class="yir-year-nav">
-      <button class="yir-year-btn" onclick="monthRevNav(-1)" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
+      <button class="yir-year-btn" onclick="monthRevNav(-1)" aria-label="Previous month" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
       <span class="yir-year-label" style="min-width:7.5rem;font-size:.8rem">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
-      <button class="yir-year-btn" onclick="monthRevNav(1)"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
+      <button class="yir-year-btn" onclick="monthRevNav(1)" aria-label="Next month"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
     </div>
   </div>`;
   if (!mLogs.length) {
@@ -25212,7 +25272,7 @@ function recCardHTML(rec) {
   const todayDOW  = new Date().getDay();
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
       <div style="color:var(--muted);font-size:.85rem">All watches worn today — great rotation!</div>
     </div>`;
   }
@@ -25257,7 +25317,7 @@ function recCardHTML(rec) {
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -25267,7 +25327,7 @@ function recCardHTML(rec) {
         <div class="rec-explanation">${explain}</div>
         <div style="display:flex;gap:.55rem;align-items:center;margin-top:.65rem;flex-wrap:wrap;">
           ${wornToday
-            ? `<span style="font-size:.78rem;color:var(--success)">✓ Already logged today</span>`
+            ? `<span style="font-size:.78rem;color:var(--success-text)">✓ Already logged today</span>`
             : `<button class="btn-quicklog" onclick="openRecLog('${w.id}')">Log This Wear</button>`}
           <button class="btn-rec-skip" onclick="skipRec()" title="Try another suggestion">↻ Try another</button>
         </div>
@@ -26662,7 +26722,7 @@ function renderReceiptsList(w) {
       </div>
       <div class="receipt-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" onclick="removeReceipt('${w.id}','${r.id}',this)">✕</button>
+        <button class="btn btn-danger btn-sm" aria-label="Remove receipt" onclick="removeReceipt('${w.id}','${r.id}',this)">✕</button>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -26782,7 +26842,7 @@ function renderEditReceiptsList(w) {
       </div>
       <div class="receipt-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" onclick="removeReceiptFromEdit('${w.id}','${r.id}',this)">✕</button>
+        <button class="btn btn-danger btn-sm" aria-label="Remove receipt" onclick="removeReceiptFromEdit('${w.id}','${r.id}',this)">✕</button>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -27084,10 +27144,10 @@ function af2RenderRow(watch, idx) {
   let actionsHtml = '';
   switch (s) {
     case 'waiting':
-      actionsHtml = `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
+      actionsHtml = `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip">×</button>`;
       break;
     case 'identifying':
-      actionsHtml = `<span class="af2-spinner-gold"></span><button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" style="margin-left:4px;">×</button>`;
+      actionsHtml = `<span class="af2-spinner-gold"></span><button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip" style="margin-left:4px;">×</button>`;
       break;
     case 'enhancing':
     case 'pricing':
@@ -27096,7 +27156,7 @@ function af2RenderRow(watch, idx) {
     case 'identified':
       actionsHtml = `<button class="af2-btn-confirm" onclick="af2Confirm(${idx})">${watch._af2Duplicate ? 'Add anyway' : 'Confirm'}</button>`
         + `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`
-        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
+        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip">×</button>`;
       break;
     case 'confirmed':
     case 'enhanced':
@@ -27109,7 +27169,7 @@ function af2RenderRow(watch, idx) {
       break;
     case 'failed':
       actionsHtml = `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`
-        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
+        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip">×</button>`;
       break;
   }
 
@@ -27726,13 +27786,13 @@ function af2Edit(idx) {
   const actionsEl = rowEl.querySelector('.af2-actions');
   if (!infoEl || !actionsEl) return;
   infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;position:relative;">
-    <input id="af2-edit-brand-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" autocomplete="off" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-brand-${idx}" aria-label="Brand" value="${escHtml(w.brand || '')}" placeholder="Brand" autocomplete="off" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
     <div id="af2-brand-ac-${idx}" style="display:none;position:absolute;top:28px;left:0;right:0;max-height:120px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15);"></div>
-    <input id="af2-edit-model-${idx}" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-ref-${idx}" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-diameter-${idx}" value="${escHtml(w.caseDiameter || '')}" placeholder="Size (e.g. 41mm)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-movement-${idx}" value="${escHtml(w.movementType || '')}" placeholder="Movement (e.g. automatic)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-years-${idx}" value="${escHtml(w.yearRange || '')}" placeholder="Years (e.g. 2020-2022)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-model-${idx}" aria-label="Model" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-ref-${idx}" aria-label="Reference" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-diameter-${idx}" aria-label="Case size" value="${escHtml(w.caseDiameter || '')}" placeholder="Size (e.g. 41mm)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-movement-${idx}" aria-label="Movement" value="${escHtml(w.movementType || '')}" placeholder="Movement (e.g. automatic)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-years-${idx}" aria-label="Years produced" value="${escHtml(w.yearRange || '')}" placeholder="Years (e.g. 2020-2022)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
   </div>`;
   const brandInput = document.getElementById('af2-edit-brand-' + idx);
   const acList = document.getElementById('af2-brand-ac-' + idx);
@@ -27813,7 +27873,7 @@ function af2UpdatePill() {
   const total = _af2Watches.filter(w => w._af2State !== 'skipped' && w._af2State !== 'failed').length;
   const done = _af2Watches.filter(w => w._af2State === 'done').length;
   if (done >= total) {
-    pill.innerHTML = `<span style="color:var(--success);">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
+    pill.innerHTML = `<span style="color:var(--success-text);">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
     setTimeout(() => pill.remove(), 3000);
   } else {
     pill.innerHTML = `<span class="af2-spinner-gold"></span> Enriching ${total} watch${total !== 1 ? 'es' : ''} · ${done} of ${total} done`;
@@ -28182,13 +28242,22 @@ async function saveEnhanceResult(idx) {
   for (const k of Object.keys(r._updates)) backup[k] = w[k];
   try {
     Object.assign(w, r._updates);
-    const row = watchToRow(w);
-    const { error } = await db.from('watches').update(row).eq('id', w.id);
+    // Update ONLY the enhance-filled columns (audit REL-N9): the old full
+    // watchToRow(w) write clobbered every other column with this device's
+    // in-memory snapshot — a price logged on another device died here. The
+    // enhance keys all map camelCase -> snake_case with plain `|| null` values.
+    const row = {};
+    for (const k of Object.keys(r._updates)) {
+      row[k.replace(/[A-Z]/g, c => '_' + c.toLowerCase())] = w[k] || null;
+    }
+    const { error } = await db.from('watches').update(row).eq('id', w.id).eq('user_id', currentUser.id);
     if (error) throw error;
     r._saved = true;
     _enhanceSaveCount++;
     safeLS.set('wr_enhanceSaveCount', String(_enhanceSaveCount));
-    markDirty('watches', w.id);
+    // No markDirty here: the column-scoped update above already synced the
+    // enhance fields, and queueing a full-row cloudSync upsert would push this
+    // device's stale snapshot of every OTHER column right back (REL-N9).
     save();
     const statusEl = card?.querySelector('.enh-status');
     if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
@@ -28889,7 +28958,7 @@ function openWishlistShareSheet() {
     <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never your price, notes or tags.</div>
     ${priv ? `<div id="wl-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:.75rem;">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
     <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Add a note (optional)</label>
-    <textarea id="wl-share-label" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, sizes, budget, questions." style="width:100%;resize:vertical;"></textarea>
+    <textarea id="wl-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, sizes, budget, questions." style="width:100%;resize:vertical;"></textarea>
     <button class="btn btn-primary" id="wl-share-create" style="margin-top:.75rem;width:100%;" onclick="mintWishlistShare()">Create link</button>`;
   document.getElementById('wl-share-modal').classList.remove('hidden');
   loadWishlistShareLinks();
@@ -29192,7 +29261,7 @@ function openCollectionShareSheet() {
     <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never what you paid, market value, wears, notes or tags.</div>
     ${priv ? `<div id="coll-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:.75rem;">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
     <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Add a note (optional)</label>
-    <textarea id="coll-share-label" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, what you're asking, questions." style="width:100%;resize:vertical;"></textarea>
+    <textarea id="coll-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, what you're asking, questions." style="width:100%;resize:vertical;"></textarea>
     <button class="btn btn-primary" id="coll-share-create" style="margin-top:.75rem;width:100%;" onclick="mintCollectionShare()">Create link</button>`;
   document.getElementById('coll-share-modal').classList.remove('hidden');
   loadCollectionShareLinks();
@@ -31176,7 +31245,7 @@ function initApp() {
         <div style="display:flex;align-items:center;justify-content:center;min-height:80vh;padding:2rem;">
           <div style="text-align:center;max-width:360px;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8" style="margin-bottom:.75rem;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-            <div style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;color:var(--danger);">Account Suspended</div>
+            <div style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;color:var(--danger-text);">Account Suspended</div>
             <div style="color:var(--muted);font-size:.9rem;line-height:1.5;margin-bottom:1rem;">
               Your account has been suspended for violating our Terms of Use. If you believe this is a mistake, contact <a href="mailto:support@wrotate.com" style="color:var(--gold-text);">support@wrotate.com</a>.
             </div>
@@ -31222,6 +31291,11 @@ function clearUserState() {
   _isDemoMode = false;
   const demoBanner = document.getElementById('demo-banner');
   if (demoBanner) demoBanner.classList.add('hidden');
+  // Audit F3: without this, a session-expiry sign-out kept the previous
+  // account's experiment arms (incl. tgknob_* trial knobs) live for whoever
+  // signs in next on this device, until get_experiments() resolved — or
+  // indefinitely if it errored.
+  clearExperiments();
   watches = []; logs = []; wishlist = []; eloRatings = {};
   _earnedBadges = []; _badgeScanDone = false; _badgesLoaded = false;
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear(); _persistDirty();
@@ -32488,8 +32562,8 @@ async function loadTgHistory() {
         </div>
         <div style="display:flex;align-items:center;gap:.5rem;">
           <span style="color:var(--muted);font-size:.72rem;">${dateStr}</span>
-          <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:.75rem;" title="Edit">✎</button>
-          <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:0;font-size:.75rem;" title="Delete">✕</button>
+          <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:.75rem;" title="Edit" aria-label="Edit">✎</button>
+          <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger-text);cursor:pointer;padding:0;font-size:.75rem;" title="Delete" aria-label="Delete">✕</button>
         </div>
       </div>${noteStr}
     </div>`;
@@ -32884,7 +32958,7 @@ function renderMsrHistoryView() {
         const extra = [r.amplitude ? 'Amp ' + r.amplitude + '°' : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0 .3rem 1rem;font-size:.78rem;border-top:1px dashed var(--border);">
           <div><span style="font-weight:600;">${_fmtRateSigned(r.rate)}</span>${extra ? `<span style="color:var(--muted);margin-left:.4rem;">${extra}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.7rem;">${t}</span></div>
-          <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+          <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
         </div>`; }).join('') : '';
       return `<div class="card" style="padding:.55rem .85rem;margin-bottom:.45rem;cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
         <div style="display:flex;align-items:center;justify-content:space-between;font-size:.82rem;">
@@ -35085,11 +35159,11 @@ function _buildViewer() {
   _viewerOverlay = document.createElement('div');
   _viewerOverlay.className = 'img-viewer-overlay';
   _viewerOverlay.innerHTML = `
-    <button class="img-viewer-close" onclick="closeImageViewer()">✕</button>
+    <button class="img-viewer-close" aria-label="Close" onclick="closeImageViewer()">✕</button>
     <span class="img-viewer-counter"></span>
     <div class="img-viewer-media-slot" style="display:flex;align-items:center;justify-content:center;width:100%;max-height:85vh;"></div>
-    <button class="img-viewer-arrow img-viewer-prev" onclick="viewerNav(-1)">‹</button>
-    <button class="img-viewer-arrow img-viewer-next" onclick="viewerNav(1)">›</button>
+    <button class="img-viewer-arrow img-viewer-prev" onclick="viewerNav(-1)" aria-label="Previous image">‹</button>
+    <button class="img-viewer-arrow img-viewer-next" onclick="viewerNav(1)" aria-label="Next image">›</button>
     <div class="img-viewer-dots"></div>`;
   _viewerOverlay.addEventListener('click', e => { if (e.target === _viewerOverlay) closeImageViewer(); });
   let _touchX = 0;

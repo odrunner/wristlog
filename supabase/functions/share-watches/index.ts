@@ -54,21 +54,21 @@ async function fetchShareData(db: any, token: string) {
   if (!isShareUsable(share, shareErr)) return null;
   const row = share as ShareRow;
 
-  const { data: profile, error: profErr } = await db
-    .from("profiles")
-    .select("id, username, display_name, avatar_url")
-    .eq("id", row.user_id)
-    .maybeSingle();
-  if (profErr || !profile) return null;
-
+  // Profile and items both key on the share row alone — run them in parallel.
   // user_id is not redundant next to the id filter: it guarantees a token can
   // never surface a row belonging to anyone but its owner, whatever ids the
   // array happens to contain.
-  const { data: itemRows } = await db
-    .from("watches")
-    .select(WATCHES_SHARE_SELECT)
-    .eq("user_id", row.user_id)
-    .in("id", row.item_ids.length ? row.item_ids : ["__none__"]);
+  const [{ data: profile, error: profErr }, { data: itemRows }] = await Promise.all([
+    db.from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .eq("id", row.user_id)
+      .maybeSingle(),
+    db.from("watches")
+      .select(WATCHES_SHARE_SELECT)
+      .eq("user_id", row.user_id)
+      .in("id", row.item_ids.length ? row.item_ids : ["__none__"]),
+  ]);
+  if (profErr || !profile) return null;
 
   // Ordered like the Collection tab (sortSharedWatches), then stripped to the
   // five publishable fields — purchase_date/created_at never reach the page.
@@ -146,7 +146,12 @@ serve(async (req) => {
     );
   }
 
-  const data = await fetchShareData(db, token);
+  // Comments depend only on the token, not on the share data — fetch both in
+  // parallel. A dead token costs one wasted (tiny, indexed) comments read.
+  const [data, comments] = await Promise.all([
+    fetchShareData(db, token),
+    loadComments(db, "collection", token),
+  ]);
 
   if (!data) {
     return new Response(
@@ -162,7 +167,6 @@ serve(async (req) => {
   const canonicalUrl = `${supabaseUrl}/functions/v1/share-watches?t=${encodeURIComponent(token)}`;
 
   const n = items.length;
-  const comments = await loadComments(db, "collection", token);
   const body = `
     <div class="col-hero">
       <div class="col-avatar">${avatarInnerHtml(profile.avatar_url, displayName)}</div>
@@ -185,6 +189,9 @@ serve(async (req) => {
   if (_rt && typeof _rt.waitUntil === "function") _rt.waitUntil(_bump);
 
   return new Response(htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, body), {
-    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
+    // Same 60s window as the og:image above, and for the same reason: it is
+    // exactly how long a revoked link (or a fresh comment) can lag behind.
+    // Siblings without revocable tokens (share-collection/share-post) use 300.
+    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=60" },
   });
 });

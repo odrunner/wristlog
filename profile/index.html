@@ -331,7 +331,7 @@
         const sorted = [...watches].sort((a, b) => (wearCounts[b.id] || 0) - (wearCounts[a.id] || 0));
         gridHtml = sorted.map(w => {
           const imgHtml = w.image
-            ? `<img class="watch-card-img" src="${escHtml(w.image)}" alt="" loading="lazy">`
+            ? `<img class="watch-card-img" ${thumbSrcAttrs(w.image, escHtml)} alt="" loading="lazy">`
             : `<div class="watch-card-placeholder">${escHtml(initials((w.brand || '') + ' ' + (w.name || '')))}</div>`;
           const wears = wearCounts[w.id] || 0;
           return `

@@ -32,24 +32,33 @@ async function fetchCollectionData(db: ReturnType<typeof createClient>, username
 
   if (!isCollectionViewable(profile, profErr)) return null;
 
-  const { data: watchRows } = await db
-    .from("watches")
-    .select("id, brand, name, image, watch_privacy")
-    .eq("user_id", profile.id)
-    .or("watch_privacy.eq.public,watch_privacy.is.null");
-
-  const watches = watchRows || [];
-  let wearCounts: Record<string, number> = {};
-
-  if (watches.length > 0) {
-    const { data: logs } = await db
-      .from("logs")
+  // Watches and logs both key on profile.id alone, so they run in parallel.
+  // The logs query is filtered by user only (not by the watch-id list): private
+  // watches' logs are dropped in computeWearCounts via `allowedIds` instead,
+  // which keeps the rendered counts identical while saving a serial round-trip
+  // and a URL carrying every watch id.
+  //
+  // Wears are DISTINCT dates per watch (multiple logs same day = 1 wear — the
+  // app-wide definition), so the raw (watch_id, date) pairs still have to come
+  // over: PostgREST aggregates are disabled on this instance (PGRST123, checked
+  // 2026-09-01) and count()/head would count duplicate same-day rows. A
+  // GROUP-BY-watch RPC is the real fix if this ever grows. The cap is ordered
+  // newest-first so, if a user ever exceeds it, recent wears are the ones that
+  // count (observed max is 422 log rows/user as of 2026-09-01).
+  const [{ data: watchRows }, { data: logs }] = await Promise.all([
+    db.from("watches")
+      .select("id, brand, name, image, watch_privacy")
+      .eq("user_id", profile.id)
+      .or("watch_privacy.eq.public,watch_privacy.is.null"),
+    db.from("logs")
       .select("watch_id, date")
       .eq("user_id", profile.id)
-      .in("watch_id", watches.map((w: { id: string }) => w.id))
-      .limit(10000);
-    wearCounts = computeWearCounts(logs);
-  }
+      .order("date", { ascending: false })
+      .limit(2500),
+  ]);
+
+  const watches = watchRows || [];
+  const wearCounts = computeWearCounts(logs, new Set(watches.map((w: { id: string }) => w.id)));
 
   const sorted = sortByWears(watches, wearCounts);
   return { profile, watches, sorted, wearCounts };

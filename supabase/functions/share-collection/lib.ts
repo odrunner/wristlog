@@ -150,10 +150,18 @@ export function isCollectionViewable(
 }
 
 // Count unique (watch_id, date) wears per watch from raw log rows.
-export function computeWearCounts(logs: { watch_id: string; date: string }[] | null | undefined): Record<string, number> {
+// `allowedIds`, when given, restricts counting to those watch ids — the caller
+// now fetches logs by user_id alone (so the logs query can run in parallel with
+// the watches query instead of waiting for its id list), and logs of private or
+// since-deleted watches must not leak into the rendered counts or the OG total.
+export function computeWearCounts(
+  logs: { watch_id: string; date: string }[] | null | undefined,
+  allowedIds?: Set<string>,
+): Record<string, number> {
   const wearCounts: Record<string, number> = {};
   const seen = new Set<string>();
   for (const log of (logs || [])) {
+    if (allowedIds && !allowedIds.has(log.watch_id)) continue;
     const k = log.watch_id + "|" + log.date;
     if (!seen.has(k)) { seen.add(k); wearCounts[log.watch_id] = (wearCounts[log.watch_id] || 0) + 1; }
   }
