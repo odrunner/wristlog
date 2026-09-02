@@ -444,6 +444,14 @@ def internal_suffix(st):
 # (the boundingBox crash, the MAX_TOKENS truncations), so they still page.
 TRANSIENT_MARKERS = ("has been aborted", "aborted a request", "timed out")
 
+# ...but not every HTTP error. Gemini answering 503 UNAVAILABLE ("experiencing
+# high demand ... try again later") is the same weather as a stall: upstream is
+# busy, the fallback absorbs it, the user gets their answer. On 2026-09-01 one
+# of these paged as a defect and Claude had already returned the identification
+# 14 seconds later. Overload and rate limiting are Google's problem; a 4xx is
+# OURS — a bad key, a malformed request — and still pages on the first one.
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
+
 # Thresholds for the transient kind. Under these it is a line in the report, not
 # a red banner — alerting on normal, absorbed behaviour is how three mornings
 # went to investigating a working system.
@@ -462,7 +470,10 @@ def classify_failures(reasons):
     """
     transient, defect, users = [], [], set()
     for i, r in enumerate(reasons):
-        if any(m in r for m in TRANSIENT_MARKERS):
+        # "Gemini error: 503 {...}" / "Gemini error, falling back to Claude: 503 {...}"
+        code = re.search(r"Gemini error[^:]*:\s*(\d{3})", r)
+        is_transient_http = code and int(code.group(1)) in TRANSIENT_HTTP
+        if is_transient_http or any(m in r for m in TRANSIENT_MARKERS):
             transient.append(r)
             m = re.search(r"user=([0-9a-fA-F-]{36})", r)
             users.add(m.group(1) if m else f"unknown-{i}")

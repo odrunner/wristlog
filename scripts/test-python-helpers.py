@@ -208,6 +208,35 @@ class FallbackAlertThreshold(unittest.TestCase):
         st = {"gemini": 9, "claude": 1, "reasons": []}
         self.assertEqual(self._fn("should_alert")(st), "defect")
 
+    def test_gemini_503_is_upstream_weather_not_a_defect(self):
+        """2026-09-01: a 503 paged as a defect while Claude had already answered.
+
+        "This model is currently experiencing high demand ... try again later" is
+        the same class of event as a stall — Google is busy, the fallback covers
+        it. One of them is not news.
+        """
+        st = {"gemini": 6, "claude": 1, "reasons": [
+            f'[identify-watch] {self.U1} Gemini error: 503 {{ "error": {{ "code": 503, '
+            '"message": "This model is currently experiencing high demand.", '
+            '"status": "UNAVAILABLE" }} }}']}
+        self.assertIsNone(self._fn("should_alert")(st))
+        self.assertEqual(len(self._fn("classify_failures")(st["reasons"])["transient"]), 1)
+
+    def test_rate_limit_and_gateway_errors_are_transient(self):
+        for code in (429, 500, 502, 504):
+            st = {"gemini": 6, "claude": 1,
+                  "reasons": [f"[watch-value] {self.U1} Gemini error, falling back to "
+                              f"Claude: {code} upstream"]}
+            self.assertIsNone(self._fn("should_alert")(st), f"{code} should not page")
+
+    def test_client_errors_still_page_on_the_first_one(self):
+        """A 400/401/403 is ours — bad key, malformed request. Never absorb it."""
+        for code in (400, 401, 403):
+            st = {"gemini": 6, "claude": 1,
+                  "reasons": [f"[watch-value] {self.U1} Gemini error, falling back to "
+                              f"Claude: {code} bad request"]}
+            self.assertEqual(self._fn("should_alert")(st), "defect", f"{code} must page")
+
     def test_clean_day_is_silent(self):
         self.assertIsNone(self._fn("should_alert")({"gemini": 15, "claude": 0, "reasons": []}))
 
