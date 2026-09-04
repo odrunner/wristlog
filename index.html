@@ -8196,7 +8196,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.16.09';
+const APP_VERSION = '04.15.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16616,11 +16616,22 @@ async function toggleCommentLike(commentId, logId) {
   }
 }
 
-function refreshFeedCard(logId) {
+function refreshFeedCard(logId, { force = false } = {}) {
   const item = feedItems.find(i => i.id === logId);
   if (!item) return;
   const el = document.getElementById(`feedcard-${logId}`);
+  // Never rebuild the card under a comment box the user is typing in. The
+  // background thread refetch (toggleComments / toggleCommentLike, bcbfa4d) lands
+  // ~1s after the box opens, and outerHTML swaps the input with it: focus, the iOS
+  // keyboard, the typed text and the open @mention picker all vanished — reported
+  // 2026-09-04 as "@ didn't work when replying". The data is already in
+  // feedComments, so the next refresh (posting forces one) renders it.
+  const inp = document.getElementById(`comment-input-${logId}`);
+  if (!force && inp && document.activeElement === inp) return;
+  const draft = inp ? inp.value : '';
   if (el) el.outerHTML = renderFeedCard(item);
+  // An unfocused draft (typed, then tapped elsewhere) survives the swap too.
+  if (draft) { const n = document.getElementById(`comment-input-${logId}`); if (n && !n.value) n.value = draft; }
   // Re-wire the fun-fact row on the brand-new node: it has no data-fact-init,
   // no observer registration and no is-truncated class yet. No freshRender
   // flag — this is a single-card swap, not a full feed replace, so the shared
@@ -16883,7 +16894,7 @@ async function postComment(logId) {
     input.value = '';
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
-    refreshFeedCard(logId);
+    refreshFeedCard(logId, { force: true }); // Enter keeps focus in the box; the new comment must still render
     const item = feedItems.find(i => i.id === logId);
     const postOwner = item?.user_id;
     // Notify the post author (skip if commenting on own post)
