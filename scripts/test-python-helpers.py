@@ -248,5 +248,45 @@ class FallbackAlertThreshold(unittest.TestCase):
         self.assertEqual(self._fn("should_alert")(st), "transient")
 
 
+class CurlHttpMethod(unittest.TestCase):
+    """curl() must send the method it was asked for. Until 2026-09-07 it only
+    added `-X` for POST, so the loop's first real experiment PATCH (2026-09-06,
+    promoting tgknob_guardmode_0) went out as a POST with a body: PostgREST
+    INSERTed a keyless row, hit the NOT NULL on `key`, and the Sunday review
+    crashed before its email. These lock in the verb for every method."""
+
+    def _curl(self, calls):
+        class FakeProc:
+            @staticmethod
+            def run(cmd, check=True, timeout=60):
+                calls.append(cmd)
+                open(cmd[cmd.index("-o") + 1], "w").write("[]")
+        ns = {"subprocess": FakeProc, "json": json, "TMP": tempfile.gettempdir()}
+        exec(_extract("weekly-measurement-review.py", "def curl(", "def fetch_paginated("), ns)
+        return ns["curl"]
+
+    def _verb(self, cmd):
+        return cmd[cmd.index("-X") + 1] if "-X" in cmd else None
+
+    def test_patch_with_body_is_sent_as_patch(self):
+        calls = []
+        self._curl(calls)("https://x/rest/v1/experiments?key=eq.k", [], "PATCH", '{"status":"won"}')
+        self.assertEqual(self._verb(calls[0]), "PATCH")
+        self.assertIn('{"status":"won"}', calls[0])
+
+    def test_post_and_delete_keep_their_verbs(self):
+        calls = []
+        c = self._curl(calls)
+        c("https://x/a", [], "POST", "{}")
+        c("https://x/b", [], "DELETE")
+        self.assertEqual([self._verb(k) for k in calls], ["POST", "DELETE"])
+
+    def test_get_sends_no_explicit_verb(self):
+        calls = []
+        self._curl(calls)("https://x/a", ["Range: 0-9"])
+        self.assertIsNone(self._verb(calls[0]))
+        self.assertNotIn("-d", calls[0])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

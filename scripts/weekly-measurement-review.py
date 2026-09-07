@@ -133,7 +133,7 @@ def read_ledger_lines(primary=None, cache=None):
 def curl(url, hdrs, method="GET", body=None):
     out = f"{TMP}/resp_{abs(hash(url)) % 99999}.json"
     cmd = ["curl", "-s", "-o", out]
-    if method == "POST": cmd += ["-X", "POST"]
+    if method != "GET": cmd += ["-X", method]   # PATCH/DELETE too — a body alone makes curl POST
     if body: cmd += ["-d", body]
     for h in (hdrs or []): cmd += ["-H", h]
     cmd.append(url)
