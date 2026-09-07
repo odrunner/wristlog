@@ -57,7 +57,7 @@ const VERBATIM = [
   'collShareItems', 'collSharePrivateCount', 'groupCommentsByToken',
   'resolveExperiment', 'experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric',
   'parseTgTrialKey', 'tgTrialKnobs', 'resolveTgKnob',
-  'shouldNudgeEnhance',
+  'shouldNudgeEnhance', 'orderCommentsForDisplay',
 ];
 
 const ADAPTED = [

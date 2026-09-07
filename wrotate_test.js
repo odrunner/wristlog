@@ -3674,3 +3674,26 @@ export function featuredFactIndex(count, now = new Date()) {
   const day = Math.floor((now - start) / 86400000);
   return day % n;
 }
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Which comments a card shows, and in what order. Expanded: every comment,
+// chronological. Collapsed: the two most recent. A "top comment" is pinned
+// first only when it has ≥2 likes AND the thread has ≥4 comments — pinning
+// on a single like scrambled short threads (a liked reply jumped above the
+// question it answered, reported 2026-09-05). Ties keep the earliest.
+export function orderCommentsForDisplay(allComments, likeCounts, showAll) {
+  const list = allComments || [];
+  let topIdx = -1, topLikes = 0;
+  list.forEach((c, i) => {
+    const n = (likeCounts && likeCounts[c.id] && likeCounts[c.id].count) || 0;
+    if (n > topLikes) { topLikes = n; topIdx = i; }
+  });
+  const pin = topIdx >= 0 && topLikes >= 2 && list.length >= 4;
+  if (showAll) {
+    if (!pin || topIdx === 0) return list.slice();
+    return [list[topIdx], ...list.filter((_, i) => i !== topIdx)];
+  }
+  const newest = list[list.length - 1] || null;
+  if (pin && newest && list[topIdx].id !== newest.id) return [list[topIdx], newest];
+  return list.slice(-2);
+}
