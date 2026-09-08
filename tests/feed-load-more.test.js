@@ -19,13 +19,22 @@ describe('feedKeysetFilter', () => {
 
   it('builds a composite keyset filter for a valid cursor', () => {
     const f = feedKeysetFilter({ date: '2026-07-20', created_at: '2026-07-20T10:00:00Z' });
-    expect(f).toBe('date.lt.2026-07-20,and(date.eq.2026-07-20,created_at.lt.2026-07-20T10:00:00Z)');
+    expect(f).toBe('date.lt.2026-07-20,and(date.eq.2026-07-20,created_at.lte.2026-07-20T10:00:00Z)');
   });
 
   it('same-date pagination: filter still keys on created_at within the date', () => {
     const f = feedKeysetFilter({ date: '2026-01-01', created_at: '2026-01-01T23:59:59Z' });
-    expect(f).toContain('and(date.eq.2026-01-01,created_at.lt.2026-01-01T23:59:59Z)');
+    expect(f).toContain('and(date.eq.2026-01-01,created_at.lte.2026-01-01T23:59:59Z)');
     expect(f).toContain('date.lt.2026-01-01');
+  });
+
+  // Audit F8: the tiebreaker is INCLUSIVE — rows sharing the cursor's exact
+  // date+created_at (bulk imports) must land on the next page, where
+  // dedupeNewFeedLogs drops the ones already shown instead of losing the rest.
+  it('re-includes exact created_at ties for dedupe rather than skipping them', () => {
+    const f = feedKeysetFilter({ date: '2026-07-20', created_at: '2026-07-20T10:00:00Z' });
+    expect(f).toContain('created_at.lte.');
+    expect(f).not.toContain('created_at.lt.2026');
   });
 });
 

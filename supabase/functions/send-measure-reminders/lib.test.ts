@@ -6,6 +6,9 @@ Deno.test("fmtRate — sign and one decimal", () => {
   assertEquals(fmtRate(6.24), "+6.2 s/d");
   assertEquals(fmtRate(-2), "-2.0 s/d");
   assertEquals(fmtRate(0), "0.0 s/d");
+  // Audit F7: sign comes from the ROUNDED value — no "-0.0 s/d" in push text
+  assertEquals(fmtRate(-0.04), "0.0 s/d");
+  assertEquals(fmtRate(0.04), "0.0 s/d");
 });
 
 Deno.test("buildMeasurePush — first reminder: re-measure to see if it's holding", () => {

@@ -1815,7 +1815,9 @@ export function hasWornToday(logs, watchId, today) {
 // watch accuracy panel's "Unsaved readings" block.
 export function unsavedReadingLabel(row, now = new Date()) {
   const r = Number(row.rate);
-  const rateStr = (r > 0 ? '+' : r < 0 ? '-' : '') + Math.abs(r).toFixed(1) + ' s/d';
+  // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
+  const mag = Math.abs(r).toFixed(1);
+  const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag + ' s/d';
   const ampStr = row.amplitude ? 'Amp: ' + row.amplitude + '°' : '';
   const d = new Date(row.created_at);
   const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
@@ -2883,7 +2885,11 @@ export function pinFeatured(rawLogs, featuredId, featuredLog) {
 // cursor (nothing to page from).
 export function feedKeysetFilter(cursor) {
   if (!cursor || !cursor.date || !cursor.created_at) return null;
-  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lt.${cursor.created_at})`;
+  // created_at.LTE, not lt (audit F8): rows sharing the cursor row's exact
+  // date+created_at (bulk-imported logs) were on no page at all. The cursor row
+  // and its ties are re-fetched and dropped by dedupeNewFeedLogs(shownIds, …),
+  // so nothing renders twice and a fully-deduped page still reads as 'end'.
+  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lte.${cursor.created_at})`;
 }
 
 // Given the ids already shown (Set or array) and an incoming batch of logs,
@@ -3648,7 +3654,9 @@ export function wearIndexPhrase(index, pctRank) {
 export function fmtRate(r) {
   const x = Number(r);
   if (!Number.isFinite(x)) return '—';
-  return `${x > 0 ? '+' : ''}${x.toFixed(1)} s/d`;
+  // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
+  const mag = Math.abs(x).toFixed(1);
+  return `${mag === '0.0' ? '' : x > 0 ? '+' : '-'}${mag} s/d`;
 }
 
 // Bar heights for the tiny histograms/strips on the model page: percent of the

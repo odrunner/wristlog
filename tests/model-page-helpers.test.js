@@ -62,6 +62,9 @@ describe('fmtRate', () => {
     expect(fmtRate(2.94)).toBe('+2.9 s/d');
     expect(fmtRate(-0.24)).toBe('-0.2 s/d');
     expect(fmtRate(0)).toBe('0.0 s/d');
+    // Audit F7: sign comes from the ROUNDED value — no "-0.0 s/d"
+    expect(fmtRate(-0.04)).toBe('0.0 s/d');
+    expect(fmtRate(0.04)).toBe('0.0 s/d');
     expect(fmtRate('nope')).toBe('—');
   });
 });

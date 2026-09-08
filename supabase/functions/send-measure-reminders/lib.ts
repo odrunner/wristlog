@@ -8,8 +8,10 @@ export type MeasureTarget = {
 };
 
 export function fmtRate(r: number): string {
-  const s = r > 0 ? "+" : r < 0 ? "-" : "";
-  return `${s}${Math.abs(r).toFixed(1)} s/d`;
+  // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
+  const mag = Math.abs(r).toFixed(1);
+  const s = mag === "0.0" ? "" : r > 0 ? "+" : "-";
+  return `${s}${mag} s/d`;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

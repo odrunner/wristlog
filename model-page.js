@@ -76,7 +76,9 @@ function wearIndexPhrase(index, pctRank) {
 function fmtRate(r) {
   const x = Number(r);
   if (!Number.isFinite(x)) return '—';
-  return `${x > 0 ? '+' : ''}${x.toFixed(1)} s/d`;
+  // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
+  const mag = Math.abs(x).toFixed(1);
+  return `${mag === '0.0' ? '' : x > 0 ? '+' : '-'}${mag} s/d`;
 }
 
 function barPcts(counts) {

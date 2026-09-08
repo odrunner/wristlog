@@ -7335,10 +7335,9 @@ async function checkAndAwardBadges(context, postId) {
     }
 
     if (!alreadyEarned(82)) {
-      const now = new Date();
-      const cutoff = new Date(now);
-      cutoff.setDate(cutoff.getDate() - 90);
-      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      // Local-date cutoff to match l.date strings (audit F5: the UTC slice was
+      // off by one day for anyone west of UTC)
+      const cutoffStr = addDaysStr(todayStr(), -90);
       const recentLogs = logs.filter(l => l.date >= cutoffStr);
       const watchDays = {};
       recentLogs.forEach(l => { watchDays[l.watchId] = (watchDays[l.watchId] || 0) + 1; });
@@ -7936,12 +7935,12 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph,model_id').eq('user_id', uid)),
+    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph,model_id').eq('user_id', uid).range(0, 9999)),
     // .range(): PostgREST caps an unbounded select at 1000 rows silently. A
     // truncated log set would quietly re-rank the Most Worn leaderboard rather
     // than fail, so ask for a bound well above the current max (422/user).
-    _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid).range(0, 9999)),
-    _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order,elo_rating').eq('user_id', uid)),
+    _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,location,club_id').eq('user_id', uid).range(0, 9999)),
+    _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order,elo_rating').eq('user_id', uid).range(0, 9999)),
     _q(db.from('brands').select('name').eq('is_canonical', true).range(0, 9999)),
   ]), 15000);
   // Only overwrite each table if the query succeeded — keep localStorage cache on failure
@@ -8196,7 +8195,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.16.45';
+const APP_VERSION = '07.18.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10268,9 +10267,9 @@ async function renderClubDetail(clubId) {
         ? db.rpc('feed_watch_display', { ids: watchIds })
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids),
-      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds).range(0, 4999), // audit F9: unbounded selects silently cap at 1000 — count chips under-reported on busy pages
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
-        .in('log_id', logIds).order('created_at', { ascending: true }).limit(300),
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: low page-wide cap dropped the newest comments of later posts
     ]);
 
     const watchMap = {};
@@ -11727,7 +11726,11 @@ function orderCommentsForDisplay(allComments, likeCounts, showAll) {
 // Composite (date, created_at) keyset: fetch posts strictly older than cursor.
 function feedKeysetFilter(cursor) {
   if (!cursor || !cursor.date || !cursor.created_at) return null;
-  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lt.${cursor.created_at})`;
+  // created_at.LTE, not lt (audit F8): rows sharing the cursor row's exact
+  // date+created_at (bulk-imported logs) were on no page at all. The cursor row
+  // and its ties are re-fetched and dropped by dedupeNewFeedLogs(shownIds, …),
+  // so nothing renders twice and a fully-deduped page still reads as 'end'.
+  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lte.${cursor.created_at})`;
 }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 // What loadMoreFeed() should do with a fetched page, given how many rows survived the
@@ -12124,9 +12127,9 @@ async function loadFeed() {
         ? db.rpc('feed_watch_display', { ids: watchIds })
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
-      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds).range(0, 4999), // audit F9: unbounded selects silently cap at 1000 — count chips under-reported on busy pages
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
-        .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
       factIds.length
         ? db.from('watch_facts').select('id, fact').in('id', factIds)
         : Promise.resolve({ data: [] }),
@@ -12322,9 +12325,9 @@ async function loadMoreFeed() {
         ? db.rpc('feed_watch_display', { ids: watchIds })
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
-      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds).range(0, 4999), // audit F9: unbounded selects silently cap at 1000 — count chips under-reported on busy pages
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
-        .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
       factIds.length
         ? db.from('watch_facts').select('id, fact').in('id', factIds)
         : Promise.resolve({ data: [] }),
@@ -13718,7 +13721,7 @@ async function loadRecapLikes() {
     .filter(Boolean);
   if (!ids.length) return;
   try {
-    const { data, error } = await db.from('likes').select('log_id').in('log_id', ids);
+    const { data, error } = await db.from('likes').select('log_id').in('log_id', ids).range(0, 4999); // audit F9: unbounded selects silently cap at 1000
     if (error) throw error;
     const counts = {};
     for (const r of (data || [])) counts[r.log_id] = (counts[r.log_id] || 0) + 1;
@@ -14041,7 +14044,9 @@ function hasWornToday(logs, watchId, today) {
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function unsavedReadingLabel(row, now = new Date()) {
   const r = Number(row.rate);
-  const rateStr = (r > 0 ? '+' : r < 0 ? '-' : '') + Math.abs(r).toFixed(1) + ' s/d';
+  // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
+  const mag = Math.abs(r).toFixed(1);
+  const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag + ' s/d';
   const ampStr = row.amplitude ? 'Amp: ' + row.amplitude + '°' : '';
   const d = new Date(row.created_at);
   const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
@@ -20583,7 +20588,7 @@ async function approveOfficialDraft(draftId) {
     const { error: logErr } = await db.from('logs').insert({
       id: logId,
       user_id: OFFICIAL_USER_ID,
-      date: new Date().toISOString().slice(0, 10),
+      date: todayStr(), // local date like every other post (audit F4: the UTC slice future-dated evening approvals)
       notes: caption.slice(0, 500),
       photo_url: storedUrl,
       visibility: 'public',
@@ -32874,7 +32879,7 @@ async function fetchAccuracyRows(watchId, limit = 500) {
     .eq('user_id', currentUser.id).eq('watch_id', watchId).order('created_at', { ascending: false }).limit(limit);
   return error ? [] : (data || []);
 }
-function _fmtRateSigned(r) { const v = Number(r); return (v > 0 ? '+' : v < 0 ? '-' : '') + Math.abs(v).toFixed(1) + ' s/d'; }
+function _fmtRateSigned(r) { const v = Number(r); const mag = Math.abs(v).toFixed(1); return (mag === '0.0' ? '' : v > 0 ? '+' : '-') + mag + ' s/d'; }
 function _fmtDayLabel(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
