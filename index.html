@@ -8195,7 +8195,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.07.20';
+const APP_VERSION = '09.07.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22027,6 +22027,11 @@ function installPromoAdminListDelegation() {
     const toggleBtn = event.target.closest('[data-promo-toggle]');
     if (toggleBtn) {
       setPromoStatus(toggleBtn.dataset.promoToggle, toggleBtn.dataset.promoNext);
+      return;
+    }
+    if (event.target.closest('[data-promo-archived-toggle]')) {
+      const r = document.getElementById('promo-archived-list');
+      if (r) r.style.display = r.style.display === 'none' ? '' : 'none';
     }
   });
 }
@@ -22057,9 +22062,7 @@ async function loadPromoAdmin() {
   (stats || []).forEach((s) => { byId[s.slot_id] = s; });
   _promoAdminStats = byId;
   if (!listEl) return;
-  listEl.innerHTML = _promoAdminSlots.length === 0
-    ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
-    : _promoAdminSlots.map((s) => {
+  const slotCard = (s) => {
         const st = byId[s.id] || {};
         // A paused slot is stored as 'draft' — same row shape as a slot that
         // was never activated. Distinguish them in the label using recorded
@@ -22105,7 +22108,21 @@ async function loadPromoAdmin() {
             <button class="btn btn-danger promo-slot-del" data-promo-delete="${escAttr(s.id)}" title="Delete this slot and its recorded events for good" aria-label="Delete this slot"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
           </div>
         </div>`;
-      }).join('');
+      };
+  // Archived slots are history, not work: live ones render as cards, archived
+  // ones fold into one muted "N archived" line at the bottom, expanded on tap
+  // (same card markup inside, so Activate / Delete still work from there).
+  const liveSlots = _promoAdminSlots.filter((s) => s.status !== 'archived');
+  const archivedSlots = _promoAdminSlots.filter((s) => s.status === 'archived');
+  const archivedHtml = archivedSlots.length
+    ? `<div style="margin-top:.2rem;">
+        <button class="btn btn-ghost" style="color:var(--muted);" data-promo-archived-toggle>${archivedSlots.length} archived</button>
+        <div id="promo-archived-list" style="display:none;margin-top:.4rem;">${archivedSlots.map(slotCard).join('')}</div>
+      </div>`
+    : '';
+  listEl.innerHTML = _promoAdminSlots.length === 0
+    ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
+    : liveSlots.map(slotCard).join('') + archivedHtml;
 }
 
 async function savePromoConfig() {
