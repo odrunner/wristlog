@@ -8195,7 +8195,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.06.48';
+const APP_VERSION = '09.07.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18600,9 +18600,16 @@ async function loadAdminExperiments() {
   if (sel && metrics.data) sel.innerHTML = metrics.data.map(m => `<option value="${escAttr(m.key)}">${escHtml(m.label)}</option>`).join('');
   _adminExps = (data || []).slice().sort((a, b) => experimentSortRank(a.status) - experimentSortRank(b.status));
   if (!_adminExps.length) { el.innerHTML = '<div style="color:var(--muted);">No experiments yet.</div>'; return; }
+  // Archived rows are history, not work: one muted line at the bottom, expanded on tap.
+  const archived = _adminExps.filter(x => x.status === 'archived');
+  const archivedHtml = archived.length ? `<div style="margin-top:.2rem;">
+        <button class="btn btn-ghost btn-sm" style="color:var(--muted);" onclick="adminExpToggleArchived()">${archived.length} archived</button>
+        <div id="adm-exp-archived" style="display:none;padding:.3rem .4rem 0;color:var(--muted);font-size:.72rem;">
+          ${archived.map(x => `<div style="padding:.15rem 0;">${escHtml(x.name)} <span style="font-family:monospace;font-size:.68rem;">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
+        </div></div>` : '';
   // Stacked cards (not a table) so it fits a phone: identity → metrics grid → verdict → actions row.
   const cell = (label, val) => `<div><div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${label}</div><div>${val}</div></div>`;
-  el.innerHTML = _adminExps.map(x => {
+  el.innerHTML = _adminExps.filter(x => x.status !== 'archived').map(x => {
       const ev = x.eval;
       const gates = { min_users_per_arm: x.min_users_per_arm, min_days: x.min_days, min_lift_pct: x.min_lift_pct, max_guardrail_drop_pct: x.max_guardrail_drop_pct };
       const verdict = ev ? (ev.verdict || experimentVerdict(ev, gates)) : 'not evaluated';
@@ -18644,7 +18651,11 @@ async function loadAdminExperiments() {
           ${(x.decisions || []).map(d => `<div>${escHtml(d.at ? new Date(d.at).toLocaleString() : '—')} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
         </div>
       </div>`;
-    }).join('');
+    }).join('') + archivedHtml;
+}
+function adminExpToggleArchived() {
+  const r = document.getElementById('adm-exp-archived');
+  if (r) r.style.display = r.style.display === 'none' ? '' : 'none';
 }
 function adminExpToggleLog(key) {
   const r = document.getElementById('adm-exp-log-' + key);
