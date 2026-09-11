@@ -3214,6 +3214,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ FOLLOWERS MODAL ════ -->
 <!-- ════ REVIEW PROMPT MODAL ════ -->
+<!-- Push benefit card (2.6 provisional → prominent). Shown once, at the next wear log or kept
+     reading while notifications still deliver quietly; Turn on spends the one-shot OS dialog. -->
+<div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
+  <div class="modal" style="max-width:340px;text-align:center;padding:2rem 1.75rem;">
+    <div class="eyebrow" style="margin-bottom:1rem;">Reminders</div>
+    <div id="push-ask-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Get the 5pm nudge on your lock screen</div>
+    <div style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1.5rem;">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn btn-ghost" onclick="pushAskNotNow()" style="flex:1;border-color:var(--border);color:var(--muted);">Not now</button>
+      <button class="btn btn-ghost" onclick="pushAskTurnOn()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Turn on</button>
+    </div>
+  </div>
+</div>
 <div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
   <div class="modal" style="max-width:340px;text-align:center;padding:2rem 1.75rem;position:relative;">
     <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" style="display:none;position:absolute;top:.6rem;right:.6rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.4rem;line-height:1;padding:.2rem .45rem;">&times;</button>
@@ -8195,7 +8208,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.07.22';
+const APP_VERSION = '11.05.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14192,10 +14205,13 @@ function badgeRevealNames(names, shown = 8) {
 
 // ── Push permission (2.6: provisional at sign-in, one-shot dialog deferred) ─────
 // The native build asks provisionally at sign-in — iOS grants silently and delivers
-// quietly with its own Keep / Turn Off buttons. The one-shot FULL dialog is spent only
-// here, after the user has ACTED on a quiet notification (opened the app from one, then
-// logged a wear or completed a measurement). History: the 2.3 in-app primer modal was
-// shown 52 times and tapped twice; it is gone. 2.3–2.5 builds keep the bridge action.
+// quietly with its own Keep / Turn Off buttons. The one-shot FULL dialog is spent here:
+// directly when the user has ACTED on a quiet notification (opened the app from one, then
+// logged a wear or finished a measurement), or via a one-time benefit card at the next
+// wear log / kept reading while delivery is still quiet (2026-09-11: quiet delivery
+// converted 2.8% of reminders vs 62.9% prominent, and the tap-first rule had produced 20
+// authorized users in four weeks). History: the 2.3 in-app primer modal was shown 52
+// times and tapped twice; it is gone. 2.3–2.5 builds keep the bridge action.
 function _pushBridge() { return window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appAction; }
 function _pushBridgeAvailable() {
   return !!_pushBridge() && iosAtLeast(window._iosAppVersion, '2.3');
@@ -14210,24 +14226,52 @@ function onPushAuthStatus(status) {
   }
 }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
-function shouldDeferredPushAsk({ authStatus, openedFromPush, iosVersion, asked }) {
-  if (asked) return false;
-  if (authStatus !== 'provisional') return false;
-  if (!openedFromPush) return false;
-  return iosAtLeast(iosVersion, '2.6');
+// 'dialog' = spend the one-shot OS dialog now (the user tapped a quiet notification, so
+// intent is proven); 'card' = show the benefit card first (once, at the next wear log or
+// kept reading while delivery is still quiet); null = nothing.
+function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen }) {
+  if (asked) return null;
+  if (authStatus !== 'provisional') return null;
+  if (!iosAtLeast(iosVersion, '2.6')) return null;
+  if (openedFromPush) return 'dialog';
+  return cardSeen ? null : 'card';
 }
 const PUSH_HARD_ASKED = 'wr_push_hard_asked';
+const PUSH_CARD_SEEN = 'wr_push_card_seen';
+function _requestFullPush() {
+  safeLS.set(PUSH_HARD_ASKED, '1');
+  try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {}
+}
+// Returns true when it showed something, so callers hold back the review prompt.
 function maybeDeferredPushAsk() {
-  if (!_pushBridge()) return;
-  const ok = shouldDeferredPushAsk({
+  if (!_pushBridge()) return false;
+  const mode = deferredPushAskMode({
     authStatus: window._pushAuthStatus || 'notDetermined',
     openedFromPush: !!window._openedFromPush,
     iosVersion: window._iosAppVersion,
     asked: safeLS.get(PUSH_HARD_ASKED) === '1',
+    cardSeen: safeLS.get(PUSH_CARD_SEEN) === '1',
   });
-  if (!ok) return;
-  safeLS.set(PUSH_HARD_ASKED, '1');
-  try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {}
+  if (!mode) return false;
+  if (mode === 'dialog') { _requestFullPush(); return true; }
+  safeLS.set(PUSH_CARD_SEEN, '1');
+  // Small delay so the save toast lands first (same rhythm as the review prompt).
+  setTimeout(() => {
+    const m = document.getElementById('push-ask-modal');
+    if (!m) return;
+    m.classList.remove('hidden');
+    _logPostCtaEvent('shown', 'push_ask');
+  }, 1200);
+  return true;
+}
+function pushAskTurnOn() {
+  document.getElementById('push-ask-modal').classList.add('hidden');
+  _logPostCtaEvent('clicked', 'push_ask');
+  _requestFullPush();
+}
+function pushAskNotNow() {
+  document.getElementById('push-ask-modal').classList.add('hidden');
+  _logPostCtaEvent('dismissed', 'push_ask');
 }
 // Settings row: reflects OS status, lets the user enable / manage.
 function renderPushSettingRow() {
@@ -21531,8 +21575,10 @@ async function saveLog() {
   // Delayed so it doesn't land on top of the fun-fact toast.
   setTimeout(() => maybeShowEnhanceNudge(_factWatch, 'wear'), 1500);
   haptic('success');
-  if (!isUpdate && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');
-  if (!isUpdate) maybeDeferredPushAsk();   // acted on a quiet notification? spend the one-shot dialog now
+  // Push ask first: a quiet-delivery user's next log is the moment to earn the lock-screen
+  // reminder; the review prompt yields to it (both are modals).
+  const _pushAsked = !isUpdate && maybeDeferredPushAsk();
+  if (!isUpdate && !_pushAsked && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
@@ -34699,8 +34745,8 @@ function dismissMsrShareCta() {
   const cta = document.getElementById('msr-share-cta');
   if (cta) cta.style.display = 'none';
   closeMeasureModal();
-  // Acted on a quiet notification and just finished a measurement → the one-shot
-  // full permission dialog is worth spending now (no-op unless provisional + 2.6).
+  // A reading was just kept → the one-shot full permission dialog (or its benefit card)
+  // is worth spending now (no-op unless provisional + 2.6).
   maybeDeferredPushAsk();
 }
 

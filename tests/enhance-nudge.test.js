@@ -108,7 +108,8 @@ describe('enhance_nudge wiring in index.html', () => {
     expect(html).toContain("if (nudging) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);");
     // The review prompt yields to a nudge so the two never compete for the same moment.
     expect(html).toContain("if (!nudging) maybeShowReviewPrompt('post');");
-    expect(html).toContain("if (!isUpdate && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');");
+    // …and both yield to the one-time push benefit card (2026-09-11).
+    expect(html).toContain("if (!isUpdate && !_pushAsked && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');");
   });
 
   it('registers the enhance_run metric in the experiment_metrics seed', () => {

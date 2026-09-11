@@ -8,7 +8,8 @@ import { describe, it, expect } from 'vitest';
 // (52 shown / 2 tapped, opt-ins fell to zero); 2.5 restored the cold ask (~28%).
 // 2.6 asks PROVISIONALLY at sign-in — iOS grants silently, notifications deliver quietly
 // with the OS's own Keep / Turn Off buttons — and spends the one-shot dialog only after
-// the user has ACTED on a quiet notification (see shouldDeferredPushAsk in index.html).
+// the user has ACTED on a quiet notification, or via a one-time benefit card at the next
+// wear log / kept reading (see deferredPushAskMode in index.html).
 //
 // Source assertions — this repo has Command Line Tools only, no Xcode, so the Swift cannot
 // be executed here. They guard the contract, not the wiring.
@@ -70,9 +71,11 @@ describe('2.6: push-tap routing falls through to JS', () => {
 });
 
 describe('web side', () => {
-  it('the deferred ask needs provisional + opened-from-push + 2.6', () => {
-    expect(html).toMatch(/function shouldDeferredPushAsk\(/);
-    expect(html).toMatch(/return iosAtLeast\(iosVersion, '2\.6'\);/);
+  it('the deferred ask needs provisional + 2.6, and goes straight to the dialog only when opened from push', () => {
+    expect(html).toMatch(/function deferredPushAskMode\(/);
+    expect(html).toMatch(/if \(!iosAtLeast\(iosVersion, '2\.6'\)\) return null;/);
+    expect(html).toMatch(/if \(openedFromPush\) return 'dialog';/);
+    expect(html).toContain('id="push-ask-modal"');
   });
   it('the in-app primer modal is gone', () => {
     expect(html).not.toContain('id="push-primer-modal"');

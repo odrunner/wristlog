@@ -1965,13 +1965,15 @@ export function badgeRevealNames(names, shown = 8) {
   return list.slice(0, shown).join(' · ') + ' · and ' + (list.length - shown) + ' more';
 }
 
-// The one-shot OS dialog is spent only after the user has ACTED on a quiet (provisional)
-// notification — tapped one, then logged a wear or finished a measurement. Never at sign-in.
-export function shouldDeferredPushAsk({ authStatus, openedFromPush, iosVersion, asked }) {
-  if (asked) return false;
-  if (authStatus !== 'provisional') return false;
-  if (!openedFromPush) return false;
-  return iosAtLeast(iosVersion, '2.6');
+// The one-shot OS dialog: 'dialog' when the user has ACTED on a quiet (provisional)
+// notification, 'card' (benefit card first, once) at the next wear log / kept reading while
+// delivery is still quiet, null otherwise. Never at sign-in.
+export function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen }) {
+  if (asked) return null;
+  if (authStatus !== 'provisional') return null;
+  if (!iosAtLeast(iosVersion, '2.6')) return null;
+  if (openedFromPush) return 'dialog';
+  return cardSeen ? null : 'card';
 }
 
 // ══════════════════════════════════════════
