@@ -26,3 +26,11 @@ branch in `experiment_user_metric()` (`sql/2026-08-28-experiments.sql`).
 
 Dev tab → "Experiments — force my variant" lets the admin see either arm without touching
 assignment. Internal accounts are never assigned and never counted.
+
+Server-side exposure (`owner = 'server'`): when the treatment is something the server does
+to a user at a specific moment (a push, an email), assign the arm in the RPC that selects
+the audience — same hash as `get_experiments()` — and insert into `experiment_assignments`
+there. `get_experiments()` skips server-owned experiments at login, so the arm stats only
+contain users who were actually eligible. Set `owner='server'` on the experiment row; the
+nightly judge evaluates it like any other. Example: `remeasure_d7` in
+`sql/2026-09-11-remeasure-d7.sql`.

@@ -36,6 +36,88 @@ export function buildMeasurePush(t: MeasureTarget): { title: string; body: strin
 }
 
 // ---------------------------------------------------------------------------
+// Day-7 "did it hold?" nudge — experiment remeasure_d7 (2026-09-11). One message per user,
+// ever, seven days after their FIRST kept reading, on that watch, quoting its rate.
+// Channel comes from remeasure_d7_targets(): 'push' when the token is backed by a real
+// grant, 'email' otherwise (provisional / denied / no token).
+// ---------------------------------------------------------------------------
+
+export type RemeasureD7Target = {
+  user_id: string; email: string | null; channel: string; variant: string; watch_id: string;
+  brand: string | null; name: string | null; rate: number | string; measured_at: string; local_today: string;
+};
+
+const d7Label = (t: { brand: string | null; name: string | null }) =>
+  [t.brand, t.name].filter(Boolean).join(" ").trim() || "watch";
+
+export function buildRemeasureD7Push(t: { brand: string | null; name: string | null; rate: number | string }): { title: string; body: string } {
+  return { title: "WRotate", body: `Your ${d7Label(t)} ran ${fmtRate(Number(t.rate))} last week. Measure again to see if it holds.` };
+}
+
+const escHtml = (x: string) => x.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
+
+// Body is HTML (brand/name escaped here); subject is plain text.
+export function buildRemeasureD7Email(t: { brand: string | null; name: string | null; rate: number | string }): { subject: string; body: string } {
+  const label = d7Label(t);
+  const rate = fmtRate(Number(t.rate));
+  return {
+    subject: `Did your ${label} hold its rate?`,
+    body: `A week ago your <strong>${escHtml(label)}</strong> measured <strong>${rate}</strong>. Measure it again in WRotate to see whether it's holding — two readings make a trend, one is just a number.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Email helpers — copied from supabase/functions/send-wear-reminders/lib.ts
+// (self-contained; no cross-function imports per repo convention). The CTA links to
+// /open, never the bare root: .well-known/apple-app-site-association EXCLUDES "/" and
+// "/index.html", so a root link opens Safari instead of the installed iOS app.
+// ---------------------------------------------------------------------------
+
+export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "remeasure-d7"): string {
+  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
+          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
+        </td></tr>
+        <tr><td style="padding:24px 28px;">
+          <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
+        </td></tr>
+        <tr><td style="padding:4px 28px 28px;">
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=${campaign}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Measure it again</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function unsubUrl(supabaseUrl: string, uid: string, sig: string, cat = "updates"): string {
+  return `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${uid}&cat=${cat}&sig=${sig}`;
+}
+
+// HMAC-SHA-256 sign uid:cat with the given key; returns url-safe base64.
+export async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${uid}:${cat}`));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// ---------------------------------------------------------------------------
 // APNs helpers — copied VERBATIM from supabase/functions/send-badge-push/lib.ts
 // (self-contained; no cross-function imports per repo convention).
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import { buildMeasurePush, fmtRate } from "./lib.ts";
+import { buildHtmlEmail, buildRemeasureD7Email, buildRemeasureD7Push, hmacSign, unsubUrl } from "./lib.ts";
 import { buildAlertPayload, routeFor, versionAtLeast } from "./lib.ts";
 
 Deno.test("fmtRate — sign and one decimal", () => {
@@ -46,4 +47,34 @@ Deno.test("buildAlertPayload — extra merges into the root, aps untouched", () 
   assertEquals((p.aps as Record<string, unknown>).badge, 1);
   assertEquals((p.w as Record<string, unknown>).route, "measure");
   assertEquals("w" in (buildAlertPayload({ title: "T", body: "B" }) as Record<string, unknown>), false);
+});
+
+// ── Day-7 "did it hold?" nudge (experiment remeasure_d7) ─────────────────────────
+Deno.test("buildRemeasureD7Push — names the watch and quotes last week's rate", () => {
+  const m = buildRemeasureD7Push({ brand: "Omega", name: "Speedmaster", rate: "4.24" });
+  assertEquals(m.title, "WRotate");
+  assertEquals(m.body, "Your Omega Speedmaster ran +4.2 s/d last week. Measure again to see if it holds.");
+  assertEquals(buildRemeasureD7Push({ brand: null, name: null, rate: -1 }).body, "Your watch ran -1.0 s/d last week. Measure again to see if it holds.");
+});
+
+Deno.test("buildRemeasureD7Email — subject plain, body escapes brand/name", () => {
+  const m = buildRemeasureD7Email({ brand: "A&B", name: "<Diver>", rate: 0.02 });
+  assertEquals(m.subject, "Did your A&B <Diver> hold its rate?");
+  assertStringIncludes(m.body, "<strong>A&amp;B &lt;Diver&gt;</strong> measured <strong>0.0 s/d</strong>");
+  assertStringIncludes(m.body, "two readings make a trend");
+});
+
+Deno.test("buildHtmlEmail — CTA goes to /open (never the bare root), unsubscribe link present", () => {
+  const html = buildHtmlEmail("Subj <x>", "<p>hi</p>", "https://u/unsub");
+  assertStringIncludes(html, 'href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=remeasure-d7"');
+  assertStringIncludes(html, 'href="https://u/unsub"');
+  assertStringIncludes(html, "<title>Subj &lt;x&gt;</title>");
+  assertEquals(html.includes('href="https://wrotate.com/"'), false);
+});
+
+Deno.test("unsubUrl / hmacSign — reminders category, url-safe base64", async () => {
+  assertEquals(unsubUrl("https://x.supabase.co", "u1", "s1", "reminders"), "https://x.supabase.co/functions/v1/email-unsubscribe?uid=u1&cat=reminders&sig=s1");
+  const sig = await hmacSign("u1", "reminders", "k");
+  assertEquals(/^[A-Za-z0-9_-]+$/.test(sig), true);
+  assertEquals(sig, await hmacSign("u1", "reminders", "k"));
 });
