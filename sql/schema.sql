@@ -2395,14 +2395,20 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
+declare
+  -- Provider picture (Google sets avatar_url and picture; Apple sets neither) — see
+  -- sql/2026-09-12-avatar-import-trigger.sql.
+  pic text := coalesce(nullif(new.raw_user_meta_data->>'avatar_url', ''),
+                       nullif(new.raw_user_meta_data->>'picture', ''));
 begin
-  insert into public.profiles (id, username, display_name, theme_preference, default_post_visibility)
+  insert into public.profiles (id, username, display_name, theme_preference, default_post_visibility, avatar_url)
   values (
     new.id,
     split_part(new.email, '@', 1),
     split_part(new.email, '@', 1),
     'light',
-    'public'
+    'public',
+    case when pic ~ '^https://' then pic else null end
   );
   return new;
 end;
