@@ -7,13 +7,13 @@ import { dirname, join } from 'path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const sql = readFileSync(join(root, 'sql', '2026-09-13-follow-suggestions.sql'), 'utf8');
 describe('follow_suggestions', () => {
-  it('excludes self, followed, requested, blocks either way, private, suspended, internal', () => {
+  it('excludes self, followed, requested, blocks either way, non-public, suspended, internal', () => {
     expect(sql).toMatch(/SELECT id FROM me/);
     expect(sql).toMatch(/follows f WHERE f\.follower_id = \(SELECT id FROM me\)/);
     expect(sql).toMatch(/follow_requests r WHERE r\.requester_id = \(SELECT id FROM me\)/);
     expect(sql).toMatch(/user_blocks b WHERE b\.blocker_id = \(SELECT id FROM me\)/);
     expect(sql).toMatch(/user_blocks b WHERE b\.blocked_id = \(SELECT id FROM me\)/);
-    expect(sql).toMatch(/COALESCE\(p\.profile_privacy, 'public'\) <> 'private'/);
+    expect(sql).toMatch(/COALESCE\(p\.profile_privacy, 'public'\) = 'public'/);   // public profiles only — never followers-only or private
     expect(sql).toMatch(/is_suspended/);
     expect(sql).toMatch(/internal_accounts/);
   });
