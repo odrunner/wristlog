@@ -8,8 +8,9 @@
 --   2. liked      — authors of public posts with the most likes in the last 30 days.
 --   3. followed   — most-followed accounts seen in the last 30 days.
 -- Always excluded: self, people already followed or requested, blocks either way,
--- private profiles, suspended and internal accounts. 'followers'-privacy profiles are
--- returned (the client shows Request instead of Follow).
+-- suspended and internal accounts, and ANY profile that is not public (2026-09-13:
+-- followers-only profiles used to be returned with a Request button; a suggestion
+-- reveals the person and, for same_model, what they own, so only public profiles now).
 -- Deploy with: npx supabase db query --linked --file sql/2026-09-13-follow-suggestions.sql
 -- Guarded by tests/follow-suggestions-sql.test.js. Client: followSuggest* in index.html.
 
@@ -29,7 +30,7 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     WHERE (SELECT id FROM me) IS NOT NULL
       AND p.id NOT IN (SELECT id FROM excluded)
       AND COALESCE(p.is_suspended, false) = false
-      AND COALESCE(p.profile_privacy, 'public') <> 'private'
+      AND COALESCE(p.profile_privacy, 'public') = 'public'
       AND NOT EXISTS (SELECT 1 FROM internal_accounts ia WHERE ia.user_id = p.id)
   ),
   same_model AS (
