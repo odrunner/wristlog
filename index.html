@@ -3226,6 +3226,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ FOLLOWERS MODAL ════ -->
 <!-- ════ REVIEW PROMPT MODAL ════ -->
+<!-- After adding a watch (A/B follow_suggest): the members who own that same model. -->
+<div id="follow-sugg-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="follow-sugg-modal-title">
+  <div class="modal" style="max-width:420px;">
+    <div class="follow-sugg" data-surface="add">
+      <div class="eyebrow" style="margin-bottom:.35rem;">You're in good company</div>
+      <div class="modal-title" id="follow-sugg-modal-title" style="margin-bottom:.9rem;"></div>
+      <div class="follow-sugg-row" id="follow-sugg-modal-row"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:1.1rem;">
+      <button class="btn btn-ghost" onclick="dismissFollowSuggest('add')">Close</button>
+    </div>
+  </div>
+</div>
 <!-- Push benefit card (2.6 provisional → prominent). Shown once, at the next wear log or kept
      reading while notifications still deliver quietly; Turn on spends the one-shot OS dialog. -->
 <div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
@@ -3595,7 +3608,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
-    <div id="follow-suggest-add-slot"></div>
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div style="display:flex;gap:.45rem;align-items:center;">
@@ -8223,7 +8235,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.08.37';
+const APP_VERSION = '13.15.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17322,9 +17334,14 @@ function renderFollowSuggestCard(slot, list, { title, surface, dismissable }) {
   }
 }
 function dismissFollowSuggest(surface) {
-  const slot = document.getElementById(surface === 'feed' ? 'follow-suggest-slot' : 'follow-suggest-add-slot');
-  if (slot) { slot.innerHTML = ''; delete slot.dataset.key; }
-  if (surface === 'feed') safeLS.set(FOLLOW_SUGG_DISMISS, String(Date.now()));
+  if (surface === 'add') {
+    const m = document.getElementById('follow-sugg-modal');
+    if (m) m.classList.add('hidden');
+  } else {
+    const slot = document.getElementById('follow-suggest-slot');
+    if (slot) { slot.innerHTML = ''; delete slot.dataset.key; }
+    safeLS.set(FOLLOW_SUGG_DISMISS, String(Date.now()));
+  }
   _logFollowSuggest('dismissed', { surface });
 }
 async function followSuggestAct(btn) {
@@ -17340,7 +17357,7 @@ async function followSuggestAct(btn) {
   if (window.posthog) posthog.capture('follow_suggest_followed', { surface, reason: s ? s.reason : null, request: restricted });
   if (restricted) await sendFollowRequest(userId, btn); else await followUser(userId, btn);
   // followUser / sendFollowRequest restyle the button; drop the key so the next render can drop the tile.
-  document.querySelectorAll('#follow-suggest-slot, #follow-suggest-add-slot').forEach(el => { delete el.dataset.key; });
+  document.querySelectorAll('#follow-suggest-slot').forEach(el => { delete el.dataset.key; });
 }
 // Feed card. Called from renderFeed(); cheap when nothing changed (10-min cache + DOM key).
 async function maybeRenderFollowSuggest() {
@@ -17358,24 +17375,34 @@ async function maybeRenderFollowSuggest() {
   if (!visible) { slot.innerHTML = ''; delete slot.dataset.key; return; }
   renderFollowSuggestCard(slot, list, { title: 'People to follow', surface: 'feed', dismissable: true });
 }
-// Right after a watch is added: the people who own that same model, if any. The model
-// link is set by a DB trigger once the row syncs, so this looks twice (3 s, then 8 s).
+// Right after a watch is added: a popup with the people who own that same model, if
+// any. The model link is set by a DB trigger once the row syncs, so this looks twice
+// (3 s, then 8 s), and it waits until no other sheet or modal is open (the photo flow's
+// result sheet, the fun-fact modal) so it never lands on top of something else.
 async function showFollowSuggestAfterAdd(watchId) {
   if (!currentUser || _isDemoMode || !experiment('follow_suggest')) return;
   invalidateFollowSuggestions();
+  let owners = [];
   for (const delay of [3000, 5000]) {
     await new Promise(r => setTimeout(r, delay));
     const list = await loadFollowSuggestions(true);
-    const owners = list.filter(s => s.reason === 'same_model' && s.via_watch_id === watchId);
-    const slot = document.getElementById('follow-suggest-add-slot');
-    if (!slot) return;
-    if (owners.length) {
-      const w = watches.find(x => x.id === watchId);
-      const label = w ? [w.brand, w.name].filter(Boolean).join(' ').trim() : '';
-      renderFollowSuggestCard(slot, owners, { title: label ? `Also own the ${label}` : 'Also own this watch', surface: 'add', dismissable: true });
-      return;
-    }
+    owners = _followSuggOpen(list.filter(s => s.reason === 'same_model' && s.via_watch_id === watchId));
+    if (owners.length) break;
   }
+  if (!owners.length) return;
+  const modal = document.getElementById('follow-sugg-modal');
+  if (!modal) return;
+  const otherOpen = () => [...document.querySelectorAll('.overlay:not(.hidden)')].some(el => el !== modal)
+    || !!document.querySelector('#af2-sheet:not(.hidden), .sheet.open');
+  for (let i = 0; i < 120 && otherOpen(); i++) await new Promise(r => setTimeout(r, 500));
+  if (otherOpen()) return;   // still busy after a minute — skip rather than interrupt
+  const w = watches.find(x => x.id === watchId);
+  const label = w ? [w.brand, w.name].filter(Boolean).join(' ').trim() : '';
+  document.getElementById('follow-sugg-modal-title').textContent =
+    (owners.length === 1 ? '1 member also owns' : owners.length + ' members also own') + (label ? ` the ${label}` : ' this watch');
+  document.getElementById('follow-sugg-modal-row').innerHTML = owners.map(s => followSuggestTileHtml(s)).join('');
+  modal.classList.remove('hidden');
+  _logFollowSuggest('shown', { surface: 'add', n: owners.length });
 }
 // People modal: a Suggested section above the search results while the box is empty.
 async function renderDiscoverSuggested() {

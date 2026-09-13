@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockSupabase, injectSession, waitForAppBoot } from './helpers.js';
+import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES } from './helpers.js';
 
 // A/B `follow_suggest`: treatment shows a "People to follow" card at the top of the Feed,
 // tiles with a reason line and Follow / Request per the target's privacy. Control: nothing.
@@ -66,4 +66,24 @@ test('control: no card, no RPC call', async ({ page }) => {
   await page.waitForTimeout(400);
   await expect(page.locator('#follow-sugg-feed')).toHaveCount(0);
   expect(calls).toBe(0);
+});
+
+test('treatment: after adding a watch, a popup lists the owners of that model', async ({ page }) => {
+  const W = SAMPLE_WATCHES[0];
+  const owners = [{ ...SUGG[0], via_watch_id: W.id, model_brand: W.brand, model_name: W.name }, { ...SUGG[1], reason: 'same_model', via_watch_id: W.id, model_brand: W.brand, model_name: W.name }];
+  await mockSupabase(page, { watches: [W] });
+  await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant: 'treatment' }]) }));
+  await page.route('**/rest/v1/rpc/follow_suggestions*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(owners) }));
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await expect.poll(() => page.evaluate(() => EXPERIMENTS.follow_suggest)).toBe('treatment');
+  await navigateTo(page, 'collection');
+  page.evaluate((id) => showFollowSuggestAfterAdd(id), W.id);
+  const modal = page.locator('#follow-sugg-modal');
+  await expect(modal).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#follow-sugg-modal-title')).toHaveText(`2 members also own the ${W.brand} ${W.name}`);
+  await expect(modal.locator('.follow-sugg-tile')).toHaveCount(2);
+  await modal.getByRole('button', { name: 'Close' }).click();
+  await expect(modal).toBeHidden();
 });
