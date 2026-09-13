@@ -2752,6 +2752,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-empty-icon   { font-size: 3rem; margin-bottom: .75rem; }
 
     /* ── DISCOVER / USER CARDS ─────────────────── */
+    /* Suggested follows (A/B follow_suggest) */
+    .follow-sugg { margin-bottom: 1.1rem; padding: .85rem .9rem .7rem; }
+    .follow-sugg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+    .follow-sugg-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.05rem; line-height: 1; padding: .1rem .3rem; }
+    .follow-sugg-row { display: flex; gap: .6rem; overflow-x: auto; padding-bottom: .25rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .follow-sugg-row::-webkit-scrollbar { display: none; }
+    .follow-sugg-tile { flex: 0 0 132px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .35rem; padding: .7rem .5rem .6rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); }
+    .follow-sugg-tile .feed-user-avatar { width: 48px; height: 48px; font-size: .95rem; cursor: pointer; }
+    .follow-sugg-name { font-size: .8rem; font-weight: 600; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    .follow-sugg-reason { font-size: .68rem; color: var(--muted); line-height: 1.3; min-height: 1.75em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .follow-sugg-tile .follow-btn { margin-top: .15rem; }
+    .user-card-reason { font-size: .7rem; color: var(--gold-text); }
     .user-card {
       display: flex; align-items: center; gap: .75rem;
       padding: .7rem 0; border-bottom: 1px solid var(--border);
@@ -3583,6 +3595,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
+    <div id="follow-suggest-add-slot"></div>
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div style="display:flex;gap:.45rem;align-items:center;">
@@ -3621,6 +3634,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
+    <div id="follow-suggest-slot"></div>
     <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
     <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
@@ -5848,6 +5862,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="form-group" style="margin-bottom:1rem;">
       <input type="text" id="discover-search" aria-label="Search people" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
     </div>
+    <div id="discover-suggested"></div>
     <div id="discover-results"></div>
     <div style="margin-top:1.25rem;">
       <div class="eyebrow eyebrow-muted" style="margin-bottom:.65rem;">People You Follow</div>
@@ -8208,7 +8223,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.16.03';
+const APP_VERSION = '13.08.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14361,6 +14376,7 @@ function carryFeedVideos(el, render) {
 }
 
 function renderFeed() {
+  maybeRenderFollowSuggest();   // A/B follow_suggest — cached, no-op unless the list changed
   const el = document.getElementById('feed-list');
   if (!el) return;
   renderOnboardingChecklist();
@@ -17127,6 +17143,7 @@ function openDiscover() {
   document.getElementById('discover-results').innerHTML =
     '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
   renderFollowingList();
+  renderDiscoverSuggested();   // A/B follow_suggest
   document.getElementById('discover-modal').classList.remove('hidden');
 }
 function closeDiscover() {
@@ -17135,6 +17152,8 @@ function closeDiscover() {
 }
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
+  const _sugg = document.getElementById('discover-suggested');
+  if (_sugg) _sugg.style.display = val.trim() ? 'none' : '';
   if (!val.trim()) {
     discoverUsers = [];
     document.getElementById('discover-results').innerHTML =
@@ -17204,17 +17223,171 @@ function friendActionBtn(u) {
   return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
 }
 
-function userCardHtml(u, { removable = false } = {}) {
+function userCardHtml(u, { removable = false, sub = null } = {}) {
   return `
     <div class="user-card" data-uid="${u.id}">
       <div class="feed-user-avatar" onclick="viewUserProfile('${u.id}')" style="cursor:pointer;">${profileInitials(u)}</div>
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
         <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
         <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
+        ${sub ? `<div class="user-card-reason">${escHtml(sub)}</div>` : ''}
       </div>
       ${friendActionBtn(u)}
       ${removable ? `<button class="follow-btn remove-follower" title="Remove this follower" onclick="event.stopPropagation();confirmRemoveFollower('${u.id}',this)">Remove</button>` : ''}
     </div>`;
+}
+
+// ── Suggested follows — A/B `follow_suggest` (2026-09-13, usage review P6) ─────────────
+// Treatment shows up to 8 people worth following: owners of the same model first (public
+// collections and public watches only), then the most-liked posters of the last 30 days,
+// then the most-followed active accounts. Three surfaces: a card at the top of the Feed
+// (dismissable for 14 days, gone once you follow 10 people), a Suggested section in the
+// People modal, and — right after adding a watch — the owners of that same model.
+// Ranking lives in the follow_suggestions() RPC (sql/2026-09-13-follow-suggestions.sql).
+let _followSugg = null, _followSuggAt = 0, _followSuggLoading = null;
+const _followSuggShown = new Set();
+const FOLLOW_SUGG_DISMISS = 'wr_follow_sugg_dismissed';
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function followSuggestReason(s) {
+  if (!s) return '';
+  if (s.reason === 'same_model') {
+    const w = [s.model_brand, s.model_name].filter(Boolean).join(' ').trim();
+    return w ? 'Also owns the ' + w : 'Owns the same watch';
+  }
+  if (s.reason === 'liked') return Number(s.likes) === 1 ? '1 like this month' : Number(s.likes) + ' likes this month';
+  if (s.reason === 'followed') return Number(s.followers) === 1 ? 'Followed by 1 member' : 'Followed by ' + Number(s.followers) + ' members';
+  return '';
+}
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function followSuggestVisible({ variant, count, followingCount, dismissedAt, now }) {
+  if (variant !== 'treatment') return false;
+  if (!count) return false;
+  if (followingCount >= 10) return false;
+  if (dismissedAt && now - dismissedAt < 14 * 86400000) return false;
+  return true;
+}
+function _followSuggOpen(list) {
+  return (list || []).filter(s => s && s.id && !following.has(s.id) && !pendingRequests.has(s.id) && (!currentUser || s.id !== currentUser.id));
+}
+async function loadFollowSuggestions(force) {
+  if (!currentUser || _isDemoMode) return [];
+  if (!force && _followSugg && Date.now() - _followSuggAt < 10 * 60 * 1000) return _followSugg;
+  if (_followSuggLoading) return _followSuggLoading;
+  _followSuggLoading = (async () => {
+    try {
+      const { data, error } = await db.rpc('follow_suggestions', { p_limit: 8 });
+      if (error) { console.warn('[WRotate] follow_suggestions:', error.message); return _followSugg || []; }
+      _followSugg = Array.isArray(data) ? data : [];
+      _followSuggAt = Date.now();
+      return _followSugg;
+    } catch (_) { return _followSugg || []; }
+    finally { _followSuggLoading = null; }
+  })();
+  return _followSuggLoading;
+}
+function invalidateFollowSuggestions() { _followSuggAt = 0; }
+function _logFollowSuggest(event, meta) {
+  if (!currentUser || _isDemoMode) return;
+  try { db.from('feature_events').insert({ user_id: currentUser.id, event: 'follow_suggest', meta: { event, ...(meta || {}) } }).then(() => {}); } catch (_) { /* ignore */ }
+}
+function followSuggestTileHtml(s) {
+  // ids and the surface travel as data attributes and are read back with dataset —
+  // never interpolated into a handler's JS string (audit SEC-8).
+  const id = escAttr(s.id);
+  const name = escHtml(s.display_name || s.username || '—');
+  const restricted = followNeedsRequest(s.profile_privacy);
+  return `<div class="follow-sugg-tile" data-uid="${id}">
+    <div class="feed-user-avatar" onclick="viewUserProfile(this.parentNode.dataset.uid)">${profileInitials(s)}</div>
+    <div class="follow-sugg-name" onclick="viewUserProfile(this.parentNode.dataset.uid)" title="${name}">${name}</div>
+    <div class="follow-sugg-reason">${escHtml(followSuggestReason(s))}</div>
+    <button class="follow-btn follow" onclick="followSuggestAct(this)">${restricted ? 'Request' : 'Follow'}</button>
+  </div>`;
+}
+function renderFollowSuggestCard(slot, list, { title, surface, dismissable }) {
+  if (!slot) return;
+  const open = _followSuggOpen(list);
+  if (!open.length) { slot.innerHTML = ''; delete slot.dataset.key; return; }
+  const key = surface + ':' + open.map(s => s.id).join(',');
+  if (slot.dataset.key === key) return;   // same people already on screen — keep the row's scroll position
+  slot.dataset.key = key;
+  const sfc = escAttr(surface);
+  slot.innerHTML = `<div class="card follow-sugg" id="follow-sugg-${sfc}" data-surface="${sfc}">
+    <div class="follow-sugg-head"><div class="eyebrow">${escHtml(title)}</div>
+      ${dismissable ? `<button class="follow-sugg-close" aria-label="Dismiss" title="Dismiss" onclick="dismissFollowSuggest(this.closest('.follow-sugg').dataset.surface)">✕</button>` : ''}</div>
+    <div class="follow-sugg-row">${open.map(s => followSuggestTileHtml(s)).join('')}</div>
+  </div>`;
+  if (!_followSuggShown.has(surface)) {
+    _followSuggShown.add(surface);
+    _logFollowSuggest('shown', { surface, n: open.length, reasons: open.map(s => s.reason) });
+  }
+}
+function dismissFollowSuggest(surface) {
+  const slot = document.getElementById(surface === 'feed' ? 'follow-suggest-slot' : 'follow-suggest-add-slot');
+  if (slot) { slot.innerHTML = ''; delete slot.dataset.key; }
+  if (surface === 'feed') safeLS.set(FOLLOW_SUGG_DISMISS, String(Date.now()));
+  _logFollowSuggest('dismissed', { surface });
+}
+async function followSuggestAct(btn) {
+  if (demoGuard()) return;
+  const tile = btn && btn.closest('.follow-sugg-tile');
+  const card = btn && btn.closest('.follow-sugg');
+  const userId = tile ? tile.dataset.uid : null;
+  const surface = card ? card.dataset.surface : 'feed';
+  if (!userId) return;
+  const s = (_followSugg || []).find(x => x.id === userId);
+  const restricted = followNeedsRequest(s && s.profile_privacy);
+  _logFollowSuggest('follow', { surface, reason: s ? s.reason : null, request: restricted });
+  if (window.posthog) posthog.capture('follow_suggest_followed', { surface, reason: s ? s.reason : null, request: restricted });
+  if (restricted) await sendFollowRequest(userId, btn); else await followUser(userId, btn);
+  // followUser / sendFollowRequest restyle the button; drop the key so the next render can drop the tile.
+  document.querySelectorAll('#follow-suggest-slot, #follow-suggest-add-slot').forEach(el => { delete el.dataset.key; });
+}
+// Feed card. Called from renderFeed(); cheap when nothing changed (10-min cache + DOM key).
+async function maybeRenderFollowSuggest() {
+  const slot = document.getElementById('follow-suggest-slot');
+  if (!slot) return;
+  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) {
+    if (slot.innerHTML) { slot.innerHTML = ''; delete slot.dataset.key; }
+    return;
+  }
+  const list = await loadFollowSuggestions();
+  const visible = followSuggestVisible({
+    variant: 'treatment', count: _followSuggOpen(list).length, followingCount: following.size,
+    dismissedAt: Number(safeLS.get(FOLLOW_SUGG_DISMISS)) || 0, now: Date.now(),
+  });
+  if (!visible) { slot.innerHTML = ''; delete slot.dataset.key; return; }
+  renderFollowSuggestCard(slot, list, { title: 'People to follow', surface: 'feed', dismissable: true });
+}
+// Right after a watch is added: the people who own that same model, if any. The model
+// link is set by a DB trigger once the row syncs, so this looks twice (3 s, then 8 s).
+async function showFollowSuggestAfterAdd(watchId) {
+  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) return;
+  invalidateFollowSuggestions();
+  for (const delay of [3000, 5000]) {
+    await new Promise(r => setTimeout(r, delay));
+    const list = await loadFollowSuggestions(true);
+    const owners = list.filter(s => s.reason === 'same_model' && s.via_watch_id === watchId);
+    const slot = document.getElementById('follow-suggest-add-slot');
+    if (!slot) return;
+    if (owners.length) {
+      const w = watches.find(x => x.id === watchId);
+      const label = w ? [w.brand, w.name].filter(Boolean).join(' ').trim() : '';
+      renderFollowSuggestCard(slot, owners, { title: label ? `Also own the ${label}` : 'Also own this watch', surface: 'add', dismissable: true });
+      return;
+    }
+  }
+}
+// People modal: a Suggested section above the search results while the box is empty.
+async function renderDiscoverSuggested() {
+  const el = document.getElementById('discover-suggested');
+  if (!el) return;
+  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) { el.innerHTML = ''; return; }
+  const open = _followSuggOpen(await loadFollowSuggestions());
+  if (!open.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin-bottom:.65rem;">Suggested</div>`
+    + open.map(s => userCardHtml(s, { sub: followSuggestReason(s) })).join('')
+    + `<div style="height:1rem;"></div>`;
+  if (!_followSuggShown.has('people')) { _followSuggShown.add('people'); _logFollowSuggest('shown', { surface: 'people', n: open.length }); }
 }
 
 // ══════════════════════════════════════════
@@ -24808,7 +24981,7 @@ async function saveWatch() {
   closeWatchModal();
   renderCollection();
   // A/B enhance_nudge — after the modal closed and the grid re-rendered.
-  if (_addedWatchId) { maybeShowEnhanceNudge(watches.find(x => x.id === _addedWatchId) || null, 'add'); _addedWatchId = null; }
+  if (_addedWatchId) { const _aid = _addedWatchId; maybeShowEnhanceNudge(watches.find(x => x.id === _aid) || null, 'add'); _addedWatchId = null; showFollowSuggestAfterAdd(_aid); }
   checkAndAwardBadges('watch');
 
   // If this was a "Move from Wishlist" flow, delete the source wishlist item
@@ -27665,6 +27838,7 @@ async function af2Confirm(idx) {
     if (window.posthog) posthog.capture('watch_added', { brand: watchData.brand, source: 'photo_v2' });
     w._af2WatchId = newId;
     logIdentifyOutcome(w, 'accepted');
+    showFollowSuggestAfterAdd(newId);   // A/B follow_suggest — owners of this model
   } catch (e) {
     console.error('[WRotate] af2 add error:', e);
     toast('Failed to add watch: ' + (e?.message || e), 'error');

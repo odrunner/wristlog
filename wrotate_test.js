@@ -1976,6 +1976,26 @@ export function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, as
   return cardSeen ? null : 'card';
 }
 
+// Suggested follows (A/B follow_suggest). Reason line under each tile.
+export function followSuggestReason(s) {
+  if (!s) return '';
+  if (s.reason === 'same_model') {
+    const w = [s.model_brand, s.model_name].filter(Boolean).join(' ').trim();
+    return w ? 'Also owns the ' + w : 'Owns the same watch';
+  }
+  if (s.reason === 'liked') return Number(s.likes) === 1 ? '1 like this month' : Number(s.likes) + ' likes this month';
+  if (s.reason === 'followed') return Number(s.followers) === 1 ? 'Followed by 1 member' : 'Followed by ' + Number(s.followers) + ' members';
+  return '';
+}
+// Feed card gate: treatment only, something to show, not yet a heavy follower, not dismissed in 14 days.
+export function followSuggestVisible({ variant, count, followingCount, dismissedAt, now }) {
+  if (variant !== 'treatment') return false;
+  if (!count) return false;
+  if (followingCount >= 10) return false;
+  if (dismissedAt && now - dismissedAt < 14 * 86400000) return false;
+  return true;
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════

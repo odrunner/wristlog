@@ -101,7 +101,7 @@ describe('enhance_nudge wiring in index.html', () => {
   });
 
   it('calls the nudge from the add and wear surfaces', () => {
-    expect(html).toContain("maybeShowEnhanceNudge(watches.find(x => x.id === _addedWatchId) || null, 'add')");
+    expect(html).toContain("maybeShowEnhanceNudge(watches.find(x => x.id === _aid) || null, 'add')");
     expect(html).toContain("setTimeout(() => maybeShowEnhanceNudge(_factWatch, 'wear'), 1500);");
     expect(html).toContain("setTimeout(() => maybeShowEnhanceNudge(watches.find(x => x.id === watchId) || null, 'wear'), 1500);");
     expect(html).toContain("const nudging = isWear && enhanceNudgeWouldShow(postedWatch);");
