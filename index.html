@@ -6434,15 +6434,24 @@ const _bootMarks = { script: performance.now() };
 function _bootMark(k) { if (_bootMarks[k] == null) _bootMarks[k] = performance.now(); }
 let _bootTimingSent = false;
 function _sendBootTiming() {
-  if (_bootTimingSent || _isDemoMode || !window.posthog) return;
+  if (_bootTimingSent || _isDemoMode) return;
   _bootTimingSent = true;
   try {
     const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
-    posthog.capture('boot_timing', bootTimingPayload({
+    const payload = bootTimingPayload({
       marks: _bootMarks, nav,
       swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
       feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed,
-    }));
+    });
+    if (window.posthog) posthog.capture('boot_timing', payload);
+    // First-party copy for Admin → Traffic → "First load" (no PostHog key needed,
+    // and not lost to blockers). Signed-in loads only — the RPC needs auth.uid()
+    // — and this runs after the feed has rendered, so it never competes with
+    // the load it measures. Spec: sql/2026-09-18-boot-timings.sql.
+    if (currentUser) {
+      db.rpc('record_boot_timing', { p: { ...payload, platform: _tgHasNative() ? 'ios' : 'web' } })
+        .then(({ error }) => { if (error) console.warn('[WRotate] record_boot_timing:', error.message); }, () => {});
+    }
   } catch (e) { /* telemetry must never break boot */ }
 }
 setTimeout(_sendBootTiming, 20000);
@@ -8317,7 +8326,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.05.27';
+const APP_VERSION = '18.05.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12088,6 +12097,40 @@ function syncFeedCaughtUp() {
 // Shown above the cards when a refresh failed but the previous load (cached
 // feed at boot, or the last successful pull) is still on screen. The full
 // "Couldn't load your feed" screen is reserved for having nothing to show.
+// Admin → Traffic → "First load": one row per UTC day from
+// admin_boot_timing_daily() (first-party copy of the boot_timing event, internal
+// accounts excluded). Times are median / 90th percentile, in seconds since the
+// page started loading.
+function firstLoadCardHtml(days) {
+  const rows = Array.isArray(days) ? days.filter(d => d && d.day) : [];
+  if (!rows.length) return '';
+  const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
+  const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
+  const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
+  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const td = (html, left) => `<td style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
+  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
+  const body = rows.map(d => '<tr>'
+    + td(escHtml(String(d.day).slice(5)), true)
+    + td(escHtml(String(num(d.loads) == null ? '–' : num(d.loads))))
+    + td(pair(d.script_p50, d.script_p90))
+    + td(secs(d.cached_paint_p50))
+    + td(pair(d.first_live_p50, d.first_live_p90))
+    + td(pair(d.enriched_p50, d.enriched_p90))
+    + td(pct(d.cached_pct))
+    + td(pct(d.early_pct))
+    + td(pct(d.error_pct))
+    + '</tr>').join('');
+  return `<div class="admin-card">
+        <div class="eyebrow" style="margin-bottom:.5rem;">First load (last ${rows.length} days, UTC)</div>
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;font-variant-numeric:tabular-nums;">
+          <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
+          <tbody>${body}</tbody>
+        </table></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+      </div>`;
+}
+
 // The head's early-fetch script parks the feed's two user-independent queries on
 // window.__earlyFeed before the boot script has even arrived. They are only
 // trusted for the same user and while fresh; anything else → issue the queries
@@ -19880,7 +19923,7 @@ async function renderAdminTraffic(force = false) {
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
-    const [trafficR, emailEventsR, demoR, clickR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR, clickR, bootR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
@@ -19891,6 +19934,9 @@ async function renderAdminTraffic(force = false) {
       // tracking is live only for broadcasts to iOS 2.6+ recipients (since
       // 2026-08-21), so this is the fuller count. Spec: sql/2026-08-14-email-clickthrough.sql.
       db.rpc('admin_email_clickthrough', cacheArgs),
+      // First-load timings per day (sql/2026-09-18-boot-timings.sql). ~100 narrow
+      // rows/day, so it is computed live — no admin_stats_cache entry needed.
+      db.rpc('admin_boot_timing_daily', { p_days: 14 }),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -19944,6 +19990,7 @@ async function renderAdminTraffic(force = false) {
     el.innerHTML = `
       ${renderEmailHealth(emailEventsR.data || {})}
       ${demoViewsHtml}
+      ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">By Source</div>
         ${sourceRows}

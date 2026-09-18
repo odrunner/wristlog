@@ -3112,6 +3112,40 @@ export function serializeFeedCache({ userId, items, likes, comments, commentCoun
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
+// Admin → Traffic → "First load": one row per UTC day from
+// admin_boot_timing_daily() (first-party copy of the boot_timing event, internal
+// accounts excluded). Times are median / 90th percentile, in seconds since the
+// page started loading.
+export function firstLoadCardHtml(days) {
+  const rows = Array.isArray(days) ? days.filter(d => d && d.day) : [];
+  if (!rows.length) return '';
+  const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
+  const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
+  const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
+  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const td = (html, left) => `<td style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
+  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
+  const body = rows.map(d => '<tr>'
+    + td(escHtml(String(d.day).slice(5)), true)
+    + td(escHtml(String(num(d.loads) == null ? '–' : num(d.loads))))
+    + td(pair(d.script_p50, d.script_p90))
+    + td(secs(d.cached_paint_p50))
+    + td(pair(d.first_live_p50, d.first_live_p90))
+    + td(pair(d.enriched_p50, d.enriched_p90))
+    + td(pct(d.cached_pct))
+    + td(pct(d.early_pct))
+    + td(pct(d.error_pct))
+    + '</tr>').join('');
+  return `<div class="admin-card">
+        <div class="eyebrow" style="margin-bottom:.5rem;">First load (last ${rows.length} days, UTC)</div>
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;font-variant-numeric:tabular-nums;">
+          <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
+          <tbody>${body}</tbody>
+        </table></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+      </div>`;
+}
+
 // The head's early-fetch script parks the feed's two user-independent queries on
 // window.__earlyFeed before the boot script has even arrived. They are only
 // trusted for the same user and while fresh; anything else → issue the queries

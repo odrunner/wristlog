@@ -36,6 +36,8 @@ async function visit(page) {
 test('one boot_timing event per load, marks in boot order', async ({ page }) => {
   await injectSession(page);
   await spyPostHog(page);
+  const rpcBodies = [];
+  page.on('request', r => { if (r.method() === 'POST' && r.url().includes('/rest/v1/rpc/record_boot_timing')) rpcBodies.push(r.postDataJSON()); });
   await visit(page);
 
   await expect.poll(() => bootEvents(page).then(e => e.length)).toBe(1);
@@ -53,6 +55,10 @@ test('one boot_timing event per load, marks in boot order', async ({ page }) => 
   // The Phase-2 render fires it; nothing later may send a second copy.
   await page.waitForTimeout(500);
   expect((await bootEvents(page)).length).toBe(1);
+
+  // Same numbers, once, to the first-party table behind Admin → Traffic → First load.
+  expect(rpcBodies).toHaveLength(1);
+  expect(rpcBodies[0].p).toMatchObject({ ...props, platform: 'web' });
 });
 
 test('a returning user reports the cached paint', async ({ page }) => {
@@ -67,4 +73,15 @@ test('a returning user reports the cached paint', async ({ page }) => {
   expect(props.cached_feed).toBe(true);
   expect(props.cached_paint_ms).toBeGreaterThan(0);
   expect(props.first_live_ms).toBeGreaterThanOrEqual(props.cached_paint_ms);
+});
+
+test('the first-party copy is still written when PostHog is blocked', async ({ page }) => {
+  await injectSession(page);
+  // A blocker: the snippet never defines window.posthog.
+  await page.addInitScript(() => { Object.defineProperty(window, 'posthog', { get: () => undefined, set: () => {}, configurable: false }); });
+  const rpcBodies = [];
+  page.on('request', r => { if (r.method() === 'POST' && r.url().includes('/rest/v1/rpc/record_boot_timing')) rpcBodies.push(r.postDataJSON()); });
+  await visit(page);
+  await expect.poll(() => rpcBodies.length).toBe(1);
+  expect(rpcBodies[0].p.first_live_ms).toBeGreaterThan(0);
 });
