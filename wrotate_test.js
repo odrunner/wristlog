@@ -3146,6 +3146,43 @@ export function firstLoadCardHtml(days) {
       </div>`;
 }
 
+// ── Social cache ─────────────────────────────────────────────────────────────
+// "Remember who you follow on the device." The feed's first stage needs the ids
+// the user follows, has blocked, and is close friends with; fetching them was a
+// whole request stage (~0.4–0.5 s on a phone) in front of the posts query. The
+// last known sets are stored per user and restored at boot so the posts query
+// starts at once; the live lookups still run, and socialSignature() tells the
+// boot code whether anything changed (→ one feed reload) or not (→ nothing).
+export function socialCacheKey(userId) {
+  return userId ? 'wrotate_social_cache_' + userId : null;
+}
+
+export function serializeSocialCache({ userId, following, blocked, friends, savedAt }) {
+  if (!userId) return null;
+  const ids = s => [...(s || [])].filter(x => typeof x === 'string' && x).slice(0, 5000);
+  return JSON.stringify({ v: 1, userId, savedAt, following: ids(following), blocked: ids(blocked), friends: ids(friends) });
+}
+
+// Trust a stored social cache only for the same user, within maxAgeMs, with the
+// expected shape. Returns { following, blocked, friends } as arrays, or null.
+export function parseSocialCache(raw, { userId, now, maxAgeMs = 7 * 86400000 }) {
+  if (!raw || !userId) return null;
+  let c;
+  try { c = JSON.parse(raw); } catch (e) { return null; }
+  if (!c || c.v !== 1 || c.userId !== userId) return null;
+  if (typeof c.savedAt !== 'number' || !(now - c.savedAt < maxAgeMs) || now - c.savedAt < 0) return null;
+  const ids = a => Array.isArray(a) ? a.filter(x => typeof x === 'string' && x) : null;
+  const following = ids(c.following), blocked = ids(c.blocked), friends = ids(c.friends);
+  if (!following || !blocked || !friends) return null;
+  return { following, blocked, friends };
+}
+
+// Order-independent fingerprint of the three sets the feed is built from.
+export function socialSignature({ following, blocked, friends }) {
+  const part = s => [...(s || [])].sort().join(',');
+  return part(following) + '|' + part(blocked) + '|' + part(friends);
+}
+
 // The head's early-fetch script parks the feed's two user-independent queries on
 // window.__earlyFeed before the boot script has even arrived. They are only
 // trusted for the same user and while fresh; anything else → issue the queries
@@ -3157,7 +3194,7 @@ export function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   return age >= 0 && age < maxAgeMs;
 }
 
-export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed }) {
+export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -3177,6 +3214,7 @@ export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedF
     feed_error: !!feedError,
     optimistic_boot: !!optimistic,
     early_feed: !!earlyFeed,
+    social_cache: !!socialCache,
   };
 }
 

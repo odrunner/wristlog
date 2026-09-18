@@ -47,6 +47,7 @@ const VERBATIM = [
   'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome', 'applyCommentLikes',
   'feedSortDate', 'compareFeedLogs', 'feedCaughtUpIndex', 'feedMaxCreatedAt',
   'feedCacheKey', 'serializeFeedCache', 'parseFeedCache', 'carryFeedEnrichment', 'bootTimingPayload', 'earlyFeedUsable', 'firstLoadCardHtml',
+  'socialCacheKey', 'serializeSocialCache', 'parseSocialCache', 'socialSignature',
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'deferredPushAskMode', 'followSuggestReason', 'followSuggestVisible',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',

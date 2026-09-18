@@ -6441,7 +6441,7 @@ function _sendBootTiming() {
     const payload = bootTimingPayload({
       marks: _bootMarks, nav,
       swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed,
+      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed, socialCache: _socialCacheUsed,
     });
     if (window.posthog) posthog.capture('boot_timing', payload);
     // First-party copy for Admin → Traffic → "First load" (no PostHog key needed,
@@ -8326,7 +8326,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.05.53';
+const APP_VERSION = '18.07.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11976,7 +11976,7 @@ function serializeFeedCache({ userId, items, likes, comments, commentCounts, com
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed }) {
+function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -11996,6 +11996,7 @@ function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, op
     feed_error: !!feedError,
     optimistic_boot: !!optimistic,
     early_feed: !!earlyFeed,
+    social_cache: !!socialCache,
   };
 }
 
@@ -12131,6 +12132,75 @@ function firstLoadCardHtml(days) {
       </div>`;
 }
 
+// ── Social cache ─────────────────────────────────────────────────────────────
+// "Remember who you follow on the device." The feed's first stage needs the ids
+// the user follows, has blocked, and is close friends with; fetching them was a
+// whole request stage (~0.4–0.5 s on a phone) in front of the posts query. The
+// last known sets are stored per user and restored at boot so the posts query
+// starts at once; the live lookups still run, and socialSignature() tells the
+// boot code whether anything changed (→ one feed reload) or not (→ nothing).
+function socialCacheKey(userId) {
+  return userId ? 'wrotate_social_cache_' + userId : null;
+}
+
+function serializeSocialCache({ userId, following, blocked, friends, savedAt }) {
+  if (!userId) return null;
+  const ids = s => [...(s || [])].filter(x => typeof x === 'string' && x).slice(0, 5000);
+  return JSON.stringify({ v: 1, userId, savedAt, following: ids(following), blocked: ids(blocked), friends: ids(friends) });
+}
+
+// Trust a stored social cache only for the same user, within maxAgeMs, with the
+// expected shape. Returns { following, blocked, friends } as arrays, or null.
+function parseSocialCache(raw, { userId, now, maxAgeMs = 7 * 86400000 }) {
+  if (!raw || !userId) return null;
+  let c;
+  try { c = JSON.parse(raw); } catch (e) { return null; }
+  if (!c || c.v !== 1 || c.userId !== userId) return null;
+  if (typeof c.savedAt !== 'number' || !(now - c.savedAt < maxAgeMs) || now - c.savedAt < 0) return null;
+  const ids = a => Array.isArray(a) ? a.filter(x => typeof x === 'string' && x) : null;
+  const following = ids(c.following), blocked = ids(c.blocked), friends = ids(c.friends);
+  if (!following || !blocked || !friends) return null;
+  return { following, blocked, friends };
+}
+
+// Order-independent fingerprint of the three sets the feed is built from.
+function socialSignature({ following, blocked, friends }) {
+  const part = s => [...(s || [])].sort().join(',');
+  return part(following) + '|' + part(blocked) + '|' + part(friends);
+}
+
+// Wiring for the social cache (pure helpers above).
+let _socialCacheUsed = false;
+let _feedSocialSig = null;      // signature the current feed was built from
+function _socialSig() { return socialSignature({ following, blocked: blockedUsers, friends: friendships }); }
+function saveSocialCache() {
+  const key = socialCacheKey(currentUser && currentUser.id);
+  if (!key || _isDemoMode) return;
+  // Nothing to remember → drop the entry, so a user who unfollowed everyone
+  // doesn't boot from a stale list (and reload the feed) forever.
+  if (!following.size && !blockedUsers.size && !friendships.size) { try { safeLS.remove(key); } catch (e) {} return; }
+  const json = serializeSocialCache({ userId: currentUser.id, following, blocked: blockedUsers, friends: friendships, savedAt: Date.now() });
+  if (json) { try { safeLS.set(key, json); } catch (e) {} }
+}
+function clearSocialCache(userId) {
+  const key = socialCacheKey(userId);
+  if (key) { try { safeLS.remove(key); } catch (e) {} }
+}
+// Returns true when the last known sets were restored.
+function restoreSocialCache() {
+  const key = socialCacheKey(currentUser && currentUser.id);
+  if (!key) return false;
+  let raw = null;
+  try { raw = safeLS.get(key); } catch (e) {}
+  const c = parseSocialCache(raw, { userId: currentUser.id, now: Date.now() });
+  if (!c) return false;
+  following = new Set(c.following);
+  blockedUsers = new Set(c.blocked);
+  friendships = new Set(c.friends);
+  _socialCacheUsed = true;
+  return true;
+}
+
 // The head's early-fetch script parks the feed's two user-independent queries on
 // window.__earlyFeed before the boot script has even arrived. They are only
 // trusted for the same user and while fresh; anything else → issue the queries
@@ -12180,8 +12250,10 @@ async function loadFeed() {
   feedHasMore = true;
   feedLoadingMore = false;
   _feedSkipCursor = null;
-  // Snapshot following size — used at end to detect race condition
-  const _followingAtStart = following.size;
+  // Snapshot what this load is built from — compared at the end to detect the
+  // follows / blocks / friends lookups landing (or changing) mid-load.
+  const _sigAtStart = _socialSig();
+  _feedSocialSig = _sigAtStart;
   // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
   const _feedSafety = setTimeout(() => {
     if (feedLoading) {
@@ -12449,9 +12521,8 @@ async function loadFeed() {
   // ── Stale-following guard ──────────────────────────────────────────────
   // If following was populated AFTER we built the query (race condition),
   // re-compute friendships and re-fetch with full following data.
-  if (!feedError && following.size > _followingAtStart) {
-    console.log('[WRotate] following populated after feed query — re-fetching');
-    computeFriendships();
+  if (!feedError && _socialSig() !== _sigAtStart) {
+    console.log('[WRotate] follows/blocks changed during the feed query — re-fetching');
     feedLoadedAt = 0;
     loadFeed();
   }
@@ -31784,10 +31855,26 @@ function initApp() {
     if (_feedFired) return;
     _feedFired = true;
     computeFriendships();
+    saveSocialCache();
     loadFeed();
   };
+  // Last known follows / blocks / close friends → start the posts query NOW
+  // instead of a request stage later. The live lookups below still run; when
+  // they land the sets are recomputed and saved, and the feed reloads once only
+  // if what it was built from has changed (or loadFeed()'s own end-of-load
+  // check does it, when a load is still in flight).
+  if (restoreSocialCache()) { _feedFired = true; loadFeed(); }
   Promise.all([_safe(loadFollowing), _safe(loadBlockedUsers), _safe(loadFriendRequests)])
-    .then(_fireFeed)
+    .then(() => {
+      if (!_feedFired) { _fireFeed(); return; }
+      computeFriendships();
+      saveSocialCache();
+      if (!feedLoading && _feedSocialSig !== null && _socialSig() !== _feedSocialSig) {
+        console.log('[WRotate] follows/blocks changed since the cached copy — reloading feed');
+        feedLoadedAt = 0;
+        loadFeed();
+      }
+    })
     .catch(() => _fireFeed());
   // Safety: if feed-critical loaders hang >5s, start feed with whatever we have
   // (2s was too aggressive — cold starts with auth token refresh easily exceed 2s)
@@ -35560,6 +35647,7 @@ db.auth.getSession().then(({ data: { session }, error }) => {
 function _onSignedOut() {
     const wasLoggedIn = !!currentUser; // distinguish manual vs expired
     clearFeedCache(currentUser && currentUser.id);
+    clearSocialCache(currentUser && currentUser.id);
     currentUser = null;
     clearUserState();
     document.getElementById('auth-screen').style.display = 'flex';
@@ -35593,6 +35681,7 @@ let _lastHiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     _lastHiddenAt = Date.now();
+    if (currentUser) saveSocialCache(); // follows / blocks made this session
     // Pause notification polling while tab is hidden
     if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
     return;
