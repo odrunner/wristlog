@@ -8276,7 +8276,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.21.05';
+const APP_VERSION = '17.21.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12046,8 +12046,9 @@ function syncFeedCaughtUp() {
 // Shown above the cards when a refresh failed but the previous load (cached
 // feed at boot, or the last successful pull) is still on screen. The full
 // "Couldn't load your feed" screen is reserved for having nothing to show.
-function feedStaleHtml() {
-  return `<div class="feed-stale" role="status" aria-live="polite"><span>Couldn&#39;t refresh &mdash; showing earlier posts</span><button type="button" onclick="loadFeed()">&#8635; Retry</button></div>`;
+function feedStaleHtml(partial) {
+  const msg = partial ? 'Couldn&#39;t load everyone&#39;s posts &mdash; showing yours' : 'Couldn&#39;t refresh &mdash; showing earlier posts';
+  return `<div class="feed-stale" role="status" aria-live="polite"><span>${msg}</span><button type="button" onclick="loadFeed()">&#8635; Retry</button></div>`;
 }
 
 function feedCaughtUpHtml() {
@@ -12067,6 +12068,7 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
+  feedPartial = false;
   // Fresh full load → reset pagination so "load more" starts clean.
   feedHasMore = true;
   feedLoadingMore = false;
@@ -12101,6 +12103,7 @@ async function loadFeed() {
     // null so the feed renders normally without a featured pin.
     const featuredP = withTimeout(db.rpc('featured_current'), 4000).catch(() => null);
     try {
+      const buildPhase1 = () => {
       // Q1: public posts — no user restriction, global discovery feed
       const q1 = db.from('logs').select(FEED_LOG_COLS)
         .eq('visibility', 'public')
@@ -12138,9 +12141,26 @@ async function loadFeed() {
         );
       }
 
-      const results = await withTimeout(Promise.all(promises), 8000);
-      const firstError = results.find(r => r.error);
-      if (firstError) throw firstError.error;
+      return promises;
+      };
+      const runPhase1 = async (ms) => {
+        const results = await withTimeout(Promise.all(buildPhase1()), ms);
+        const firstError = results.find(r => r.error);
+        if (firstError) throw firstError.error;
+        return results;
+      };
+      // One retry after a short pause. A single transient failure — a request
+      // dropped on a flaky connection, a 5xx — used to drop straight to the
+      // own-posts fallback and pin it for 60 s. 5 s + 0.5 s + 2.5 s stays
+      // inside the 8 s master safety net above.
+      let results;
+      try {
+        results = await runPhase1(5000);
+      } catch (e1) {
+        console.warn('[WRotate] feed Phase 1 failed, retrying once:', e1?.message);
+        await new Promise(r => setTimeout(r, 500));
+        results = await runPhase1(2500);
+      }
 
       // Merge, deduplicate by id, cap at 50, then order for display.
       // The 50-row window is cut on the RAW (date, created_at) order — the same
@@ -12155,12 +12175,18 @@ async function loadFeed() {
         .slice(0, 50)
         .sort((a, b) => compareFeedLogs(a, b, feedToday));
       logsErr = null;
-    } catch {
-      // Fallback: own posts only (safe when visibility column is unavailable)
+    } catch (e) {
+      // Both attempts failed. With cards already on screen (cached feed at
+      // boot, foreground re-pull) keep them — the error path draws the
+      // "couldn't refresh" chip over them. With nothing to show, fall back to
+      // own posts only, and mark the load partial so the 60 s "loaded
+      // recently" guard can't pin a feed that is missing everyone else.
+      if (feedItems.length) throw e;
       const res = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 8000);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 4000);
       rawLogs = res.data; logsErr = res.error;
+      feedPartial = true;
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedError = true; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
@@ -12308,7 +12334,7 @@ async function loadFeed() {
     saveFeedCache();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
   finally { clearTimeout(_feedSafety); feedLoading = false; }
-  if (!feedError) feedLoadedAt = Date.now();
+  if (!feedError && !feedPartial) feedLoadedAt = Date.now();
   // If error occurred before Phase 1 could render, show error UI
   if (feedError) { renderFeed(); _sendBootTiming(); }
   // ── Stale-following guard ──────────────────────────────────────────────
@@ -14518,7 +14544,7 @@ function renderFeed() {
   if (_feedCaughtUpIdx !== null && _feedCaughtUpIdx <= cards.length) {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
-  if (feedError) cards.unshift(feedStaleHtml());
+  if (feedError || feedPartial) cards.unshift(feedStaleHtml(!feedError && feedPartial));
   carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render
@@ -17759,6 +17785,7 @@ let clubPagePrev  = 'page-feed';
 let feedLoading       = false;
 let _feedLoadStartedAt = 0;          // when feedLoading was set true (stuck-guard)
 let feedError         = false;       // true when loadFeed() fails — shows retry UI
+let feedPartial       = false;       // true when the load fell back to own posts only — never "loaded recently"
 let feedLoadedAt      = 0;           // timestamp of last successful feed load (for cache)
 let feedLoadingMore   = false;       // true while loadMoreFeed() is in flight (re-entrancy guard)
 let feedHasMore       = true;        // false once a load-more batch returns 0 new posts
