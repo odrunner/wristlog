@@ -7,6 +7,11 @@ import { funFactCardHTML, funFactRowHTML, shouldAttachFactOnEdit, showsFunFact }
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
 
+// Impression writes sit behind index.html's feed-first boot gate (afterBootGate).
+// These sandboxes exercise the app AFTER boot, when the gate is open and the
+// helper runs its callback immediately.
+const GATE_OPEN = fn => fn();
+
 describe('funFactCardHTML', () => {
   it('returns empty string when no fact', () => {
     expect(funFactCardHTML({ fact: '' })).toBe('');
@@ -427,10 +432,10 @@ describe('fix: full re-render vs. append are handled differently by initFactRows
     const currentUser = { id: 'user1' };
     const db = { from: () => ({ insert: () => ({ then: (cb) => { cb && cb(); return { catch: () => {} }; } }) }) };
     const factory = new Function(
-      'window', 'document', 'IntersectionObserver', 'currentUser', 'db',
+      'window', 'document', 'IntersectionObserver', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
     );
-    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db);
+    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db, GATE_OPEN);
     return { ...api, setLiveRows: (rows) => { liveRows = rows; }, instances: FakeObserver.instances };
   }
 
@@ -494,10 +499,10 @@ describe('fix: _factImpSeen is reset on sign-out so it cannot survive an account
     const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const currentUser = { id: 'userA' };
     const factory = new Function(
-      'currentUser', 'db',
+      'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { recordFactImpression, clearSeen: () => _factImpSeen.clear() };`
     );
-    const { recordFactImpression, clearSeen } = factory(currentUser, db);
+    const { recordFactImpression, clearSeen } = factory(currentUser, db, GATE_OPEN);
 
     recordFactImpression('log1');
     recordFactImpression('log1'); // same session, same post — suppressed by design
@@ -611,10 +616,10 @@ describe('fix: truncation is measured at first real visibility, not synchronousl
     const inserted = [];
     const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const factory = new Function(
-      'window', 'document', 'IntersectionObserver', 'currentUser', 'db',
+      'window', 'document', 'IntersectionObserver', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
     );
-    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db);
+    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db, GATE_OPEN);
     return { ...api, setLiveRows: (rows) => { liveRows = rows; }, inserted };
   }
 
@@ -671,10 +676,10 @@ describe('fix: truncation is measured at first real visibility, not synchronousl
     const inserted = [];
     const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const factory = new Function(
-      'window', 'document', 'currentUser', 'db',
+      'window', 'document', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows };`
     );
-    const { initFactRows } = factory(fakeWindow, fakeDocument, currentUser, db);
+    const { initFactRows } = factory(fakeWindow, fakeDocument, currentUser, db, GATE_OPEN);
     const clamp = { scrollHeight: 90, clientHeight: 58 };
     const row = makeRow(clamp);
     liveRows = [row];

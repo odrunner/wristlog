@@ -10,7 +10,10 @@ describe('experiments client wiring', () => {
     expect(html).toMatch(/function experiment\(key\)\s*\{[^}]*resolveExperiment\(EXPERIMENTS, _expOverrides\(\), key\)/);
   });
   it('loads experiments after login and clears them on sign-out', () => {
-    expect(html).toContain('applyWatchDbFlag();\n  loadExperiments();');
+    // Behind the feed-first gate since 2026-09-18: get_experiments is not needed for
+    // the first feed render, and the first burst of a visit is what a cold API server
+    // answers 2–3 s late. Still per-user: a sign-out while waiting must not load them.
+    expect(html).toContain('applyWatchDbFlag();\n  _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });');
     expect(html).toMatch(/async function signOut\(\) \{[\s\S]*?clearExperiments\(\);/);
   });
   it('mirrors resolveExperiment verbatim', () => {

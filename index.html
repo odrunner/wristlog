@@ -6457,6 +6457,32 @@ function _sendBootTiming() {
   } catch (e) { /* telemetry must never break boot */ }
 }
 setTimeout(_sendBootTiming, 20000);
+
+// ── Feed first: boot request scheduling ──────────────────────────────────────
+// Measured 2026-09-18 (edge logs + pg_stat_activity): the app fired ~20 requests
+// in the first 0.2 s of a visit and EVERY one took 2.3–3.0 s, trivial ones
+// included — the API server had closed its idle database connections and had
+// to open ~10 fresh ones at once on the smallest compute. Three seconds later
+// the same requests took 20–60 ms. So only what the feed's first render needs
+// goes out at boot; everything else waits behind this gate, which opens at the
+// first live feed render, on ANY feed outcome (error, empty), when the user
+// leaves the Feed tab, or after 3 s — and immediately for a logged-out visitor,
+// who has no feed to wait for.
+let _bootGateOpen = false, _resolveBootGate = null;
+const _bootGate = new Promise(res => { _resolveBootGate = res; });
+function _openBootGate() {
+  if (_bootGateOpen) return;
+  _bootGateOpen = true;
+  _bootMark('gate');
+  _resolveBootGate();
+}
+setTimeout(_openBootGate, 3000);
+// Run fn now when the gate is already open (the whole life of the app after
+// boot), otherwise once it opens. Never throws into the caller.
+function afterBootGate(fn) {
+  if (_bootGateOpen) { try { fn(); } catch (e) {} return; }
+  _bootGate.then(fn).catch(() => {});
+}
 // ══════════════════════════════════════════
 //  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
 // ══════════════════════════════════════════
@@ -7630,6 +7656,8 @@ function storedAuthUserId() {
   return decodeAuthUserId(authTokenRaw());
 }
 
+try { if (!decodeAuthUser(authTokenRaw())) _openBootGate(); } catch (e) { _openBootGate(); }
+
 (function trackVisit() {
   try {
     // Never record automated page loads. The mocked Playwright suite serves the
@@ -7661,14 +7689,14 @@ function storedAuthUserId() {
     const _vid = crypto.randomUUID();
     const _uid = window.currentUser?.id || storedAuthUserId();
     if (!_uid) safeLS.set('_wrotate_visit_id', _vid);
-    db.from('page_visits').insert({
+    _bootGate.then(() => db.from('page_visits').insert({
       id: _vid,
       utm_source: effectiveSource, utm_medium, utm_campaign, utm_content, utm_term,
       referrer: externalRef,
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
       user_id: _uid,
-    }).then(() => {}).catch(() => {});
+    })).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
       const clean = new URL(window.location.href);
@@ -8328,7 +8356,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.09.26';
+const APP_VERSION = '18.12.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12486,6 +12514,7 @@ async function loadFeed() {
     feedComments = carried.comments;
     renderFeed();
     _bootMark('first_live');
+    _openBootGate();
 
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 2: Enrich with profiles, watches, likes, comments in background
@@ -12559,7 +12588,7 @@ async function loadFeed() {
     _sendBootTiming();
     saveFeedCache();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
-  finally { clearTimeout(_feedSafety); feedLoading = false; }
+  finally { clearTimeout(_feedSafety); feedLoading = false; _openBootGate(); }
   if (!feedError && !feedPartial) feedLoadedAt = Date.now();
   // If error occurred before Phase 1 could render, show error UI
   if (feedError) { renderFeed(); _sendBootTiming(); }
@@ -14582,7 +14611,7 @@ function onPushAuthStatus(status) {
   window._pushAuthStatus = status;
   renderPushSettingRow();
   if (currentUser && !_isDemoMode) {
-    db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || null }).then(() => {});
+    _bootGate.then(() => db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || null })).then(() => {}, () => {});
   }
 }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -15274,7 +15303,7 @@ function recordFactImpression(logId) {
   if (!logId || !currentUser || _factImpSeen.has(logId)) return;
   _factImpSeen.add(logId);
   try {
-    db.from('fact_impressions').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {});
+    afterBootGate(() => { if (currentUser) db.from('fact_impressions').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {}); });
   } catch (e) {}
 }
 
@@ -20597,6 +20626,8 @@ async function updateFeedbackStatus(id, selectEl) {
 
 function nav(btn) {
   const page = btn.dataset.page;
+  // Leaving the Feed tab: the feed no longer deserves priority — let the rest of boot go.
+  if (page !== 'feed') _openBootGate();
   // Stop active microphone/audio when navigating away from measure or watch detail
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
@@ -31930,8 +31961,12 @@ function initApp() {
   // they land the sets are recomputed and saved, and the feed reloads once only
   // if what it was built from has changed (or loadFeed()'s own end-of-load
   // check does it, when a load is still in flight).
-  if (restoreSocialCache()) { _feedFired = true; loadFeed(); }
-  Promise.all([_safe(loadFollowing), _safe(loadBlockedUsers), _safe(loadFriendRequests)])
+  const _fromSocialCache = restoreSocialCache();
+  if (_fromSocialCache) { _feedFired = true; loadFeed(); }
+  // Without a remembered copy the feed NEEDS these first; with one they can wait
+  // for the feed-first gate like everything else.
+  (_fromSocialCache ? _bootGate : Promise.resolve())
+    .then(() => Promise.all([_safe(loadFollowing), _safe(loadBlockedUsers), _safe(loadFriendRequests)]))
     .then(() => {
       if (!_feedFired) { _fireFeed(); return; }
       computeFriendships();
@@ -31972,11 +32007,11 @@ function initApp() {
     loadNotifications();
     if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
   };
-  Promise.all([_safe(loadMyProfile), _safe(loadPendingRequests)])
+  _bootGate.then(() => Promise.all([_safe(loadMyProfile), _safe(loadPendingRequests)]))
     .then(_fireSocial)
     .catch(() => _fireSocial());
-  // Safety: if non-feed loaders hang >3s, fire EULA/notifications anyway
-  setTimeout(_fireSocial, 3000);
+  // Safety: if non-feed loaders hang >3s after the gate, fire EULA/notifications anyway
+  _bootGate.then(() => setTimeout(_fireSocial, 3000));
   // Collection renders on-demand when user taps the tab (nav → renderCollection)
 
   // ── Offline indicator ──────────────────────────────────────────────────
@@ -35534,7 +35569,7 @@ async function bootApp(user) {
   // admin-only and Postgres applies it to the UPDATE's WHERE clause.
   const _storedVisitId = safeLS.get('_wrotate_visit_id');
   if (_storedVisitId) {
-    db.rpc('attribute_page_visit', { p_visit_id: _storedVisitId })
+    _bootGate.then(() => db.rpc('attribute_page_visit', { p_visit_id: _storedVisitId }))
       .then(() => { safeLS.remove('_wrotate_visit_id'); })
       .catch(() => {});
   }
@@ -35547,7 +35582,7 @@ async function bootApp(user) {
     if (soBtn) { soBtn.textContent = 'Exit Demo'; soBtn.onclick = exitDemoMode; }
   }
   if (window.posthog && !_isDemoMode) posthog.identify(user.id, { email: user.email });
-  if (!_isDemoMode) _pingPresence();
+  if (!_isDemoMode) _bootGate.then(() => { if (currentUser?.id === user.id) _pingPresence(); });
   // Force scroll to top — iOS PWA restores previous scroll position on launch
   window.scrollTo(0, 0);
   document.getElementById('auth-screen').style.display = 'none';
@@ -35562,7 +35597,7 @@ async function bootApp(user) {
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   applyWatchDbFlag();
-  loadExperiments();
+  _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
@@ -35575,7 +35610,11 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp initApp error:', e.message, e);
   }
-  // Load user's collection data in parallel (watches, logs, wishlist)
+  // Load user's collection data (watches, logs, wishlist) — behind the feed-first
+  // gate: four reads that the default page doesn't need. loadUserData() re-renders
+  // whichever page is active when it lands, and leaving the Feed tab opens the gate.
+  await _bootGate;
+  if (currentUser?.id !== user.id) return; // signed out / switched account while waiting
   try {
     await loadUserData();
   } catch(e) {
