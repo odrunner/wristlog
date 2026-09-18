@@ -3042,6 +3042,36 @@ export function serializeFeedCache({ userId, items, likes, comments, commentCoun
 
 // Trust a stored cache only for the same user, within maxAgeMs, with a sane
 // shape; anything else → null (boot falls through to the normal skeleton path).
+// ── Boot timing ──────────────────────────────────────────────────────────────
+// One `boot_timing` event per page load so first-load work is measured on real
+// devices instead of guessed from one local trace. `marks` are performance.now()
+// stamps (ms since navigation start): script = the boot script began running
+// (the whole inline block has downloaded and parsed), session = getSession()
+// resolved, cached_paint = last visit's feed drawn, first_live = Phase-1 render,
+// enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
+// null). transferSize 0 on a navigation means the document came from the
+// service worker / HTTP cache rather than the network.
+export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed }) {
+  const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
+  const m = marks || {};
+  const n = nav || null;
+  const transfer = n && typeof n.transferSize === 'number' ? n.transferSize : null;
+  return {
+    script_ms: ms(m.script),
+    session_ms: ms(m.session),
+    cached_paint_ms: ms(m.cached_paint),
+    first_live_ms: ms(m.first_live),
+    enriched_ms: ms(m.enriched),
+    nav_type: n && n.type ? String(n.type) : null,
+    shell_kb: transfer == null ? null : Math.round(transfer / 1024),
+    shell_from: transfer == null ? null : (transfer === 0 ? 'cache' : 'network'),
+    response_end_ms: n ? ms(n.responseEnd) : null,
+    sw_controlled: !!swControlled,
+    cached_feed: !!cachedFeed,
+    feed_error: !!feedError,
+  };
+}
+
 export function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
   if (!raw || !userId) return null;
   let c;

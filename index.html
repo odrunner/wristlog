@@ -6381,6 +6381,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+// ── Boot timing ──────────────────────────────────────────────────────────────
+// Stamps the moments that make up a first load (see bootTimingPayload) and
+// sends ONE `boot_timing` event per page load: after the feed's Phase-2 render,
+// on a feed error, or after 20 s with whatever happened. `script` is stamped
+// here, so it measures how long the whole inline block took to arrive + parse.
+const _bootMarks = { script: performance.now() };
+function _bootMark(k) { if (_bootMarks[k] == null) _bootMarks[k] = performance.now(); }
+let _bootTimingSent = false;
+function _sendBootTiming() {
+  if (_bootTimingSent || _isDemoMode || !window.posthog) return;
+  _bootTimingSent = true;
+  try {
+    const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+    posthog.capture('boot_timing', bootTimingPayload({
+      marks: _bootMarks, nav,
+      swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
+      feedError, cachedFeed: _bootMarks.cached_paint != null,
+    }));
+  } catch (e) { /* telemetry must never break boot */ }
+}
+setTimeout(_sendBootTiming, 20000);
 // ══════════════════════════════════════════
 //  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
 // ══════════════════════════════════════════
@@ -8235,7 +8256,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.19.02';
+const APP_VERSION = '17.20.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11876,6 +11897,36 @@ function serializeFeedCache({ userId, items, likes, comments, commentCounts, com
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// ── Boot timing ──────────────────────────────────────────────────────────────
+// One `boot_timing` event per page load so first-load work is measured on real
+// devices instead of guessed from one local trace. `marks` are performance.now()
+// stamps (ms since navigation start): script = the boot script began running
+// (the whole inline block has downloaded and parsed), session = getSession()
+// resolved, cached_paint = last visit's feed drawn, first_live = Phase-1 render,
+// enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
+// null). transferSize 0 on a navigation means the document came from the
+// service worker / HTTP cache rather than the network.
+function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed }) {
+  const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
+  const m = marks || {};
+  const n = nav || null;
+  const transfer = n && typeof n.transferSize === 'number' ? n.transferSize : null;
+  return {
+    script_ms: ms(m.script),
+    session_ms: ms(m.session),
+    cached_paint_ms: ms(m.cached_paint),
+    first_live_ms: ms(m.first_live),
+    enriched_ms: ms(m.enriched),
+    nav_type: n && n.type ? String(n.type) : null,
+    shell_kb: transfer == null ? null : Math.round(transfer / 1024),
+    shell_from: transfer == null ? null : (transfer === 0 ? 'cache' : 'network'),
+    response_end_ms: n ? ms(n.responseEnd) : null,
+    sw_controlled: !!swControlled,
+    cached_feed: !!cachedFeed,
+    feed_error: !!feedError,
+  };
+}
+
 function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
   if (!raw || !userId) return null;
   let c;
@@ -12154,6 +12205,7 @@ async function loadFeed() {
     feedCommentCounts = carried.commentCounts;
     feedComments = carried.comments;
     renderFeed();
+    _bootMark('first_live');
 
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 2: Enrich with profiles, watches, likes, comments in background
@@ -12223,12 +12275,14 @@ async function loadFeed() {
       fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
     }));
     renderFeed();
+    _bootMark('enriched');
+    _sendBootTiming();
     saveFeedCache();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
   finally { clearTimeout(_feedSafety); feedLoading = false; }
   if (!feedError) feedLoadedAt = Date.now();
   // If error occurred before Phase 1 could render, show error UI
-  if (feedError) renderFeed();
+  if (feedError) { renderFeed(); _sendBootTiming(); }
   // ── Stale-following guard ──────────────────────────────────────────────
   // If following was populated AFTER we built the query (race condition),
   // re-compute friendships and re-fetch with full following data.
@@ -35144,7 +35198,7 @@ async function bootApp(user) {
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
   // Draw last visit's feed before any network — loadFeed() (via initApp's
   // Track A) refreshes it in place. No-op when there is no usable cache.
-  try { restoreFeedCache(); } catch(e) { console.warn('[WRotate] feed cache restore failed:', e?.message); }
+  try { if (restoreFeedCache()) _bootMark('cached_paint'); } catch(e) { console.warn('[WRotate] feed cache restore failed:', e?.message); }
   // Start feed/social loading immediately — don't block on user data
   try {
     initApp();
@@ -35228,6 +35282,7 @@ const _sessionTimeout = setTimeout(() => {
 
 db.auth.getSession().then(({ data: { session }, error }) => {
   clearTimeout(_sessionTimeout);
+  _bootMark('session');
   if (error) console.error('[WRotate] getSession error:', error.message);
   if (session?.user) {
     bootApp(session.user);
