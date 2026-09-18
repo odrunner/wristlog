@@ -78,6 +78,8 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             lastBackgrounded = Date()
+            // Renew the login token on the way out so the NEXT launch doesn't wait on it.
+            SessionRefresher.shared.refreshOnBackground(webView: webViewRef)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             // Refresh the WebView after a long idle so shipped web updates reach the app.

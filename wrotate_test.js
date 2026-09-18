@@ -3146,6 +3146,29 @@ export function firstLoadCardHtml(days) {
       </div>`;
 }
 
+// ── Refresh the login token on the way OUT (iOS 2.7+) ────────────────────────
+// Every real app open on 2026-09-18 spent ~0.9 s refreshing an expired token
+// before a single feed request could leave. Refreshing at launch cannot fix
+// that (the refresh takes longer than the page takes to load), so the token is
+// renewed when the app is BACKGROUNDED instead: native asks iOS for a few
+// seconds of background time and calls _nativeRefreshSession(). Only a token
+// issued more than minAgeSec ago is renewed, so a quick app-switch never
+// rotates anything. Age comes from the JWT's own iat; expires_at − expires_in
+// is the fallback.
+export function shouldRefreshOnBackground(session, nowSec, minAgeSec = 3600) {
+  if (!session || !session.refresh_token || !session.access_token) return false;
+  let iat = null;
+  try {
+    const part = String(session.access_token).split('.')[1] || '';
+    iat = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))).iat;
+  } catch (e) { iat = null; }
+  if (typeof iat !== 'number') {
+    if (typeof session.expires_at !== 'number' || typeof session.expires_in !== 'number') return false;
+    iat = session.expires_at - session.expires_in;
+  }
+  return nowSec - iat >= minAgeSec;
+}
+
 // ── Social cache ─────────────────────────────────────────────────────────────
 // "Remember who you follow on the device." The feed's first stage needs the ids
 // the user follows, has blocked, and is close friends with; fetching them was a

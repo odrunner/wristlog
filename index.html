@@ -8326,7 +8326,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.07.50';
+const APP_VERSION = '18.08.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12130,6 +12130,49 @@ function firstLoadCardHtml(days) {
         </table></div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
+}
+
+// ── Refresh the login token on the way OUT (iOS 2.7+) ────────────────────────
+// Every real app open on 2026-09-18 spent ~0.9 s refreshing an expired token
+// before a single feed request could leave. Refreshing at launch cannot fix
+// that (the refresh takes longer than the page takes to load), so the token is
+// renewed when the app is BACKGROUNDED instead: native asks iOS for a few
+// seconds of background time and calls _nativeRefreshSession(). Only a token
+// issued more than minAgeSec ago is renewed, so a quick app-switch never
+// rotates anything. Age comes from the JWT's own iat; expires_at − expires_in
+// is the fallback.
+function shouldRefreshOnBackground(session, nowSec, minAgeSec = 3600) {
+  if (!session || !session.refresh_token || !session.access_token) return false;
+  let iat = null;
+  try {
+    const part = String(session.access_token).split('.')[1] || '';
+    iat = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))).iat;
+  } catch (e) { iat = null; }
+  if (typeof iat !== 'number') {
+    if (typeof session.expires_at !== 'number' || typeof session.expires_in !== 'number') return false;
+    iat = session.expires_at - session.expires_in;
+  }
+  return nowSec - iat >= minAgeSec;
+}
+
+// Called by the iOS app (SessionRefresher in WebView.swift) from
+// didEnterBackground, inside a UIKit background task. Always answers with
+// SESSION_REFRESH_DONE so native can end the task early instead of waiting out
+// its timeout. Rotation safety: one lost response is tolerated by Supabase
+// (the parent of the active refresh token is accepted once); the background
+// task exists to make even that rare.
+async function _nativeRefreshSession() {
+  const done = (outcome) => {
+    try { window.webkit.messageHandlers.auth.postMessage({ event: 'SESSION_REFRESH_DONE', outcome }); } catch (e) {}
+    return outcome;
+  };
+  try {
+    if (!currentUser || _isDemoMode) return done('skipped');
+    const { data } = await db.auth.getSession();
+    if (!shouldRefreshOnBackground(data && data.session, Date.now() / 1000)) return done('fresh');
+    const { error } = await db.auth.refreshSession();
+    return done(error ? 'error' : 'refreshed');
+  } catch (e) { return done('error'); }
 }
 
 // ── Social cache ─────────────────────────────────────────────────────────────

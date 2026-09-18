@@ -403,7 +403,61 @@ struct WebView: UIViewRepresentable {
             } else if event == "BADGE_UPDATE" {
                 let count = body["count"] as? Int ?? 0
                 UNUserNotificationCenter.current().setBadgeCount(count)
+            } else if event == "SESSION_REFRESH_DONE" {
+                // The page finished (or skipped) the background token refresh.
+                SessionRefresher.shared.finish()
             }
         }
+    }
+}
+
+/// Renews the web session's login token when the app is BACKGROUNDED, so the next
+/// launch finds a valid token instead of spending ~1 s refreshing it before any
+/// request can leave (measured on every real open, 2026-09-18). Refreshing at
+/// launch can't help — it takes longer than the page takes to load — so the work
+/// moves to the way out.
+///
+/// The session lives in the WebView's localStorage, so the refresh itself is done
+/// by the page (`_nativeRefreshSession()` in index.html, which only renews a token
+/// older than an hour). Native's job is to keep the process alive long enough for
+/// that request to finish: a UIKit background task, ended when the page posts
+/// `SESSION_REFRESH_DONE`, when the timeout passes, or when iOS expires it.
+final class SessionRefresher {
+    static let shared = SessionRefresher()
+    /// Upper bound on how long we hold the background task for one refresh.
+    static let timeout: TimeInterval = 8
+
+    private var task: UIBackgroundTaskIdentifier = .invalid
+    private var generation = 0
+
+    private init() {}
+
+    func refreshOnBackground(webView: WKWebView?) {
+        guard let webView = webView, task == .invalid else { return }
+        task = UIApplication.shared.beginBackgroundTask(withName: "session-refresh") { [weak self] in
+            self?.finish()
+        }
+        guard task != .invalid else { return }
+        generation += 1
+        let mine = generation
+
+        // An older page (or the sign-in screen) has no such function → end at once.
+        let js = "typeof _nativeRefreshSession === 'function' ? (_nativeRefreshSession(), true) : false"
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
+            if (result as? Bool) != true { self?.finish() }
+        }
+        // Never hold the task past the timeout — and never let a stale timer end
+        // a LATER refresh's task (generation check).
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.timeout) { [weak self] in
+            guard let self = self, self.generation == mine else { return }
+            self.finish()
+        }
+    }
+
+    func finish() {
+        guard task != .invalid else { return }
+        let ended = task
+        task = .invalid
+        UIApplication.shared.endBackgroundTask(ended)
     }
 }
