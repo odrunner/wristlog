@@ -124,6 +124,41 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       window.safeSS = make('sessionStorage');
     })();
   </script>
+  <!-- Early feed fetch. The boot script is one ~1.4 MB inline block at the end of
+       this document and cannot run until all of it has arrived, so the feed's
+       first requests used to start only after the whole shell downloaded. This
+       runs as soon as the parser gets here: with a stored, unexpired session it
+       fires the two feed queries that need nothing but the user id (public
+       posts, own posts) and parks the promises on window.__earlyFeed;
+       loadFeed()'s first stage consumes them once (takeEarlyFeed) instead of
+       issuing its own. Any failure resolves to { error } and the normal retry
+       re-runs the stage through supabase-js. EARLY_KEY / EARLY_COLS mirror
+       SUPABASE_KEY / FEED_LOG_COLS — tests/early-feed.test.js fails on drift. -->
+  <script>
+    (function () {
+      try {
+        if (location.hash.indexOf('access_token') >= 0 || location.search.indexOf('code=') >= 0) return;
+        var k = null, i, n;
+        for (i = 0; i < localStorage.length; i++) { n = localStorage.key(i); if (/^sb-.*-auth-token$/.test(n)) { k = n; break; } }
+        if (!k) return;
+        var s = JSON.parse(localStorage.getItem(k));
+        if (!s || !s.access_token || !s.user || !s.user.id) return;
+        if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
+        var EARLY_URL = 'https://api.wrotate.com';
+        var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+        var EARLY_COLS = 'id,user_id,watch_id,club_id,photo_url,notes,use_case,date,created_at,visibility,moderation_status,location,badge_refs,fact_id';
+        var base = EARLY_URL + '/rest/v1/logs?select=' + encodeURIComponent(EARLY_COLS);
+        var tail = '&order=date.desc,created_at.desc&limit=50';
+        var h = { apikey: EARLY_KEY, Authorization: 'Bearer ' + s.access_token, Accept: 'application/json' };
+        var get = function (filter) {
+          return fetch(base + '&' + filter + tail, { headers: h })
+            .then(function (r) { return r.ok ? r.json().then(function (d) { return { data: d, error: null }; }) : { data: null, error: { message: 'early feed HTTP ' + r.status } }; })
+            .catch(function (e) { return { data: null, error: { message: 'early feed: ' + (e && e.message || e) } }; });
+        };
+        window.__earlyFeed = { uid: s.user.id, at: Date.now(), q1: get('visibility=eq.public'), q2: get('user_id=eq.' + encodeURIComponent(s.user.id)) };
+      } catch (e) { /* no early fetch — the normal path runs */ }
+    })();
+  </script>
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>
     (function(){
@@ -6406,7 +6441,7 @@ function _sendBootTiming() {
     posthog.capture('boot_timing', bootTimingPayload({
       marks: _bootMarks, nav,
       swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot,
+      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed,
     }));
   } catch (e) { /* telemetry must never break boot */ }
 }
@@ -8282,7 +8317,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.21.27';
+const APP_VERSION = '18.05.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11932,7 +11967,7 @@ function serializeFeedCache({ userId, items, likes, comments, commentCounts, com
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic }) {
+function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -11951,6 +11986,7 @@ function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, op
     cached_feed: !!cachedFeed,
     feed_error: !!feedError,
     optimistic_boot: !!optimistic,
+    early_feed: !!earlyFeed,
   };
 }
 
@@ -12052,6 +12088,28 @@ function syncFeedCaughtUp() {
 // Shown above the cards when a refresh failed but the previous load (cached
 // feed at boot, or the last successful pull) is still on screen. The full
 // "Couldn't load your feed" screen is reserved for having nothing to show.
+// The head's early-fetch script parks the feed's two user-independent queries on
+// window.__earlyFeed before the boot script has even arrived. They are only
+// trusted for the same user and while fresh; anything else → issue the queries
+// normally.
+function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
+  if (!early || !userId || early.uid !== userId) return false;
+  if (!early.q1 || !early.q2 || typeof early.at !== 'number') return false;
+  const age = now - early.at;
+  return age >= 0 && age < maxAgeMs;
+}
+
+// Consume-once: the first Phase-1 attempt of the first load may use the early
+// results; a retry, a foreground re-pull or another account never does.
+let _earlyFeedUsed = false;
+function takeEarlyFeed() {
+  const e = window.__earlyFeed || null;
+  window.__earlyFeed = null;
+  if (!earlyFeedUsable(e, currentUser && currentUser.id, Date.now())) return null;
+  _earlyFeedUsed = true;
+  return e;
+}
+
 function feedStaleHtml(partial) {
   const msg = partial ? 'Couldn&#39;t load everyone&#39;s posts &mdash; showing yours' : 'Couldn&#39;t refresh &mdash; showing earlier posts';
   return `<div class="feed-stale" role="status" aria-live="polite"><span>${msg}</span><button type="button" onclick="loadFeed()">&#8635; Retry</button></div>`;
@@ -12110,12 +12168,14 @@ async function loadFeed() {
     const featuredP = withTimeout(db.rpc('featured_current'), 4000).catch(() => null);
     try {
       const buildPhase1 = () => {
+      // Q1 + Q2 may already be in flight from the head's early-fetch script.
+      const early = takeEarlyFeed();
       // Q1: public posts — no user restriction, global discovery feed
-      const q1 = db.from('logs').select(FEED_LOG_COLS)
+      const q1 = early ? early.q1 : db.from('logs').select(FEED_LOG_COLS)
         .eq('visibility', 'public')
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       // Q2: own posts — all visibility types (owner sees own private/followers/etc.)
-      const q2 = db.from('logs').select(FEED_LOG_COLS)
+      const q2 = early ? early.q2 : db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
 

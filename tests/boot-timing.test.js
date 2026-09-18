@@ -14,7 +14,7 @@ describe('bootTimingPayload', () => {
     expect(p).toMatchObject({
       script_ms: 812, session_ms: 902, cached_paint_ms: 950, first_live_ms: 1611, enriched_ms: 2100,
       nav_type: 'navigate', shell_kb: 548, shell_from: 'network', response_end_ms: 641,
-      sw_controlled: true, cached_feed: true, feed_error: false, optimistic_boot: false,
+      sw_controlled: true, cached_feed: true, feed_error: false, optimistic_boot: false, early_feed: false,
     });
   });
 
@@ -39,7 +39,7 @@ describe('bootTimingPayload', () => {
     expect(p).toEqual({
       script_ms: null, session_ms: null, cached_paint_ms: null, first_live_ms: null, enriched_ms: null,
       nav_type: null, shell_kb: null, shell_from: null, response_end_ms: null,
-      sw_controlled: false, cached_feed: false, feed_error: false, optimistic_boot: false,
+      sw_controlled: false, cached_feed: false, feed_error: false, optimistic_boot: false, early_feed: false,
     });
   });
 
@@ -50,6 +50,10 @@ describe('bootTimingPayload', () => {
     expect(p.shell_from).toBeNull();
     expect(p.response_end_ms).toBe(300);
     expect(p.feed_error).toBe(true);
+  });
+
+  it('records that the early-fetched feed queries were used', () => {
+    expect(bootTimingPayload({ marks, nav, earlyFeed: true }).early_feed).toBe(true);
   });
 
   it('records a boot that started from the stored session', () => {

@@ -3112,7 +3112,18 @@ export function serializeFeedCache({ userId, items, likes, comments, commentCoun
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic }) {
+// The head's early-fetch script parks the feed's two user-independent queries on
+// window.__earlyFeed before the boot script has even arrived. They are only
+// trusted for the same user and while fresh; anything else → issue the queries
+// normally.
+export function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
+  if (!early || !userId || early.uid !== userId) return false;
+  if (!early.q1 || !early.q2 || typeof early.at !== 'number') return false;
+  const age = now - early.at;
+  return age >= 0 && age < maxAgeMs;
+}
+
+export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -3131,6 +3142,7 @@ export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedF
     cached_feed: !!cachedFeed,
     feed_error: !!feedError,
     optimistic_boot: !!optimistic,
+    early_feed: !!earlyFeed,
   };
 }
 
