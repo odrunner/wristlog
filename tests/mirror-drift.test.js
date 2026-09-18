@@ -35,7 +35,7 @@ const VERBATIM = [
   'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
   'nextWishlistView', 'posterUrlFor', 'rankWishlistByElo', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
-  'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs',
+  'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs', 'cardPathFor', 'cardUrlFor', 'cardSrcAttrs',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
   'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'collViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows', 'notifStaysUnreadOnPanelOpen',
@@ -64,6 +64,8 @@ const ADAPTED = [
   // Plain constants (array/number/string), not {...} bodies — extractBody can't
   // read them; tests/thumbnails.test.js pins THUMB_FOLDERS' value.
   'THUMB_FOLDERS', 'THUMB_MAX', 'THUMB_QUALITY', 'THUMB_SUFFIX',
+  // Same shape; tests/card-images.test.js pins the CARD_* values.
+  'CARD_FOLDERS', 'CARD_MAX', 'CARD_QUALITY', 'CARD_SUFFIX',
   // Array literal / plain string, not a {...} body — extractBody can't read
   // them, so the byte-identical check can't run. tests/campaign-groups.test.js
   // asserts the two copies match instead.

@@ -8276,7 +8276,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.21.08';
+const APP_VERSION = '17.21.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14699,7 +14699,7 @@ function renderFeedCard(item) {
     const isAccuracyCard = isMeasurementCardImage(item.use_case, _urls, 0);
     const heroInner = heroIsVideo
       ? `<video id="feed-hero-${item.id}" muted loop playsinline webkit-playsinline preload="none" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
-      : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+      : `<img id="feed-hero-${item.id}" ${cardSrcAttrs(heroUrl)} alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroIsPhoto = true;
     heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" data-idx="0" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))}, +(this.dataset.idx||0))">
       ${heroInner}
@@ -14719,7 +14719,7 @@ function renderFeedCard(item) {
         // the swap handler (avoids fragile nested-quote inline HTML).
         const thumbInner = itemIsVideo
           ? `<img src="${escHtml(thumbSrc)}" loading="lazy" alt="" data-vsrc="${escAttr(u)}" onerror="swapThumbToVideo(this)">`
-          : `<img src="${escHtml(thumbSrc)}" loading="lazy" alt="">`;
+          : `<img ${cardSrcAttrs(thumbSrc)} loading="lazy" alt="">`;
         heroHtml += `<div class="feed-card-thumb${i === 0 ? ' active' : ''}" onclick="feedThumbTap('${item.id}',${i},${escAttr(JSON.stringify(_urls))})">
           ${thumbInner}
           ${itemIsVideo ? '<div class="feed-card-thumb-video-badge">▶</div>' : ''}
@@ -26588,20 +26588,23 @@ function validateImageFile(file) {
 // upload still succeeds and thumbSrcAttrs()'s onerror fallback shows the original.
 async function uploadImage(blob, path) {
   const resized = await blobToResizedBlob(blob);
-  const thumbPath = thumbPathFor(path);
-  const thumbUpload = thumbPath
-    ? blobToResizedBlobMax(resized, THUMB_MAX, THUMB_QUALITY)
-        .then(tb => db.storage.from('media').upload(thumbPath, tb, {
+  // Best-effort smaller siblings: the 240 px thumb (chip folders) and the
+  // 1000 px card image (post photos). Either failing leaves the main upload
+  // intact; the renderers fall back to the original via data-full.
+  const sibling = (sPath, max, quality, label) => sPath
+    ? blobToResizedBlobMax(resized, max, quality)
+        .then(b => db.storage.from('media').upload(sPath, b, {
           cacheControl: '31536000', upsert: true, contentType: 'image/jpeg',
         }))
-        .then(r => { if (r?.error) console.warn('[WRotate] thumb upload:', r.error.message); })
-        .catch(e => console.warn('[WRotate] thumb generate:', e?.message || e))
+        .then(r => { if (r?.error) console.warn('[WRotate] ' + label + ' upload:', r.error.message); })
+        .catch(e => console.warn('[WRotate] ' + label + ' generate:', e?.message || e))
     : Promise.resolve();
   const [{ data, error }] = await Promise.all([
     db.storage.from('media').upload(path, resized, {
       cacheControl: '31536000', upsert: true, contentType: 'image/jpeg',
     }),
-    thumbUpload,
+    sibling(thumbPathFor(path), THUMB_MAX, THUMB_QUALITY, 'thumb'),
+    sibling(cardPathFor(path), CARD_MAX, CARD_QUALITY, 'card'),
   ]);
   if (error) throw new Error('Upload failed: ' + error.message);
   const { data: urlData } = db.storage.from('media').getPublicUrl(path);
@@ -26624,10 +26627,10 @@ async function uploadFile(blob, path, contentType) {
   return urlData.publicUrl;
 }
 
-// Delete a file from Supabase Storage (and its _thumb sibling, if that folder has one)
+// Delete a file from Supabase Storage (and its _thumb / _card siblings, if that folder has them)
 async function deleteStorageFile(path) {
-  const thumbPath = thumbPathFor(path);
-  const { error } = await db.storage.from('media').remove(thumbPath ? [path, thumbPath] : [path]);
+  const paths = [path, thumbPathFor(path), cardPathFor(path)].filter(Boolean);
+  const { error } = await db.storage.from('media').remove(paths);
   if (error) console.error('[WristLog] storage delete:', error.message);
 }
 
@@ -26688,6 +26691,50 @@ function thumbUrlFor(url) {
 function thumbSrcAttrs(url) {
   const t = thumbUrlFor(url);
   return t ? `src="${escHtml(t)}" data-full="${escHtml(url)}"` : `src="${escHtml(url)}"`;
+}
+
+// ── Card images ──────────────────────────────────────────────────────────────
+// Post photos render as the feed card hero (≤ 470 CSS px wide) yet were served
+// as the 1280 px / ~400 KB originals — the single largest byte cost of a boot
+// (2.5 MB of images against 240 KB of data in the 09-01 trace). Uploads to
+// logs/ now also write a `<name>_card.jpg` sibling (1000 px longest side,
+// ~95 KB) that the card uses; the original still opens in the viewer. Same
+// fallback as thumbs: initThumbFallback swaps in data-full when the sibling
+// 404s (not yet backfilled — scripts/backfill-card-images.py covers history).
+const CARD_FOLDERS = ['logs/'];
+const CARD_MAX = 1000;       // px, longest side — a 470 px column at 2x
+const CARD_QUALITY = 0.72;
+const CARD_SUFFIX = '_card';
+
+// Storage path of the card-size sibling for a post-photo path, or null when it
+// is not a logs/ image (videos, posters keep their own handling), already a
+// sibling, or has no image extension.
+function cardPathFor(path) {
+  if (!path || !CARD_FOLDERS.some(f => path.startsWith(f))) return null;
+  const dot = path.lastIndexOf('.');
+  const slash = path.lastIndexOf('/');
+  if (dot < 0 || dot < slash) return null;
+  const ext = path.slice(dot).toLowerCase();
+  if (ext !== '.jpg' && ext !== '.jpeg' && ext !== '.png' && ext !== '.webp') return null;
+  const stem = path.slice(0, dot);
+  if (stem.endsWith(CARD_SUFFIX) || stem.endsWith(THUMB_SUFFIX) || stem.endsWith('_poster')) return null;
+  return stem + CARD_SUFFIX + '.jpg';
+}
+
+function cardUrlFor(url) {
+  const path = storagePathFrom(url);
+  const cp = cardPathFor(path);
+  if (!cp) return null;
+  const marker = '/storage/v1/object/public/media/';
+  const idx = url.indexOf(marker);
+  const qIdx = url.indexOf('?', idx);
+  const query = qIdx >= 0 ? url.slice(qIdx) : '';
+  return url.slice(0, idx + marker.length) + cp + query;
+}
+
+function cardSrcAttrs(url) {
+  const c = cardUrlFor(url);
+  return c ? `src="${escHtml(c)}" data-full="${escHtml(url)}"` : `src="${escHtml(url)}"`;
 }
 
 function initThumbFallback() {

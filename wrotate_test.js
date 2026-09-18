@@ -2430,6 +2430,50 @@ export function thumbSrcAttrs(url) {
   return t ? `src="${escHtml(t)}" data-full="${escHtml(url)}"` : `src="${escHtml(url)}"`;
 }
 
+// ── Card images ──────────────────────────────────────────────────────────────
+// Post photos render as the feed card hero (≤ 470 CSS px wide) yet were served
+// as the 1280 px / ~400 KB originals — the single largest byte cost of a boot
+// (2.5 MB of images against 240 KB of data in the 09-01 trace). Uploads to
+// logs/ now also write a `<name>_card.jpg` sibling (1000 px longest side,
+// ~95 KB) that the card uses; the original still opens in the viewer. Same
+// fallback as thumbs: initThumbFallback swaps in data-full when the sibling
+// 404s (not yet backfilled — scripts/backfill-card-images.py covers history).
+export const CARD_FOLDERS = ['logs/'];
+export const CARD_MAX = 1000;       // px, longest side — a 470 px column at 2x
+export const CARD_QUALITY = 0.72;
+export const CARD_SUFFIX = '_card';
+
+// Storage path of the card-size sibling for a post-photo path, or null when it
+// is not a logs/ image (videos, posters keep their own handling), already a
+// sibling, or has no image extension.
+export function cardPathFor(path) {
+  if (!path || !CARD_FOLDERS.some(f => path.startsWith(f))) return null;
+  const dot = path.lastIndexOf('.');
+  const slash = path.lastIndexOf('/');
+  if (dot < 0 || dot < slash) return null;
+  const ext = path.slice(dot).toLowerCase();
+  if (ext !== '.jpg' && ext !== '.jpeg' && ext !== '.png' && ext !== '.webp') return null;
+  const stem = path.slice(0, dot);
+  if (stem.endsWith(CARD_SUFFIX) || stem.endsWith(THUMB_SUFFIX) || stem.endsWith('_poster')) return null;
+  return stem + CARD_SUFFIX + '.jpg';
+}
+
+export function cardUrlFor(url) {
+  const path = storagePathFrom(url);
+  const cp = cardPathFor(path);
+  if (!cp) return null;
+  const marker = '/storage/v1/object/public/media/';
+  const idx = url.indexOf(marker);
+  const qIdx = url.indexOf('?', idx);
+  const query = qIdx >= 0 ? url.slice(qIdx) : '';
+  return url.slice(0, idx + marker.length) + cp + query;
+}
+
+export function cardSrcAttrs(url) {
+  const c = cardUrlFor(url);
+  return c ? `src="${escHtml(c)}" data-full="${escHtml(url)}"` : `src="${escHtml(url)}"`;
+}
+
 export function parsePhotoUrl(photoUrl) {
   if (!photoUrl) return [];
   if (photoUrl.startsWith('[')) {
