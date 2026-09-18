@@ -36,16 +36,9 @@ async function compare(page) {
 
     const { data: j, error } = await db.rpc('feed_page');
     if (error) return { error: error.message };
-    const today = todayStr();
-    let logs = (j.logs || []).slice().sort((a, b) => compareFeedLogs(a, b, today));
-    logs = pinFeatured(logs, j.featured_id, j.featured_log);
-    const prof = Object.fromEntries((j.profiles || []).map(p => [p.id, p]));
-    const wat = Object.fromEntries((j.watches || []).map(w => [w.id, w]));
-    const fac = Object.fromEntries((j.facts || []).map(f => [f.id, f.fact]));
-    const counts = {};
-    (j.comments || []).forEach(c => { counts[c.log_id] = (counts[c.log_id] || 0) + 1; });
-    const items = logs.map(l => ({ ...l, profile: prof[l.user_id] || null, watch: l.watch_id ? (wat[l.watch_id] || null) : null, fact: l.fact_id ? (fac[l.fact_id] || '') : '' }));
-    const rpc = shape(items, j.likes || {}, counts);
+    // The PRODUCTION transformer — what the feed_rpc arm actually renders from.
+    const st = feedPageToState(j, todayStr());
+    const rpc = shape(st.items, st.likes, st.commentCounts);
     return { app, rpc, following: following.size, friends: friendships.size, visibilities: [...new Set(feedItems.map(i => i.visibility))] };
   });
 }

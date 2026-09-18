@@ -144,6 +144,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         var s = JSON.parse(localStorage.getItem(k));
         if (!s || !s.access_token || !s.user || !s.user.id) return;
         if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
+        var forced = localStorage.getItem('exp_force_feed_rpc');
+        if (forced === 'treatment' || (forced !== 'control' && localStorage.getItem('wrotate_feed_rpc_' + s.user.id) === '1')) return; // feed_page() arm: one request, made by the boot script
         var EARLY_URL = 'https://api.wrotate.com';
         var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
         var EARLY_COLS = 'id,user_id,watch_id,club_id,photo_url,notes,use_case,date,created_at,visibility,moderation_status,location,badge_refs,fact_id';
@@ -6443,7 +6445,7 @@ function _sendBootTiming() {
     const payload = bootTimingPayload({
       marks: _bootMarks, nav,
       swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed, socialCache: _socialCacheUsed,
+      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot, earlyFeed: _earlyFeedUsed, socialCache: _socialCacheUsed, feedRpc: _feedViaRpc,
     });
     if (window.posthog) posthog.capture('boot_timing', payload);
     // First-party copy for Admin → Traffic → "First load" (no PostHog key needed,
@@ -8356,7 +8358,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.12.28';
+const APP_VERSION = '18.12.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12006,7 +12008,7 @@ function serializeFeedCache({ userId, items, likes, comments, commentCounts, com
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache }) {
+function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache, feedRpc }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -12027,6 +12029,7 @@ function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, op
     optimistic_boot: !!optimistic,
     early_feed: !!earlyFeed,
     social_cache: !!socialCache,
+    feed_rpc: !!feedRpc,
   };
 }
 
@@ -12205,6 +12208,117 @@ async function _nativeRefreshSession() {
   } catch (e) { return done('error'); }
 }
 
+// ── feed_page() → feed state ─────────────────────────────────────────────────
+// One request (sql/2026-09-18-feed-page.sql) returns what loadFeed() used to
+// assemble from five post queries and 5–7 enrichment queries. This turns that
+// payload into exactly the state the classic path builds: display order and the
+// featured pin stay client-side (compareFeedLogs / pinFeatured), like counts
+// arrive already counted. Returns null for anything that isn't a feed_page
+// payload, so the caller falls back to the classic path.
+function feedPageToState(j, today) {
+  if (!j || !Array.isArray(j.logs)) return null;
+  const arr = a => Array.isArray(a) ? a : [];
+  let logs = j.logs.slice().sort((a, b) => compareFeedLogs(a, b, today));
+  logs = pinFeatured(logs, j.featured_id || null, j.featured_log || null);
+  const prof = Object.fromEntries(arr(j.profiles).map(p => [p.id, p]));
+  const wat = Object.fromEntries(arr(j.watches).map(w => [w.id, w]));
+  const fac = Object.fromEntries(arr(j.facts).map(f => [f.id, f.fact]));
+  const items = logs.map(l => ({
+    ...l,
+    profile: prof[l.user_id] || null,
+    watch: l.watch_id ? (wat[l.watch_id] || null) : null,
+    fact: l.fact_id ? (fac[l.fact_id] || '') : '',
+  }));
+  const rawLikes = (j.likes && typeof j.likes === 'object') ? j.likes : {};
+  const likes = {}, comments = {}, commentCounts = {};
+  logs.forEach(l => {
+    const k = rawLikes[l.id];
+    likes[l.id] = { count: k ? (Number(k.count) || 0) : 0, liked: !!(k && k.liked) };
+  });
+  const shown = new Set(logs.map(l => l.id));
+  const commentIds = [];
+  arr(j.comments).forEach(c => {
+    if (!c || !shown.has(c.log_id)) return;
+    (comments[c.log_id] = comments[c.log_id] || []).push({ ...c, profile: prof[c.user_id] || null });
+    commentIds.push(c.id);
+  });
+  logs.forEach(l => { commentCounts[l.id] = (comments[l.id] || []).length; });
+  return { items, likes, comments, commentCounts, commentIds, commentLikeRows: arr(j.comment_likes) };
+}
+
+function feedRpcHintKey(userId) {
+  return userId ? 'wrotate_feed_rpc_' + userId : null;
+}
+
+// Which path loadFeed() takes. Experiment state is cleared at every boot and
+// get_experiments now loads AFTER the feed, so the arm comes from a per-user
+// hint written on the previous visit (experiments:loaded) — or from the admin's
+// forced variant, which persists on its own.
+let _feedViaRpc = false;
+function _useFeedRpc() {
+  try {
+    if (!currentUser || _isDemoMode) return false;
+    const forced = safeLS.get('exp_force_feed_rpc');
+    if (forced === 'treatment') return true;
+    if (forced === 'control') return false;
+    return safeLS.get(feedRpcHintKey(currentUser.id)) === '1';
+  } catch (e) { return false; }
+}
+document.addEventListener('experiments:loaded', () => {
+  const key = feedRpcHintKey(currentUser && currentUser.id);
+  if (key) { try { safeLS.set(key, experiment('feed_rpc') ? '1' : '0'); } catch (e) {} }
+});
+// True when the feed was fully loaded and rendered from feed_page().
+async function _loadFeedViaRpc() {
+  try {
+    const { data, error } = await withTimeout(db.rpc('feed_page'), 8000);
+    if (error) throw error;
+    const st = feedPageToState(data, todayStr());
+    if (!st) throw new Error('unexpected feed_page payload');
+    feedItems = st.items;
+    syncFeedCaughtUp();
+    feedLikes = st.likes;
+    feedComments = st.comments;
+    feedCommentCounts = st.commentCounts;
+    commentLikes = {};
+    applyCommentLikes(commentLikes, st.commentIds, st.commentLikeRows, currentUser.id);
+    _feedViaRpc = true;
+    renderFeed();
+    _bootMark('first_live');
+    _bootMark('enriched');
+    _sendBootTiming();
+    saveFeedCache();
+    return true;
+  } catch (e) {
+    console.warn('[WRotate] feed_page failed — using the classic feed load:', e?.message);
+    _feedViaRpc = false;
+    return false;
+  }
+}
+// Admin/dev check, run from the console on a CLASSIC load: does feed_page()
+// produce the same feed this account is looking at? Logs and returns the diffs.
+async function _feedPageParity() {
+  const shape = (items, likes, counts) => items.map(i => ({
+    id: i.id, featured: !!i.__featured, visibility: i.visibility || null,
+    likes: (likes[i.id] || { count: 0 }).count, liked: !!(likes[i.id] || {}).liked,
+    comments: counts[i.id] || 0, author: i.profile ? i.profile.username : null,
+    watch: i.watch ? (i.watch.brand + '|' + i.watch.name) : null, fact: i.fact || '',
+  }));
+  if (_feedViaRpc) return console.warn('This feed came from feed_page already — force the control variant and reload first.');
+  const { data, error } = await db.rpc('feed_page');
+  if (error) return console.error('feed_page error:', error.message);
+  const st = feedPageToState(data, todayStr());
+  const app = shape(feedItems, feedLikes, feedCommentCounts), rpc = shape(st.items, st.likes, st.commentCounts);
+  const diffs = [];
+  for (let i = 0; i < Math.max(app.length, rpc.length); i++) {
+    if (JSON.stringify(app[i]) !== JSON.stringify(rpc[i])) diffs.push({ position: i, app: app[i] || null, rpc: rpc[i] || null });
+  }
+  const summary = { posts: app.length, rpcPosts: rpc.length, identical: diffs.length === 0, diffs: diffs.length,
+    visibilities: [...new Set(app.map(p => p.visibility))], withComments: app.filter(p => p.comments).length };
+  console.log('[feed_page parity]', summary); if (diffs.length) console.table(diffs.slice(0, 10));
+  return { summary, diffs };
+}
+
 // ── Social cache ─────────────────────────────────────────────────────────────
 // "Remember who you follow on the device." The feed's first stage needs the ids
 // the user follows, has blocked, and is close friends with; fetching them was a
@@ -12339,6 +12453,17 @@ async function loadFeed() {
   // them in place when Phase 1 returns.
   const listEl = document.getElementById('feed-list');
   if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
+  // Experiment feed_rpc: the whole first page in ONE request. Any failure falls
+  // through to the classic path below, which is untouched.
+  if (_useFeedRpc() && await _loadFeedViaRpc()) {
+    clearTimeout(_feedSafety);
+    feedLoading = false;
+    feedLoadedAt = Date.now();
+    _openBootGate();
+    if (!myProfile && currentUser) loadMyProfile().catch(() => {});
+    document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
+    return;
+  }
   try {
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 1: Fetch logs and render immediately (kill skeletons fast)
@@ -31961,7 +32086,7 @@ function initApp() {
   // they land the sets are recomputed and saved, and the feed reloads once only
   // if what it was built from has changed (or loadFeed()'s own end-of-load
   // check does it, when a load is still in flight).
-  const _fromSocialCache = restoreSocialCache();
+  const _fromSocialCache = restoreSocialCache() || _useFeedRpc();   // feed_page() resolves follows server-side
   if (_fromSocialCache) { _feedFired = true; loadFeed(); }
   // Without a remembered copy the feed NEEDS these first; with one they can wait
   // for the feed-first gate like everything else.
@@ -31971,7 +32096,7 @@ function initApp() {
       if (!_feedFired) { _fireFeed(); return; }
       computeFriendships();
       saveSocialCache();
-      if (!feedLoading && _feedSocialSig !== null && _socialSig() !== _feedSocialSig) {
+      if (!_feedViaRpc && !feedLoading && _feedSocialSig !== null && _socialSig() !== _feedSocialSig) {
         console.log('[WRotate] follows/blocks changed since the cached copy — reloading feed');
         feedLoadedAt = 0;
         loadFeed();

@@ -3169,6 +3169,48 @@ export function shouldRefreshOnBackground(session, nowSec, minAgeSec = 3600) {
   return nowSec - iat >= minAgeSec;
 }
 
+// ── feed_page() → feed state ─────────────────────────────────────────────────
+// One request (sql/2026-09-18-feed-page.sql) returns what loadFeed() used to
+// assemble from five post queries and 5–7 enrichment queries. This turns that
+// payload into exactly the state the classic path builds: display order and the
+// featured pin stay client-side (compareFeedLogs / pinFeatured), like counts
+// arrive already counted. Returns null for anything that isn't a feed_page
+// payload, so the caller falls back to the classic path.
+export function feedPageToState(j, today) {
+  if (!j || !Array.isArray(j.logs)) return null;
+  const arr = a => Array.isArray(a) ? a : [];
+  let logs = j.logs.slice().sort((a, b) => compareFeedLogs(a, b, today));
+  logs = pinFeatured(logs, j.featured_id || null, j.featured_log || null);
+  const prof = Object.fromEntries(arr(j.profiles).map(p => [p.id, p]));
+  const wat = Object.fromEntries(arr(j.watches).map(w => [w.id, w]));
+  const fac = Object.fromEntries(arr(j.facts).map(f => [f.id, f.fact]));
+  const items = logs.map(l => ({
+    ...l,
+    profile: prof[l.user_id] || null,
+    watch: l.watch_id ? (wat[l.watch_id] || null) : null,
+    fact: l.fact_id ? (fac[l.fact_id] || '') : '',
+  }));
+  const rawLikes = (j.likes && typeof j.likes === 'object') ? j.likes : {};
+  const likes = {}, comments = {}, commentCounts = {};
+  logs.forEach(l => {
+    const k = rawLikes[l.id];
+    likes[l.id] = { count: k ? (Number(k.count) || 0) : 0, liked: !!(k && k.liked) };
+  });
+  const shown = new Set(logs.map(l => l.id));
+  const commentIds = [];
+  arr(j.comments).forEach(c => {
+    if (!c || !shown.has(c.log_id)) return;
+    (comments[c.log_id] = comments[c.log_id] || []).push({ ...c, profile: prof[c.user_id] || null });
+    commentIds.push(c.id);
+  });
+  logs.forEach(l => { commentCounts[l.id] = (comments[l.id] || []).length; });
+  return { items, likes, comments, commentCounts, commentIds, commentLikeRows: arr(j.comment_likes) };
+}
+
+export function feedRpcHintKey(userId) {
+  return userId ? 'wrotate_feed_rpc_' + userId : null;
+}
+
 // ── Social cache ─────────────────────────────────────────────────────────────
 // "Remember who you follow on the device." The feed's first stage needs the ids
 // the user follows, has blocked, and is close friends with; fetching them was a
@@ -3217,7 +3259,7 @@ export function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   return age >= 0 && age < maxAgeMs;
 }
 
-export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache }) {
+export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic, earlyFeed, socialCache, feedRpc }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -3238,6 +3280,7 @@ export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedF
     optimistic_boot: !!optimistic,
     early_feed: !!earlyFeed,
     social_cache: !!socialCache,
+    feed_rpc: !!feedRpc,
   };
 }
 
