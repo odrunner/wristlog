@@ -173,6 +173,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+    /* nav() focuses the page heading for screen readers only — never show a ring on it */
+    .page-title:focus, .page-title:focus-visible { outline: none; }
     .skip-link { position: absolute; left: -9999px; top: .75rem; z-index: 4000; background: var(--surface); color: var(--gold-text); border: 1px solid var(--gold); border-radius: 8px; padding: .55rem 1rem; font-weight: 600; text-decoration: none; }
     .skip-link:focus { left: .75rem; }
     @media (prefers-reduced-motion: reduce) {
@@ -8326,7 +8328,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.08.25';
+const APP_VERSION = '18.09.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
