@@ -3090,7 +3090,7 @@ export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedF
   };
 }
 
-export function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
+export function parseFeedCache(raw, { userId, now, maxAgeMs = 7 * 86400000 }) {
   if (!raw || !userId) return null;
   let c;
   try { c = JSON.parse(raw); } catch (e) { return null; }

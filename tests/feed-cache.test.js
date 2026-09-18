@@ -95,9 +95,10 @@ describe('parseFeedCache', () => {
     expect(parseFeedCache(good(), { userId: 'someone-else', now: T0 + 1 })).toBe(null);
   });
 
-  it('rejects a cache older than the age limit (default 24h)', () => {
-    expect(parseFeedCache(good(), { userId: ME, now: T0 + 24 * 3600_000 + 1 })).toBe(null);
-    expect(parseFeedCache(good(), { userId: ME, now: T0 + 24 * 3600_000 - 1 })).not.toBe(null);
+  it('rejects a cache older than the age limit (default 7 days — a launch after a weekend offline still has a feed)', () => {
+    expect(parseFeedCache(good(), { userId: ME, now: T0 + 7 * 86400_000 + 1 })).toBe(null);
+    expect(parseFeedCache(good(), { userId: ME, now: T0 + 7 * 86400_000 - 1 })).not.toBe(null);
+    expect(parseFeedCache(good(), { userId: ME, now: T0 + 3 * 86400_000 })).not.toBe(null);
     expect(parseFeedCache(good(), { userId: ME, now: T0 + 7_200_001, maxAgeMs: 7_200_000 })).toBe(null);
   });
 

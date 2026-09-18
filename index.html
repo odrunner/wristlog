@@ -8276,7 +8276,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.21.04';
+const APP_VERSION = '17.21.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11948,7 +11948,7 @@ function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, op
   };
 }
 
-function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
+function parseFeedCache(raw, { userId, now, maxAgeMs = 7 * 86400000 }) {
   if (!raw || !userId) return null;
   let c;
   try { c = JSON.parse(raw); } catch (e) { return null; }
