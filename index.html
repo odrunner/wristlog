@@ -8328,7 +8328,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.09.01';
+const APP_VERSION = '18.09.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23645,10 +23645,18 @@ async function openUpdatePrices() {
   };
   status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
-  eligible.forEach(w => {
+  // Dispatch a few at a time, not the whole collection at once. A bare forEach
+  // fired one request per watch in the same millisecond, which is fine at ten
+  // and not at thirty-eight: on 2026-09-17 19:54:44 a 38-watch run had Google
+  // reject one lookup instantly with 503 UNAVAILABLE and two more hit the
+  // server's 35s Gemini timeout, so three watches fell through to Claude + web
+  // search and cost most of that day's spend. We were rate-limiting ourselves.
+  // Ten concurrent measured clean twice (12-26s end to end); eight leaves room.
+  const UPDATE_PRICES_CONCURRENCY = 8;
+  const lookupOne = (w) => {
     const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'update-prices', watch_id: w.id };
     if (w.ref) payload.reference = w.ref;
-    authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
+    return authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -23712,7 +23720,21 @@ async function openUpdatePrices() {
         _uprLogComplete();
       }
     });
-  });
+  };
+
+  // Each worker pulls the next watch as it finishes, so the pool stays full
+  // instead of waiting for a slow lookup to clear a fixed-size chunk. Every
+  // chain ends in .catch, so a failure frees its slot like any other result.
+  const queue = eligible.slice();
+  const runWorker = async () => {
+    while (queue.length) {
+      const w = queue.shift();
+      if (w) await lookupOne(w);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(UPDATE_PRICES_CONCURRENCY, queue.length) }, runWorker)
+  );
 }
 
 function closeUpdatePrices() {
