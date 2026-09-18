@@ -2705,6 +2705,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-caught-up-label { display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap;
       color:var(--muted); font-size:.78rem; font-weight:600; letter-spacing:.01em; }
     .feed-caught-up-label svg { flex-shrink:0; color:var(--gold-text); }
+    /* Refresh failed while earlier posts are on screen: keep them, say so. */
+    .feed-stale { display:flex; align-items:center; justify-content:center; gap:.6rem; flex-wrap:wrap; margin:.1rem .15rem .9rem; padding:.45rem .7rem; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--muted); font-size:.78rem; }
+    .feed-stale button { font:inherit; font-weight:600; color:var(--gold-text); background:none; border:0; padding:0; cursor:pointer; display:inline-flex; align-items:center; gap:.25rem; }
     .streak-chip { display:inline-flex; align-items:center; gap:.22rem; height:34px; padding:0 .4rem; font-size:.85rem; font-weight:600; color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
     .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
@@ -8256,7 +8259,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.20.48';
+const APP_VERSION = '17.20.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12022,6 +12025,13 @@ function syncFeedCaughtUp() {
   if (max) { try { safeLS.set(key, max); } catch {} }
 }
 
+// Shown above the cards when a refresh failed but the previous load (cached
+// feed at boot, or the last successful pull) is still on screen. The full
+// "Couldn't load your feed" screen is reserved for having nothing to show.
+function feedStaleHtml() {
+  return `<div class="feed-stale" role="status" aria-live="polite"><span>Couldn&#39;t refresh &mdash; showing earlier posts</span><button type="button" onclick="loadFeed()">&#8635; Retry</button></div>`;
+}
+
 function feedCaughtUpHtml() {
   return `<div class="feed-caught-up" role="separator" aria-label="You're all caught up"><span class="feed-caught-up-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>You&#39;re all caught up</span></div>`;
 }
@@ -14455,7 +14465,7 @@ function renderFeed() {
     if (inp.value) _savedCommentDrafts[inp.id] = inp.value;
   });
 
-  if (feedError) {
+  if (feedError && feedItems.length === 0) {
     el.innerHTML = `
       <div style="text-align:center;padding:2.5rem 1rem;">
         <div style="font-size:1.6rem;margin-bottom:.5rem;">⚠</div>
@@ -14490,6 +14500,7 @@ function renderFeed() {
   if (_feedCaughtUpIdx !== null && _feedCaughtUpIdx <= cards.length) {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
+  if (feedError) cards.unshift(feedStaleHtml());
   carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render
