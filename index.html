@@ -6400,7 +6400,7 @@ function _sendBootTiming() {
     posthog.capture('boot_timing', bootTimingPayload({
       marks: _bootMarks, nav,
       swControlled: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-      feedError, cachedFeed: _bootMarks.cached_paint != null,
+      feedError, cachedFeed: _bootMarks.cached_paint != null, optimistic: _optimisticBoot,
     }));
   } catch (e) { /* telemetry must never break boot */ }
 }
@@ -7544,7 +7544,20 @@ function authTokenRaw() {
 // The session is stored as plain JSON today, but supabase-js also has a
 // base64url-behind-"base64-" storage format — handle both so an SDK bump can't
 // silently break attribution again.
-function decodeAuthUserId(raw) {
+// What the boot does once getSession() settles, given whether the app already
+// booted from the session stored in localStorage (see the optimistic boot).
+//   boot        — a session with a user came back: bootApp (no-op if same user)
+//   keep        — booted from storage and the refresh failed with a RETRYABLE
+//                 (network) error: supabase-js kept the stored session, stay up
+//   sign_out    — booted from storage but there is definitively no session
+//   auth_screen — nothing booted and nothing came back: show the login screen
+function sessionSettleAction({ session, error, optimistic, retryable }) {
+  if (session && session.user) return 'boot';
+  if (optimistic) return (error && retryable) ? 'keep' : 'sign_out';
+  return 'auth_screen';
+}
+
+function decodeAuthUser(raw) {
   try {
     let t = raw;
     if (!t) return null;
@@ -7554,8 +7567,12 @@ function decodeAuthUserId(raw) {
       const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
       t = new TextDecoder().decode(bytes);
     }
-    return JSON.parse(t).user?.id || null;
+    const u = JSON.parse(t).user;
+    return u && typeof u === 'object' && u.id ? u : null;
   } catch(e) { return null; }
+}
+function decodeAuthUserId(raw) {
+  return decodeAuthUser(raw)?.id || null;
 }
 function storedAuthUserId() {
   return decodeAuthUserId(authTokenRaw());
@@ -8259,7 +8276,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.20.53';
+const APP_VERSION = '17.21.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11909,7 +11926,7 @@ function serializeFeedCache({ userId, items, likes, comments, commentCounts, com
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed }) {
+function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -11927,6 +11944,7 @@ function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed }) 
     sw_controlled: !!swControlled,
     cached_feed: !!cachedFeed,
     feed_error: !!feedError,
+    optimistic_boot: !!optimistic,
   };
 }
 
@@ -35291,12 +35309,37 @@ const _sessionTimeout = setTimeout(() => {
   }
 }, 10000);
 
+// ── Optimistic boot from the stored session ───────────────────────────────
+// getSession() refreshes an expired access token over the network BEFORE it
+// resolves, so every PWA open after >1 h waited on that round-trip, and a hung
+// refresh ended at the 10 s timeout's login screen with a valid session sitting
+// in localStorage. Boot from the stored user right away instead: the cached
+// feed and the localStorage collection paint with no network, and every
+// request queues behind the refresh inside supabase-js anyway. When
+// getSession() settles: same user → bootApp's guard makes it a no-op; a
+// non-retryable auth error → supabase-js has removed the session and emits
+// SIGNED_OUT; a retryable (network) error keeps the stored session and the app
+// stays up on cached data. Skipped on an OAuth return — that session is still
+// being written.
+let _optimisticBoot = false;
+try {
+  const _storedUser = decodeAuthUser(authTokenRaw());
+  const _oauthReturn = window.location.hash.includes('access_token') || window.location.search.includes('code=');
+  if (_storedUser && !_oauthReturn) { _optimisticBoot = true; bootApp(_storedUser); }
+} catch (e) { console.warn('[WRotate] optimistic boot skipped:', e?.message); }
+
 db.auth.getSession().then(({ data: { session }, error }) => {
   clearTimeout(_sessionTimeout);
   _bootMark('session');
   if (error) console.error('[WRotate] getSession error:', error.message);
-  if (session?.user) {
+  const retryable = !!(error && supabase.isAuthRetryableFetchError && supabase.isAuthRetryableFetchError(error));
+  const action = sessionSettleAction({ session, error, optimistic: _optimisticBoot, retryable });
+  if (action === 'boot') {
     bootApp(session.user);
+  } else if (action === 'keep') {
+    console.warn('[WRotate] session refresh failed (retryable) — staying on the stored session');
+  } else if (action === 'sign_out') {
+    _onSignedOut();
   } else {
     // If the URL contains an OAuth callback (access_token or code), Supabase
     // is still processing it — onAuthStateChange will fire with SIGNED_IN.
@@ -35317,6 +35360,7 @@ db.auth.getSession().then(({ data: { session }, error }) => {
   }
 }).catch(() => {
   clearTimeout(_sessionTimeout);
+  if (_optimisticBoot) { console.warn('[WRotate] getSession threw — staying on the stored session'); return; }
   console.error('[WRotate] getSession threw — showing auth screen');
   document.getElementById('auth-screen').style.display = 'flex';
   loadPublicFeed();
@@ -35326,10 +35370,7 @@ db.auth.getSession().then(({ data: { session }, error }) => {
 // Handles: OAuth redirect returning access_token (SIGNED_IN),
 //          explicit sign-out (SIGNED_OUT), and hourly token refresh.
 // INITIAL_SESSION is intentionally ignored — getSession() above covers it.
-db.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session?.user) {
-    bootApp(session.user); // guard prevents double-boot if getSession already ran
-  } else if (event === 'SIGNED_OUT') {
+function _onSignedOut() {
     const wasLoggedIn = !!currentUser; // distinguish manual vs expired
     clearFeedCache(currentUser && currentUser.id);
     currentUser = null;
@@ -35349,6 +35390,12 @@ db.auth.onAuthStateChange((event, session) => {
     if (adminNavBtn2) adminNavBtn2.style.display = 'none';
     const notifPanel = document.getElementById('notif-panel');
     if (notifPanel) notifPanel.classList.add('hidden');
+}
+db.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    bootApp(session.user); // guard prevents double-boot if getSession already ran
+  } else if (event === 'SIGNED_OUT') {
+    _onSignedOut();
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     if (currentUser) currentUser = session.user; // keep token current (only after boot; avoids triggering bootApp guard prematurely)
   }

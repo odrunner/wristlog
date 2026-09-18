@@ -247,7 +247,11 @@ export async function mockSupabase(page, opts = {}) {
  * Inject a fake Supabase auth session into localStorage so the app's
  * getSession() call succeeds without a real login.
  */
-export async function injectSession(page, user = FAKE_USER) {
+// opts.getSession = { delayMs, result }: make the patched getSession() settle
+// after delayMs with `result` ({ data: { session }, error }) instead of the
+// fixture session — the way to drive a slow, failed or missing refresh through
+// the app's real boot code (the SDK's own refresh path is bypassed by the patch).
+export async function injectSession(page, user = FAKE_USER, opts = {}) {
   const storageKey = 'sb-xnzweevzrojmouzhpwzv-auth-token';
   // Build a minimal valid JWT (header.payload.signature) so the Supabase
   // client's getSession() parses it without error.
@@ -323,7 +327,10 @@ export async function injectSession(page, user = FAKE_USER) {
               },
               error: null,
             };
-            client.auth.getSession = () => Promise.resolve(fakeSessionData);
+            const gs = args.getSession;
+            client.auth.getSession = () => gs
+              ? new Promise(res => setTimeout(() => res(gs.result || fakeSessionData), gs.delayMs || 0))
+              : Promise.resolve(fakeSessionData);
             client.auth.getUser = () => Promise.resolve({ data: { user: args.session.user }, error: null });
             const origOnAuth = client.auth.onAuthStateChange.bind(client.auth);
             client.auth.onAuthStateChange = (cb) => {
@@ -338,7 +345,7 @@ export async function injectSession(page, user = FAKE_USER) {
       },
       get() { return undefined; },
     });
-  }, { key: storageKey, session });
+  }, { key: storageKey, session, getSession: opts.getSession || null });
 }
 
 /**

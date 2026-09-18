@@ -2478,7 +2478,20 @@ export function displayImageFor(photoUrl) {
 // page_visit can be attributed at INSERT time. supabase-js >= 2.6x stores the
 // session base64url-encoded behind a "base64-" prefix; a bare JSON.parse throws
 // on it, which is why visits were landing with user_id NULL.
-export function decodeAuthUserId(raw) {
+// What the boot does once getSession() settles, given whether the app already
+// booted from the session stored in localStorage (see the optimistic boot).
+//   boot        — a session with a user came back: bootApp (no-op if same user)
+//   keep        — booted from storage and the refresh failed with a RETRYABLE
+//                 (network) error: supabase-js kept the stored session, stay up
+//   sign_out    — booted from storage but there is definitively no session
+//   auth_screen — nothing booted and nothing came back: show the login screen
+export function sessionSettleAction({ session, error, optimistic, retryable }) {
+  if (session && session.user) return 'boot';
+  if (optimistic) return (error && retryable) ? 'keep' : 'sign_out';
+  return 'auth_screen';
+}
+
+export function decodeAuthUser(raw) {
   try {
     let t = raw;
     if (!t) return null;
@@ -2488,8 +2501,12 @@ export function decodeAuthUserId(raw) {
       const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
       t = new TextDecoder().decode(bytes);
     }
-    return JSON.parse(t).user?.id || null;
+    const u = JSON.parse(t).user;
+    return u && typeof u === 'object' && u.id ? u : null;
   } catch(e) { return null; }
+}
+export function decodeAuthUserId(raw) {
+  return decodeAuthUser(raw)?.id || null;
 }
 
 // ══════════════════════════════════════════
@@ -3051,7 +3068,7 @@ export function serializeFeedCache({ userId, items, likes, comments, commentCoun
 // enriched = Phase-2 render. `nav` is the PerformanceNavigationTiming entry (or
 // null). transferSize 0 on a navigation means the document came from the
 // service worker / HTTP cache rather than the network.
-export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed }) {
+export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedFeed, optimistic }) {
   const ms = v => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
   const m = marks || {};
   const n = nav || null;
@@ -3069,6 +3086,7 @@ export function bootTimingPayload({ marks, nav, swControlled, feedError, cachedF
     sw_controlled: !!swControlled,
     cached_feed: !!cachedFeed,
     feed_error: !!feedError,
+    optimistic_boot: !!optimistic,
   };
 }
 
