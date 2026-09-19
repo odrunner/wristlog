@@ -14,3 +14,10 @@ GRANT  EXECUTE ON FUNCTION public.wear_reminder_targets()  TO service_role;
 GRANT  EXECUTE ON FUNCTION public.model_wear_share_rows()  TO service_role;
 GRANT  EXECUTE ON FUNCTION public.model_wear_index_rows()  TO service_role;
 NOTIFY pgrst, 'reload schema';
+
+-- Added later the same day: onboarding4_feature_state() returned one row per
+-- user (user_id, has_played, strap count, onboarding-4 sent_at) to any
+-- signed-in caller. No caller exists in the client, edge functions, scripts,
+-- other functions, views, policies or cron. Rollback: GRANT EXECUTE … TO authenticated.
+REVOKE EXECUTE ON FUNCTION public.onboarding4_feature_state() FROM PUBLIC, anon, authenticated;
+NOTIFY pgrst, 'reload schema';
