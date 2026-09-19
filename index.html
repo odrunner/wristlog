@@ -7027,7 +7027,7 @@ function maybeRevealBadges() {
   if (!shouldRevealBadges({ earnedCount: (_earnedBadges || []).length, unseenCount: unseenBadgeCount(), lastRevealedCount: lastRevealed })) return;
   setTimeout(() => {
     if (!currentUser || _isDemoMode || unseenBadgeCount() <= 0) return;
-    if (document.querySelector('.overlay:not(.hidden)')) return;   // busy — retry next open
+    if (_screenBusy()) return;                                     // busy — retry next open
     // Consume the batch only if the modal actually rendered — see openBadgeRevealModal().
     if (!openBadgeRevealModal()) return;
     try { safeLS.set(BADGE_REVEAL_KEY, String((_earnedBadges || []).length)); } catch (_) {}
@@ -8358,7 +8358,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.17.44';
+const APP_VERSION = '18.17.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13065,6 +13065,17 @@ function _factModalKey() {
   return currentUser ? FACT_MODAL_KEY + '_' + currentUser.id : FACT_MODAL_KEY;
 }
 
+// True when something full-screen already owns the display — the gate every
+// self-opening modal (badge reveal, first-wear prompt, fact modal) checks before
+// it renders. `.overlay:not(.hidden)` alone misses the Ranking Game: #game-overlay
+// carries no `overlay` class and is shown via style.display, so those modals
+// could open on top of a timed round.
+function _screenBusy() {
+  if (document.querySelector('.overlay:not(.hidden)')) return true;
+  const game = document.getElementById('game-overlay');
+  return !!game && game.style.display !== 'none';
+}
+
 let _factModalPending = false;   // a check is already scheduled — don't stack timers
 let _factModalWatchId = null;    // the watch the open modal is about
 let _factModalCache = null;      // { watchId, fact } — reuse instead of burning another cursor position
@@ -13129,7 +13140,7 @@ function maybeShowFactModal() {
   setTimeout(async () => {
     try {
       if (!_factModalPreCheck()) return;
-      if (document.querySelector('.overlay:not(.hidden)')) return;   // something else is up
+      if (_screenBusy()) return;                               // something else is up
       const af2 = document.getElementById('af2-sheet');
       if (af2 && !af2.classList.contains('hidden')) return;
       // Defer to the first-wear prompt whenever it is still owed. Checking
@@ -13158,7 +13169,7 @@ function maybeShowFactModal() {
       // request is in flight (e.g. the push primer opens), and _factModalState
       // reads data only, never the DOM. Without this the modal can render on
       // top of another overlay — the exact thing the deferred open prevents.
-      if (document.querySelector('.overlay:not(.hidden)')) return;
+      if (_screenBusy()) return;
       const af2b = document.getElementById('af2-sheet');
       if (af2b && !af2b.classList.contains('hidden')) return;
       safeLS.set(_factModalKey(), '1');                    // once ever, per user
@@ -14855,7 +14866,7 @@ function maybePromptFirstWear() {
   setTimeout(() => {
     _firstWearPending = false;
     if (!shouldPromptFirstWear(_firstWearState())) return;
-    if (document.querySelector('.overlay:not(.hidden)')) return;         // a modal is open — retry next render
+    if (_screenBusy()) return;                                           // a modal is open — retry next render
     const af2 = document.getElementById('af2-sheet');
     if (af2 && !af2.classList.contains('hidden')) return;               // add-watch sheet still up
     safeLS.set(_firstWearKey(), '1');                        // once ever, per user

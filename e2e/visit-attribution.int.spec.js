@@ -62,12 +62,20 @@ test('a signed-in page load records a page_visit carrying user_id', async ({ pag
     const req = route.request();
     if (req.method() === 'POST') {
       try { inserted.push(JSON.parse(req.postData() || '{}')); } catch (e) {}
+      return route.fulfill({ status: 201, body: '' });   // observed, never written to production
     }
     await route.continue();
   });
   await page.route('**/rest/v1/rpc/attribute_page_visit*', async (route) => {
     try { attributed.push(JSON.parse(route.request().postData() || '{}')); } catch (e) {}
-    await route.continue();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+  });
+  // trackVisit() skips automated browsers (navigator.webdriver, cd74bea) so the
+  // suite stops polluting production page_visits. This test is the one place
+  // that needs the real code path, so it presents as a normal browser — and the
+  // two routes above answer locally, so still nothing is written.
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false });
   });
 
   await devLogin(page);

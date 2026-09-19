@@ -91,6 +91,23 @@ test.describe('Login fun-fact modal (mocked)', () => {
     expect(await page.evaluate(() => localStorage.getItem('wrotate_fact_modal_shown_u1'))).toBe(null);
   });
 
+  // #game-overlay has no `overlay` class and is shown via style.display, so the
+  // plain `.overlay:not(.hidden)` check missed it and the modal opened on top of
+  // a timed Ranking Game round (caught by the wishlist-ranking UAT, 2026-09-18).
+  test('does not appear over the Ranking Game', async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => { document.getElementById('game-overlay').style.display = 'flex'; });
+    await page.evaluate(() => maybeShowFactModal());
+    await page.waitForTimeout(900);
+    expect(await visible(page)).toBe(false);
+    expect(await page.evaluate(() => localStorage.getItem('wrotate_fact_modal_shown_u1'))).toBe(null);
+    // …and it is only deferred: once the game closes, the next render shows it.
+    await page.evaluate(() => { document.getElementById('game-overlay').style.display = 'none'; });
+    await page.evaluate(() => maybeShowFactModal());
+    await page.waitForTimeout(900);
+    expect(await visible(page)).toBe(true);
+  });
+
   test('does not appear once already shown', async ({ page }) => {
     await setup(page, { alreadyShown: true });
     await page.evaluate(() => maybeShowFactModal());

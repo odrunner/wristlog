@@ -18,6 +18,17 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
+// Self-opening modals (badge reveal, then the once-per-user "Did you know?" fact
+// modal) fire ~1 s after a render, and each is remembered in localStorage — which
+// every Playwright context starts without, so they are "first time" on every
+// run. Correct behaviour, but they cover the nav bar; dismiss whichever blocks.
+async function dismissAutoModalsWhenShown(page) {
+  await page.addLocatorHandler(page.locator('#badge-reveal-modal:not(.hidden)'),
+    async () => { await page.evaluate(() => closeBadgeReveal()); });
+  await page.addLocatorHandler(page.locator('#fact-modal:not(.hidden)'),
+    async () => { await page.evaluate(() => closeFactModal()); });
+}
+
 async function devLogin(page, useSecond = false) {
   await page.goto(APP_URL);
   await page.waitForSelector('#auth-screen', { state: 'visible', timeout: 10_000 });
@@ -362,6 +373,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
+    await dismissAutoModalsWhenShown(page);
     await devLogin(page);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {
@@ -385,6 +397,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
+    await dismissAutoModalsWhenShown(page);
     await devLogin(page, true);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {
