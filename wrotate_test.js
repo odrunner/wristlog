@@ -3211,6 +3211,33 @@ export function feedRpcHintKey(userId) {
   return userId ? 'wrotate_feed_rpc_' + userId : null;
 }
 
+// Admin → Experiments: load-time per arm for experiments that are ABOUT load time.
+// The judge only knows behaviour metrics, so a speed change (feed_rpc) had nothing
+// to show on its card. `arms` comes from admin_experiment_speed(): repeat loads
+// only, because a boot-time arm takes effect from the user's second visit. Shown
+// only for keys in SPEED_EXPERIMENTS — for any other experiment the two arms'
+// load times differ by chance alone and would invite a wrong reading.
+export const SPEED_EXPERIMENTS = ['feed_rpc'];
+export function experimentSpeedHtml(key, arms) {
+  if (!SPEED_EXPERIMENTS.includes(key) || !arms || typeof arms !== 'object') return '';
+  const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
+  const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
+  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const row = (label, a) => {
+    if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
+    return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
+  };
+  const head = t => `<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
+  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:.5rem .6rem;border:0.5px solid var(--border);border-radius:8px;font-size:.78rem;font-variant-numeric:tabular-nums;">
+          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:.3rem .6rem;align-items:baseline;">
+            ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
+            ${row('Control', arms.control)}
+            ${row('Treatment', arms.treatment)}
+          </div>
+          <div style="color:var(--muted);font-size:.68rem;margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+        </div>`;
+}
+
 // ── Social cache ─────────────────────────────────────────────────────────────
 // "Remember who you follow on the device." The feed's first stage needs the ids
 // the user follows, has blocked, and is close friends with; fetching them was a

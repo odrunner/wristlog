@@ -8358,7 +8358,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.12.35';
+const APP_VERSION = '18.17.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12317,6 +12317,33 @@ async function _feedPageParity() {
     visibilities: [...new Set(app.map(p => p.visibility))], withComments: app.filter(p => p.comments).length };
   console.log('[feed_page parity]', summary); if (diffs.length) console.table(diffs.slice(0, 10));
   return { summary, diffs };
+}
+
+// Admin → Experiments: load-time per arm for experiments that are ABOUT load time.
+// The judge only knows behaviour metrics, so a speed change (feed_rpc) had nothing
+// to show on its card. `arms` comes from admin_experiment_speed(): repeat loads
+// only, because a boot-time arm takes effect from the user's second visit. Shown
+// only for keys in SPEED_EXPERIMENTS — for any other experiment the two arms'
+// load times differ by chance alone and would invite a wrong reading.
+const SPEED_EXPERIMENTS = ['feed_rpc'];
+function experimentSpeedHtml(key, arms) {
+  if (!SPEED_EXPERIMENTS.includes(key) || !arms || typeof arms !== 'object') return '';
+  const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
+  const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
+  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const row = (label, a) => {
+    if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
+    return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
+  };
+  const head = t => `<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
+  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:.5rem .6rem;border:0.5px solid var(--border);border-radius:8px;font-size:.78rem;font-variant-numeric:tabular-nums;">
+          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:.3rem .6rem;align-items:baseline;">
+            ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
+            ${row('Control', arms.control)}
+            ${row('Treatment', arms.treatment)}
+          </div>
+          <div style="color:var(--muted);font-size:.68rem;margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+        </div>`;
 }
 
 // ── Social cache ─────────────────────────────────────────────────────────────
@@ -19323,10 +19350,14 @@ async function loadAdminExperiments() {
   const el = document.getElementById('admin-experiments-list');
   if (!el) return;
   el.textContent = 'Loading…';
-  const [{ data, error }, metrics] = await Promise.all([
+  const [{ data, error }, metrics, speedR] = await Promise.all([
     db.rpc('admin_experiments_list'),
     db.from('experiment_metrics').select('key,label,kind').order('sort'),
+    // Load time per arm (sql/2026-09-18-experiment-speed.sql). Optional: the tab
+    // renders without it.
+    db.rpc('admin_experiment_speed').then(r => r, () => ({ data: null, error: true })),
   ]);
+  const _expSpeed = (speedR && !speedR.error && speedR.data) || {};
   if (error) { el.textContent = 'Failed: ' + error.message; return; }
   if (metrics.error) toast('Metrics failed: ' + metrics.error.message, 'error');
   const sel = document.getElementById('adm-exp-metric');
@@ -19378,6 +19409,7 @@ async function loadAdminExperiments() {
           ${cell('Treatment', fmtExperimentMetric(ev, 'treatment'))}
           ${cell('Lift · p', (ev && ev.lift_pct != null ? (ev.lift_pct > 0 ? '+' : '') + ev.lift_pct + '%' : '—') + ' · ' + (ev && ev.p_value != null ? ev.p_value : '—'))}
         </div>
+        ${experimentSpeedHtml(x.key, _expSpeed[x.key])}
         <div style="margin-bottom:.5rem;"><span style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Verdict</span> ${escHtml(verdict)}${evaluatedAt}</div>
         <div style="display:flex;flex-wrap:wrap;gap:.4rem;">${actions.join('')}</div>
         <div id="adm-exp-log-${escAttr(x.key)}" style="display:none;padding:.5rem 0 0;color:var(--muted);font-size:.72rem;">
