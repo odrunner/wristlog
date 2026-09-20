@@ -271,12 +271,9 @@ describe('design-system.css', () => {
 
 const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 
-// Referenced in index.html but declared nowhere. These three always carry a
-// var() fallback, so they resolve to something sensible rather than resetting
-// the property — which is why they were left alone when --accent, --error,
-// --fg, --hover and --surface1 were declared as aliases on 2026-08-08.
-// See audit-results/2026-08-08-design-system-tokens-review.md.
-const KNOWN_UNDECLARED = ['--bg-secondary', '--bg2', '--tertiary'];
+// --bg2, --bg-secondary and --tertiary were referenced for months with only a
+// fixed-colour fallback (a near-white skeleton bar in dark mode). Replaced with
+// real tokens 2026-09-20; nothing is exempt any more.
 
 describe('index.html', () => {
   it('links design-system.css before its inline style block', () => {
@@ -306,7 +303,7 @@ describe('index.html', () => {
   it('references no token that nothing declares', () => {
     const declared = declaredIn(indexHtml);
     const orphans = [...referencedIn(indexHtml)]
-      .filter(t => !owned(t) && !declared.has(t) && !KNOWN_UNDECLARED.includes(t));
+      .filter(t => !owned(t) && !declared.has(t));
     expect(orphans).toEqual([]);
   });
 });
