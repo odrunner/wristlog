@@ -1392,7 +1392,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wishlist-list { display: flex; flex-direction: column; gap: var(--space-3); }
     .wl-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: .9rem 1.1rem;
+      border-radius: var(--radius); padding: var(--space-3-5) var(--space-4);
       display: flex; align-items: center; gap: var(--space-4);
       transition: border-color var(--dur-fast); cursor: default;
     }
@@ -1403,21 +1403,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        top-left corner (like the Collection ranking handle) for touch drags. */
     .wl-tile.drag-over { border-color: var(--gold) !important; background: var(--gold-dim); }
     .wl-tile.dragging  { opacity: .4; }
-    .wl-tile-handle { position: absolute; top: .45rem; left: .5rem; z-index: 2; padding: .1rem .3rem; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); touch-action: none; line-height: 1; }
+    .wl-tile-handle { position: absolute; top: .45rem; left: .5rem; z-index: 2; padding: .1rem var(--space-1); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); touch-action: none; line-height: 1; }
     .wl-card-img    { width: 72px; height: 72px; border-radius: var(--radius-btn); object-fit: cover; flex-shrink: 0; }
-    .wl-card-avatar { width: 72px; height: 72px; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); color: #000; flex-shrink: 0; font-size: 1.15rem; }
+    .wl-card-avatar { width: 72px; height: 72px; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); color: #000; flex-shrink: 0; font-size: var(--fs-xl); }
     .drag-handle { color: var(--border); cursor: grab; font-size: var(--fs-xl); padding: 0 .2rem; user-select: none; flex-shrink: 0; }
     .drag-handle:hover { color: var(--muted); }
-    .wl-rank { width: 24px; text-align: center; font-size: .85rem; font-weight: var(--fw-heavy); color: var(--muted); flex-shrink: 0; }
+    .wl-rank { width: 24px; text-align: center; font-size: var(--fs-base); font-weight: var(--fw-heavy); color: var(--muted); flex-shrink: 0; }
     .wl-rank.r1 { color: var(--gold-text); }
     .wl-rank.r2 { color: #b0b0b0; }
     .wl-rank.r3 { color: #cd7f32; }
     .wl-info { flex: 1; min-width: 0; }
-    .wl-name  { font-weight: var(--fw-bold); font-size: .98rem; }
-    .wl-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+    .wl-name  { font-weight: var(--fw-bold); font-size: var(--fs-lg); }
+    .wl-brand { font-size: var(--fs-sm); color: var(--muted); margin-top: .1rem; }
     .wl-meta  { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1); }
 
-    .wl-select-box { appearance:none; -webkit-appearance:none; width:20px; height:20px; flex-shrink:0; border:2px solid var(--border); border-radius:5px; background:var(--surface); cursor:pointer; position:relative; }
+    .wl-select-box { appearance:none; -webkit-appearance:none; width:20px; height:20px; flex-shrink:0; border:2px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); cursor:pointer; position:relative; }
     .wl-select-box:checked { background:var(--gold); border-color:var(--gold); }
     .wl-select-box:checked::after { content:''; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
     .wl-select-box.partial { background:color-mix(in srgb, var(--gold) 30%, transparent); border-color:var(--gold); }
@@ -1431,7 +1431,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Wishlist header actions: view toggle + add buttons all on one row */
     /* wrap, not nowrap: with nowrap the row grew past the viewport on phones
        and "+ Add to Wishlist" was clipped off the right edge. */
-    .wl-actions { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; justify-content: flex-start; }
+    .wl-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-start; }
     /* Buttons are sized like the Collection header's (same .btn, .45rem padding,
        16px icons, .8rem text) so the two pages read as one. */
     .wl-actions .btn { white-space: nowrap; display: inline-flex; align-items: center; }
@@ -1439,13 +1439,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Wishlist brand folders */
     .wl-folder-header {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: .8rem 1.1rem;
-      display: flex; align-items: center; gap: .8rem; cursor: pointer;
+      border-radius: var(--radius); padding: var(--space-3) var(--space-4);
+      display: flex; align-items: center; gap: var(--space-3); cursor: pointer;
       transition: border-color var(--dur-fast); user-select: none;
     }
     .wl-folder-header:hover { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
     .wl-folder-icon { color: var(--gold-text); flex-shrink: 0; display: flex; }
-    .wl-folder-name { font-weight: var(--fw-bold); font-size: .98rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wl-folder-name { font-weight: var(--fw-bold); font-size: var(--fs-lg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-folder-count { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: .1rem var(--space-2); flex-shrink: 0; }
     .wl-folder-thumbs { display: flex; flex-shrink: 0; margin-left: auto; }
     .wl-folder-thumb, .wl-folder-thumb-avatar { width: 34px; height: 34px; border-radius: var(--radius-btn); border: 2px solid var(--surface); margin-left: -10px; flex-shrink: 0; }
@@ -1458,8 +1458,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-folder.open .wl-folder-items { display: flex; }
 
     /* Wishlist gallery (photo-first) */
-    .wl-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; }
-    .wl-tile { display: flex; flex-direction: column; gap: .35rem; min-width: 0; border: 2px solid var(--border); border-radius: var(--radius); padding: .4rem; background: var(--surface2); transition: border-color var(--dur-fast); }
+    .wl-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+    .wl-tile { display: flex; flex-direction: column; gap: var(--space-1-5); min-width: 0; border: 2px solid var(--border); border-radius: var(--radius); padding: var(--space-1-5); background: var(--surface2); transition: border-color var(--dur-fast); }
     .wl-tile[data-priv="public"]       { border-color: var(--success); }
     .wl-tile[data-priv="followers"]    { border-color: var(--gold); }
     .wl-tile[data-priv="friends"],
@@ -1468,8 +1468,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile-imglink { display: block; cursor: pointer; }
     .wl-tile-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-btn); display: block; }
     .wl-tile-avatar { width: 100%; aspect-ratio: 1 / 1; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); font-size: var(--fs-3xl); color: #000; }
-    .wl-tile-name { font-weight: var(--fw-bold); font-size: .85rem; line-height: 1.25; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .wl-tile-url { font-size: .72rem; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .wl-tile-name { font-weight: var(--fw-bold); font-size: var(--fs-base); line-height: var(--lh-tight); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wl-tile-url { font-size: var(--fs-sm); color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .wl-tile-url:hover { color: var(--gold-text); }
 
     /* ── QUICK-LOG BUTTON (collection card) ── */
@@ -1720,7 +1720,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          "Add from Photo" keeps its label — same row as the Collection header.
          Everything stays 44px tall. Measured to fit one line at 375px
          (e2e/wishlist-layout.mock.spec.js). */
-      .wl-actions .btn { padding: .45rem .55rem !important; }
+      .wl-actions .btn { padding: var(--space-2) var(--space-2) !important; }
       .wl-actions .wl-actions-text { display: none; }
       /* Collection header: Share and Enhance drop to icon-only too, so the row
          still fits at 390px (e2e/collection-gallery.mock.spec.js) — with both
@@ -1741,8 +1741,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1) var(--space-2); }
       .coll-rank-chip .coll-rank-text { display: none; }
       .coll-rank-chip + .coll-sort-chip { margin-left: .1rem; }
-      #wishlist-modal .modal-actions { gap: .3rem; }
-      #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
+      #wishlist-modal .modal-actions { gap: var(--space-1); }
+      #wishlist-modal .modal-actions .btn { padding: var(--space-2-5) var(--space-2); font-size: var(--fs-sm); }
       .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
       /* Height only for the feed actions. min-width:40px pinned every icon-only
          button at 40px, so the ink between the like/comment/share icons was
@@ -1782,7 +1782,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .track-form { padding-bottom: 80px; }
 
       /* Wishlist cards: wrap actions onto their own row */
-      .wl-card { flex-wrap: wrap; padding: var(--space-3) .9rem; gap: var(--space-2) var(--space-3); }
+      .wl-card { flex-wrap: wrap; padding: var(--space-3) var(--space-3-5); gap: var(--space-2) var(--space-3); }
       .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: var(--fs-lg); }
       .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
     }
@@ -5114,11 +5114,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="wl-actions">
         <!-- One icon cycles list → folders → gallery → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
-        <button id="wl-view-btn" class="btn btn-ghost" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;padding:.45rem;"></button>
-        <button class="btn btn-ghost" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn btn-primary" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="wl-rank-btn" class="btn btn-ghost" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
-        <button id="wl-share-btn" class="btn btn-ghost" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="wl-view-btn" class="btn btn-ghost" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;padding:var(--space-2);"></button>
+        <button class="btn btn-ghost" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button class="btn btn-primary" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button id="wl-rank-btn" class="btn btn-ghost" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
+        <button id="wl-share-btn" class="btn btn-ghost" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
     <div id="wl-select-bar" style="display:none;align-items:center;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.16.27';
+const APP_VERSION = '20.16.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -30531,7 +30531,7 @@ function renderWishlist(force) {
             if (!ps.length) return '';
             const lo = Math.min(...ps), hi = Math.max(...ps);
             const txt = lo === hi ? fmtMoney(lo) : `${fmtMoney(lo)}–${fmtMoney(hi)}`;
-            return `<span style="font-size:.72rem;color:var(--muted);white-space:nowrap;margin-left:.4rem;">${txt}</span>`;
+            return `<span style="font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;margin-left:var(--space-1-5);">${txt}</span>`;
           })()}
           <span class="wl-folder-thumbs">${thumbs}</span>
           <span class="wl-folder-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
