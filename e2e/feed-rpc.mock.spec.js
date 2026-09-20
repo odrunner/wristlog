@@ -30,17 +30,19 @@ const classicFeedReqs = page => {
   return seen;
 };
 
-test('treatment: one feed_page call renders the feed; no classic feed queries, not even the early fetch', async ({ page }) => {
+test('treatment: one feed_page call — fired from the head — renders the feed; no classic feed queries', async ({ page }) => {
   await injectSession(page);
   await force(page, 'treatment');
   await spyPostHog(page);
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });   // classic path would render an EMPTY feed
-  let calls = 0;
-  await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });
+  let calls = 0, fromHead = 0;
+  // supabase-js stamps x-client-info on its requests; one without it came from the head script.
+  await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; if (!route.request().headers()['x-client-info']) fromHead++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });
   const classic = classicFeedReqs(page);
   await page.goto('/');
   await waitForAppBoot(page);
   await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
+  expect(fromHead).toBe(1);
   expect(await page.evaluate(() => ({ order: feedItems.map(i => i.id), author: feedItems[0].profile.display_name, likes: feedLikes['p-1'], comments: feedCommentCounts['p-2'], viaRpc: _feedViaRpc })))
     .toEqual({ order: ['p-1', 'p-2', 'p-3'], author: 'Other Person', likes: { count: 7, liked: true }, comments: 1, viaRpc: true });
   expect(calls).toBe(1);
@@ -49,7 +51,7 @@ test('treatment: one feed_page call renders the feed; no classic feed queries, n
   await expect.poll(() => ev().then(e => e.length)).toBe(1);
   const p = (await ev())[0].props;
   expect(p.feed_rpc).toBe(true);
-  expect(p.early_feed).toBe(false);
+  expect(p.early_feed).toBe(true);
   expect(p.enriched_ms).toBe(p.first_live_ms);   // one render: fresh posts ARE the complete posts
 });
 
@@ -66,6 +68,22 @@ test('treatment: a failing feed_page falls back to the classic load', async ({ p
   const ev = () => page.evaluate(() => window.__ph.filter(e => e.name === 'boot_timing'));
   await expect.poll(() => ev().then(e => e.length)).toBe(1);
   expect((await ev())[0].props.feed_rpc).toBe(false);
+});
+
+test('treatment: a failed early feed_page is retried once through the SDK before any fallback', async ({ page }) => {
+  await injectSession(page);
+  await force(page, 'treatment');
+  await spyPostHog(page);
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });
+  await page.route('**/rest/v1/rpc/feed_page*', route => route.request().headers()['x-client-info']
+    ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) })
+    : route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' }));
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
+  const ev = () => page.evaluate(() => window.__ph.filter(e => e.name === 'boot_timing'));
+  await expect.poll(() => ev().then(e => e.length)).toBe(1);
+  expect((await ev())[0].props).toMatchObject({ feed_rpc: true, early_feed: false });
 });
 
 test('control and unassigned users never call feed_page', async ({ page }) => {

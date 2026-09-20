@@ -131,7 +131,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        fires the two feed queries that need nothing but the user id (public
        posts, own posts) and parks the promises on window.__earlyFeed;
        loadFeed()'s first stage consumes them once (takeEarlyFeed) instead of
-       issuing its own. Any failure resolves to { error } and the normal retry
+       issuing its own. In the feed_rpc experiment's treatment arm the single
+       feed_page() call is fired here instead (parked as .rpc, consumed by
+       _loadFeedViaRpc). Any failure resolves to { error } and the normal retry
        re-runs the stage through supabase-js. EARLY_KEY / EARLY_COLS mirror
        SUPABASE_KEY / FEED_LOG_COLS — tests/early-feed.test.js fails on drift. -->
   <script>
@@ -145,18 +147,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         if (!s || !s.access_token || !s.user || !s.user.id) return;
         if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
         var forced = localStorage.getItem('exp_force_feed_rpc');
-        if (forced === 'treatment' || (forced !== 'control' && localStorage.getItem('wrotate_feed_rpc_' + s.user.id) === '1')) return; // feed_page() arm: one request, made by the boot script
+        var viaRpc = forced === 'treatment' || (forced !== 'control' && localStorage.getItem('wrotate_feed_rpc_' + s.user.id) === '1'); // feed_page() arm: one request
         var EARLY_URL = 'https://api.wrotate.com';
         var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
         var EARLY_COLS = 'id,user_id,watch_id,club_id,photo_url,notes,use_case,date,created_at,visibility,moderation_status,location,badge_refs,fact_id';
         var base = EARLY_URL + '/rest/v1/logs?select=' + encodeURIComponent(EARLY_COLS);
         var tail = '&order=date.desc,created_at.desc&limit=50';
         var h = { apikey: EARLY_KEY, Authorization: 'Bearer ' + s.access_token, Accept: 'application/json' };
-        var get = function (filter) {
-          return fetch(base + '&' + filter + tail, { headers: h })
+        var send = function (url, init) {
+          return fetch(url, init)
             .then(function (r) { return r.ok ? r.json().then(function (d) { return { data: d, error: null }; }) : { data: null, error: { message: 'early feed HTTP ' + r.status } }; })
             .catch(function (e) { return { data: null, error: { message: 'early feed: ' + (e && e.message || e) } }; });
         };
+        var get = function (filter) { return send(base + '&' + filter + tail, { headers: h }); };
+        if (viaRpc) {
+          window.__earlyFeed = { uid: s.user.id, at: Date.now(), rpc: send(EARLY_URL + '/rest/v1/rpc/feed_page', { method: 'POST', headers: { apikey: h.apikey, Authorization: h.Authorization, Accept: h.Accept, 'Content-Type': 'application/json' }, body: '{}' }) };
+          return;
+        }
         window.__earlyFeed = { uid: s.user.id, at: Date.now(), q1: get('visibility=eq.public'), q2: get('user_id=eq.' + encodeURIComponent(s.user.id)) };
       } catch (e) { /* no early fetch — the normal path runs */ }
     })();
@@ -8358,7 +8365,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.18.09';
+const APP_VERSION = '19.19.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12271,7 +12278,12 @@ document.addEventListener('experiments:loaded', () => {
 // True when the feed was fully loaded and rendered from feed_page().
 async function _loadFeedViaRpc() {
   try {
-    const { data, error } = await withTimeout(db.rpc('feed_page'), 8000);
+    // The call may already be in flight from the head's early-fetch script; a
+    // failed early call is retried once here before the classic fallback.
+    const early = takeEarlyFeed(true);
+    let res = early ? await withTimeout(early.rpc, 8000) : null;
+    if (!res || res.error) { if (res) _earlyFeedUsed = false; res = await withTimeout(db.rpc('feed_page'), 8000); }
+    const { data, error } = res;
     if (error) throw error;
     const st = feedPageToState(data, todayStr());
     if (!st) throw new Error('unexpected feed_page payload');
@@ -12421,7 +12433,7 @@ function restoreSocialCache() {
 // normally.
 function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   if (!early || !userId || early.uid !== userId) return false;
-  if (!early.q1 || !early.q2 || typeof early.at !== 'number') return false;
+  if (!(early.rpc || (early.q1 && early.q2)) || typeof early.at !== 'number') return false;
   const age = now - early.at;
   return age >= 0 && age < maxAgeMs;
 }
@@ -12429,10 +12441,11 @@ function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
 // Consume-once: the first Phase-1 attempt of the first load may use the early
 // results; a retry, a foreground re-pull or another account never does.
 let _earlyFeedUsed = false;
-function takeEarlyFeed() {
+function takeEarlyFeed(rpc = false) {
   const e = window.__earlyFeed || null;
   window.__earlyFeed = null;
   if (!earlyFeedUsable(e, currentUser && currentUser.id, Date.now())) return null;
+  if (!!e.rpc !== rpc) return null;   // parked for the other feed path
   _earlyFeedUsed = true;
   return e;
 }

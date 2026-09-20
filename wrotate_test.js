@@ -3281,7 +3281,7 @@ export function socialSignature({ following, blocked, friends }) {
 // normally.
 export function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   if (!early || !userId || early.uid !== userId) return false;
-  if (!early.q1 || !early.q2 || typeof early.at !== 'number') return false;
+  if (!(early.rpc || (early.q1 && early.q2)) || typeof early.at !== 'number') return false;
   const age = now - early.at;
   return age >= 0 && age < maxAgeMs;
 }

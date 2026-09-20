@@ -24,6 +24,10 @@ describe('early-fetch script mirrors the boot script', () => {
     expect(html.indexOf('window.__earlyFeed = {')).toBeGreaterThan(0);
     expect(html.indexOf('window.__earlyFeed = {')).toBeLessThan(html.indexOf('const SUPABASE_KEY ='));
   });
+  it('fires feed_page for the feed_rpc arm', () => {
+    expect(html.indexOf("rpc: send(EARLY_URL + '/rest/v1/rpc/feed_page'")).toBeGreaterThan(0);
+    expect(html.indexOf("rpc: send(EARLY_URL + '/rest/v1/rpc/feed_page'")).toBeLessThan(html.indexOf('const SUPABASE_KEY ='));
+  });
 });
 
 describe('earlyFeedUsable', () => {
@@ -49,5 +53,12 @@ describe('earlyFeedUsable', () => {
     expect(earlyFeedUsable(e({ q1: null }), 'u1', T)).toBe(false);
     expect(earlyFeedUsable(e({ q2: undefined }), 'u1', T)).toBe(false);
     expect(earlyFeedUsable(e({ at: 'x' }), 'u1', T)).toBe(false);
+  });
+  it('accepts a parked feed_page call in place of the two queries', () => {
+    const r = { uid: 'u1', at: T, rpc: Promise.resolve() };
+    expect(earlyFeedUsable(r, 'u1', T + 500)).toBe(true);
+    expect(earlyFeedUsable(r, 'u2', T + 500)).toBe(false);
+    expect(earlyFeedUsable({ ...r, rpc: null }, 'u1', T)).toBe(false);
+    expect(earlyFeedUsable({ ...r, q1: Promise.resolve() }, 'u1', T)).toBe(true);
   });
 });
