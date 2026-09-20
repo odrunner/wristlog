@@ -8369,7 +8369,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.12.39';
+const APP_VERSION = '20.12.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10644,9 +10644,10 @@ async function saveClubEdit(clubId) {
     try {
       const oldUrl = myClubs.find(c => c.id === clubId)?.image_url;
       updates.image_url = await uploadImage(_clubEditImageFile, `clubs/${clubId}.jpg`);
-      // Cleanup old storage file if existed
+      // Cleanup old storage file if existed — never the one just written: a replacement
+      // lands on the same clubs/<id>.jpg path, and deleting "the old file" removed it.
       const oldPath = storagePathFrom(oldUrl);
-      if (oldPath) deleteStorageFile(oldPath);
+      if (oldPath && oldPath !== storagePathFrom(updates.image_url)) deleteStorageFile(oldPath);
     } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
   }
 
@@ -31199,10 +31200,13 @@ async function saveWishlistItem() {
       const oldPath = storagePathFrom(oldImage);
       if (oldPath) deleteStorageFile(oldPath);
     }
-    // Cleanup old storage file if replaced with new upload
+    // Cleanup old storage file if replaced with new upload — but only when it is a
+    // DIFFERENT file. A replacement uploads to the same wishlist/<uid>/<id>.jpg path
+    // (upsert) and differs only in ?v=, so comparing URLs deleted the photo that had
+    // just been uploaded (audit 2026-09-20 H7).
     if (data.image && oldImage && oldImage !== data.image) {
       const oldPath = storagePathFrom(oldImage);
-      if (oldPath) deleteStorageFile(oldPath);
+      if (oldPath && oldPath !== storagePathFrom(data.image)) deleteStorageFile(oldPath);
     }
     wishlist[idx] = updated;
     markDirty('wishlist', editingWlId);
