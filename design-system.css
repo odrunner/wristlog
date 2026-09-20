@@ -52,8 +52,10 @@
   --accent: var(--gold);
 
   /* ── Scale tokens (theme-independent) ── */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  /* Spacing is in rem, like every font size here, so it follows the reader's
+     text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. */
+  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
+  --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
   --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px;
   --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem;
   --fs-md: .95rem; --fs-lg: 1.1rem; --fs-xl: 1.3rem; --fs-2xl: 1.6rem; --fs-3xl: 2.5rem;
@@ -80,7 +82,7 @@
      absolute surface picks one of these; it does not invent a number. */
   --z-fab: 90;
   --z-header: 100;
-  --z-dropdown: 200;
+  --z-float: 200;
   --z-modal: 200;
   --z-modal-top: 210;
   --z-nav: 300;

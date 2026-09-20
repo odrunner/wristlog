@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countAll, countHardcoded, readBudget, PAGES } from '../scripts/ds-count.mjs';
+import { countAll, countHardcoded, isTokenised, readBudget, PAGES } from '../scripts/ds-count.mjs';
 
 // The ratchet. Every page that links design-system.css has a budget of
 // hardcoded design values per category (tests/design-system-budget.json). New
@@ -40,6 +40,15 @@ describe('countHardcoded', () => {
     expect(c.margin).toBe(0);
     expect(c['border-radius']).toBe(0);
     expect(c.gap).toBe(0);
+  });
+
+  it('counts a half-swapped shorthand as still hardcoded', () => {
+    expect(isTokenised('var(--space-2)')).toBe(true);
+    expect(isTokenised('0 var(--space-4)')).toBe(true);
+    expect(isTokenised('color var(--dur-fast), opacity var(--dur-fast)')).toBe(true);
+    expect(isTokenised('.4rem var(--space-2)')).toBe(false);
+    expect(isTokenised('calc(var(--header-h) + .6rem)')).toBe(false);
+    expect(isTokenised('.5rem')).toBe(false);
   });
 
   it('ignores HTML entities, fragment links and 4-letter ids that look like hex', () => {

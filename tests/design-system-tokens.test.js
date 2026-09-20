@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect } from 'vitest';
+import { EMAIL_RANGES } from '../scripts/ds-count.mjs';
 
 // The design tokens used to be copy-pasted into index.html, p/index.html and
 // profile/index.html, plus a fourth inline copy under #auth-screen. r.html had
@@ -41,13 +42,13 @@ export const SHARED_LIGHT = {
   '--success-text': '#27714b',
   '--radius': '10px',
   '--overlay-bg': 'rgba(245,245,248,.96)',
-  '--space-1': '4px',
-  '--space-2': '8px',
-  '--space-3': '12px',
-  '--space-4': '16px',
-  '--space-5': '20px',
-  '--space-6': '24px',
-  '--space-8': '32px',
+  '--space-1': '.25rem',
+  '--space-2': '.5rem',
+  '--space-3': '.75rem',
+  '--space-4': '1rem',
+  '--space-5': '1.25rem',
+  '--space-6': '1.5rem',
+  '--space-8': '2rem',
   '--radius-sm': '6px',
   '--radius-btn': '8px',
   '--radius-pill': '999px',
@@ -88,7 +89,7 @@ export const SHARED_LIGHT = {
   '--scrim': 'rgba(0,0,0,.55)',
   '--z-fab': '90',
   '--z-header': '100',
-  '--z-dropdown': '200',
+  '--z-float': '200',
   '--z-modal': '200',
   '--z-modal-top': '210',
   '--z-nav': '300',
@@ -305,6 +306,21 @@ describe('index.html', () => {
     const orphans = [...referencedIn(indexHtml)]
       .filter(t => !owned(t) && !declared.has(t));
     expect(orphans).toEqual([]);
+  });
+});
+
+// The admin Broadcast / Campaign builders produce HTML that is SENT AS EMAIL.
+// Mail clients do not support CSS custom properties and the message never loads
+// design-system.css, so a token there renders as nothing. These ranges stay on
+// literal values on purpose; the token swap of 2026-09-20 skipped them.
+describe('email HTML builders in index.html', () => {
+  const RANGES = EMAIL_RANGES;
+  it.each(RANGES)('%s … uses no design token', (from, to) => {
+    const a = indexHtml.indexOf('\n' + from);
+    const b = indexHtml.indexOf('\n' + to, a);
+    expect(a, `marker not found: ${from}`).toBeGreaterThan(-1);
+    expect(b, `marker not found: ${to}`).toBeGreaterThan(a);
+    expect(indexHtml.slice(a, b)).not.toContain('var(--');
   });
 });
 

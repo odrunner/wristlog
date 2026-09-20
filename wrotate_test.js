@@ -3124,7 +3124,7 @@ export function firstLoadCardHtml(days) {
   const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
   const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
   const td = (html, left) => `<td style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
-  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
+  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
   const body = rows.map(d => '<tr>'
     + td(escHtml(String(d.day).slice(5)), true)
     + td(escHtml(String(num(d.loads) == null ? '–' : num(d.loads))))
@@ -3137,12 +3137,12 @@ export function firstLoadCardHtml(days) {
     + td(pct(d.error_pct))
     + '</tr>').join('');
   return `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:.5rem;">First load (last ${rows.length} days, UTC)</div>
+        <div class="eyebrow" style="margin-bottom:var(--space-2);">First load (last ${rows.length} days, UTC)</div>
         <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;font-variant-numeric:tabular-nums;">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
         </table></div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
 }
 
@@ -3227,14 +3227,14 @@ export function experimentSpeedHtml(key, arms) {
     if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
     return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
-  const head = t => `<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
-  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:.5rem .6rem;border:0.5px solid var(--border);border-radius:8px;font-size:.78rem;font-variant-numeric:tabular-nums;">
+  const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
+  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:var(--space-2) .6rem;border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:.78rem;font-variant-numeric:tabular-nums;">
           <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:.3rem .6rem;align-items:baseline;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}
             ${row('Treatment', arms.treatment)}
           </div>
-          <div style="color:var(--muted);font-size:.68rem;margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
 

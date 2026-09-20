@@ -51,10 +51,30 @@ Other pages: `profile/index.html` (~90 hardcoded), `p/index.html` (~45), `privac
 | Phase | What | Visual change | Status |
 |---|---|---|---|
 | 0 | Ratchet test: per-category budget of hardcoded values that can only go down | none | **DONE 2026-09-20** (`41be452`) — `scripts/ds-count.mjs`, `tests/design-system-ratchet.test.js`, `tests/design-system-budget.json` |
-| 1 | Complete the token set (shadow, motion, z-layers, status colours, mono, fw-800); move the 29 local tokens in; fix the 3 undeclared | none | OPEN |
-| 2 | Lossless swap: every value that already equals a token → `var()` | none | OPEN |
+| 1 | Complete the token set (shadow, motion, z-layers, status colours, mono, fw-800); move the 29 local tokens in; fix the 3 undeclared | none | **DONE 2026-09-20** (`3fd813f`, `cd9ec8d`) — index.html now declares only `--page-gutter`. The 3 undeclared were a real dark-mode bug (near-white skeleton bars) |
+| 2 | Lossless swap: every value that already equals a token → `var()` | none | **DONE 2026-09-20** — 2,191 swaps (2,165 by script + 26 z-index layers). Verified: text proof (resolving tokens back reproduces the original), computed-style diff of all 5,918 static elements × 30 properties × both themes = identical, 2,393 unit + 512 E2E pass. Email builders deliberately skipped and now guarded by a test |
 | 3 | Snap off-scale values to the scale (73 font sizes → ~9, 286 paddings → spacing scale), one screen at a time | **yes, small** | OPEN |
 | 4 | Component classes replace inline styles (buttons, inputs, cards, section headers, rows, modals), incl. JS templates | none intended | OPEN |
 | 5 | Secondary pages: profile, p, privacy, terms link the system and drop their own values | none | OPEN |
 
 Out of reach by design: email templates (mail clients do not support CSS variables) and the native iOS screens.
+
+## Progress — hardcoded values remaining in index.html (from `node scripts/ds-count.mjs`)
+
+| Category | Start | After phase 2 |
+|---|---|---|
+| font-weight | 461 | 7 |
+| transition | 98 | 8 |
+| z-index | 39 | 13 (local 1/2/3 stacking inside a component) |
+| line-height | 218 | 93 |
+| border-radius | 333 | 159 |
+| margin | 905 | 414 |
+| gap | 353 | 205 |
+| padding | 663 | 552 |
+| font-size | 1,217 | 935 |
+| letter-spacing | 105 | 91 |
+| color | 631 | 568 |
+| box-shadow | 40 | 34 |
+| inline `style=` attributes | 2,137 | 2,137 (phase 4) |
+
+What is left is, by construction, everything that is NOT on the scale — that is phase 3 (snap) and phase 4 (classes).

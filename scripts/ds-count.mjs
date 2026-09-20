@@ -15,6 +15,28 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUDGET_PATH = join(root, 'tests', 'design-system-budget.json');
 export const PAGES = ['index.html', 'p/index.html', 'profile/index.html'];
 
+// HTML built in index.html that is SENT AS EMAIL (admin Broadcast / Campaign).
+// Mail clients have no CSS custom properties and never load design-system.css,
+// so these ranges keep literal values on purpose: they are outside the design
+// system, are not counted here, and tests/design-system-tokens.test.js asserts
+// no var(-- ever lands in them. [start-of-line marker, end-of-line marker).
+export const EMAIL_RANGES = [
+  ['const FUNFACT_CARD_HTML', 'function renderDevFlags'],
+  ['function imgSnippet', 'function updateBroadcastPreview'],
+  ['function buildFinalBroadcastHtml', 'const BROADCAST_DRAFTS_KEY'],
+  ['function buildCampaignEmailHtml', 'async function createCampaign'],
+];
+
+export function withoutEmailRanges(src) {
+  for (const [from, to] of EMAIL_RANGES) {
+    const a = src.indexOf('\n' + from);
+    if (a === -1) continue;
+    const b = src.indexOf('\n' + to, a);
+    if (b > a) src = src.slice(0, a) + src.slice(b);
+  }
+  return src;
+}
+
 // Values that are not a design decision, so are not counted.
 const NEUTRAL = new Set(['inherit', 'initial', 'unset', 'none', 'auto', 'normal', '0', '0 auto', 'currentcolor', 'transparent']);
 
@@ -48,15 +70,25 @@ function withoutDeclarations(src) {
   return src.replace(/(^|[;{\s])--[A-Za-z0-9_-]+\s*:[^;}]*/g, '$1');
 }
 
+// True when every number in the value comes from a token. `var(--space-2)` and
+// `0 var(--space-4)` are tokenised; `.4rem var(--space-2)` is not — a half-swapped
+// shorthand still counts, so the budget cannot be gamed by partial edits.
+export function isTokenised(v) {
+  if (!v.includes('var(')) return false;
+  const rest = v.replace(/var\([^()]*\)/g, '').replace(/(?<![\d.])0(?![\d.])/g, '');
+  return !/\d/.test(rest);
+}
+
 export function countHardcoded(src) {
-  const text = withoutDeclarations(src);
+  const text = withoutDeclarations(withoutEmailRanges(src));
   const out = {};
   out['color'] = (text.match(HEX) || []).length + (text.match(RGB) || []).filter(v => !v.includes('var(')).length;
   for (const [name, rx] of Object.entries(PROPS)) {
     let n = 0;
     for (const m of text.matchAll(rx)) {
       const v = m[1].trim().replace(/\s*!important$/, '').toLowerCase();
-      if (v.includes('var(') || v.includes('${') || NEUTRAL.has(v)) continue;
+      if (v.includes('${') || NEUTRAL.has(v)) continue;
+      if (isTokenised(v)) continue;
       n++;
     }
     out[name] = n;
