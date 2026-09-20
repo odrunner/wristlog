@@ -311,7 +311,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     #auth-screen { overflow-y:auto; }
     .landing-inner { max-width:520px; margin:0 auto; }
     .landing-logo { display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:.8rem; }
-    .landing-logo span { font-size:var(--fs-2xl); font-weight:var(--fw-semibold); color:var(--gold-text); }
+    .landing-logo span { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--gold-text); }
     .landing-logo span span { font-weight:var(--fw-normal); letter-spacing:.04em; }
     .landing-tagline { font-size:1.05rem; color:var(--muted); line-height:1.5; text-align:center; margin-bottom:1.2rem; }
     .landing-auth { display:flex; flex-direction:column; gap:.45rem; margin-top:1.4rem; margin-bottom:.6rem; }
@@ -333,7 +333,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .landing-features { flex-direction:row; gap:0; }
       .landing-feature { display:block; flex:1; padding:var(--space-5) var(--space-4); border-bottom:none; border-right:1px solid var(--border); }
       .landing-feature:last-child { border-right:none; }
-      .landing-feat-num { font-size:var(--fs-3xl); margin-bottom:8px; }
+      .landing-feat-num { font-size:var(--fs-4xl); margin-bottom:8px; }
     }
     #login-prompt-modal .modal { text-align:center; }
     #login-prompt-modal .btn-google, #login-prompt-modal .btn-apple { margin-bottom:.6rem; }
@@ -346,7 +346,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center; gap: var(--space-3);
       width: 100%; padding: .85rem var(--space-4); margin-bottom: var(--space-3);
       background: #fff; color: #3c4043; border: 1px solid #dadce0; border-radius: var(--radius);
-      font-size: var(--fs-md); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
+      font-size: var(--fs-lg); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
       transition: box-shadow var(--dur-fast), background var(--dur-fast);
     }
     .btn-google:hover { box-shadow: 0 1px 6px rgba(0,0,0,.2); background: #f8f8f8; }
@@ -354,7 +354,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center; gap: var(--space-3);
       width: 100%; padding: .85rem var(--space-4); margin-bottom: var(--space-3);
       background: #000; color: #fff; border: none; border-radius: var(--radius);
-      font-size: var(--fs-md); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
+      font-size: var(--fs-lg); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
       transition: box-shadow var(--dur-fast), background var(--dur-fast);
     }
     .btn-apple:hover { box-shadow: 0 1px 6px rgba(0,0,0,.3); background: #1a1a1a; }
@@ -467,7 +467,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 var(--space-5); gap:.55rem; }
     .profile-avatar-lg { position:relative; width:72px; height:72px; border-radius:50%; background:var(--gold); color:#000; font-size:1.5rem; font-weight:var(--fw-bold); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
     .profile-avatar-lg img { width:100%; height:100%; object-fit:cover; }
-    .profile-avatar-cam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); opacity:0; transition:opacity var(--dur-fast); cursor:pointer; border-radius:50%; font-size:var(--fs-lg); color:#fff; }
+    .profile-avatar-cam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); opacity:0; transition:opacity var(--dur-fast); cursor:pointer; border-radius:50%; font-size:var(--fs-xl); color:#fff; }
     .profile-avatar-lg:hover .profile-avatar-cam { opacity:1; }
     .profile-name-row { display:flex; align-items:center; gap:.4rem; }
     .profile-edit-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:var(--fs-base); padding:.15rem .3rem; border-radius:4px; line-height:1; }
@@ -531,7 +531,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-posts-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
     .profile-post-cell { position:relative; aspect-ratio:1; overflow:hidden; border-radius:4px; background:var(--surface2); cursor:pointer; }
     .profile-post-cell img { width:100%; height:100%; object-fit:cover; display:block; }
-    .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:var(--fw-heavy); font-size:var(--fs-lg); color:#000; }
+    .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:var(--fw-heavy); font-size:var(--fs-xl); color:#000; }
     .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:.65rem; color:var(--gold-text); background:linear-gradient(transparent, rgba(0,0,0,.7)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .profile-post-vis { position:absolute; top:4px; right:4px; font-size:.58rem; font-weight:var(--fw-bold); padding:2px 5px; border-radius:var(--radius-sm); letter-spacing:.03em; line-height:var(--lh-snug); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px rgba(0,0,0,.5); }
     .profile-post-vis.public { background:color-mix(in srgb, var(--tg-ink) 35%, transparent); color:#fff; }
@@ -855,7 +855,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Save bar */
     .save-bar { position: sticky; bottom: 1rem; }
-    .save-bar .btn { width: 100%; justify-content: center; padding: .85rem; font-size: var(--fs-md); border-radius: var(--radius); }
+    .save-bar .btn { width: 100%; justify-content: center; padding: .85rem; font-size: var(--fs-lg); border-radius: var(--radius); }
 
     /* Recent log items */
     .log-item {
@@ -1020,7 +1020,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-photo-toggle input[type="checkbox"]:checked { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: var(--gold); }
     .coll-photo-toggle input[type="checkbox"]:checked::after { transform: translateX(14px); background: var(--gold); }
     .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: .85rem; line-height: 1; pointer-events: none; }
-    .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: var(--fs-lg); user-select: none; z-index: 2; touch-action: none; line-height: 1; }
+    .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: var(--fs-xl); user-select: none; z-index: 2; touch-action: none; line-height: 1; }
     .rank-drag-handle:hover { color: var(--muted); }
     .watch-card.dragging  { opacity: .4; }
     .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold); }
@@ -1288,8 +1288,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .empty {
       text-align: center; padding: 2.5rem var(--space-4); color: var(--muted);
     }
-    .empty-icon { font-size: var(--fs-3xl); opacity: .3; margin-bottom: var(--space-3); }
-    .empty-text { font-size: var(--fs-md); margin-bottom: .3rem; }
+    .empty-icon { font-size: var(--fs-4xl); opacity: .3; margin-bottom: var(--space-3); }
+    .empty-text { font-size: var(--fs-lg); margin-bottom: .3rem; }
     .empty-sub  { font-size: var(--fs-base); opacity: .7; }
 
     /* No-data overlay for charts */
@@ -1406,7 +1406,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile-handle { position: absolute; top: .45rem; left: .5rem; z-index: 2; padding: .1rem .3rem; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); touch-action: none; line-height: 1; }
     .wl-card-img    { width: 72px; height: 72px; border-radius: var(--radius-btn); object-fit: cover; flex-shrink: 0; }
     .wl-card-avatar { width: 72px; height: 72px; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); color: #000; flex-shrink: 0; font-size: 1.15rem; }
-    .drag-handle { color: var(--border); cursor: grab; font-size: var(--fs-lg); padding: 0 .2rem; user-select: none; flex-shrink: 0; }
+    .drag-handle { color: var(--border); cursor: grab; font-size: var(--fs-xl); padding: 0 .2rem; user-select: none; flex-shrink: 0; }
     .drag-handle:hover { color: var(--muted); }
     .wl-rank { width: 24px; text-align: center; font-size: .85rem; font-weight: var(--fw-heavy); color: var(--muted); flex-shrink: 0; }
     .wl-rank.r1 { color: var(--gold-text); }
@@ -1467,7 +1467,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile[data-priv="private"]      { border-color: var(--danger); }
     .wl-tile-imglink { display: block; cursor: pointer; }
     .wl-tile-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-btn); display: block; }
-    .wl-tile-avatar { width: 100%; aspect-ratio: 1 / 1; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); font-size: var(--fs-2xl); color: #000; }
+    .wl-tile-avatar { width: 100%; aspect-ratio: 1 / 1; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); font-size: var(--fs-3xl); color: #000; }
     .wl-tile-name { font-weight: var(--fw-bold); font-size: .85rem; line-height: 1.25; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-tile-url { font-size: .72rem; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .wl-tile-url:hover { color: var(--gold-text); }
@@ -1783,7 +1783,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       /* Wishlist cards: wrap actions onto their own row */
       .wl-card { flex-wrap: wrap; padding: var(--space-3) .9rem; gap: var(--space-2) var(--space-3); }
-      .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: var(--fs-md); }
+      .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: var(--fs-lg); }
       .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
     }
 
@@ -1806,7 +1806,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .help-btn {
       width: 34px; height: 34px; border-radius: 50%;
       background: none; border: none;
-      color: var(--muted); font-size: var(--fs-md); font-weight: var(--fw-bold);
+      color: var(--muted); font-size: var(--fs-lg); font-weight: var(--fw-bold);
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: box-shadow var(--dur-fast), color var(--dur-fast); padding: 0;
       font-family: inherit;
@@ -1855,7 +1855,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumb.hero { border-color: var(--accent); }
     .np-thumb img, .np-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .np-thumb .np-thumb-remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.7); color: #fff; font-size: 11px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
-    .np-thumb-add { width: 60px; height: 60px; border-radius: var(--radius-sm); border: 2px dashed var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: var(--muted); font-size: var(--fs-xl); background: none; }
+    .np-thumb-add { width: 60px; height: 60px; border-radius: var(--radius-sm); border: 2px dashed var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: var(--muted); font-size: var(--fs-2xl); background: none; }
     .np-thumb-add:hover { border-color: var(--accent); color: var(--accent); }
     .np-photo-counter { font-size: var(--fs-sm); color: var(--muted); padding: 2px 0; }
     .np-thumb.dragging { opacity: .5; }
@@ -2037,7 +2037,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-card-hero { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface2); }
     .promo-card-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .promo-card-body { padding: .85rem var(--space-4) var(--space-4); }
-    .promo-heading { font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: .35rem; }
+    .promo-heading { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: .35rem; }
     .promo-body { font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); }
     .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: var(--space-2) 0; }
     .promo-body a { color: var(--badge-accent); }
@@ -2767,7 +2767,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .follow-sugg-row { display: flex; gap: .6rem; overflow-x: auto; padding-bottom: var(--space-1); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .follow-sugg-row::-webkit-scrollbar { display: none; }
     .follow-sugg-tile { flex: 0 0 132px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .35rem; padding: .7rem var(--space-2) .6rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); }
-    .follow-sugg-tile .feed-user-avatar { width: 48px; height: 48px; font-size: var(--fs-md); cursor: pointer; }
+    .follow-sugg-tile .feed-user-avatar { width: 48px; height: 48px; font-size: var(--fs-lg); cursor: pointer; }
     .follow-sugg-name { font-size: .8rem; font-weight: var(--fw-semibold); color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     .follow-sugg-reason { font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; min-height: 1.75em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .follow-sugg-tile .follow-btn { margin-top: .15rem; }
@@ -3356,7 +3356,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div class="welcome-step" id="ws-1">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-      <div class="modal-title" id="welcome-modal-title" style="font-size:var(--fs-xl);">Welcome to WRotate</div>
+      <div class="modal-title" id="welcome-modal-title" style="font-size:var(--fs-2xl);">Welcome to WRotate</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">Track every wear, build your collection story, and discover what other enthusiasts are wearing.</p>
       <button class="btn btn-primary" style="width:100%;" onclick="welcomeStep(2)">Get started →</button>
     </div>
@@ -3679,7 +3679,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <div id="page-explore" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;">
-      <h1 style="font-size:var(--fs-lg);font-weight:var(--fw-bold);">Watches</h1>
+      <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Watches</h1>
     </div>
     <div class="form-group" style="margin-bottom:.7rem;">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
@@ -3694,7 +3694,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <div id="page-clubs" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
-      <h1 style="font-size:var(--fs-lg);font-weight:var(--fw-bold);">Clubs</h1>
+      <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Clubs</h1>
       <button class="btn btn-primary" style="font-size:var(--fs-base);padding:.4rem .9rem;" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
@@ -4757,7 +4757,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- No-watches callout (shown when collection is empty) -->
     <div id="measure-no-watches" style="display:none;text-align:center;padding:var(--space-8) var(--space-4);">
       <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:var(--space-4);opacity:.5;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-      <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);margin-bottom:var(--space-2);">Add a watch first</div>
+      <div style="font-size:var(--fs-lg);font-weight:var(--fw-semibold);margin-bottom:var(--space-2);">Add a watch first</div>
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:1.2rem;line-height:1.5;">To measure accuracy, you need at least one watch in your collection. Add your first watch to get started.</div>
       <button class="btn btn-primary" onclick="nav(document.querySelector('[data-page=collection]'));openAddWatch()">+ Add Your First Watch</button>
     </div>
@@ -4829,7 +4829,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <!-- Rate HUD overlay — top right -->
           <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity var(--dur-slow);pointer-events:none;">
             <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;">
-              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--tg-ink);text-shadow:0 0 12px color-mix(in srgb, var(--tg-ink) 30%, transparent);line-height:1;">—</div>
+              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:var(--fs-3xl);font-weight:var(--fw-bold);color:var(--tg-ink);text-shadow:0 0 12px color-mix(in srgb, var(--tg-ink) 30%, transparent);line-height:1;">—</div>
               <div style="font-size:.6rem;color:color-mix(in srgb, var(--tg-ink) 70%, transparent);letter-spacing:.05em;">s/day</div>
             </div>
           </div>
@@ -5199,11 +5199,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div class="modal-title" id="watch-modal-title" style="margin-bottom:0;">Add Watch</div>
-      <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:var(--fs-xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
+      <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
     </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
-      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:var(--fs-lg);padding:0 0 0 var(--space-2);cursor:pointer;line-height:1;">&times;</button>
+      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:var(--fs-xl);padding:0 0 0 var(--space-2);cursor:pointer;line-height:1;">&times;</button>
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;margin-bottom:0;">
@@ -5696,7 +5696,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div class="modal-title" id="wishlist-modal-title" style="margin-bottom:0;">Add to Wishlist</div>
-      <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:var(--fs-xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
+      <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
     </div>
     <!-- Photo (hidden state) -->
     <div id="wl-img-preview" style="display:none;">
@@ -6092,7 +6092,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="rec-settings-modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Pick Settings</span>
-      <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:var(--fs-lg);cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+      <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:var(--fs-xl);cursor:pointer;color:var(--muted);padding:0;">&times;</button>
     </div>
     <div id="rec-settings-body" style="max-height:60vh;overflow-y:auto;padding-right:var(--space-3);"></div>
   </div>
@@ -7738,7 +7738,7 @@ function showDemoSignupModal() {
   m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);';
   m.innerHTML = `
     <div style="background:var(--bg,#f5f5f8);border-radius:16px;padding:var(--space-8);max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-      <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text,#16161e);margin-bottom:.3rem;">Like what you see?</div>
+      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text,#16161e);margin-bottom:.3rem;">Like what you see?</div>
       <div style="font-size:.85rem;color:var(--muted);margin-bottom:1.4rem;">Sign up free to start tracking your own collection.</div>
       <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:.7rem;border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#333;font-size:.9rem;font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:var(--space-2);">
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
@@ -8321,7 +8321,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.13.54';
+const APP_VERSION = '20.15.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11615,9 +11615,9 @@ function renderNotificationPanel() {
       : n.type === 'share_comment' ? `toggleNotifPanel();openShareCommentsFromNotif(this.dataset.ref)`
       : `viewUserProfile(this.dataset.actor)`;
     const avatarHtml = n.type === 'badge_earned'
-      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-lg);flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
+      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-xl);flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
       : n.type === 'share_comment'
-      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-lg);flex-shrink:0;display:flex;align-items:center;justify-content:center;">💬</div>`
+      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-xl);flex-shrink:0;display:flex;align-items:center;justify-content:center;">💬</div>`
       : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" data-ref="${escAttr(n.ref_id || '')}" data-actor="${escAttr(n.actor_id || '')}" onclick="${notifClick}">
@@ -14924,7 +14924,7 @@ function renderFeed() {
   if (feedError && feedItems.length === 0) {
     el.innerHTML = `
       <div style="text-align:center;padding:2.5rem var(--space-4);">
-        <div style="font-size:var(--fs-2xl);margin-bottom:var(--space-2);">⚠</div>
+        <div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">⚠</div>
         <div style="font-weight:var(--fw-semibold);margin-bottom:.4rem;color:var(--text);">Couldn't load your feed</div>
         <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Check your connection and try again.</div>
         <button class="btn btn-primary" onclick="loadFeed()" style="display:inline-flex;align-items:center;gap:.4rem;">↻ Retry</button>
@@ -20198,7 +20198,7 @@ async function openAdminUserDetail(userId) {
       <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);">
         ${initHTML}
         <div>
-          <div style="font-weight:var(--fw-bold);font-size:var(--fs-md);">${escHtml(name)}</div>
+          <div style="font-weight:var(--fw-bold);font-size:var(--fs-lg);">${escHtml(name)}</div>
           <div style="font-size:.72rem;color:var(--muted);">@${escHtml(p.username || '—')}</div>
           <div style="font-size:var(--fs-xs);color:var(--muted);">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
           ${p.is_suspended ? '<div style="font-size:var(--fs-xs);color:var(--danger-text);font-weight:var(--fw-semibold);">SUSPENDED</div>' : ''}
@@ -20948,7 +20948,7 @@ async function loadExploreModels(reset) {
     <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
-        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-md);background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
         <div style="flex:1;min-width:0;">
           <div class="watch-card-name">${escHtml(m.name)}</div>
           <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
@@ -24186,7 +24186,7 @@ function renderCollection(force) {
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo" aria-label="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
-          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-md);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
+          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
           const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
             <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo" aria-label="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
@@ -26168,7 +26168,7 @@ function recCardHTML(rec) {
           anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:56px;height:56px;border-radius:var(--radius-btn);object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:56px;height:56px;font-size:var(--fs-md);border-radius:var(--radius-btn);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="avatar" style="width:56px;height:56px;font-size:var(--fs-lg);border-radius:var(--radius-btn);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
   const tags = [];
   if (daysSince === 999) tags.push({ text: 'Never worn', cls: '' });
   else if (daysSince >= 30) tags.push({ text: `${daysSince}d idle`, cls: '' });
@@ -36141,7 +36141,7 @@ setTimeout(() => {
     loadFeed();
   } else {
     fl.innerHTML = '<div style="text-align:center;padding:2.5rem var(--space-4);">' +
-      '<div style="font-size:var(--fs-2xl);margin-bottom:var(--space-2);">\u26A0</div>' +
+      '<div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">\u26A0</div>' +
       '<div style="font-weight:var(--fw-semibold);margin-bottom:.4rem;color:var(--text);">Taking too long to load</div>' +
       '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Try refreshing the page.</div>' +
       '<button class="btn btn-primary" onclick="location.reload()">Refresh</button></div>';

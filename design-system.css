@@ -57,8 +57,12 @@
   --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
   --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
   --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px;
-  --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem;
-  --fs-md: .95rem; --fs-lg: 1.1rem; --fs-xl: 1.3rem; --fs-2xl: 1.6rem; --fs-3xl: 2.5rem;
+  /* Type scale. One step per ~1px through the UI range, where the app's text
+     lives (10 / 11 / 12 / 13 / 14 / 15px), then wider steps for headings.
+     --fs-md (.88rem) was added 2026-09-20: the scale used to jump 13 -> 15px
+     and 76 labels had nowhere to land. */
+  --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem; --fs-md: .88rem;
+  --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
   --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
   --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
