@@ -19,7 +19,7 @@ Changing the design today = editing thousands of sites. Only a colour-theme chan
 
 | Category | Instances | Distinct values | Tokens available | Note |
 |---|---|---|---|---|
-| Colour literals | 674 | 252 | 17 | `#c9a84c` ×69 is the DARK gold hardcoded — wrong gold in light mode. Three greens (`#4ade80`, `#22c55e`, `#4caf7d`), two purples, `#fff` ×55, `#000` ×34 |
+| Colour literals | 674 | 252 | 17 | `#c9a84c` ×69 — **corrected 2026-09-20:** 57 of these are the default watch-avatar colour (`w.color \|\| '#c9a84c'`), which is data, not theme styling, and is meant to look the same in both themes. Not a light-mode bug as first written; the issue is one default repeated 57 times instead of one JS constant. ~5 are real styling (demo banner, model-page avatar). Three greens (`#4ade80`, `#22c55e`, `#4caf7d`), two purples, `#fff` ×55, `#000` ×34 |
 | font-size | 1,217 | 73 | 9 | Top values `.85 / .8 / .72 / .78rem` are not on the scale at all; px and rem mixed |
 | padding | 666 | 286 | 7 | |
 | margin | 905 | 102 | 7 | |
@@ -50,9 +50,9 @@ Other pages: `profile/index.html` (~90 hardcoded), `p/index.html` (~45), `privac
 
 | Phase | What | Visual change | Status |
 |---|---|---|---|
-| 0 | Ratchet test: per-category budget of hardcoded values that can only go down | none | OPEN |
+| 0 | Ratchet test: per-category budget of hardcoded values that can only go down | none | **DONE 2026-09-20** (`41be452`) — `scripts/ds-count.mjs`, `tests/design-system-ratchet.test.js`, `tests/design-system-budget.json` |
 | 1 | Complete the token set (shadow, motion, z-layers, status colours, mono, fw-800); move the 29 local tokens in; fix the 3 undeclared | none | OPEN |
-| 2 | Lossless swap: every value that already equals a token → `var()` | none (light-mode gold gets corrected) | OPEN |
+| 2 | Lossless swap: every value that already equals a token → `var()` | none | OPEN |
 | 3 | Snap off-scale values to the scale (73 font sizes → ~9, 286 paddings → spacing scale), one screen at a time | **yes, small** | OPEN |
 | 4 | Component classes replace inline styles (buttons, inputs, cards, section headers, rows, modals), incl. JS templates | none intended | OPEN |
 | 5 | Secondary pages: profile, p, privacy, terms link the system and drop their own values | none | OPEN |

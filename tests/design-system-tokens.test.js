@@ -72,6 +72,52 @@ export const SHARED_LIGHT = {
   '--icon-lg': '20px',
   '--icon-xl': '24px',
   '--ls-eyebrow': '.08em',
+  // Added 2026-09-20 (audit-results/2026-09-20-design-system-audit.md, phase 1):
+  // the categories that had no token at all, each at the value the app was
+  // already typing by hand, so declaring them changed nothing on screen.
+  '--fw-heavy': '800',
+  '--font-sans': "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  '--font-mono': "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+  '--dur-fast': '.15s',
+  '--dur-base': '.2s',
+  '--dur-slow': '.3s',
+  '--shadow-1': '0 1px 4px rgba(0,0,0,.18)',
+  '--shadow-2': '0 2px 8px rgba(0,0,0,.15)',
+  '--shadow-3': '0 4px 16px rgba(0,0,0,.35)',
+  '--shadow-4': '0 8px 32px rgba(0,0,0,.45)',
+  '--scrim': 'rgba(0,0,0,.55)',
+  '--z-fab': '90',
+  '--z-header': '100',
+  '--z-dropdown': '200',
+  '--z-modal': '200',
+  '--z-modal-top': '210',
+  '--z-nav': '300',
+  '--z-modal-high': '300',
+  '--z-toast': '400',
+  '--z-toast-top': '410',
+  '--z-auth': '500',
+  '--z-menu': '999',
+  '--z-skip': '4000',
+  '--z-popover-backdrop': '9998',
+  '--z-popover': '9999',
+  '--z-top': '10000',
+  '--status-good': '#22c55e',
+  '--status-warn': '#eab308',
+  '--status-bad': '#ef4444',
+  '--tg-ink': '#4ade80',
+  '--tg-bg': '#0a1a12',
+  // Moved out of index.html 2026-09-20 — values unchanged.
+  '--vis-friends': '#a78bfa',
+  '--warn': '#d9a441',
+  '--badge-text': '#3D2A14',
+  '--badge-accent': '#854F0B',
+  '--badge-bg': '#FAEEDA',
+  '--badge-bg2': '#FBF6E8',
+  '--badge-border': '#BA7517',
+  '--badge-close': '#6B5618',
+  '--badge-tier': '#B8952A',
+  '--badge-deep': '#633806',
+  '--badge-ink': '#3D2A14',
   // Aliases of the tokens above. Declared 2026-08-08 after index.html was found
   // referencing them without ever declaring them. The indirection is deliberate:
   // it carries the dark values without a second declaration.
@@ -105,6 +151,16 @@ export const SHARED_DARK = {
   // --surface and --surface2. Light --muted already passed and is unchanged.
   '--muted': '#82829d',
   '--overlay-bg': 'rgba(11,11,16,.94)',
+  // Badge warm theme, dark variants. --badge-ink is deliberately absent: the
+  // medallion disc is cream in both themes, so its glyph ink stays dark.
+  '--badge-text': '#e7d9bd',
+  '--badge-accent': '#dbbe72',
+  '--badge-bg': '#221a0e',
+  '--badge-bg2': '#1c160d',
+  '--badge-border': 'rgba(219,190,114,.35)',
+  '--badge-close': '#c9a84c',
+  '--badge-tier': '#dbbe72',
+  '--badge-deep': '#d8b96a',
   // The aliases are repeated here on purpose, not duplicated by accident: a
   // var() inside a custom property is substituted where it is DECLARED, so an
   // alias written only in :root freezes the light value and inherits it into
@@ -115,6 +171,17 @@ export const SHARED_DARK = {
   '--fg': 'var(--text)',
   '--accent': 'var(--gold)',
 };
+
+// Declared in design-system.css outside the two theme blocks: the --header-h
+// seed (plain :root, see the note in the file) and the promo component tokens
+// (scoped to the promo variants).
+export const SHARED_OTHER = [
+  '--header-h',
+  '--promo-gold', '--promo-gold-deep', '--promo-gold-bright', '--promo-gold-light',
+  '--promo-parchment', '--promo-line', '--promo-sand', '--promo-band-body',
+  '--promo-ink', '--promo-ink-2', '--promo-quiet', '--promo-cta-fg', '--promo-mono',
+];
+const owned = t => t in SHARED_LIGHT || SHARED_OTHER.includes(t);
 
 // Returns the text between a selector's braces. Takes the first '}' after the
 // selector's '{', so this assumes the block isn't nested inside an @media or
@@ -187,6 +254,16 @@ describe('design-system.css', () => {
     expect([...dark].sort()).toEqual(Object.keys(SHARED_DARK).sort());
   });
 
+  it('declares nothing outside SHARED_LIGHT and SHARED_OTHER', () => {
+    const stray = [...declaredIn(css)].filter(t => !owned(t));
+    expect(stray).toEqual([]);
+    for (const t of SHARED_OTHER) expect(declaredIn(css).has(t), `missing ${t}`).toBe(true);
+  });
+
+  it('keeps the --header-h seed out of the [data-theme="light"] block', () => {
+    expect(blockFor(css, ':root, [data-theme="light"]')).not.toContain('--header-h');
+  });
+
   it('pairs :root with [data-theme="light"] so the forced-light landing screen works', () => {
     expect(css).toContain(':root, [data-theme="light"]');
   });
@@ -210,7 +287,7 @@ describe('index.html', () => {
   });
 
   it('re-declares none of the tokens design-system.css owns', () => {
-    const dupes = [...declaredIn(indexHtml)].filter(t => t in SHARED_LIGHT);
+    const dupes = [...declaredIn(indexHtml)].filter(owned);
     expect(dupes).toEqual([]);
   });
 
@@ -219,17 +296,17 @@ describe('index.html', () => {
     expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual(['/design-system.css']);
   });
 
-  it('still declares its page-local tokens', () => {
-    const declared = declaredIn(indexHtml);
-    for (const t of ['--vis-friends', '--warn', '--badge-text', '--badge-ink', '--promo-gold']) {
-      expect(declared.has(t), `${t} should stay in index.html`).toBe(true);
-    }
+  // --page-gutter is layout state, not a design value: `main` sets it per
+  // breakpoint so full-bleed children can cancel the gutter. Everything else
+  // moved to design-system.css on 2026-09-20.
+  it('declares no custom property of its own except --page-gutter', () => {
+    expect([...declaredIn(indexHtml)]).toEqual(['--page-gutter']);
   });
 
   it('references no token that nothing declares', () => {
     const declared = declaredIn(indexHtml);
     const orphans = [...referencedIn(indexHtml)]
-      .filter(t => !(t in SHARED_LIGHT) && !declared.has(t) && !KNOWN_UNDECLARED.includes(t));
+      .filter(t => !owned(t) && !declared.has(t) && !KNOWN_UNDECLARED.includes(t));
     expect(orphans).toEqual([]);
   });
 });
@@ -256,7 +333,7 @@ describe.each([
   });
 
   it('references only tokens that design-system.css owns', () => {
-    const unowned = [...referencedIn(src)].filter(t => !(t in SHARED_LIGHT));
+    const unowned = [...referencedIn(src)].filter(t => !owned(t));
     expect(unowned).toEqual([]);
   });
 

@@ -61,6 +61,66 @@
   --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
   --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
   --ls-eyebrow: .08em;
+  --fw-heavy: 800;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ── Motion ── */
+  --dur-fast: .15s; --dur-base: .2s; --dur-slow: .3s;
+
+  /* ── Elevation ── */
+  --shadow-1: 0 1px 4px rgba(0,0,0,.18);
+  --shadow-2: 0 2px 8px rgba(0,0,0,.15);
+  --shadow-3: 0 4px 16px rgba(0,0,0,.35);
+  --shadow-4: 0 8px 32px rgba(0,0,0,.45);
+  /* Dimmed backdrop behind sheets, viewers and popovers. */
+  --scrim: rgba(0,0,0,.55);
+
+  /* ── Layers ── one name per stacking layer, lowest first. A new fixed or
+     absolute surface picks one of these; it does not invent a number. */
+  --z-fab: 90;
+  --z-header: 100;
+  --z-dropdown: 200;
+  --z-modal: 200;
+  --z-modal-top: 210;
+  --z-nav: 300;
+  --z-modal-high: 300;
+  --z-toast: 400;
+  --z-toast-top: 410;
+  --z-auth: 500;
+  --z-menu: 999;
+  --z-skip: 4000;
+  --z-popover-backdrop: 9998;
+  --z-popover: 9999;
+  --z-top: 10000;
+
+  /* ── Status ── the timegrapher's rate / amplitude traffic light. Distinct from
+     --success / --warn / --danger today only because they were typed by hand;
+     kept at their current values so declaring them changes nothing on screen. */
+  --status-good: #22c55e;
+  --status-warn: #eab308;
+  --status-bad: #ef4444;
+  /* visibility-state semantic colors (one hue per state, all surfaces) */
+  --vis-friends: #a78bfa;
+  --warn: #d9a441;
+
+  /* ── Timegrapher instrument ── a fixed green-on-black readout in BOTH themes,
+     like the screen of a bench timegrapher, so not overridden in dark. */
+  --tg-ink: #4ade80;
+  --tg-bg: #0a1a12;
+
+  /* ── Badges / achievements ── warm theme; dark variants below. */
+  --badge-text: #3D2A14;
+  --badge-accent: #854F0B;
+  --badge-bg: #FAEEDA;
+  --badge-bg2: #FBF6E8;
+  --badge-border: #BA7517;
+  --badge-close: #6B5618;
+  --badge-tier: #B8952A;
+  --badge-deep: #633806;
+  /* badge medallion glyph ink — fixed dark (disc is always cream #FEFCF6,
+     both themes), so NOT overridden in dark like --badge-text is. */
+  --badge-ink: #3D2A14;
 }
 
 [data-theme="dark"] {
@@ -88,6 +148,16 @@
   --muted: #82829d;
   --overlay-bg: rgba(11,11,16,.94);
 
+  /* badge/achievement warm theme — dark variants (readable on dark) */
+  --badge-text: #e7d9bd;
+  --badge-accent: #dbbe72;
+  --badge-bg: #221a0e;
+  --badge-bg2: #1c160d;
+  --badge-border: rgba(219,190,114,.35);
+  --badge-close: #c9a84c;
+  --badge-tier: #dbbe72;
+  --badge-deep: #d8b96a;
+
   /* ── Aliases, repeated on purpose ──
      Do NOT delete these as duplicates of the light block. A var() inside a
      custom property is substituted on the element that DECLARES it, not on the
@@ -100,4 +170,47 @@
   --error: var(--danger);
   --fg: var(--text);
   --accent: var(--gold);
+}
+
+/* ── Runtime layout seed ──
+   Sticky header height. Seed value only — syncHeaderHeightVar() in index.html
+   measures the real header on load/resize (it varies by breakpoint and by the
+   iOS safe-area inset) and writes it on <html>. Plain :root on purpose: paired
+   with [data-theme="light"] it would be re-declared on the forced-light landing
+   screen and mask the measured value for everything inside it. */
+:root {
+  --header-h: 60px;
+}
+
+/* ── Component tokens: promo cards ──
+   Scoped to the promo variants rather than :root because the band variant
+   carries its own dark ground in both themes (see the dark block below).
+   The mock specifies IBM Plex Mono for the brand eyebrow; this app loads no web
+   fonts, so --promo-mono is the platform mono face. */
+.promo-tag, .promo-band, .promo-recap {
+  --promo-gold: #8A6D1B;
+  --promo-gold-deep: #6E5514;
+  --promo-gold-bright: #9A7B22;
+  --promo-gold-light: #C8A33A;
+  --promo-parchment: #F3EFE1;
+  --promo-line: #D9C48A;
+  --promo-sand: #F0E2B4;
+  --promo-band-body: #EEE3C6;
+  --promo-ink: #1B1712;
+  --promo-ink-2: #A9A196;
+  --promo-quiet: #6B6478;
+  --promo-cta-fg: #fff;
+  --promo-mono: var(--font-mono);
+}
+/* The tag and the recap deck are painted on the app surface, so a fixed white
+   card + parchment strip would be a flashbang in dark mode. The band is left
+   alone. Gold flips to the theme's lighter gold (#8A6D1B on dark fails
+   contrast), which means the CTA's fill is light and its label becomes ink. */
+[data-theme="dark"] .promo-tag, [data-theme="dark"] .promo-recap {
+  --promo-gold: #C9A84C;
+  --promo-gold-deep: #DBBE72;
+  --promo-parchment: #1D1A12;
+  --promo-line: rgba(201,168,76,.34);
+  --promo-quiet: var(--muted);
+  --promo-cta-fg: #1B1712;
 }
