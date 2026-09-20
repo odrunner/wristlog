@@ -18,7 +18,7 @@
 DROP FUNCTION IF EXISTS wear_reminder_targets();
 CREATE OR REPLACE FUNCTION wear_reminder_targets()
 RETURNS TABLE (user_id uuid, email text, channel text, local_today date,
-               last_watch_id text, last_brand text, last_name text)
+               last_watch_id text, last_brand text, last_name text, push_quiet boolean)
 LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
   WITH valid AS MATERIALIZED (
     SELECT p.id, p.timezone
@@ -26,7 +26,9 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
     WHERE p.timezone IS NOT NULL AND p.timezone <> ''
       AND EXISTS (SELECT 1 FROM pg_timezone_names z WHERE z.name = p.timezone)
       AND COALESCE(p.is_suspended, false) = false
-      AND COALESCE((p.email_prefs->>'reminders')::boolean, true) = true
+      -- Compared as text: a ::boolean cast throws on any non-boolean string, and one
+      -- malformed profile would fail the whole RPC — that hour's sends for everyone.
+      AND COALESCE(p.email_prefs->>'reminders', 'true') <> 'false'
       AND p.id NOT IN (SELECT ia.user_id FROM internal_accounts ia)
   ),
   cand AS (
@@ -84,7 +86,11 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
               WHEN ch.email_due THEN 'email'
               ELSE 'push' END AS channel,
          ch.local_today,
-         lw.watch_id, lw.brand, lw.name
+         lw.watch_id, lw.brand, lw.name,
+         -- For the sender: an 'email' row whose address is bounce-suppressed falls back to
+         -- the quiet push when this is true. Without it that user got nothing, forever —
+         -- no send means no ledger row, so email_due never turned false (audit 2026-09-20 S3).
+         ch.push_quiet
   FROM chan ch
   JOIN auth.users u ON u.id = ch.uid
   LEFT JOIN lastw lw ON lw.user_id = ch.uid

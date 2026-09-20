@@ -25,7 +25,9 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
     WHERE p.timezone IS NOT NULL AND p.timezone <> ''
       AND EXISTS (SELECT 1 FROM pg_timezone_names z WHERE z.name = p.timezone)
       AND COALESCE(p.is_suspended, false) = false
-      AND COALESCE((p.email_prefs->>'reminders')::boolean, true) = true
+      -- Compared as text: a ::boolean cast throws on any non-boolean string, and one
+      -- malformed profile would fail the whole RPC — that hour's sends for everyone.
+      AND COALESCE(p.email_prefs->>'reminders', 'true') <> 'false'
       AND p.id NOT IN (SELECT ia.user_id FROM internal_accounts ia)
       AND EXISTS (SELECT 1 FROM device_tokens d WHERE d.user_id = p.id AND d.platform = 'ios')
   ),

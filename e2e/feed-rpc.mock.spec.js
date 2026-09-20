@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, SAMPLE_WATCHES } from './helpers.js';
 
 // Experiment feed_rpc: the whole first page of the feed comes from ONE request
-// (feed_page). These drive the real boot with the variant forced the way the
-// admin Dev tab does it, and check the two things that matter: the classic feed
+// (feed_page). These drive the real boot with the arm hinted the way a previous
+// visit leaves it, and check the two things that matter: the classic feed
 // queries are not made, and any failure falls back to them untouched.
 
 const OTHER = '00000000-0000-4000-8000-0000000000ff';
@@ -19,7 +19,9 @@ const PAYLOAD = {
   comments: [{ id: 'c1', log_id: 'p-2', user_id: OTHER, body: 'nice', created_at: '2026-08-06T11:00:00+00:00', moderation_status: null }],
   comment_likes: [], facts: [],
 };
-const force = (page, variant) => page.addInitScript(v => localStorage.setItem('exp_force_feed_rpc', v), variant);
+// The arm reaches the boot through the per-user hint the previous visit wrote — the
+// admin's exp_force override is ignored for every other account (audit 2026-09-20 C8).
+const force = (page, variant) => page.addInitScript(v => localStorage.setItem('wrotate_feed_rpc_test-user-id-000', v === 'treatment' ? '1' : '0'), variant);
 const spyPostHog = page => page.addInitScript(() => {
   window.__ph = [];
   window.posthog = { __SV: 1, init() {}, identify() {}, capture(name, props) { window.__ph.push({ name, props }); } };
@@ -106,6 +108,18 @@ test('treatment: a failed early feed_page is retried once through the SDK before
 
 test('control and unassigned users never call feed_page', async ({ page }) => {
   await injectSession(page);
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
+  let calls = 0;
+  await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
+  expect(calls).toBe(0);
+});
+
+test("the admin's force override is ignored for another account on the same device", async ({ page }) => {
+  await injectSession(page);
+  await page.addInitScript(() => { localStorage.setItem('exp_force_feed_rpc', 'treatment'); localStorage.setItem('exp_force_uid', 'someone-else'); });
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
   let calls = 0;
   await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });

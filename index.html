@@ -146,7 +146,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         var s = JSON.parse(localStorage.getItem(k));
         if (!s || !s.access_token || !s.user || !s.user.id) return;
         if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
-        var forced = localStorage.getItem('exp_force_feed_rpc');
+        // Admin-only override, stamped with the admin's id when it is set — another account on this device never inherits it.
+        var forced = localStorage.getItem('exp_force_uid') === s.user.id ? localStorage.getItem('exp_force_feed_rpc') : null;
         var viaRpc = forced === 'treatment' || (forced !== 'control' && localStorage.getItem('wrotate_feed_rpc_' + s.user.id) === '1'); // feed_page() arm: one request
         var EARLY_URL = 'https://api.wrotate.com';
         var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
@@ -2824,8 +2825,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding: .7rem 0; border-bottom: 1px solid var(--border);
     }
     .user-card:last-child { border-bottom: none; }
-    .user-card-name     { font-weight: 700; font-size: .88rem; }
-    .user-card-username { font-size: .74rem; color: var(--muted); }
+    /* One line each: with Close Friends + Remove beside it, a name wrapped onto two lines at 390px. */
+    .user-card-name     { font-weight: 700; font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-card-username { font-size: .74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ── PROFILE MODAL ─────────────────────────── */
     .profile-stat        { text-align: center; }
@@ -6592,6 +6594,7 @@ async function loadExperiments() {
 function clearExperiments() { EXPERIMENTS = {}; safeLS.remove('exp_state'); }
 function setExperimentOverride(key, variant) {
   if (variant) safeLS.set('exp_force_' + key, variant); else safeLS.remove('exp_force_' + key);
+  if (currentUser) safeLS.set('exp_force_uid', currentUser.id);   // read by the head's early-fetch script
   renderDevExperiments();
 }
 // Watch database (Explore + model pages + Also owned by) — behind the watch_db
@@ -7944,6 +7947,7 @@ async function deleteAccount() {
 }
 
 let _manualSignOut = false;
+let _signedOutHandled = false;   // see _onSignedOut — declared here so the optimistic boot can't hit it in its TDZ
 async function signOut() {
   _manualSignOut = true;
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
@@ -8365,7 +8369,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.11.29';
+const APP_VERSION = '20.12.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9889,6 +9893,7 @@ async function blockUser(userId, displayName) {
     return;
   }
   blockedUsers.add(userId);
+  invalidateFollowSuggestions();   // the server list excludes blocks; the 10-min cache does not
 
   // Remove follow relationships in both directions
   const { error: delErr1 } = await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
@@ -9900,6 +9905,9 @@ async function blockUser(userId, displayName) {
   // Remove their content from feed
   feedItems = feedItems.filter(i => i.user_id !== userId);
   renderFeed();
+  // The cached feed paints before any network on the next open (and is trusted for
+  // 7 days) — without this the blocked user's posts came back until the refresh landed.
+  saveFeedCache();
 
   toast(`${displayName || 'User'} blocked`);
   if (profilePageUserId === userId) goBackFromProfile();
@@ -12107,7 +12115,14 @@ function restoreFeedCache() {
   try { raw = safeLS.get(key); } catch (e) {}
   const c = parseFeedCache(raw, { userId: currentUser.id, now: Date.now() });
   if (!c) return false;
-  feedItems = c.items; feedLikes = c.likes; feedComments = c.comments;
+  // The social cache is restored later in boot; read its block list here so a block
+  // made after this feed was saved is honoured on the cached paint too.
+  let blocked = new Set();
+  try {
+    const sc = parseSocialCache(safeLS.get(socialCacheKey(currentUser.id)), { userId: currentUser.id, now: Date.now() });
+    if (sc) blocked = new Set(sc.blocked);
+  } catch (e) {}
+  feedItems = c.items.filter(i => !blocked.has(i.user_id)); feedLikes = c.likes; feedComments = c.comments;
   feedCommentCounts = c.commentCounts; commentLikes = c.commentLikes;
   _feedCaughtUpIdx = c.caughtUpIdx;
   feedHasMore = true; feedError = false;
@@ -12265,7 +12280,9 @@ let _feedViaRpc = false;
 function _useFeedRpc() {
   try {
     if (!currentUser || _isDemoMode) return false;
-    const forced = safeLS.get('exp_force_feed_rpc');
+    // Same rule as experiment(): force overrides are the admin's only. Without the
+    // check a test account on the admin's device was pushed into treatment.
+    const forced = currentUser.id === ADMIN_USER_ID ? safeLS.get('exp_force_feed_rpc') : null;
     if (forced === 'treatment') return true;
     if (forced === 'control') return false;
     return safeLS.get(feedRpcHintKey(currentUser.id)) === '1';
@@ -12459,12 +12476,17 @@ function feedCaughtUpHtml() {
   return `<div class="feed-caught-up" role="separator" aria-label="You're all caught up"><span class="feed-caught-up-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>You&#39;re all caught up</span></div>`;
 }
 
+// How long one loadFeed() may legitimately run: the sum of its per-phase timeouts —
+// phase 1 up to 8 s + the 4 s own-posts fallback + featured/club fetches, and the
+// feed_rpc arm puts up to two 8 s feed_page() attempts in front.
+function _feedLoadBudgetMs() { return _useFeedRpc() ? 32000 : 16000; }
+
 async function loadFeed() {
   if (!currentUser) return;
-  // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
+  // If feedLoading is stuck true for longer than a load can take, treat it as dead and allow re-entry
   if (feedLoading) {
-    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < 8000) return;
-    console.warn('[WRotate] feedLoading stuck >8s — forcing re-entry');
+    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < _feedLoadBudgetMs()) return;
+    console.warn('[WRotate] feedLoading stuck — forcing re-entry');
     feedLoading = false;
   }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
@@ -12481,13 +12503,17 @@ async function loadFeed() {
   // follows / blocks / friends lookups landing (or changing) mid-load.
   const _sigAtStart = _socialSig();
   _feedSocialSig = _sigAtStart;
-  // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
+  // Master safety net for a load that HANGS. Every phase below has its own timeout,
+  // and their sum (_feedLoadBudgetMs) is what this must outlast. At 8 s it fired mid-load: a full error screen,
+  // the fallback mislabelled "Couldn't refresh", and feedLoading=false let a second
+  // loadFeed() start under the first (audit 2026-09-20 C7).
+  const _feedSafetyMs = _feedLoadBudgetMs();
   const _feedSafety = setTimeout(() => {
     if (feedLoading) {
-      console.warn('[WRotate] loadFeed master timeout (8s) — forcing error render');
+      console.warn(`[WRotate] loadFeed master timeout (${_feedSafetyMs / 1000}s) — forcing error render`);
       feedLoading = false; feedError = true; renderFeed();
     }
-  }, 8000);
+  }, _feedSafetyMs);
   // Skeletons only when there is nothing to show: a refresh over content on
   // screen (cached feed at boot, foreground re-pull) keeps the cards and swaps
   // them in place when Phase 1 returns.
@@ -14825,6 +14851,8 @@ function maybeDeferredPushAsk() {
   setTimeout(() => {
     const m = document.getElementById('push-ask-modal');
     if (!m) return;
+    // Never over another modal or the Ranking Game; un-spend the one-shot so it shows next time.
+    if (_screenBusy()) { safeLS.remove(PUSH_CARD_SEEN); return; }
     m.classList.remove('hidden');
     _logPostCtaEvent('shown', 'push_ask');
   }, 1200);
@@ -15366,11 +15394,11 @@ function renderFeedCard(item) {
       </div>
       ${heroHtml}
       <div class="feed-actions">
-        <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
+        <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')" aria-pressed="${likes.liked ? 'true' : 'false'}" aria-label="Like${likes.count ? `, ${likes.count} like${likes.count === 1 ? '' : 's'}` : ''}">
           ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'} ${likes.count ? `<span onclick="event.stopPropagation();event.preventDefault();showLikers('${item.id}')">${likes.count}</span>` : ''}
         </button>
 
-        <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
+        <button class="feed-action-btn" onclick="toggleComments('${item.id}')" aria-label="Comments${cCount ? `, ${cCount}` : ''}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${cCount ? `<span>${cCount}</span>` : ''}
         </button>
         ${addPhotoAction}
@@ -17855,7 +17883,7 @@ function followSuggestVisible({ variant, count, followingCount, dismissedAt, now
   return true;
 }
 function _followSuggOpen(list) {
-  return (list || []).filter(s => s && s.id && !following.has(s.id) && !pendingRequests.has(s.id) && (!currentUser || s.id !== currentUser.id));
+  return (list || []).filter(s => s && s.id && !following.has(s.id) && !pendingRequests.has(s.id) && !blockedUsers.has(s.id) && (!currentUser || s.id !== currentUser.id));
 }
 async function loadFollowSuggestions(force) {
   if (!currentUser || _isDemoMode) return [];
@@ -17931,7 +17959,11 @@ async function followSuggestAct(btn) {
   const restricted = followNeedsRequest(s && s.profile_privacy);
   _logFollowSuggest('follow', { surface, reason: s ? s.reason : null, request: restricted });
   if (window.posthog) posthog.capture('follow_suggest_followed', { surface, reason: s ? s.reason : null, request: restricted });
-  if (restricted) await sendFollowRequest(userId, btn); else await followUser(userId, btn);
+  // A tile can outlive its list (showFollowSuggestAfterAdd force-reloads it): with no
+  // cached privacy to trust, look it up — followByPrivacy fails CLOSED, a bare
+  // followUser() here would follow a restricted profile without a request.
+  if (!s) await followByPrivacy(userId, btn);
+  else if (restricted) await sendFollowRequest(userId, btn); else await followUser(userId, btn);
   // followUser / sendFollowRequest restyle the button; drop the key so the next render can drop the tile.
   document.querySelectorAll('#follow-suggest-slot').forEach(el => { delete el.dataset.key; });
 }
@@ -17972,8 +18004,8 @@ async function showFollowSuggestAfterAdd(watchId) {
   if (!owners.length) return;
   const modal = document.getElementById('follow-sugg-modal');
   if (!modal) return;
-  const otherOpen = () => [...document.querySelectorAll('.overlay:not(.hidden)')].some(el => el !== modal)
-    || !!document.querySelector('#af2-sheet:not(.hidden), .sheet.open');
+  // _screenBusy() also covers the Ranking Game (#game-overlay is not an .overlay) — 2bba77e.
+  const otherOpen = () => _screenBusy() || !!document.querySelector('#af2-sheet:not(.hidden), .sheet.open');
   for (let i = 0; i < 120 && otherOpen(); i++) await new Promise(r => setTimeout(r, 500));
   if (otherOpen()) return;   // still busy after a minute — skip rather than interrupt
   const w = watches.find(x => x.id === watchId);
@@ -27100,8 +27132,14 @@ async function uploadImage(blob, path) {
         .then(b => db.storage.from('media').upload(sPath, b, {
           cacheControl: '31536000', upsert: true, contentType: 'image/jpeg',
         }))
-        .then(r => { if (r?.error) console.warn('[WRotate] ' + label + ' upload:', r.error.message); })
-        .catch(e => console.warn('[WRotate] ' + label + ' generate:', e?.message || e))
+        .then(r => { if (r?.error) throw new Error(r.error.message); })
+        // Best-effort — but on a REPLACE the old sibling is still at this path and would be
+        // served under the new ?v=, so the feed card kept the previous photo. Remove it:
+        // a missing sibling falls back to the full image (initThumbFallback).
+        .catch(e => {
+          console.warn('[WRotate] ' + label + ' upload:', e?.message || e);
+          return db.storage.from('media').remove([sPath]).catch(() => {});
+        })
     : Promise.resolve();
   const [{ data, error }] = await Promise.all([
     db.storage.from('media').upload(path, resized, {
@@ -35783,6 +35821,7 @@ async function bootApp(user) {
   clearUserState();
   resetUserDataReady();
   currentUser = user;
+  _signedOutHandled = false;
   // A photo shared before the session resolved (see handleSharedImage).
   if (_pendingSharedImageB64) {
     const _b64 = _pendingSharedImageB64; _pendingSharedImageB64 = null;
@@ -35975,7 +36014,12 @@ db.auth.getSession().then(({ data: { session }, error }) => {
 // Handles: OAuth redirect returning access_token (SIGNED_IN),
 //          explicit sign-out (SIGNED_OUT), and hourly token refresh.
 // INITIAL_SESSION is intentionally ignored — getSession() above covers it.
+// A forced sign-out reaches here twice — supabase-js emits SIGNED_OUT when the token
+// refresh fails, then the settle path's 'sign_out' action fires as well — and the
+// second pass re-ran loadPublicFeed(), double-counting landing_page_viewed.
 function _onSignedOut() {
+    if (_signedOutHandled && !currentUser) return;
+    _signedOutHandled = true;
     const wasLoggedIn = !!currentUser; // distinguish manual vs expired
     clearFeedCache(currentUser && currentUser.id);
     clearSocialCache(currentUser && currentUser.id);

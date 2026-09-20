@@ -42,7 +42,7 @@ serve(async (req) => {
       console.error("[send-wear-reminders] target query failed:", error);
       return new Response(JSON.stringify({ error: String(error.message) }), { status: 500 });
     }
-    const allRows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string; last_watch_id?: string | null; last_brand?: string | null; last_name?: string | null }[];
+    const allRows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string; last_watch_id?: string | null; last_brand?: string | null; last_name?: string | null; push_quiet?: boolean | null }[];
     if (!allRows.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
 
     // Skip addresses that have permanently bounced. This runs hourly, so a dead
@@ -53,7 +53,13 @@ serve(async (req) => {
     // (the RPC selects users whose LOCAL hour is 5pm), and paying for a
     // suppression lookup on every empty run is 20+ wasted queries a day.
     const bounced = await fetchBouncedEmails(supabase);
-    const rows = allRows.filter((t) => t.channel === "push" || !bounced.has((t.email ?? "").trim().toLowerCase()));
+    // A suppressed address with a provisional token falls back to the quiet push (the RPC
+    // says so via push_quiet) instead of being dropped — dropped rows write no ledger
+    // entry, so that user stayed "email due" and was never reminded again.
+    const rows = allRows.flatMap((t) => {
+      if (t.channel === "push" || !bounced.has((t.email ?? "").trim().toLowerCase())) return [t];
+      return t.push_quiet ? [{ ...t, channel: "push" }] : [];
+    });
     if (!rows.length) return new Response(JSON.stringify({ sent: 0, skipped_bounced: allRows.length }), { status: 200 });
 
     let pushed = 0, emailed = 0, failed = 0;
