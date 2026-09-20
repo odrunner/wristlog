@@ -56,6 +56,11 @@
      text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. */
   --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
   --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
+  /* Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from
+     5-7px and 10px gaps; without these, snapping to the scale moved things by
+     2px+ and it added up across a card. With them nothing under 16px moves
+     more than 1px. Named like Tailwind's 0.5 / 1.5 / 2.5 / 3.5. */
+  --space-0-5: .125rem; --space-1-5: .375rem; --space-2-5: .625rem; --space-3-5: .875rem;
   --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px;
   /* Type scale. One step per ~1px through the UI range, where the app's text
      lives (10 / 11 / 12 / 13 / 14 / 15px), then wider steps for headings.

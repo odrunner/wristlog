@@ -699,7 +699,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
       background-size: 800px 100%;
       animation: shimmer 1.5s infinite linear;
-      border-radius: .4rem;
+      border-radius: var(--radius-sm);
     }
 
     /* ── PULL TO REFRESH ── */
@@ -1822,7 +1822,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .feed-card-header {
       display: flex; align-items: center; gap: var(--space-3);
-      padding: .85rem var(--space-4) .6rem;
+      padding: var(--space-3-5) var(--space-4) var(--space-2-5);
     }
     .feed-user-avatar {
       width: 38px; height: 38px; border-radius: 50%;
@@ -1830,8 +1830,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center;
       font-weight: var(--fw-bold); font-size: var(--fs-base); flex-shrink: 0; overflow: hidden;
     }
-    .feed-user-name  { font-weight: var(--fw-bold); font-size: .9rem; line-height: var(--lh-tight); }
-    .feed-meta       { font-size: .72rem; color: var(--muted); }
+    .feed-user-name  { font-weight: var(--fw-bold); font-size: var(--fs-md); line-height: var(--lh-tight); }
+    .feed-meta       { font-size: var(--fs-sm); color: var(--muted); }
 
     /* Feed column — mobile-width centered on desktop */
     #page-feed { max-width: 470px; margin-left: auto; margin-right: auto; }
@@ -1843,12 +1843,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        height (no fixed 4:5 slot, no crop) so there's no blank padding. */
     .feed-card-photo--accuracy { aspect-ratio: auto; max-height: none; background: #060f0a; }
     .feed-card-photo--accuracy img { height: auto; object-fit: contain; }
-    .feed-card-thumbnails { display: flex; gap: 2px; padding: 2px; background: var(--surface2); }
+    .feed-card-thumbnails { display: flex; gap: var(--space-0-5); padding: var(--space-0-5); background: var(--surface2); }
     .feed-card-thumb { flex: 1; aspect-ratio: 1; overflow: hidden; cursor: pointer; position: relative; max-width: 80px; }
     .feed-card-thumb img, .feed-card-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .7; transition: opacity var(--dur-base); }
     .feed-card-thumb.active img, .feed-card-thumb.active video { opacity: 1; }
     .feed-card-thumb:hover img, .feed-card-thumb:hover video { opacity: 1; }
-    .feed-card-photo-count { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem; padding: 2px 6px; border-radius: var(--radius); pointer-events: none; }
+    .feed-card-photo-count { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: var(--fs-xs); padding: var(--space-0-5) var(--space-1-5); border-radius: var(--radius); pointer-events: none; }
     .feed-card-photo { position: relative; }
     .np-thumbstrip { display: flex; gap: 6px; padding: 8px 0; overflow-x: auto; align-items: center; }
     .np-thumb { width: 60px; height: 60px; border-radius: var(--radius-sm); overflow: hidden; position: relative; flex-shrink: 0; border: 2px solid transparent; }
@@ -1876,7 +1876,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumb-video-badge { position: absolute; bottom: 4px; left: 4px; width: 16px; height: 16px; background: rgba(0,0,0,.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; pointer-events: none; }
     .feed-card-thumb-video-badge { position: absolute; bottom: 4px; right: 4px; width: 14px; height: 14px; background: rgba(0,0,0,.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; pointer-events: none; }
     .feed-card-photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .feed-vid-mute { position: absolute; bottom: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--scrim); color: #fff; border: none; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 3; }
+    .feed-vid-mute { position: absolute; bottom: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--scrim); color: #fff; border: none; font-size: var(--fs-lg); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 3; }
     .np-thumb-video-placeholder { width: 100%; height: 100%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; }
     .np-thumb-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.2); border-top-color: rgba(255,255,255,.85); border-radius: 50%; animation: np-thumb-spin .8s linear infinite; }
     @keyframes np-thumb-spin { to { transform: rotate(360deg); } }
@@ -1884,13 +1884,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .img-viewer-overlay video { max-width: 100%; max-height: 85vh; object-fit: contain; }
 
     /* Compact "is wearing" header row (no-photo wear logs) */
-    .feed-wearing-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; margin-bottom: 1px; cursor: pointer; }
-    .feed-wearing-watch-thumb { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+    .feed-wearing-row { display: flex; align-items: center; gap: var(--space-1-5); margin-top: var(--space-1); margin-bottom: 1px; cursor: pointer; }
+    .feed-wearing-watch-thumb { width: 22px; height: 22px; border-radius: var(--radius-sm); object-fit: cover; flex-shrink: 0; }
     .feed-wearing-watch-avatar {
-      width: 22px; height: 22px; border-radius: 5px; font-size: .5rem; font-weight: var(--fw-bold);
+      width: 22px; height: 22px; border-radius: var(--radius-sm); font-size: .5rem; font-weight: var(--fw-bold);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #000;
     }
-    .feed-wearing-watch-name { font-size: .84rem; font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-wearing-watch-name { font-size: var(--fs-base); font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Watch preview modal */
     .wpm-modal { max-width: 360px; }
@@ -1905,21 +1905,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Actions */
     .feed-actions {
-      display: flex; gap: var(--space-1); padding: var(--space-2) .65rem .45rem;
+      display: flex; gap: var(--space-1); padding: var(--space-2) var(--space-2-5) var(--space-2);
     }
     .feed-action-btn {
       background: none; border: none; color: var(--muted);
-      cursor: pointer; font-size: .88rem; padding: .35rem .4rem;
+      cursor: pointer; font-size: var(--fs-md); padding: var(--space-1-5) var(--space-1-5);
       border-radius: var(--radius-btn); font-family: inherit; font-weight: var(--fw-semibold);
-      display: flex; align-items: center; gap: .35rem;
+      display: flex; align-items: center; gap: var(--space-1-5);
       transition: all var(--dur-fast);
     }
     .feed-action-btn:hover { background: var(--hover); color: var(--text); }
     .feed-action-btn.liked  { color: var(--danger-text); }
 
     /* Caption (Instagram style — bold username inline) */
-    .feed-caption { padding: .1rem var(--space-4) .45rem; font-size: .85rem; line-height: 1.5; word-break: break-word; }
-    .feed-caption-user { font-weight: var(--fw-bold); margin-right: .35rem; }
+    .feed-caption { padding: .1rem var(--space-4) var(--space-2); font-size: var(--fs-base); line-height: var(--lh-body); word-break: break-word; }
+    .feed-caption-user { font-weight: var(--fw-bold); margin-right: var(--space-1-5); }
 
     /* Official badge */
     .official-badge { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin-left:3px; vertical-align:middle; flex-shrink:0; }
@@ -1970,9 +1970,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Watch chip */
     .feed-watch-chip {
-      display: inline-flex; align-items: center; gap: .35rem;
-      margin: 0 var(--space-4) var(--space-3); font-size: .72rem; color: var(--muted);
-      background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
+      display: inline-flex; align-items: center; gap: var(--space-1-5);
+      margin: 0 var(--space-4) var(--space-3); font-size: var(--fs-sm); color: var(--muted);
+      background: var(--surface2); border-radius: 20px; padding: var(--space-1) var(--space-2-5);
     }
 
     /* Fun-fact footnote — always visible below the chip row, clamped to 2 lines.
@@ -2402,13 +2402,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
-    .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 var(--space-4) var(--space-3); }
+    .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1-5); margin: 0 var(--space-4) var(--space-3); }
     .feed-chip-row .feed-watch-chip { margin: 0; }
 
     /* Edit-caption pencil button in card header (own cards) */
     .feed-edit-btn {
       background: none; border: none; color: var(--muted); cursor: pointer;
-      font-size: .85rem; padding: var(--space-1) .4rem; border-radius: var(--radius-sm);
+      font-size: var(--fs-base); padding: var(--space-1) var(--space-1-5); border-radius: var(--radius-sm);
       transition: color var(--dur-fast), background var(--dur-fast); flex-shrink: 0;
     }
     .feed-edit-btn:hover { color: var(--gold-text); background: var(--hover); }
@@ -2438,39 +2438,39 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-photo-count--left { right:auto; left:8px; }
 
     /* Inline caption editing area */
-    .feed-caption-edit { padding: .4rem var(--space-4) var(--space-2); }
+    .feed-caption-edit { padding: var(--space-1-5) var(--space-4) var(--space-2); }
     .feed-caption-textarea {
       width: 100%; box-sizing: border-box; resize: none;
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-btn); padding: var(--space-2) .7rem; font-size: 16px;
-      color: var(--text); font-family: inherit; line-height: 1.5;
+      border-radius: var(--radius-btn); padding: var(--space-2) var(--space-3); font-size: 16px;
+      color: var(--text); font-family: inherit; line-height: var(--lh-body);
     }
     .feed-caption-textarea:focus { outline: none; border-color: var(--gold); }
-    .feed-caption-edit-actions { display: flex; gap: var(--space-2); margin-top: .4rem; }
+    .feed-caption-edit-actions { display: flex; gap: var(--space-2); margin-top: var(--space-1-5); }
 
     /* Text-only standalone post hero */
     .feed-text-hero {
-      padding: 1.35rem 1.1rem 1.15rem;
+      padding: var(--space-5) var(--space-4) var(--space-5);
       background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
       border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
       min-height: 80px; display: flex; align-items: center;
     }
     .feed-text-hero-body {
-      font-size: .97rem; line-height: var(--lh-body); color: var(--text);
+      font-size: var(--fs-lg); line-height: var(--lh-body); color: var(--text);
       margin: 0; word-break: break-word; white-space: pre-wrap;
     }
 
-    .feed-badge-hero { display:flex; flex-direction:column; align-items:center; gap:.3rem; padding:1.1rem var(--space-4); cursor:pointer; }
+    .feed-badge-hero { display:flex; flex-direction:column; align-items:center; gap:var(--space-1); padding:var(--space-4) var(--space-4); cursor:pointer; }
     .feed-badge-name { font-weight:var(--fw-bold); font-size:1rem; color:var(--text); }
     .feed-badge-flavor { font-size:var(--fs-base); color:var(--muted); text-align:center; line-height:var(--lh-snug); max-width:34ch; }
-    .feed-badge-tag { font-size:var(--fs-xs); font-weight:var(--fw-bold); letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
-    .feed-badge-ribbon { display:flex; width:fit-content; align-items:center; gap:.35rem; margin:0 var(--space-4) var(--space-3); padding:.22rem .65rem; background:var(--surface2); border-radius:var(--radius-pill); font-size:.72rem; color:var(--muted); cursor:pointer; }
+    .feed-badge-tag { font-size:var(--fs-xs); font-weight:var(--fw-bold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); margin-top:var(--space-0-5); }
+    .feed-badge-ribbon { display:flex; width:fit-content; align-items:center; gap:var(--space-1-5); margin:0 var(--space-4) var(--space-3); padding:var(--space-1) var(--space-2-5); background:var(--surface2); border-radius:var(--radius-pill); font-size:var(--fs-sm); color:var(--muted); cursor:pointer; }
 
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
       background: none; border: 1px solid var(--border); color: var(--muted);
-      border-radius: 20px; padding: .28rem .8rem; font-size: .74rem;
-      cursor: pointer; margin-top: .4rem; font-family: inherit;
+      border-radius: 20px; padding: var(--space-1) var(--space-3); font-size: var(--fs-sm);
+      cursor: pointer; margin-top: var(--space-1-5); font-family: inherit;
       transition: border-color var(--dur-fast), color var(--dur-fast);
     }
     .feed-add-photo-btn:hover { border-color: var(--gold); color: var(--gold-text); }
@@ -2495,28 +2495,28 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── COMMENTS ──────────────────────────────── */
     .feed-comments-section {
-      padding: .55rem var(--space-4) .8rem;
+      padding: var(--space-2) var(--space-4) var(--space-3);
       border-top: 1px solid var(--border);
     }
-    .comment-item  { display: flex; gap: .55rem; margin-bottom: .65rem; align-items: flex-start; }
+    .comment-item  { display: flex; gap: var(--space-2); margin-bottom: var(--space-2-5); align-items: flex-start; }
     .comment-avatar {
       width: 28px; height: 28px; border-radius: 50%;
-      background: var(--gold); color: #000; font-size: .6rem;
+      background: var(--gold); color: #000; font-size: var(--fs-2xs);
       font-weight: var(--fw-bold); display: flex; align-items: center;
       justify-content: center; flex-shrink: 0; margin-top: .1rem;
     }
     .comment-content { flex: 1; min-width: 0; }
     .comment-body {
-      font-size: .78rem; line-height: 1.45; word-break: break-word;
+      font-size: var(--fs-sm); line-height: var(--lh-snug); word-break: break-word;
     }
     .comment-username { font-weight: var(--fw-bold); }
-    .comment-time { font-size: .7rem; color: var(--muted); font-weight: var(--fw-normal); margin-left: .35rem; }
+    .comment-time { font-size: var(--fs-xs); color: var(--muted); font-weight: var(--fw-normal); margin-left: var(--space-1-5); }
     .comment-heart-col {
       display: flex; flex-direction: column; align-items: center;
-      flex-shrink: 0; padding-top: .15rem; min-width: 24px;
+      flex-shrink: 0; padding-top: var(--space-0-5); min-width: 24px;
     }
     .comment-heart-btn {
-      background: none; border: none; cursor: pointer; padding: .15rem;
+      background: none; border: none; cursor: pointer; padding: var(--space-0-5);
       color: var(--muted); display: flex; align-items: center;
       font-family: inherit; transition: color var(--dur-fast);
     }
@@ -2524,31 +2524,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .comment-heart-btn.liked { color: var(--danger-text); }
     .comment-heart-btn svg { width: 12px; height: 12px; }
     .comment-heart-count { font-size: var(--fs-2xs); color: var(--muted); line-height: 1; }
-    .comment-menu-wrap { position: relative; flex-shrink: 0; padding-top: .15rem; }
+    .comment-menu-wrap { position: relative; flex-shrink: 0; padding-top: var(--space-0-5); }
     .comment-menu-btn {
-      background: none; border: none; cursor: pointer; padding: .15rem .2rem;
+      background: none; border: none; cursor: pointer; padding: var(--space-0-5) var(--space-1);
       color: var(--muted); display: flex; align-items: center; line-height: 0;
       border-radius: var(--radius-sm); transition: color var(--dur-fast), background var(--dur-fast);
     }
     .comment-menu-btn:hover { color: var(--text); background: var(--hover); }
     .comment-menu-btn svg { width: 12px; height: 12px; }
-    .comment-input-row { display: flex; gap: var(--space-2); margin-top: .65rem; }
+    .comment-input-row { display: flex; gap: var(--space-2); margin-top: var(--space-2-5); }
     .comment-input {
       flex: 1; background: var(--hover); border: 1px solid var(--border);
-      border-radius: 20px; padding: .4rem .9rem; font-size: .78rem;
+      border-radius: 20px; padding: var(--space-1-5) var(--space-3-5); font-size: var(--fs-sm);
       color: var(--text); font-family: inherit;
       max-width: 100%; min-width: 0;
     }
     .comment-input:focus { outline: none; border-color: var(--gold); }
     .comment-send-btn {
       background: var(--gold); border: none; color: #000;
-      border-radius: 50%; width: 32px; height: 32px; font-size: .9rem;
+      border-radius: 50%; width: 32px; height: 32px; font-size: var(--fs-md);
       cursor: pointer; display: flex; align-items: center;
       justify-content: center; flex-shrink: 0;
     }
     .comments-view-more {
-      font-size: .78rem; color: var(--muted); cursor: pointer;
-      padding: .15rem 0 .35rem; font-weight: var(--fw-semibold);
+      font-size: var(--fs-sm); color: var(--muted); cursor: pointer;
+      padding: var(--space-0-5) 0 var(--space-1-5); font-weight: var(--fw-semibold);
     }
     .comments-view-more:hover { color: var(--text); }
     /* ── @mention autocomplete dropdown ── */
@@ -2582,9 +2582,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .mention-link:hover { text-decoration: underline; }
     .comments-add-prompt {
-      font-size: .78rem; color: var(--muted); cursor: pointer;
-      padding: .4rem 0 0; border-top: 1px solid var(--border);
-      margin-top: .35rem;
+      font-size: var(--fs-sm); color: var(--muted); cursor: pointer;
+      padding: var(--space-1-5) 0 0; border-top: 1px solid var(--border);
+      margin-top: var(--space-1-5);
     }
     .comments-add-prompt:hover { color: var(--text); }
 
@@ -2705,13 +2705,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     /* "You're all caught up" divider — hairline rules either side of a label,
        marking the point below which nothing is new since the last visit. */
-    .feed-caught-up { display:flex; align-items:center; gap:.7rem; margin:.4rem .15rem 1.1rem; }
+    .feed-caught-up { display:flex; align-items:center; gap:var(--space-3); margin:var(--space-1-5) var(--space-0-5) var(--space-4); }
     .feed-caught-up::before, .feed-caught-up::after { content:''; flex:1; height:1px; background:var(--border); }
-    .feed-caught-up-label { display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap;
-      color:var(--muted); font-size:.78rem; font-weight:var(--fw-semibold); letter-spacing:.01em; }
+    .feed-caught-up-label { display:inline-flex; align-items:center; gap:var(--space-1-5); white-space:nowrap;
+      color:var(--muted); font-size:var(--fs-sm); font-weight:var(--fw-semibold); letter-spacing:.01em; }
     .feed-caught-up-label svg { flex-shrink:0; color:var(--gold-text); }
     /* Refresh failed while earlier posts are on screen: keep them, say so. */
-    .feed-stale { display:flex; align-items:center; justify-content:center; gap:.6rem; flex-wrap:wrap; margin:.1rem .15rem .9rem; padding:.45rem .7rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--muted); font-size:.78rem; }
+    .feed-stale { display:flex; align-items:center; justify-content:center; gap:var(--space-2-5); flex-wrap:wrap; margin:.1rem var(--space-0-5) var(--space-3-5); padding:var(--space-2) var(--space-3); border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--muted); font-size:var(--fs-sm); }
     .feed-stale button { font:inherit; font-weight:var(--fw-semibold); color:var(--gold-text); background:none; border:0; padding:0; cursor:pointer; display:inline-flex; align-items:center; gap:var(--space-1); }
     .streak-chip { display:inline-flex; align-items:center; gap:.22rem; height:34px; padding:0 .4rem; font-size:.85rem; font-weight:var(--fw-semibold); color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
     .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
@@ -8321,7 +8321,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.51';
+const APP_VERSION = '20.15.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14925,9 +14925,9 @@ function renderFeed() {
     el.innerHTML = `
       <div style="text-align:center;padding:2.5rem var(--space-4);">
         <div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">⚠</div>
-        <div style="font-weight:var(--fw-semibold);margin-bottom:.4rem;color:var(--text);">Couldn't load your feed</div>
+        <div style="font-weight:var(--fw-semibold);margin-bottom:var(--space-1-5);color:var(--text);">Couldn't load your feed</div>
         <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Check your connection and try again.</div>
-        <button class="btn btn-primary" onclick="loadFeed()" style="display:inline-flex;align-items:center;gap:.4rem;">↻ Retry</button>
+        <button class="btn btn-primary" onclick="loadFeed()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);">↻ Retry</button>
       </div>`;
     return;
   }
@@ -14943,7 +14943,7 @@ function renderFeed() {
             ? 'Follow other watch enthusiasts to see their daily wears here.'
             : 'Check back later — or follow more people!'}
         </div>
-        <button class="btn btn-primary" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
+        <button class="btn btn-primary" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
       </div>`;
     // The empty feed is the highest-value slot placement — a user following
     // nobody otherwise hits a dead end here. promoInjectPositions() already
@@ -15006,7 +15006,7 @@ function showFeedLoadMoreButton() {
   const s = document.getElementById('feed-load-sentinel');
   if (!s) return;
   if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
-  s.innerHTML = '<button class="btn btn-ghost" style="font-size:var(--fs-base);padding:var(--space-2) 1.1rem;" onclick="loadMoreFeed()">Load more</button>';
+  s.innerHTML = '<button class="btn btn-ghost" style="font-size:var(--fs-base);padding:var(--space-2) var(--space-4);" onclick="loadMoreFeed()">Load more</button>';
 }
 
 // ── Floating "Post" button ────────────────────────────────────────────────
@@ -15053,13 +15053,13 @@ function renderFeedCard(item) {
   // ── Moderation status rendering ──
   if (item.moderation_status === 'flagged' && isMe) {
     return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.6;text-align:center;padding:var(--space-6) var(--space-4);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" style="margin-bottom:.4rem;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-      <div style="font-size:.88rem;color:var(--muted);line-height:1.5;">Your post has been flagged and is under review.</div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" style="margin-bottom:var(--space-1-5);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <div style="font-size:var(--fs-md);color:var(--muted);line-height:var(--lh-body);">Your post has been flagged and is under review.</div>
     </div>`;
   }
   if (item.moderation_status === 'removed' && isMe) {
     return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.5;text-align:center;padding:var(--space-6) var(--space-4);">
-      <div style="font-size:.88rem;color:var(--danger-text);line-height:1.5;">This post was removed for violating our Terms of Use.</div>
+      <div style="font-size:var(--fs-md);color:var(--danger-text);line-height:var(--lh-body);">This post was removed for violating our Terms of Use.</div>
     </div>`;
   }
   if (item.moderation_status && !isMe && !myProfile?.is_admin) return ''; // RLS backup: hide flagged/removed posts from others
@@ -15189,7 +15189,7 @@ function renderFeedCard(item) {
     : '';
 
   const featuredPill = item.__featured
-    ? `<span class="pill" style="color:var(--gold-text);background:var(--gold-dim);margin-left:.4rem;vertical-align:middle;">★ Featured</span>`
+    ? `<span class="pill" style="color:var(--gold-text);background:var(--gold-dim);margin-left:var(--space-1-5);vertical-align:middle;">★ Featured</span>`
     : '';
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
@@ -15209,10 +15209,10 @@ function renderFeedCard(item) {
       const cIsMe = c.user_id === currentUser?.id;
       // Moderation status for comments
       if (c.moderation_status === 'flagged' && cIsMe) {
-        return `<div class="comment-item" style="opacity:.6;"><div style="font-size:.78rem;color:var(--muted);padding:.2rem 0;">Your comment has been flagged and is under review.</div></div>`;
+        return `<div class="comment-item" style="opacity:.6;"><div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-1) 0;">Your comment has been flagged and is under review.</div></div>`;
       }
       if (c.moderation_status === 'removed' && cIsMe) {
-        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:.78rem;color:var(--danger-text);padding:.2rem 0;">This comment was removed for violating our Terms of Use.</div></div>`;
+        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:var(--fs-sm);color:var(--danger-text);padding:var(--space-1) 0;">This comment was removed for violating our Terms of Use.</div></div>`;
       }
       if (c.moderation_status && !cIsMe) return ''; // hide flagged/removed from others
       // Filter blocked user comments
