@@ -8365,7 +8365,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.19.50';
+const APP_VERSION = '20.11.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17230,6 +17230,34 @@ async function toggleCommentLike(commentId, logId) {
   }
 }
 
+// Bring `el` up to date with `html` without touching `inp` or its ancestors: at
+// every level between the card and the input, everything except the branch that
+// holds the input is replaced by the fresh markup. Removing a focused node from
+// the DOM blurs it, so the input itself never moves. Returns false (caller does a
+// full swap) when the fresh card has no such input or nests it differently.
+function patchCardAroundInput(el, html, inp) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  const fresh = t.content.firstElementChild;
+  const freshInp = fresh && fresh.querySelector('#' + CSS.escape(inp.id));
+  if (!freshInp) return false;
+  const chain = (n, root) => { const c = [n]; while (n !== root && n.parentElement) { n = n.parentElement; c.push(n); } return c; };
+  const oc = chain(inp, el), nc = chain(freshInp, fresh);
+  if (oc.length !== nc.length || oc[oc.length - 1] !== el) return false;
+  for (let k = oc.length - 1; k >= 1; k--) {
+    const oldP = oc[k], newP = nc[k], keepOld = oc[k - 1], keepNew = nc[k - 1];
+    [...oldP.attributes].forEach(a => { if (!newP.hasAttribute(a.name)) oldP.removeAttribute(a.name); });
+    [...newP.attributes].forEach(a => oldP.setAttribute(a.name, a.value));
+    [...oldP.childNodes].forEach(n => { if (n !== keepOld) n.remove(); });
+    let before = true;
+    [...newP.childNodes].forEach(n => {
+      if (n === keepNew) { before = false; return; }
+      if (before) oldP.insertBefore(n, keepOld); else oldP.appendChild(n);
+    });
+  }
+  return true;
+}
+
 function refreshFeedCard(logId, { force = false } = {}) {
   const item = feedItems.find(i => i.id === logId);
   if (!item) return;
@@ -17238,14 +17266,18 @@ function refreshFeedCard(logId, { force = false } = {}) {
   // background thread refetch (toggleComments / toggleCommentLike, bcbfa4d) lands
   // ~1s after the box opens, and outerHTML swaps the input with it: focus, the iOS
   // keyboard, the typed text and the open @mention picker all vanished — reported
-  // 2026-09-04 as "@ didn't work when replying". The data is already in
-  // feedComments, so the next refresh (posting forces one) renders it.
+  // 2026-09-04 as "@ didn't work when replying". Instead the card is rebuilt
+  // AROUND the live input: Safari/WKWebView leave focus in the box when a button
+  // is tapped, so skipping the refresh outright left a like or a comment delete
+  // with no visible change (audit 2026-09-20 C1) and a second tap undid it.
   const inp = document.getElementById(`comment-input-${logId}`);
-  if (!force && inp && document.activeElement === inp) return;
-  const draft = inp ? inp.value : '';
-  if (el) el.outerHTML = renderFeedCard(item);
-  // An unfocused draft (typed, then tapped elsewhere) survives the swap too.
-  if (draft) { const n = document.getElementById(`comment-input-${logId}`); if (n && !n.value) n.value = draft; }
+  const patched = !force && el && inp && document.activeElement === inp && patchCardAroundInput(el, renderFeedCard(item), inp);
+  if (!patched) {
+    const draft = inp ? inp.value : '';
+    if (el) el.outerHTML = renderFeedCard(item);
+    // An unfocused draft (typed, then tapped elsewhere) survives the swap too.
+    if (draft) { const n = document.getElementById(`comment-input-${logId}`); if (n && !n.value) n.value = draft; }
+  }
   // Re-wire the fun-fact row on the brand-new node: it has no data-fact-init,
   // no observer registration and no is-truncated class yet. No freshRender
   // flag — this is a single-card swap, not a full feed replace, so the shared

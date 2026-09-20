@@ -69,11 +69,10 @@ serve(async (req) => {
     };
 
     // ── Phase 1: 21–60 day re-measure / drift push (local noon) ─────────────────
+    // A failure here must not take the day-7 phase down with it: that window is a
+    // single local hour on day 7–8, and arms are already assigned (audit 2026-09-20 S1).
     const { data: targets, error } = await supabase.rpc("measure_reminder_targets");
-    if (error) {
-      console.error("[send-measure-reminders] target query failed:", error);
-      return new Response(JSON.stringify({ error: String(error.message) }), { status: 500 });
-    }
+    if (error) console.error("[send-measure-reminders] target query failed:", error);
     const rows = (targets ?? []) as TargetRow[];
 
     // ── Phase 2: day-7 "did it hold?" nudge (local 7pm, experiment remeasure_d7) ──
@@ -92,19 +91,6 @@ serve(async (req) => {
       }), { status: 200 });
     }
 
-    let pushed = 0, failed = 0;
-    for (const t of rows) {
-      try {
-        if (!await pushUser(t.user_id, buildMeasurePush(t), "measure", t.watch_id)) { failed++; continue; }
-        pushed++;
-        await supabase.from("measure_reminder_sends")
-          .upsert({ user_id: t.user_id, watch_id: t.watch_id, sent_on: t.local_today }, { onConflict: "user_id,sent_on", ignoreDuplicates: true });
-      } catch (e) {
-        failed++;
-        console.error(`[send-measure-reminders] user ${t.user_id} failed:`, e);
-      }
-    }
-
     let d7pushed = 0, d7emailed = 0, d7failed = 0, d7skipped = 0;
     if (d7rows.length) {
       const emailRows = d7rows.filter((r) => r.channel === "email");
@@ -113,13 +99,33 @@ serve(async (req) => {
       const bounced = emailRows.length ? await fetchBouncedEmails(supabase) : new Set<string>();
       const tracked = emailRows.length ? await fetchTrackedUids(supabase, emailRows.map((r) => r.user_id)) : new Set<string>();
       for (const t of d7rows) {
+        // "One message ever": claim the ledger row BEFORE sending and release it if
+        // the send fails. An unchecked write after the send let a failed upsert
+        // re-nudge the same user on day 8 (audit 2026-09-20 S2).
+        const claim = { user_id: t.user_id, watch_id: t.watch_id, channel: t.channel, sent_on: t.local_today };
+        let claimed = false;
+        const release = async () => {
+          if (!claimed) return;
+          const { error: relErr } = await supabase.from("remeasure_d7_sends").delete().eq("user_id", t.user_id);
+          if (relErr) console.error(`[send-measure-reminders] d7 claim release failed, user ${t.user_id}:`, relErr);
+        };
         try {
+          if (t.channel === "email") {
+            const to = (t.email ?? "").trim();
+            if (!to || bounced.has(to.toLowerCase())) { d7skipped++; continue; }
+          }
+          const { error: claimErr } = await supabase.from("remeasure_d7_sends").insert(claim);
+          if (claimErr) {
+            d7failed++;
+            console.error(`[send-measure-reminders] d7 claim failed, not sending to ${t.user_id}:`, claimErr);
+            continue;
+          }
+          claimed = true;
           if (t.channel === "push") {
-            if (!await pushUser(t.user_id, buildRemeasureD7Push(t), "measure", t.watch_id)) { d7failed++; continue; }
+            if (!await pushUser(t.user_id, buildRemeasureD7Push(t), "measure", t.watch_id)) { d7failed++; await release(); continue; }
             d7pushed++;
           } else {
             const to = (t.email ?? "").trim();
-            if (!to || bounced.has(to.toLowerCase())) { d7skipped++; continue; }
             const sig = await hmacSign(t.user_id, "reminders", UNSUB_KEY);
             const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
             const mail = buildRemeasureD7Email(t);
@@ -134,20 +140,33 @@ serve(async (req) => {
               },
               ...(tracked.has(t.user_id) ? { configSet: TRACKED_CONFIG_SET } : {}),
             });
-            if (!result.ok) { d7failed++; continue; }
+            if (!result.ok) { d7failed++; await release(); continue; }
             d7emailed++;
           }
-          await supabase.from("remeasure_d7_sends")
-            .upsert({ user_id: t.user_id, watch_id: t.watch_id, channel: t.channel, sent_on: t.local_today }, { onConflict: "user_id", ignoreDuplicates: true });
         } catch (e) {
           d7failed++;
+          await release();
           console.error(`[send-measure-reminders] d7 user ${t.user_id} failed:`, e);
         }
       }
     }
 
+    let pushed = 0, failed = 0;
+    for (const t of rows) {
+      try {
+        if (!await pushUser(t.user_id, buildMeasurePush(t), "measure", t.watch_id)) { failed++; continue; }
+        pushed++;
+        const { error: ledErr } = await supabase.from("measure_reminder_sends")
+          .upsert({ user_id: t.user_id, watch_id: t.watch_id, sent_on: t.local_today }, { onConflict: "user_id,sent_on", ignoreDuplicates: true });
+        if (ledErr) console.error(`[send-measure-reminders] LEDGER WRITE FAILED after push, user ${t.user_id} may be re-sent:`, ledErr);
+      } catch (e) {
+        failed++;
+        console.error(`[send-measure-reminders] user ${t.user_id} failed:`, e);
+      }
+    }
+
     return new Response(JSON.stringify({
-      pushed, failed, candidates: rows.length,
+      pushed, failed, candidates: rows.length, ...(error ? { phase1_error: String(error.message) } : {}),
       d7: { pushed: d7pushed, emailed: d7emailed, failed: d7failed, skipped: d7skipped, candidates: d7rows.length },
     }), { status: 200 });
   } catch (err) {

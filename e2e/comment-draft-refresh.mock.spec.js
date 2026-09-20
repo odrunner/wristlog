@@ -60,4 +60,34 @@ test.describe('Comment draft vs background refetch (mocked)', () => {
     expect(state.focused).toBe(true);
     expect(state.sameNode).toBe(true);
   });
+
+  // Safari/WKWebView leave focus in the comment box when a button is tapped, so
+  // the like is driven by a direct call here — a Chromium click would move focus
+  // to the button and hide the bug (audit 2026-09-20 C1).
+  test('a like while the comment box is focused still updates the card', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    await expect(card).toBeVisible({ timeout: 8000 });
+    await card.locator('.comments-add-prompt').click();
+    const input = card.locator('#comment-input-log-001');
+    await expect(input).toBeVisible();
+    await page.waitForTimeout(1500);   // let the background refetch settle first
+    await input.evaluate(el => { el.dataset.marker = 'original'; el.focus(); });
+    await page.keyboard.type('nice');
+
+    await page.evaluate(() => toggleLike('log-001'));
+    await expect(card.locator('.feed-action-btn.liked')).toHaveCount(1);
+    // The thread refetched in the background is rendered too, not held back.
+    await expect(card.locator('.comment-item')).toHaveCount(1);
+
+    const state = await page.evaluate(() => {
+      const inp = document.getElementById('comment-input-log-001');
+      return {
+        sameNode: !!(inp && inp.dataset.marker === 'original'),
+        focused: document.activeElement === inp,
+        value: inp ? inp.value : null,
+        cards: document.querySelectorAll('#feedcard-log-001').length,
+      };
+    });
+    expect(state).toEqual({ sameNode: true, focused: true, value: 'nice', cards: 1 });
+  });
 });
