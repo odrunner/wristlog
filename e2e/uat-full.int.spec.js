@@ -27,6 +27,10 @@ async function dismissAutoModalsWhenShown(page) {
     async () => { await page.evaluate(() => closeBadgeReveal()); });
   await page.addLocatorHandler(page.locator('#fact-modal:not(.hidden)'),
     async () => { await page.evaluate(() => closeFactModal()); });
+  // Date-dependent: on a purchase anniversary (testuser2's Sinn, every Sep 20) this
+  // self-opens and covers the nav — the smoke test failed once a year on that day.
+  await page.addLocatorHandler(page.locator('#anniversary-modal:not(.hidden)'),
+    async () => { await page.evaluate(() => document.getElementById('anniversary-modal').classList.add('hidden')); });
 }
 
 async function devLogin(page, useSecond = false) {
