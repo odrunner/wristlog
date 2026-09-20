@@ -90,4 +90,9 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
   LEFT JOIN lastw lw ON lw.user_id = ch.uid
   WHERE ch.push_ok OR ch.email_due OR ch.push_quiet;
 $$;
+-- DROP + CREATE resets the grants to Supabase's defaults (anon + authenticated may
+-- EXECUTE) and this function returns user_id + email. The 2026-09-18 revoke only covers
+-- the copy that existed then, so re-applying this file alone reopened it (audit 2026-09-20 S6).
+REVOKE EXECUTE ON FUNCTION wear_reminder_targets() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION wear_reminder_targets() TO service_role;
 NOTIFY pgrst, 'reload schema';

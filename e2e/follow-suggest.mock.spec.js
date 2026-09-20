@@ -48,7 +48,16 @@ test('treatment: dismiss hides the card and remembers it', async ({ page }) => {
   await page.evaluate(() => renderFeed());
   await page.waitForTimeout(300);
   await expect(page.locator('#follow-sugg-feed')).toHaveCount(0);
-  expect(await page.evaluate(() => Number(localStorage.getItem('wr_follow_sugg_dismissed')) > 0)).toBe(true);
+  // Per-user key: one account's dismissal must not hide the card from the next (audit 2026-09-20 C3).
+  expect(await page.evaluate(() => Number(localStorage.getItem('wr_follow_sugg_dismissed:' + currentUser.id)) > 0)).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem('wr_follow_sugg_dismissed'))).toBeNull();
+});
+
+test('account change drops the cached suggestions and exposure flags', async ({ page }) => {
+  await boot(page, 'treatment');
+  await expect(page.locator('#follow-sugg-feed')).toBeVisible();
+  const st = await page.evaluate(() => { clearUserState(); return { list: _followSugg, at: _followSuggAt, shown: _followSuggShown.size, rpc: _feedViaRpc, partial: feedPartial }; });
+  expect(st).toEqual({ list: null, at: 0, shown: 0, rpc: false, partial: false });
 });
 
 test('control: no card, no RPC call', async ({ page }) => {

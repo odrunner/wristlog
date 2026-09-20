@@ -8365,7 +8365,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.11.22';
+const APP_VERSION = '20.11.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12495,6 +12495,7 @@ async function loadFeed() {
   if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   // Experiment feed_rpc: the whole first page in ONE request. Any failure falls
   // through to the classic path below, which is untouched.
+  _feedViaRpc = false;   // describes this load only — a stale true skipped the follows/blocks-changed reload
   if (_useFeedRpc() && await _loadFeedViaRpc()) {
     clearTimeout(_feedSafety);
     feedLoading = false;
@@ -15408,13 +15409,15 @@ async function unfeaturePost(logId) {
 }
 
 // ── Fun-fact footnote: expand/collapse the frozen fact in place ─────────
-// Record a fun-fact pill expand (first open per user, per post). Plain insert —
-// the PK conflict on a repeat open is expected and ignored. Fire-and-forget;
+// Record a fun-fact pill expand (first open per user, per post). ON CONFLICT DO
+// NOTHING — a plain insert answered every repeat open with a 409. PostgREST can only
+// run that under RLS because of the select-own policy (sql/2026-09-20-fact-events-
+// select-own.sql); without it the upsert is rejected outright. Fire-and-forget;
 // never blocks the UI. Powers the admin "Fun fact clicks/viewers" metrics.
 function recordFactClick(logId) {
   if (!logId || !currentUser) return;
   try {
-    db.from('fact_clicks').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {});
+    db.from('fact_clicks').upsert({ user_id: currentUser.id, log_id: logId }, { onConflict: 'user_id,log_id', ignoreDuplicates: true }).then(() => {}).catch(() => {});
   } catch (e) {}
 }
 
@@ -15479,7 +15482,7 @@ function recordFactImpression(logId) {
   if (!logId || !currentUser || _factImpSeen.has(logId)) return;
   _factImpSeen.add(logId);
   try {
-    afterBootGate(() => { if (currentUser) db.from('fact_impressions').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {}); });
+    afterBootGate(() => { if (currentUser) db.from('fact_impressions').upsert({ user_id: currentUser.id, log_id: logId }, { onConflict: 'user_id,log_id', ignoreDuplicates: true }).then(() => {}).catch(() => {}); });
   } catch (e) {}
 }
 
@@ -17830,6 +17833,8 @@ function userCardHtml(u, { removable = false, sub = null } = {}) {
 let _followSugg = null, _followSuggAt = 0, _followSuggLoading = null;
 const _followSuggShown = new Set();
 const FOLLOW_SUGG_DISMISS = 'wr_follow_sugg_dismissed';
+// Per user: on a shared device one account's dismissal hid the card from the next for 14 days.
+function followSuggDismissKey() { return FOLLOW_SUGG_DISMISS + ':' + (currentUser ? currentUser.id : ''); }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function followSuggestReason(s) {
   if (!s) return '';
@@ -17911,7 +17916,7 @@ function dismissFollowSuggest(surface) {
   } else {
     const slot = document.getElementById('follow-suggest-slot');
     if (slot) { slot.innerHTML = ''; delete slot.dataset.key; }
-    safeLS.set(FOLLOW_SUGG_DISMISS, String(Date.now()));
+    safeLS.set(followSuggDismissKey(), String(Date.now()));
   }
   _logFollowSuggest('dismissed', { surface });
 }
@@ -17941,11 +17946,15 @@ async function maybeRenderFollowSuggest() {
   const list = await loadFollowSuggestions();
   const visible = followSuggestVisible({
     variant: 'treatment', count: _followSuggOpen(list).length, followingCount: following.size,
-    dismissedAt: Number(safeLS.get(FOLLOW_SUGG_DISMISS)) || 0, now: Date.now(),
+    dismissedAt: Number(safeLS.get(followSuggDismissKey())) || 0, now: Date.now(),
   });
   if (!visible) { slot.innerHTML = ''; delete slot.dataset.key; return; }
   renderFollowSuggestCard(slot, list, { title: 'People to follow', surface: 'feed', dismissable: true });
 }
+// The feed_page() path renders the feed once, BEFORE get_experiments() resolves
+// (boot clears the arms and the fetch waits for the boot gate), so without this the
+// card could never appear on a boot load in that arm.
+document.addEventListener('experiments:loaded', () => { maybeRenderFollowSuggest(); });
 // Right after a watch is added: a popup with the people who own that same model, if
 // any. The model link is set by a DB trigger once the row syncs, so this looks twice
 // (3 s, then 8 s), and it waits until no other sheet or modal is open (the photo flow's
@@ -32270,6 +32279,9 @@ function clearUserState() {
   myClubs = []; pendingClubRequests.clear(); myProfile = null;
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
+  // Follow suggestions + feed-source flags: A's list was served to B for 10 min and B's "shown" events were suppressed.
+  _followSugg = null; _followSuggAt = 0; _followSuggLoading = null; _followSuggShown.clear();
+  _feedViaRpc = false; feedPartial = false;
   _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
   // Promo session state — same rule. signOut() never reloads the page, so
   // account A's spent max_per_session budget, impressions and modal flag

@@ -55,6 +55,24 @@ test('treatment: one feed_page call — fired from the head — renders the feed
   expect(p.enriched_ms).toBe(p.first_live_ms);   // one render: fresh posts ARE the complete posts
 });
 
+// The feed_page path renders once, before get_experiments() resolves, so the
+// follow_suggest card has to be drawn when the arms arrive (audit 2026-09-20 C2).
+test('treatment: the follow-suggestions card still appears on the boot load', async ({ page }) => {
+  await injectSession(page);
+  await force(page, 'treatment');
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });
+  await page.route('**/rest/v1/rpc/feed_page*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }));
+  await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant: 'treatment' }]) }));
+  await page.route('**/rest/v1/rpc/follow_suggestions*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+    { id: 'u-omega', username: 'omegafan', display_name: 'Omega Fan', avatar_url: null, profile_privacy: 'public', reason: 'liked', model_brand: null, model_name: null, likes: 3, followers: 0 },
+  ]) }));
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
+  await expect(page.locator('#follow-sugg-feed')).toBeVisible({ timeout: 8000 });
+  expect(await page.evaluate(() => _feedViaRpc)).toBe(true);
+});
+
 test('treatment: a failing feed_page falls back to the classic load', async ({ page }) => {
   await injectSession(page);
   await force(page, 'treatment');

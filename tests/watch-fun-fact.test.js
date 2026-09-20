@@ -147,9 +147,11 @@ describe('fun-fact engagement tracking + admin metrics', () => {
   it('toggleFunFact records a click on open', () => {
     expect(html).toContain("recordFactClick(row.getAttribute('data-log-id'))");
   });
-  it('recordFactClick does a PLAIN insert into fact_clicks (not upsert)', () => {
-    expect(html).toMatch(/from\('fact_clicks'\)\.insert\(/);
-    expect(html).not.toMatch(/from\('fact_clicks'\)\.upsert\(/);
+  // A plain insert 409'd on every repeat open (audit 2026-09-20 H2). The upsert needs the
+  // select-own policy in sql/2026-09-20-fact-events-select-own.sql to pass RLS.
+  it('recordFactClick upserts into fact_clicks ignoring duplicates', () => {
+    expect(html).toMatch(/from\('fact_clicks'\)\.upsert\([^)]*\{ onConflict: 'user_id,log_id', ignoreDuplicates: true \}/);
+    expect(html).not.toMatch(/from\('fact_clicks'\)\.insert\(/);
   });
   it('admin dashboard calls admin_fact_counts and shows the four rows', () => {
     expect(html).toContain('admin_fact_counts');
@@ -344,7 +346,7 @@ describe('toggleFunFact race guard: a stale transitionend cannot mutate a newer 
 
 describe('fun-fact impression tracking', () => {
   it('inserts impressions into their own table', () => {
-    expect(html).toContain("db.from('fact_impressions').insert(");
+    expect(html).toContain("db.from('fact_impressions').upsert({ user_id: currentUser.id, log_id: logId }, { onConflict: 'user_id,log_id', ignoreDuplicates: true })");
   });
 
   it('dedups within the page view before hitting the network', () => {
@@ -430,7 +432,7 @@ describe('fix: full re-render vs. append are handled differently by initFactRows
     };
     const fakeWindow = { IntersectionObserver: FakeObserver };
     const currentUser = { id: 'user1' };
-    const db = { from: () => ({ insert: () => ({ then: (cb) => { cb && cb(); return { catch: () => {} }; } }) }) };
+    const db = { from: () => ({ upsert: () => ({ then: (cb) => { cb && cb(); return { catch: () => {} }; } }) }) };
     const factory = new Function(
       'window', 'document', 'IntersectionObserver', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
@@ -496,7 +498,7 @@ describe('fix: _factImpSeen is reset on sign-out so it cannot survive an account
   it('recordFactImpression fires again for the same log id once the set is cleared (simulating an account switch)', () => {
     const src = html.slice(html.indexOf('let _factImpObserver = null;'), html.indexOf('function initFactRows('));
     const inserted = [];
-    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const db = { from: () => ({ upsert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const currentUser = { id: 'userA' };
     const factory = new Function(
       'currentUser', 'db', 'afterBootGate',
@@ -614,7 +616,7 @@ describe('fix: truncation is measured at first real visibility, not synchronousl
     const fakeWindow = { IntersectionObserver: FakeObserver };
     const currentUser = { id: 'user1' };
     const inserted = [];
-    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const db = { from: () => ({ upsert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const factory = new Function(
       'window', 'document', 'IntersectionObserver', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
@@ -674,7 +676,7 @@ describe('fix: truncation is measured at first real visibility, not synchronousl
     const fakeWindow = {}; // no IntersectionObserver — forces the fallback branch
     const currentUser = { id: 'user1' };
     const inserted = [];
-    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const db = { from: () => ({ upsert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
     const factory = new Function(
       'window', 'document', 'currentUser', 'db', 'afterBootGate',
       `${src}\nreturn { initFactRows };`
