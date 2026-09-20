@@ -1019,7 +1019,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-photo-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform var(--dur-base), background var(--dur-base); }
     .coll-photo-toggle input[type="checkbox"]:checked { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: var(--gold); }
     .coll-photo-toggle input[type="checkbox"]:checked::after { transform: translateX(14px); background: var(--gold); }
-    .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: .85rem; line-height: 1; pointer-events: none; }
+    .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: var(--fs-base); line-height: 1; pointer-events: none; }
     .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: var(--fs-xl); user-select: none; z-index: 2; touch-action: none; line-height: 1; }
     .rank-drag-handle:hover { color: var(--muted); }
     .watch-card.dragging  { opacity: .4; }
@@ -1184,10 +1184,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       gap: var(--space-4);
       margin-bottom: var(--space-6);
     }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.2rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4) var(--space-5); }
     .stat-val  { font-size: 1.9rem; font-weight: var(--fw-heavy); color: var(--gold-text); line-height: 1; }
-    .stat-lbl  { font-size: .72rem; color: var(--muted); margin-top: .4rem; text-transform: uppercase; letter-spacing: .05em; }
-    .stat-sub  { font-size: .8rem; font-weight: var(--fw-semibold); margin-top: var(--space-1); }
+    .stat-lbl  { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1-5); text-transform: uppercase; letter-spacing: .05em; }
+    .stat-sub  { font-size: var(--fs-base); font-weight: var(--fw-semibold); margin-top: var(--space-1); }
 
     .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5); }
     .chart-wrap  { position: relative; height: 260px; }
@@ -1196,12 +1196,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Ranking table */
     .rank-table { width: 100%; border-collapse: collapse; }
-    .rank-th { font-size: .72rem; font-weight: var(--fw-semibold); color: var(--muted); text-transform: uppercase;
-      letter-spacing: .05em; padding: .45rem .55rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .rank-th { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--muted); text-transform: uppercase;
+      letter-spacing: .05em; padding: var(--space-2) var(--space-2); text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
     .rank-th.sortable { cursor: pointer; user-select: none; }
     .rank-th.sortable:hover { color: var(--text); }
     .rank-th.active-sort { color: var(--gold-text); }
-    .rank-td { padding: .55rem .55rem; border-bottom: 1px solid var(--border); font-size: .84rem; vertical-align: middle; }
+    .rank-td { padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--border); font-size: var(--fs-base); vertical-align: middle; }
     .rank-tr:last-child .rank-td { border-bottom: none; }
 
     /* ── MARKET PRICE ROW ── */
@@ -1260,7 +1260,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rank-num {
       width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: .72rem; font-weight: var(--fw-heavy);
+      font-size: var(--fs-sm); font-weight: var(--fw-heavy);
       background: var(--surface2); color: var(--muted);
     }
     .rank-num.r1 { background: var(--gold); color: #000; }
@@ -1282,7 +1282,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Filter */
     .stats-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); flex-wrap: wrap; gap: var(--space-4); }
     select.filter-select { width: auto; min-width: 150px; }
-    .stats-filters { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+    .stats-filters { display: flex; align-items: center; gap: var(--space-2-5); flex-wrap: wrap; }
 
     /* Empty state */
     .empty {
@@ -1300,11 +1300,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     /* Chart time-horizon selector (Collection Value Over Time) */
-    .chart-range { display: flex; gap: .3rem; justify-content: center; flex-wrap: wrap; margin-top: .7rem; }
+    .chart-range { display: flex; gap: var(--space-1); justify-content: center; flex-wrap: wrap; margin-top: var(--space-3); }
     .chart-range-btn {
-      font-family: inherit; font-size: .72rem; font-weight: var(--fw-semibold); color: var(--muted);
+      font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--muted);
       background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
-      padding: .2rem .62rem; cursor: pointer;
+      padding: var(--space-1) var(--space-2-5); cursor: pointer;
       transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
     }
     .chart-range-btn:hover { color: var(--text); border-color: var(--gold); }
@@ -5155,7 +5155,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="card" style="margin-bottom:var(--space-5);">
       <div class="section-title">Collection Report</div>
       <div id="coll-report-summary"></div>
-      <div id="coll-report-table" style="overflow-x:auto;margin-top:.6rem;"></div>
+      <div id="coll-report-table" style="overflow-x:auto;margin-top:var(--space-2-5);"></div>
     </div>
 
     <div id="dow-report"></div>
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.16.48';
+const APP_VERSION = '20.16.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25319,7 +25319,7 @@ function renderValueSection() {
       <label>${mpLabel}</label>
       <input type="text" inputmode="decimal" id="w-mp-display" aria-label="Market price" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
     </div>
-    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--fg);font-size:11px;font-family:inherit;padding:5px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
+    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--fg);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1-5) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
   </div>`;
 
   // Pending price card (State B or B2)
@@ -25329,35 +25329,35 @@ function renderValueSection() {
     const deltaSign = delta >= 0 ? '+' : '−';
     if (isSamePrice) {
       // State B2 — same price
-      html += `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-btn);padding:10px 12px;margin-top:10px;">
+      html += `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);margin-top:var(--space-2-5);">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--muted);">Market Price</div>
-          <div style="font-size:10px;color:var(--muted);">${freshLabel}</div>
+          <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--muted);">Market Price</div>
+          <div style="font-size:var(--fs-2xs);color:var(--muted);">${freshLabel}</div>
         </div>
-        <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
-          <span style="font-size:20px;font-weight:var(--fw-medium);color:var(--fg);">${fmtMoney(pending)}</span>
-          <span style="font-size:12px;color:var(--muted);">unchanged</span>
+        <div style="display:flex;align-items:baseline;gap:var(--space-2);margin-top:var(--space-1);">
+          <span style="font-size:var(--fs-2xl);font-weight:var(--fw-medium);color:var(--fg);">${fmtMoney(pending)}</span>
+          <span style="font-size:var(--fs-sm);color:var(--muted);">unchanged</span>
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button type="button" disabled style="flex:1;background:var(--surface2);color:var(--muted);border:0.5px solid var(--border);font-size:12px;font-weight:var(--fw-medium);font-family:inherit;padding:8px;border-radius:var(--radius-sm);cursor:not-allowed;">Apply ${fmtMoney(pending)}</button>
-          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--muted);border:0.5px solid var(--border);font-size:12px;font-family:inherit;padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;">Dismiss</button>
+        <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2-5);">
+          <button type="button" disabled style="flex:1;background:var(--surface2);color:var(--muted);border:0.5px solid var(--border);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2);border-radius:var(--radius-sm);cursor:not-allowed;">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--muted);border:0.5px solid var(--border);font-size:var(--fs-sm);font-family:inherit;padding:var(--space-2) var(--space-3-5);border-radius:var(--radius-sm);cursor:pointer;">Dismiss</button>
         </div>
       </div>`;
     } else {
       // State B — different price
       const deltaColor = delta >= 0 ? 'var(--success)' : '#A32D2D';
-      html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:10px 12px;margin-top:10px;">
+      html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);margin-top:var(--space-2-5);">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);">New Market Price</div>
-          <div style="font-size:10px;color:var(--badge-accent);">${freshLabel}</div>
+          <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);">New Market Price</div>
+          <div style="font-size:var(--fs-2xs);color:var(--badge-accent);">${freshLabel}</div>
         </div>
-        <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
-          <span style="font-size:20px;font-weight:var(--fw-medium);color:var(--badge-text);">${fmtMoney(pending)}</span>
-          ${savedPrice ? `<span style="font-size:12px;color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
+        <div style="display:flex;align-items:baseline;gap:var(--space-2);margin-top:var(--space-1);">
+          <span style="font-size:var(--fs-2xl);font-weight:var(--fw-medium);color:var(--badge-text);">${fmtMoney(pending)}</span>
+          ${savedPrice ? `<span style="font-size:var(--fs-sm);color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button type="button" onclick="applyPendingPrice()" style="flex:1;background:var(--badge-accent);color:#fff;border:none;font-size:12px;font-weight:var(--fw-medium);font-family:inherit;padding:8px;border-radius:var(--radius-sm);cursor:pointer;">Apply ${fmtMoney(pending)}</button>
-          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:12px;font-family:inherit;padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;">Dismiss</button>
+        <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2-5);">
+          <button type="button" onclick="applyPendingPrice()" style="flex:1;background:var(--badge-accent);color:#fff;border:none;font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2);border-radius:var(--radius-sm);cursor:pointer;">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:var(--fs-sm);font-family:inherit;padding:var(--space-2) var(--space-3-5);border-radius:var(--radius-sm);cursor:pointer;">Dismiss</button>
         </div>
       </div>`;
     }
@@ -25371,11 +25371,11 @@ function renderValueSection() {
 
   // Last checked
   if (w?.marketPriceDate && !hasPending) {
-    html += `<div style="border-top:0.5px solid var(--border);margin-top:10px;padding-top:10px;font-size:11px;color:var(--muted);">Last checked ${valueFreshnessLabel(w.marketPriceDate)}</div>`;
+    html += `<div style="border-top:0.5px solid var(--border);margin-top:var(--space-2-5);padding-top:var(--space-2-5);font-size:var(--fs-xs);color:var(--muted);">Last checked ${valueFreshnessLabel(w.marketPriceDate)}</div>`;
   }
 
   // Loading indicator
-  html += '<div id="check-value-status" style="font-size:var(--fs-sm);color:var(--muted);margin-top:.35rem;"></div>';
+  html += '<div id="check-value-status" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);"></div>';
 
   el.innerHTML = html;
 }
@@ -26369,7 +26369,7 @@ function renderStatsRow(fl) {
   let valHtml = '';
   if (pricePaid) {
     if (hasMarket) {
-      valHtml = `<table style="border-collapse:collapse;margin:0 auto;"><tr><td style="text-align:right;padding:0 .3rem 0 0;white-space:nowrap;">Paid</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td style="text-align:right;padding:0 .3rem 0 0;white-space:nowrap;">Market</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(marketVal)}</td><td style="padding:0 0 0 .3rem;white-space:nowrap;"><span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
+      valHtml = `<table style="border-collapse:collapse;margin:0 auto;"><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Paid</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Market</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(marketVal)}</td><td style="padding:0 0 0 var(--space-1);white-space:nowrap;"><span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
     } else {
       valHtml = `<div class="stat-sub" style="white-space:nowrap;">${fmtMoney(pricePaid)}</div>`;
     }
@@ -26386,9 +26386,9 @@ function renderStatsRow(fl) {
     bits.push(cvs.daysSinceChecked == null ? 'never checked' : cvs.daysSinceChecked === 0 ? 'checked today' : cvs.daysSinceChecked === 1 ? 'checked yesterday' : `checked ${cvs.daysSinceChecked}d ago`);
     if (cvs.staleCount) bits.push(`${cvs.staleCount} stale`);
     if (cvs.unpricedCount) bits.push(`${cvs.unpricedCount} unpriced`);
-    valFresh = `<div style="font-size:.66rem;color:var(--muted);margin-top:.35rem;">${bits.join(' · ')}${valTap ? ' · <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">Update</span>' : ''}</div>`;
+    valFresh = `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1-5);">${bits.join(' · ')}${valTap ? ' · <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">Update</span>' : ''}</div>`;
   } else if (valTap) {
-    valFresh = `<div style="font-size:.66rem;color:var(--gold-text);font-weight:var(--fw-semibold);margin-top:.35rem;">Check values</div>`;
+    valFresh = `<div style="font-size:var(--fs-xs);color:var(--gold-text);font-weight:var(--fw-semibold);margin-top:var(--space-1-5);">Check values</div>`;
   }
 
   // Watches with no wears in the selected period. The tile previously repeated
@@ -26405,11 +26405,11 @@ function renderStatsRow(fl) {
     <div class="stat-card"><div class="stat-val">${unique}</div><div class="stat-lbl">Watches Worn</div></div>
     <div class="stat-card"><div class="stat-val">${watches.length}</div><div class="stat-lbl">In Collection</div></div>
     <div class="stat-card">
-      <div class="stat-lbl" style="margin-bottom:.3rem">Not Worn</div>
+      <div class="stat-lbl" style="margin-bottom:var(--space-1)">Not Worn</div>
       <div class="stat-sub">${unwornLbl}</div>
     </div>
     <div class="stat-card" ${valTap ? 'onclick="openUpdatePrices()" role="button" tabindex="0" style="cursor:pointer;" title="Update prices"' : ''}>
-      <div class="stat-lbl" style="margin-bottom:.3rem">Collection Value</div>
+      <div class="stat-lbl" style="margin-bottom:var(--space-1)">Collection Value</div>
       ${valHtml}
       ${valFresh}
     </div>`;
@@ -26453,7 +26453,7 @@ function renderChUsecase(fl) {
   if (!legendEl) return;
   const total   = keys.reduce((s, k) => s + um[k], 0);
   const maxCnt  = um[keys[0]];
-  legendEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:.6rem;">${
+  legendEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-2-5);">${
     keys.map(k => {
       const cnt   = um[k];
       const pct   = Math.round(cnt / total * 100);
@@ -26463,8 +26463,8 @@ function renderChUsecase(fl) {
       return `<div style="display:flex;align-items:center;gap:var(--space-3);">
         <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></div>
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.28rem;">
-            <span style="font-size:.85rem;font-weight:var(--fw-semibold);">${label}</span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-1);">
+            <span style="font-size:var(--fs-base);font-weight:var(--fw-semibold);">${label}</span>
             <span style="font-size:var(--fs-sm);color:var(--muted);">${cnt} wear${cnt!==1?'s':''} &nbsp;<strong style="color:var(--text)">${pct}%</strong></span>
           </div>
           <div style="height:4px;border-radius:2px;background:var(--surface2);overflow:hidden;">
