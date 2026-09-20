@@ -52,7 +52,7 @@ Other pages: `profile/index.html` (~90 hardcoded), `p/index.html` (~45), `privac
 |---|---|---|---|
 | 0 | Ratchet test: per-category budget of hardcoded values that can only go down | none | **DONE 2026-09-20** (`41be452`) — `scripts/ds-count.mjs`, `tests/design-system-ratchet.test.js`, `tests/design-system-budget.json` |
 | 1 | Complete the token set (shadow, motion, z-layers, status colours, mono, fw-800); move the 29 local tokens in; fix the 3 undeclared | none | **DONE 2026-09-20** (`3fd813f`, `cd9ec8d`) — index.html now declares only `--page-gutter`. The 3 undeclared were a real dark-mode bug (near-white skeleton bars) |
-| 2 | Lossless swap: every value that already equals a token → `var()` | none | **DONE 2026-09-20** — 2,191 swaps (2,165 by script + 26 z-index layers). Verified: text proof (resolving tokens back reproduces the original), computed-style diff of all 5,918 static elements × 30 properties × both themes = identical, 2,393 unit + 512 E2E pass. Email builders deliberately skipped and now guarded by a test |
+| 2 | Lossless swap: every value that already equals a token → `var()` | none | **DONE 2026-09-20** — 2,190 swaps (2,164 by script + 26 z-index layers). Verified three ways: (1) text proof — resolving every introduced token back reproduces the original file; (2) computed-style diff in Chromium of every element in the static markup of all three pages, 5,918 rows × 32 properties × both themes = 0 differences (JS off, so this covers the `<style>` block and static inline styles, NOT JS-rendered templates — those rest on the text proof and E2E); (3) 2,393 unit + 512 mocked E2E pass. **One miss caught before commit:** `imgSnippet()` builds broadcast-EMAIL image HTML and sat outside the skipped ranges, so it briefly got `var(--radius-btn)` (an emailed image would have lost its rounded corners). Reverted; the email ranges now live in one list (`EMAIL_RANGES` in `scripts/ds-count.mjs`) used by both the counter and a guard test that fails if a token ever lands in email HTML |
 | 3 | Snap off-scale values to the scale (73 font sizes → ~9, 286 paddings → spacing scale), one screen at a time | **yes, small** | OPEN |
 | 4 | Component classes replace inline styles (buttons, inputs, cards, section headers, rows, modals), incl. JS templates | none intended | OPEN |
 | 5 | Secondary pages: profile, p, privacy, terms link the system and drop their own values | none | OPEN |
@@ -63,18 +63,20 @@ Out of reach by design: email templates (mail clients do not support CSS variabl
 
 | Category | Start | After phase 2 |
 |---|---|---|
-| font-weight | 461 | 7 |
+| font-weight | 461 | 1 |
 | transition | 98 | 8 |
-| z-index | 39 | 13 (local 1/2/3 stacking inside a component) |
-| line-height | 218 | 93 |
-| border-radius | 333 | 159 |
-| margin | 905 | 414 |
+| z-index | 39 | 13 |
+| line-height | 218 | 85 |
+| border-radius | 333 | 151 |
+| margin | 905 | 406 |
 | gap | 353 | 205 |
-| padding | 663 | 552 |
-| font-size | 1,217 | 935 |
-| letter-spacing | 105 | 91 |
-| color | 631 | 568 |
-| box-shadow | 40 | 34 |
-| inline `style=` attributes | 2,137 | 2,137 (phase 4) |
+| padding | 663 | 536 |
+| font-size | 1,217 | 919 |
+| letter-spacing | 105 | 88 |
+| color | 631 | 531 |
+| box-shadow | 40 | 32 |
+| inline `style=` attributes | 2,137 | 2,089 (phase 4) |
+
+Counts exclude the email-HTML ranges, which are outside the design system on purpose. z-index: what remains is local 1/2/3 stacking inside a component.
 
 What is left is, by construction, everything that is NOT on the scale — that is phase 3 (snap) and phase 4 (classes).
