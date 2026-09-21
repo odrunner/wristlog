@@ -3227,7 +3227,7 @@ export function experimentSpeedHtml(key, arms) {
     if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
     return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
-  const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
+  const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${t}</div>`;
   return `<div class="adm-exp-speed" style="margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
           <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-2-5);align-items:baseline;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}

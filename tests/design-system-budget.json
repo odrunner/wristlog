@@ -1,12 +1,12 @@
 {
   "index.html": {
     "color": 531,
-    "font-size": 75,
+    "font-size": 27,
     "font-weight": 1,
     "font-family": 10,
-    "line-height": 20,
-    "letter-spacing": 69,
-    "border-radius": 36,
+    "line-height": 10,
+    "letter-spacing": 26,
+    "border-radius": 14,
     "padding": 58,
     "margin": 62,
     "gap": 7,
