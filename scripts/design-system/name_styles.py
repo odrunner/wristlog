@@ -194,6 +194,15 @@ def plan(tag, st, rest):
     full = norm(st); name = lookup(tag, full)
     if name: return name, full, frozenset()
     cm = re.search(r'\sclass="([^"]*)"', ' ' + rest)
+    if tag == 'button' and not cm and '${' not in st:
+        # A classless text/icon button: `.btn-plain` carries the reset plus the DEFAULT colour and padding. A button with
+        # its own colour or padding keeps those inline (they still win); one with NO padding or colour would gain the
+        # default, so it is left alone.
+        d = {x.split(':', 1)[0]: x for x in full}
+        if {'background:none', 'border:none', 'cursor:pointer'} <= full and 'padding' in d and 'color' in d:
+            gone = {'background:none', 'border:none', 'cursor:pointer'} | ({d['padding'], d['color']} & norm(NAMED_BTN['btn-plain']))
+            return 'btn-plain', frozenset(gone), full - gone
+        return None
     if tag != 'button' or not cm or 'btn' not in cm.group(1).split() or '${' in st: return None
     names = []; gone = set()
     for k in EXTRACT:
@@ -250,7 +259,7 @@ if not APPLY: sys.exit(0)
 open(ROOT + 'index.html', 'w', encoding='utf-8').write(out)
 # make sure every class in use is declared (append missing ones, in NAMED order)
 block = ds.split(MARK)[1] if MARK in ds else ''
-have = set(re.findall(r'^[.\w-]*\.([\w-]+) \{', block, flags=re.M))      # last class of the selector
+have = {c for sel in re.findall(r'^([^{}\n]+)\{', block, flags=re.M) for c in re.findall(r'\.([\w-]+)', sel)}   # every class any selector names
 in_use = {c for m in re.finditer(r'class="([^"]*)"', out) for c in m.group(1).split()}
 need = [k for k in ALL_NAMED if set(k.split()) <= in_use and k.split()[-1] not in have and k not in EXISTING]
 if need:

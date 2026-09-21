@@ -255,6 +255,13 @@ export function stylesheetHrefs(src) {
 }
 
 describe('design-system.css', () => {
+  // scripts/design-system/name_styles.py appends helper classes; twice it appended one that was already there.
+  it('declares each helper class once', () => {
+    const block = css.split('/* ══ Text styles and layout helpers')[1] || '';
+    const sels = [...block.matchAll(/^([^{}\n/]+)\{/gm)].map(m => m[1].trim());
+    expect(sels.filter((x, i) => sels.indexOf(x) !== i)).toEqual([]);
+  });
+
   it('declares every shared light token with the expected value', () => {
     const block = blockFor(css, ':root, [data-theme="light"]');
     expect(block).not.toBeNull();

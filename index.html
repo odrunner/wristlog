@@ -3174,7 +3174,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 <div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
   <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) 1.75rem;position:relative;">
-    <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" style="display:none;position:absolute;top:.6rem;right:.6rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:var(--fs-2xl);line-height:var(--lh-none);padding:var(--space-1) var(--space-2);">&times;</button>
+    <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" class="btn-plain" style="display:none;position:absolute;top:.6rem;right:.6rem;font-size:var(--fs-2xl);line-height:var(--lh-none);padding:var(--space-1) var(--space-2);">&times;</button>
     <!-- Step 1: Enjoying WRotate? -->
     <div id="review-step-ask">
       <div class="eyebrow stack-4">Quick question</div>
@@ -4655,7 +4655,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title grow">Measure Accuracy</h1>
       <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:var(--space-1-5);background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);font-size:var(--fs-xs);font-weight:var(--fw-semibold);line-height:var(--lh-none);cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
-      <button id="msr-history-btn" onclick="openMsrHistory('header')" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
+      <button id="msr-history-btn" onclick="openMsrHistory('header')" class="btn-plain" style="display:none;" aria-label="Accuracy history" title="Accuracy history">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
       </button>
       <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Advanced settings">
@@ -4860,7 +4860,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm btn-ghost-gold" onclick="shareMsrFromComplete()" disabled>Share</button>
         </div>
         <div style="text-align:center;margin-top:var(--space-2);">
-          <button onclick="discardMsrReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);">Discard</button>
+          <button onclick="discardMsrReading()" class="btn-plain" style="font-size:var(--fs-sm);font-family:inherit;text-decoration:underline;">Discard</button>
         </div>
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
@@ -4874,7 +4874,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-ghost btn-sm btn-grow" style="color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
         <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:var(--space-2);">
-          <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);min-height:32px;">Discard this reading</button>
+          <button onclick="discardKeptReading()" class="btn-plain" style="font-size:var(--fs-sm);font-family:inherit;text-decoration:underline;min-height:32px;">Discard this reading</button>
         </div>
       </div>
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
@@ -5114,7 +5114,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
-      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:var(--fs-xl);padding:0 0 0 var(--space-2);cursor:pointer;line-height:var(--lh-none);">&times;</button>
+      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" class="btn-plain" style="color:inherit;font-size:var(--fs-xl);padding:0 0 0 var(--space-2);line-height:var(--lh-none);">&times;</button>
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;">
@@ -5546,7 +5546,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:480px;">
     <div class="modal-title row-between">
       <span>Add Flow V2 — State Preview</span>
-      <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" style="background:none;border:none;font-size:var(--fs-xl);color:var(--muted);cursor:pointer;padding:0 var(--space-0-5);line-height:var(--lh-none);">&times;</button>
+      <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" class="btn-plain" style="font-size:var(--fs-xl);padding:0 var(--space-0-5);line-height:var(--lh-none);">&times;</button>
     </div>
     <div id="af2-debug-rows" style="max-height:70vh;overflow-y:auto;"></div>
   </div>
@@ -7659,7 +7659,7 @@ function showDemoSignupModal() {
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
       </button>
-      <button onclick="closeDemoSignupModal()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;font-family:inherit;padding:var(--space-1);">Keep exploring</button>
+      <button onclick="closeDemoSignupModal()" class="btn-plain" style="font-size:var(--fs-base);font-family:inherit;">Keep exploring</button>
     </div>`;
   m.addEventListener('click', (e) => { if (e.target === m) closeDemoSignupModal(); });
   document.body.appendChild(m);
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.40';
+const APP_VERSION = '21.07.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9423,7 +9423,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile" aria-label="Edit profile"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="profile-edit-icon" onclick="sharePublicProfile()" title="Share profile link" aria-label="Share profile link"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : '';
 
   const adminLink = (isOwn && currentUser?.id === ADMIN_USER_ID)
-    ? `<button style="background:none;border:none;color:var(--gold-text);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;padding:var(--space-1) var(--space-2);font-weight:var(--fw-semibold);" onclick="showAdminPage()">⚙ Admin</button>`
+    ? `<button class="btn-plain" style="color:var(--gold-text);font-size:var(--fs-sm);font-family:inherit;padding:var(--space-1) var(--space-2);font-weight:var(--fw-semibold);" onclick="showAdminPage()">⚙ Admin</button>`
     : '';
   const blockedHtml = (isOwn && blockedUsers.size > 0) ? `
     <div class="profile-page-card" style="margin:var(--space-4) 0;">
@@ -9440,8 +9440,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     <div style="margin:var(--space-6) var(--space-4) 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
       <button class="btn-signout" onclick="signOut()" style="font-size:var(--fs-base);padding:var(--space-1-5) var(--space-5);">Sign Out</button>
       ${adminLink}
-      <button style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="showHelpPage()">Help &amp; Guide</button>
-      <button style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="openDeleteAccount()">Delete Account</button>
+      <button class="btn-plain" style="font-size:var(--fs-sm);font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="showHelpPage()">Help &amp; Guide</button>
+      <button class="btn-plain" style="font-size:var(--fs-sm);font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
 
@@ -10379,7 +10379,7 @@ async function renderClubDetail(clubId) {
     const ownerBadge = m.role === 'owner' ? ' \u{1F451}' : '';
     const ownerMenu = isOwner && m.id !== currentUser.id && m.role !== 'owner' ? `
       <button data-uid="${escAttr(m.id)}" data-cid="${escAttr(clubId)}" data-name="${escAttr(m.display_name || m.username || '')}" onclick="event.stopPropagation();showMemberMenu(this.dataset.uid, this.dataset.cid, this.dataset.name, this)"
-        style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:var(--fs-base);padding:0 var(--space-1);">\u{22EF}</button>` : '';
+        class="btn-plain" style="font-size:var(--fs-base);padding:0 var(--space-1);">\u{22EF}</button>` : '';
     return `<div class="club-member-chip" onclick="viewUserProfile('${m.id}')">
       ${avatarHtml}<span>${escHtml(m.display_name || m.username || 'User')}${ownerBadge}</span>${ownerMenu}
     </div>`;
@@ -10457,9 +10457,9 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3);z-index:var(--z-menu);min-width:180px;box-shadow:var(--shadow-4)';
   menu.innerHTML = `
     <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2-5);padding-bottom:var(--space-2);border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
-    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--text);">\u{1F451} Promote to owner</button>
-    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--danger-text);">Remove member</button>
-    <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--muted);">Cancel</button>`;
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" class="btn-plain" style="display:block;width:100%;text-align:left;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--text);">\u{1F451} Promote to owner</button>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" class="btn-plain" style="display:block;width:100%;text-align:left;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--danger-text);">Remove member</button>
+    <button onclick="document.getElementById('member-menu-popup').remove()" class="btn-plain" style="display:block;width:100%;text-align:left;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
   const rect = triggerBtn.getBoundingClientRect();
@@ -26070,7 +26070,7 @@ function recCardHTML(rec) {
   const todayDOW  = new Date().getDay();
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label row-between">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+      <div class="rec-label row-between">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" class="btn-plain" style="padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
       <div class="note">All watches worn today — great rotation!</div>
     </div>`;
   }
@@ -26115,7 +26115,7 @@ function recCardHTML(rec) {
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label row-between">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="rec-label row-between">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" class="btn-plain" style="padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -33440,8 +33440,8 @@ async function loadTgHistory() {
         </div>
         <div class="row">
           <span class="caption">${dateStr}</span>
-          <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Edit" aria-label="Edit">✎</button>
-          <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger-text);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Delete" aria-label="Delete">✕</button>
+          <button onclick="editTgResult('${r.id}')" class="btn-plain" style="padding:0;font-size:var(--fs-sm);" title="Edit" aria-label="Edit">✎</button>
+          <button onclick="deleteTgResult('${r.id}')" class="btn-plain" style="color:var(--danger-text);padding:0;font-size:var(--fs-sm);" title="Delete" aria-label="Delete">✕</button>
         </div>
       </div>${noteStr}
     </div>`;
@@ -36149,7 +36149,7 @@ function _viewerKeydown(e) {
     <button onclick="sharedImgChoose('post')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--gold,#b08d3e);color:#fff;font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Post this watch</button>
     <button onclick="sharedImgChoose('collection')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Add to collection</button>
     <button onclick="sharedImgChoose('wishlist')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Add to wishlist</button>
-    <button onclick="sharedImgChoose(null)" style="width:100%;padding:var(--space-2);border-radius:var(--radius);border:none;background:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;">Cancel</button>
+    <button onclick="sharedImgChoose(null)" class="btn-plain" style="width:100%;padding:var(--space-2);border-radius:var(--radius);font-size:var(--fs-base);">Cancel</button>
   </div>
 </div>
 </body>
