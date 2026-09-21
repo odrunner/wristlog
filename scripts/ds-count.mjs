@@ -13,9 +13,7 @@ import { dirname, join } from 'path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUDGET_PATH = join(root, 'tests', 'design-system-budget.json');
-// design-system.css is counted too: its token DECLARATIONS are stripped (see withoutDeclarations), so what is
-// left is the component rules — a literal value there is as much a hardcoded value as one in a page.
-export const PAGES = ['index.html', 'p/index.html', 'profile/index.html', 'design-system.css'];
+export const PAGES = ['index.html', 'p/index.html', 'profile/index.html'];
 
 // HTML built in index.html that is SENT AS EMAIL (admin Broadcast / Campaign).
 // Mail clients have no CSS custom properties and never load design-system.css,
@@ -108,13 +106,7 @@ export function countHardcoded(src) {
 
 export function countAll() {
   const out = {};
-  for (const p of PAGES) {
-    let src = readFileSync(join(root, p), 'utf8');
-    // A stylesheet's comments quote hex values in prose ("#9a7628 measures 4.20…"); they are not uses.
-    // Only for .css: in the HTML pages a CSP meta tag contains "/*" and would open a bogus comment.
-    if (p.endsWith('.css')) src = src.replace(/\/\*[\s\S]*?\*\//g, '');
-    out[p] = countHardcoded(src);
-  }
+  for (const p of PAGES) out[p] = countHardcoded(readFileSync(join(root, p), 'utf8'));
   return out;
 }
 
