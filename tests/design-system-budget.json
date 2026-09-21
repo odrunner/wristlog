@@ -1,13 +1,13 @@
 {
   "index.html": {
-    "color": 517,
+    "color": 512,
     "font-size": 27,
     "font-weight": 1,
     "font-family": 10,
     "line-height": 10,
     "letter-spacing": 26,
     "border-radius": 14,
-    "padding": 58,
+    "padding": 57,
     "margin": 62,
     "gap": 7,
     "box-shadow": 8,
@@ -49,5 +49,22 @@
     "z-index": 1,
     "js-style-assign": 0,
     "inline-style-attr": 2
+  },
+  "design-system.css": {
+    "color": 5,
+    "font-size": 0,
+    "font-weight": 0,
+    "font-family": 0,
+    "line-height": 0,
+    "letter-spacing": 0,
+    "border-radius": 0,
+    "padding": 1,
+    "margin": 0,
+    "gap": 0,
+    "box-shadow": 0,
+    "transition": 0,
+    "z-index": 0,
+    "js-style-assign": 0,
+    "inline-style-attr": 0
   }
 }

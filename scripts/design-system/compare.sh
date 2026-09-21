@@ -5,12 +5,13 @@
 #   compare.sh screen <page> '<selector>' [ref] a tab on mocked data: item heights, overflow, screenshots
 #   compare.sh modals '<id,id|ALL-EXCEPT:id>' [ref]
 #   compare.sh force '<page-id,page-id>' [ref]  pages the mock cannot reach: reveal everything, diff every box
+#   compare.sh live [ref]                       EVERY element of every tab, JS on, mocked data, 390 + 1280 wide
 #   compare.sh shadows [ref]
 # Needs the dev server on :3000. Output (PNGs) goes to $OUT (default: a temp dir, printed at the end).
 set -e
 R="${0:A:h}/../.."; D="${0:A:h}"; MODE="$1"; shift
 OUT="${OUT:-$(mktemp -d)}"; C="$OUT/cmp"; export PATH=/opt/homebrew/bin:$PATH; cd "$R"
-case "$MODE" in static|landing|shadows) REF="${1:-HEAD}";; screen) REF="${3:-HEAD}";; *) REF="${2:-HEAD}";; esac
+case "$MODE" in static|landing|shadows|live) REF="${1:-HEAD}";; screen) REF="${3:-HEAD}";; *) REF="${2:-HEAD}";; esac
 mkdir -p "$C/old/p" "$C/old/profile" "$C/new/p" "$C/new/profile"
 for p in index.html p/index.html profile/index.html design-system.css; do git show "$REF:$p" > "$C/old/$p"; cp "$p" "$C/new/$p"; done
 run() { cp "$D/$1" "$2"; shift; local f="$1"; shift; node "$f" "$@"; local rc=$?; rm -f "$f"; return $rc; }
@@ -20,6 +21,7 @@ case "$MODE" in
   screen)  run _ds-screen-cmp.mjs e2e/_ds-screen-cmp.mjs "$C/old" "$OUT" "$1" "$2";;
   modals)  run _ds-modal-cmp.mjs e2e/_ds-modal-cmp.mjs "$C/old" "$OUT" "$1";;
   force)   run _ds-force-cmp.mjs e2e/_ds-force-cmp.mjs "$C/old" "$OUT" "$1";;
+  live)    run _ds-live-cmp.mjs e2e/_ds-live-cmp.mjs "$C/old";;
   shadows) run _ds-shadow-cmp.mjs e2e/_ds-shadow-cmp.mjs "$C/old" "$OUT";;
   *) echo "unknown mode"; exit 2;;
 esac
