@@ -18,3 +18,11 @@ Fences that every pass must keep (each one was learned the hard way):
 5. **Inputs**: 16px text is the iOS no-zoom floor (`--fs-input`).
 6. **Canvas code** cannot read CSS variables.
 7. **`wrotate_test.js`** mirrors some index.html functions verbatim — sync it after style edits.
+8. **Never move rules between `index.html` and `design-system.css` in one deploy without cache-busting the
+   stylesheet.** `sw.js` serves the page network-first but `design-system.css` cache-first (stale-while-revalidate),
+   so a returning visitor's first load pairs the NEW page with the OLD stylesheet. On 2026-09-20 the component
+   move shipped `.hidden { display: none }` out of the page and into the stylesheet: for that one load every
+   hidden modal would have been visible. Live ~3 minutes, reverted (`ad33037`); 1 signed-in load in the window,
+   an internal account. The same pairing makes any NEW token undefined for one load — additive changes degrade
+   mildly, moves break. Fix the fetch strategy (or version the URL) before re-landing `move_components.py`.
+
