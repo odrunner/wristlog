@@ -3280,7 +3280,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="eyebrow" style="margin-bottom:var(--space-4);">Feedback</div>
       <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">What could be better?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);">We read every response. Tell us what's on your mind.</div>
-      <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);resize:vertical;margin-bottom:var(--space-4);font-family:inherit;"></textarea>
+      <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);resize:vertical;margin-bottom:var(--space-4);"></textarea>
       <div style="display:flex;gap:var(--space-2);">
         <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="flex:1;border-color:var(--border);color:var(--muted);">Skip</button>
         <button class="btn btn-ghost" onclick="submitReviewFeedback()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Send</button>
@@ -3290,7 +3290,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="review-step-thanks" style="display:none;">
       <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Thank you!</div>
       <div id="review-thanks-msg" style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-5);">Your feedback means a lot to us.</div>
-      <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold-text);text-decoration:none;text-align:center;display:none;">Rate on the App Store</a>
+      <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold-text);text-decoration:none;display:none;">Rate on the App Store</a>
     </div>
   </div>
 </div>
@@ -3397,7 +3397,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Find people to follow</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2-5);display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2-5);display:inline-flex;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
@@ -3483,7 +3483,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="login-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" style="z-index:var(--z-modal-high);">
-  <div class="modal" style="max-width:360px;text-align:center;">
+  <div class="modal" style="max-width:360px;">
     <div class="modal-title" style="font-size:var(--fs-xl);margin-bottom:var(--space-1);">Sign in to continue</div>
     <p style="color:var(--muted);font-size:var(--fs-base);margin-bottom:var(--space-5);">Create a free account to start tracking your watches.</p>
     <button class="btn-google" onclick="closeLoginPrompt();signInWithGoogle()" style="width:100%;margin-bottom:var(--space-2-5);">
@@ -3623,10 +3623,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="display:flex;gap:var(--space-2);align-items:center;">
         <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:var(--space-1-5);white-space:nowrap;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);align-items:center;gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
+        <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;gap:var(--space-1-5);white-space:nowrap;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-md);">$</button>
-        <button id="coll-share-btn" class="btn btn-ghost" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);align-items:center;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="coll-share-btn" class="btn btn-ghost" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
     <div id="coll-select-bar" style="display:none;align-items:center;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
@@ -3649,10 +3649,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:var(--space-2);margin-left:auto;">
-        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
-        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;align-items:center;gap:var(--space-1-5);" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
-        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
+        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
+        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;gap:var(--space-1-5);" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
+        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;gap:var(--space-1-5);" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
@@ -4141,9 +4141,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="help-wrap">
 
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-8);">
-        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
-        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
-        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -5207,7 +5207,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:var(--fs-xl);padding:0 0 0 var(--space-2);cursor:pointer;line-height:var(--lh-none);">&times;</button>
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
-    <div id="edit-identity-strip" style="display:none;margin-bottom:0;">
+    <div id="edit-identity-strip" style="display:none;">
       <div id="edit-id-name" style="font-size:var(--fs-md);font-weight:var(--fw-medium);color:var(--fg);line-height:var(--lh-snug);"></div>
       <div id="edit-id-sub" style="font-size:var(--fs-sm);color:var(--muted);margin-top:1px;line-height:var(--lh-snug);"></div>
       <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:var(--space-1-5);background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
@@ -5227,7 +5227,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-story')">
         <span class="modal-section-hdr-label">The Story</span>
-        <span class="modal-section-summary" id="sum-sec-story" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-story" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-story">▶</span>
       </button>
       <div class="modal-section-body" id="sec-story">
@@ -5239,7 +5239,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-essentials')">
         <span class="modal-section-hdr-label">Essentials</span>
-        <span class="modal-section-summary" id="sum-sec-essentials" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-essentials" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-essentials">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-essentials">
@@ -5292,7 +5292,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-condition')">
         <span class="modal-section-hdr-label">Docs &amp; Warranty</span>
-        <span class="modal-section-summary" id="sum-sec-condition" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-condition" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-condition">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-condition">
@@ -5339,7 +5339,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-market')">
         <span class="modal-section-hdr-label">Value</span>
-        <span class="modal-section-summary" id="sum-sec-market" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-market" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
@@ -5352,7 +5352,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-tags')">
         <span class="modal-section-hdr-label">Type</span>
-        <span class="modal-section-summary" id="sum-sec-tags" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;display:flex;gap:var(--space-1);align-items:center;"></span>
+        <span class="modal-section-summary" id="sum-sec-tags" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;display:flex;gap:var(--space-1);align-items:center;"></span>
         <span class="modal-section-chevron" id="chv-sec-tags">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-tags">
@@ -5365,7 +5365,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-specs')">
         <span class="modal-section-hdr-label">Specs</span>
-        <span class="modal-section-summary" id="sum-sec-specs" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-specs" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-specs">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-specs">
@@ -5467,7 +5467,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-straps')">
         <span class="modal-section-hdr-label">Straps</span>
-        <span class="modal-section-summary" id="sum-sec-straps" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-straps" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-straps">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-straps">
@@ -5486,7 +5486,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-receipts')">
         <span class="modal-section-hdr-label">Receipts</span>
-        <span class="modal-section-summary" id="sum-sec-receipts" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-receipts" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-receipts">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-receipts">
@@ -5499,7 +5499,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section" id="sec-accuracy-wrap" style="display:none;">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-accuracy')">
         <span class="modal-section-hdr-label">Accuracy</span>
-        <span class="modal-section-summary" id="sum-sec-accuracy" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-accuracy" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
@@ -5508,22 +5508,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1-5);text-transform:uppercase;letter-spacing:var(--ls-tight);">Manual Entry</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-rate-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
+              <label for="tg-rate-input" style="font-size:var(--fs-xs);color:var(--muted);">Rate (s/day) *</label>
               <input type="number" id="tg-rate-input" step="0.1" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-be-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
+              <label for="tg-be-input" style="font-size:var(--fs-xs);color:var(--muted);">Beat Error (ms)</label>
               <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-amplitude-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Amplitude (°)</label>
+              <label for="tg-amplitude-input" style="font-size:var(--fs-xs);color:var(--muted);">Amplitude (°)</label>
               <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-bph-select" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">BPH</label>
-              <select id="tg-bph-select" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
+              <label for="tg-bph-select" style="font-size:var(--fs-xs);color:var(--muted);">BPH</label>
+              <select id="tg-bph-select" style="width:100%;color:var(--text);font-size:var(--fs-base);">
                 <option value="18000">18,000</option>
                 <option value="19800">19,800</option>
                 <option value="21600">21,600</option>
@@ -5534,7 +5534,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           <div style="margin-bottom:var(--space-2);">
-            <label for="tg-notes-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Notes</label>
+            <label for="tg-notes-input" style="font-size:var(--fs-xs);color:var(--muted);">Notes</label>
             <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           </div>
           <button class="btn btn-primary btn-sm" onclick="saveTimegrapherManual()" style="width:100%;">Save Reading</button>
@@ -5891,7 +5891,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="following-list"></div>
     </div>
     <div class="modal-actions" style="margin-top:var(--space-5);">
-      <button class="btn btn-ghost" onclick="shareApp()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+      <button class="btn btn-ghost" onclick="shareApp()" style="display:inline-flex;gap:var(--space-1-5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
       <button class="btn btn-ghost" onclick="closeDiscover()">Close</button>
     </div>
   </div>
@@ -5964,7 +5964,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <input type="text" id="np-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('np')"
-          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);font-family:inherit;">
+          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);">
       </div>
     </div>
     <div class="form-group">
@@ -6040,7 +6040,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <input type="text" id="ep-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('ep')"
-          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);font-family:inherit;">
+          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);">
       </div>
     </div>
     <div class="form-group">
@@ -6093,7 +6093,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="rec-settings-modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Pick Settings</span>
-      <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:var(--fs-xl);cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+      <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:var(--fs-xl);cursor:pointer;color:var(--muted);">&times;</button>
     </div>
     <div id="rec-settings-body" style="max-height:60vh;overflow-y:auto;padding-right:var(--space-3);"></div>
   </div>
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.21.07';
+const APP_VERSION = '20.21.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

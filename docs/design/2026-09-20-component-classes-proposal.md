@@ -58,7 +58,7 @@ defined inside `index.html`. `p/` and `profile/` cannot use them, which is why t
 
 ## Recommendation: C, in five steps, each zero-change unless stated
 
-1. **Delete what is provably redundant** (~350 declarations). Verified per declaration at 3 widths × 2 themes; a
+1. **Delete what is provably redundant.** *Done 2026-09-20: 37 declarations, not the ~350 first estimated.* The estimate came from a naive test (does removing it change the element right now?). The strict test adds: could any rule that might apply in another state — hover, `.active`, `.selected`, a media query — set a different value? Today the inline style silently beats those, so removing it could change a state nobody is looking at. Most candidates (`color: var(--text)` x52, `width: 100%`, borders) fail that and stay until steps 3-4 replace them with a real class. Verified per declaration at 3 widths × 2 themes; a
    declaration goes only if nothing about the element changes in any of the six. *Zero visual change.*
 2. **Move the shared components into `design-system.css`** (`.btn*`, `.card`, `.chip`, `.pill`, `.modal*`, `.eyebrow`,
    `.empty*`, form fields). A cut-and-paste; computed styles must be identical. Makes them available to `p/` and
