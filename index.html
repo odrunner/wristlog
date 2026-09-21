@@ -1125,13 +1125,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .add-strap-row input   { flex: 1; min-width: 110px; }
 
     /* ── Collapsible modal sections ── */
-    .modal-section { border-top: 1px solid var(--border); margin-top: .9rem; }
-    .modal-section-hdr { display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: pointer; padding: var(--space-2) 0 .35rem; color: var(--fg); font-family: inherit; line-height: 1; user-select: none; }
+    .modal-section { border-top: 1px solid var(--border); margin-top: var(--space-3-5); }
+    .modal-section-hdr { display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: pointer; padding: var(--space-2) 0 var(--space-1-5); color: var(--fg); font-family: inherit; line-height: 1; user-select: none; }
     .modal-section-hdr:hover .modal-section-hdr-label { color: var(--fg); }
-    .modal-section-hdr-label { font-size: .7rem; font-weight: var(--fw-bold); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); transition: color var(--dur-fast); }
-    .modal-section-chevron { font-size: .6rem; color: var(--muted); transition: transform var(--dur-base); display: inline-block; line-height: 1; margin-left: .3rem; }
+    .modal-section-hdr-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); transition: color var(--dur-fast); }
+    .modal-section-chevron { font-size: var(--fs-2xs); color: var(--muted); transition: transform var(--dur-base); display: inline-block; line-height: 1; margin-left: var(--space-1); }
     .modal-section-chevron.open { transform: rotate(90deg); }
-    .modal-section-body { padding-bottom: .2rem; }
+    .modal-section-body { padding-bottom: var(--space-1); }
     .modal-section-body.collapsed { display: none; }
 
     /* ── INLINE ICON BUTTON (receipts, photo) ── */
@@ -1172,8 +1172,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       overflow-y: auto;
       overflow-x: hidden;
     }
-    .modal-title { font-size: 1.15rem; font-weight: var(--fw-bold); margin-bottom: 1.4rem; }
-    .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
+    .modal-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-6); }
+    .modal-actions { display: flex; gap: var(--space-2-5); margin-top: var(--space-6); }
     #watch-modal > .modal > .modal-actions,
     #wishlist-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:-1.75rem; margin-right:-1.75rem; margin-bottom:-1.75rem; margin-top:var(--space-4); padding:var(--space-4) 1.75rem; background:var(--surface); border-top:1px solid var(--border); z-index:1; }
 
@@ -1687,7 +1687,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       /* Modals: centered on mobile with side margins */
       .overlay { align-items: center; padding: var(--space-4); overflow-x: hidden; }
-      .modal { border-radius: 14px; max-height: 88vh; max-width: 420px; padding: 1.4rem var(--space-4) 1.2rem; }
+      .modal { border-radius: 14px; max-height: 88vh; max-width: 420px; padding: var(--space-6) var(--space-4) var(--space-5); }
       #watch-preview-modal .modal { max-width: 360px; }
 
       /* Prevent horizontal overflow in modal rows */
@@ -5200,7 +5200,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div class="modal-title" id="watch-modal-title" style="margin-bottom:0;">Add Watch</div>
-      <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
+      <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:var(--space-1) var(--space-1-5);line-height:1;">&times;</button>
     </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
@@ -5208,12 +5208,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;margin-bottom:0;">
-      <div id="edit-id-name" style="font-size:14px;font-weight:var(--fw-medium);color:var(--fg);line-height:1.3;"></div>
-      <div id="edit-id-sub" style="font-size:12px;color:var(--muted);margin-top:1px;line-height:1.3;"></div>
-      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:6px;background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
-      <div style="border-bottom:0.5px solid var(--border);margin-top:10px;margin-bottom:12px;"></div>
+      <div id="edit-id-name" style="font-size:var(--fs-md);font-weight:var(--fw-medium);color:var(--fg);line-height:1.3;"></div>
+      <div id="edit-id-sub" style="font-size:var(--fs-sm);color:var(--muted);margin-top:1px;line-height:1.3;"></div>
+      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:var(--space-1-5);background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
+      <div style="border-bottom:0.5px solid var(--border);margin-top:var(--space-2-5);margin-bottom:var(--space-3);"></div>
     </div>
-    <div id="wm-also-owned" style="display:none;margin:0 0 12px;padding:9px 12px;border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:.8rem;cursor:pointer;" role="button" tabindex="0"></div>
+    <div id="wm-also-owned" style="display:none;margin:0 0 var(--space-3);padding:var(--space-2-5) var(--space-3);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-base);cursor:pointer;" role="button" tabindex="0"></div>
     <!-- Photo state (hidden) -->
     <div id="w-img-area" style="display:none;">
       <img id="w-img-preview" src="" alt="" style="display:none;">
@@ -5227,7 +5227,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-story')">
         <span class="modal-section-hdr-label">The Story</span>
-        <span class="modal-section-summary" id="sum-sec-story" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-story" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-story">▶</span>
       </button>
       <div class="modal-section-body" id="sec-story">
@@ -5239,7 +5239,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-essentials')">
         <span class="modal-section-hdr-label">Essentials</span>
-        <span class="modal-section-summary" id="sum-sec-essentials" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-essentials" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-essentials">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-essentials">
@@ -5292,7 +5292,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-condition')">
         <span class="modal-section-hdr-label">Docs &amp; Warranty</span>
-        <span class="modal-section-summary" id="sum-sec-condition" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-condition" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-condition">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-condition">
@@ -5339,7 +5339,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-market')">
         <span class="modal-section-hdr-label">Value</span>
-        <span class="modal-section-summary" id="sum-sec-market" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-market" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
@@ -5352,7 +5352,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-tags')">
         <span class="modal-section-hdr-label">Type</span>
-        <span class="modal-section-summary" id="sum-sec-tags" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;display:flex;gap:4px;align-items:center;"></span>
+        <span class="modal-section-summary" id="sum-sec-tags" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;display:flex;gap:var(--space-1);align-items:center;"></span>
         <span class="modal-section-chevron" id="chv-sec-tags">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-tags">
@@ -5365,12 +5365,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-specs')">
         <span class="modal-section-hdr-label">Specs</span>
-        <span class="modal-section-summary" id="sum-sec-specs" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-specs" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-specs">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-specs">
         <!-- Movement -->
-        <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;">Movement</div>
+        <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:var(--space-2);">Movement</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-movement-type">Type</label>
@@ -5402,7 +5402,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </select>
         </div>
         <!-- Case -->
-        <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Case</div>
+        <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:var(--space-3-5);margin-bottom:var(--space-2);">Case</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-case-diameter">Diameter</label>
@@ -5428,7 +5428,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="text" id="w-case-material" maxlength="80">
         </div>
         <!-- Glass & Water -->
-        <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Glass &amp; Water</div>
+        <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:var(--space-3-5);margin-bottom:var(--space-2);">Glass &amp; Water</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-crystal-type">Crystal</label>
@@ -5440,7 +5440,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
         <!-- Provenance -->
-        <div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Provenance</div>
+        <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:var(--space-3-5);margin-bottom:var(--space-2);">Provenance</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-origin">Origin</label>
@@ -5467,12 +5467,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-straps')">
         <span class="modal-section-hdr-label">Straps</span>
-        <span class="modal-section-summary" id="sum-sec-straps" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-straps" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-straps">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-straps">
         <div id="strap-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:.45rem">+ Add Strap</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:var(--space-2)">+ Add Strap</button>
         <div id="add-strap-row" class="add-strap-row hidden">
           <input type="text" id="strap-name-input" aria-label="Strap name" placeholder="Name (e.g. Black Rubber)" maxlength="60">
           <input type="text" id="strap-mat-input" aria-label="Strap material" placeholder="Material (optional)" maxlength="40">
@@ -5486,12 +5486,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-receipts')">
         <span class="modal-section-hdr-label">Receipts</span>
-        <span class="modal-section-summary" id="sum-sec-receipts" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-receipts" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-receipts">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-receipts">
         <div id="edit-receipts-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:.45rem">+ Upload Receipt</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:var(--space-2)">+ Upload Receipt</button>
       </div>
     </div>
 
@@ -5499,31 +5499,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section" id="sec-accuracy-wrap" style="display:none;">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-accuracy')">
         <span class="modal-section-hdr-label">Accuracy</span>
-        <span class="modal-section-summary" id="sum-sec-accuracy" style="font-size:11px;color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-summary" id="sum-sec-accuracy" style="font-size:var(--fs-xs);color:var(--muted);margin-left:var(--space-2);font-weight:var(--fw-normal);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
         <!-- Manual entry form -->
-        <div style="margin-bottom:.65rem;">
-          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
+        <div style="margin-bottom:var(--space-2-5);">
+          <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1-5);text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-rate-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
-              <input type="number" id="tg-rate-input" step="0.1" placeholder="" style="width:100%;padding:.4rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <label for="tg-rate-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
+              <input type="number" id="tg-rate-input" step="0.1" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-be-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
-              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" style="width:100%;padding:.4rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <label for="tg-be-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
+              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-amplitude-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Amplitude (°)</label>
-              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" style="width:100%;padding:.4rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <label for="tg-amplitude-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Amplitude (°)</label>
+              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
-              <select id="tg-bph-select" style="width:100%;padding:.4rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <label for="tg-bph-select" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">BPH</label>
+              <select id="tg-bph-select" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
                 <option value="18000">18,000</option>
                 <option value="19800">19,800</option>
                 <option value="21600">21,600</option>
@@ -5534,8 +5534,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           <div style="margin-bottom:var(--space-2);">
-            <label for="tg-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
-            <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:.4rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+            <label for="tg-notes-input" style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;">Notes</label>
+            <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           </div>
           <button class="btn btn-primary btn-sm" onclick="saveTimegrapherManual()" style="width:100%;">Save Reading</button>
         </div>
@@ -5544,10 +5544,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
+    <div class="modal-actions" style="flex-wrap:nowrap;gap:var(--space-1-5);">
       <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()" style="flex:1;">Save</button>
-      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:.78rem;font-weight:var(--fw-medium);font-family:inherit;padding:9px 12px;border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
-      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:.78rem;font-weight:var(--fw-medium);font-family:inherit;padding:9px 12px;border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">$ Value</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
+      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
@@ -5697,13 +5697,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div class="modal-title" id="wishlist-modal-title" style="margin-bottom:0;">Add to Wishlist</div>
-      <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
+      <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:var(--space-1) var(--space-1-5);line-height:1;">&times;</button>
     </div>
     <!-- Photo (hidden state) -->
     <div id="wl-img-preview" style="display:none;">
       <img id="wl-img-el" src="" alt="" style="display:none;">
     </div>
-    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" style="margin-top:6px;margin-bottom:10px;background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
+    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" style="margin-top:var(--space-1-5);margin-bottom:var(--space-2-5);background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
 
     <div class="form-row">
       <div class="form-group">
@@ -5753,7 +5753,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- No inline flex-wrap: an inline style beats the @media(max-width:640px)
          `.modal-actions { flex-wrap: wrap }` rule, which pushed the delete button
          off the right edge on phones. -->
-    <div class="modal-actions" style="gap:.4rem;">
+    <div class="modal-actions" style="gap:var(--space-1-5);">
       <button class="btn btn-primary" onclick="saveWishlistItem()" style="flex:1;">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
       <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;white-space:nowrap;">Move to Collection</button>
@@ -5926,7 +5926,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="new-post-modal-title" style="display:flex;align-items:center;gap:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
       <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
-        <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+        <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="np-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="np-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -5944,7 +5944,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="chip" data-uc="dinner"  onclick="selectNpUseCase('dinner')">Dinner</div>
             <div class="chip" data-uc="travel"  onclick="selectNpUseCase('travel')">Travel</div>
           </div>
-          <div id="np-strap-card" style="display:none;margin-top:.6rem;">
+          <div id="np-strap-card" style="display:none;margin-top:var(--space-2-5);">
             <div class="tl-label">Strap / Bracelet</div>
             <div class="chips" id="np-strap-chips"></div>
           </div>
@@ -5956,19 +5956,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
-      <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
-      <div style="display:flex;align-items:center;gap:.45rem;">
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Location (optional)</label>
+      <div style="display:flex;align-items:center;gap:var(--space-2);">
         <div class="chips" id="np-location-chips" style="flex-wrap:nowrap;">
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
         </div>
         <input type="text" id="np-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('np')"
-          style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
+          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);font-family:inherit;">
       </div>
     </div>
     <div class="form-group">
-      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Who can see this?</label>
       <div class="chips" id="np-vis-chips"></div>
     </div>
     <div class="modal-actions">
@@ -5998,7 +5998,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
       <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
-        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="ep-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="ep-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -6006,7 +6006,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         style="display:none" onchange="handleEditPostPhotos(this)">
     </div>
     <div class="form-group" id="ep-watch-field">
-      <label style="font-size:.78rem;color:var(--muted);">Tagged Watch</label>
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Tagged Watch</label>
       <div id="ep-watch-display"></div>
       <div id="ep-watch-picker" style="display:none;"></div>
       <!-- Occasion + strap, shown only while a watch is tagged (not measurement shares) -->
@@ -6020,7 +6020,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="chip" data-uc="dinner"  onclick="selectEpUseCase('dinner')">Dinner</div>
             <div class="chip" data-uc="travel"  onclick="selectEpUseCase('travel')">Travel</div>
           </div>
-          <div id="ep-strap-card" style="display:none;margin-top:.6rem;">
+          <div id="ep-strap-card" style="display:none;margin-top:var(--space-2-5);">
             <div class="tl-label">Strap / Bracelet</div>
             <div class="chips" id="ep-strap-chips"></div>
           </div>
@@ -6032,32 +6032,32 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
-      <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
-      <div style="display:flex;align-items:center;gap:.45rem;">
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Location (optional)</label>
+      <div style="display:flex;align-items:center;gap:var(--space-2);">
         <div class="chips" id="ep-location-chips" style="flex-wrap:nowrap;">
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
         </div>
         <input type="text" id="ep-location-input" aria-label="Location" placeholder="Add a location…" maxlength="60"
           oninput="onPostLocationInput('ep')"
-          style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
+          style="flex:1;min-width:0;padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);font-family:inherit;">
       </div>
     </div>
     <div class="form-group">
-      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Who can see this?</label>
       <div class="chips" id="ep-vis-chips"></div>
     </div>
     <div class="form-group" id="ep-club-field" style="display:none;">
-      <label style="font-size:.78rem;color:var(--muted);">Share to Club <span style="color:var(--muted);font-weight:var(--fw-normal);">(optional)</span></label>
+      <label style="font-size:var(--fs-sm);color:var(--muted);">Share to Club <span style="color:var(--muted);font-weight:var(--fw-normal);">(optional)</span></label>
       <div class="chips" id="ep-club-chips"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEditPost()">Save</button>
       <button class="btn btn-ghost"   onclick="closeEditPost()">Cancel</button>
     </div>
-    <div style="margin-top:.85rem;text-align:center;">
+    <div style="margin-top:var(--space-3-5);text-align:center;">
       <button id="ep-delete-btn" onclick="this.dataset.confirm ? confirmDeletePost() : deletePostFromFeed()"
-        style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:var(--fs-base);padding:.3rem .6rem;font-family:inherit;">
+        style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:var(--fs-base);padding:var(--space-1) var(--space-2-5);font-family:inherit;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete post
       </button>
     </div>
@@ -6224,7 +6224,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Onboarding nudge: shown only when the compose was auto-opened for a first-ever wear-log -->
-    <div id="tl-onboarding-line" style="display:none;margin:.1rem 0 .6rem;padding:var(--space-2) .7rem;background:rgba(201,168,76,.14);border:1px solid rgba(201,168,76,.35);border-radius:var(--radius);font-size:var(--fs-base);color:var(--text);text-align:center;">Last step — log your wear and post it 👋</div>
+    <div id="tl-onboarding-line" style="display:none;margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-3);background:rgba(201,168,76,.14);border:1px solid rgba(201,168,76,.35);border-radius:var(--radius);font-size:var(--fs-base);color:var(--text);text-align:center;">Last step — log your wear and post it 👋</div>
 
     <!-- Date + worn notice -->
     <div class="tl-field">
@@ -6266,7 +6266,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="tl-field">
       <div class="tl-label">Photo <span class="tl-opt">optional</span></div>
       <div id="track-photo-area" class="log-photo-area tl-photo" onclick="if(demoGuard())return;document.getElementById('track-photo-input').click()">
-        <div id="track-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
+        <div id="track-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
         <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
         <button type="button" id="track-photo-clear" aria-label="Remove photo" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
@@ -6293,7 +6293,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="modal-actions" style="margin-top:1.1rem;">
+    <div class="modal-actions" style="margin-top:var(--space-4);">
       <button class="btn btn-primary" onclick="saveLog()">Log This Wear</button>
       <button class="btn btn-ghost"   onclick="closeTrackModal()">Cancel</button>
     </div>
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.00';
+const APP_VERSION = '20.17.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
