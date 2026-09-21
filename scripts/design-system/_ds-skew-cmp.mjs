@@ -33,7 +33,10 @@ const srv = createServer((req, res) => { const u = new URL(req.url, 'http://x');
   res.writeHead(200, { 'content-type': TYPES[p.split('.').pop()] || 'application/octet-stream', 'cache-control': 'max-age=600' }); res.end(readFileSync(f)); });
 await new Promise(r => srv.listen(0, r)); const base = 'http://localhost:' + srv.address().port;
 const b = await chromium.launch();
-for (const versioned of [false, true]) {
+// The control only means something when <ref> still used the fixed URL (its cache then holds that key).
+const refVersioned = /design-system\.css\?v=/.test(execSync(`git show ${OLD_REF}:sw.js`, { cwd: REPO }).toString());
+if (refVersioned) console.log(`(${OLD_REF} already loads the stylesheet by hash — control skipped)`);
+for (const versioned of refVersioned ? [true] : [false, true]) {
   const ctx = await b.newContext(); const p = await ctx.newPage();
   await p.route(u => !u.href.startsWith(base), r => r.abort());
   deploy('old'); await p.goto(base + '/', { waitUntil: 'load' });
@@ -43,11 +46,16 @@ for (const versioned of [false, true]) {
   deploy('new', versioned); log.length = 0;
   await p.goto(base + '/', { waitUntil: 'load' });
   const first = await p.evaluate(() => ({ probe: getComputedStyle(document.documentElement).getPropertyValue('--ds-probe').trim(),
-    href: document.querySelector('link[rel=stylesheet]').getAttribute('href') }));
+    href: document.querySelector('link[rel=stylesheet]').getAttribute('href'),
+    // the 2026-09-20 symptom: `.hidden` defined in neither file, so everything hidden shows at once
+    hiddenTotal: document.querySelectorAll('.hidden').length,
+    hiddenShowing: [...document.querySelectorAll('.hidden')].filter(e => getComputedStyle(e).display !== 'none').length }));
   console.log(`\n${versioned ? 'WITH versioned URL (the fix)' : 'CONTROL: fixed URL (today)'}  — visitor had ${oldCache}`);
   console.log(`  first load after deploy: page asks for ${first.href}`);
   console.log(`  new stylesheet applied on that load: ${first.probe === 'new' ? 'YES' : 'NO  <- new page + old stylesheet'}`);
   if ((first.probe === 'new') !== versioned) failed = true;
+  if (versioned && first.hiddenShowing) failed = true;
+  console.log(`  elements with class "hidden" that are SHOWING on that load: ${first.hiddenShowing} of ${first.hiddenTotal}`);
   console.log(`  stylesheet requests that reached the server: ${JSON.stringify(log)}`);
   await p.waitForTimeout(1500); await p.goto(base + '/', { waitUntil: 'load' });
   // offline: the new SW must serve the versioned stylesheet from its precache
@@ -59,5 +67,5 @@ for (const versioned of [false, true]) {
   await ctx.close();
 }
 await b.close(); srv.close();
-console.log(failed ? '\nFAIL' : '\nOK — control shows the skew, the stamped URL removes it, offline launch works');
+console.log(failed ? '\nFAIL' : '\nOK — new page and new stylesheet arrive as a pair for a returning visitor; offline launch works');
 process.exit(failed ? 1 : 0);
