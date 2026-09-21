@@ -402,4 +402,5 @@
 .btn-block { width: 100%; }
 .btn-grow { flex: 1; }
 .btn-xs { font-size: var(--fs-sm); padding: var(--space-1) var(--space-2-5); }
+.btn-md { font-size: var(--fs-base); padding: var(--space-2) var(--space-3); }
 .field.field-compact { width: 100%; padding: var(--space-1); border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); }

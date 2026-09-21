@@ -17,6 +17,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..
 sys.path.insert(0, HERE)
 from scope import email_lines
 APPLY = '--apply' in sys.argv
+DO_SNAP = '--snap' in sys.argv
+SCOPE = sys.argv[sys.argv.index('--scope') + 1] if '--scope' in sys.argv else None   # admin | not-admin
 LINES = None
 if '--lines' in sys.argv:
     a, b = sys.argv[sys.argv.index('--lines') + 1].split('-'); LINES = (int(a), int(b))
@@ -56,8 +58,14 @@ NAMED_BTN = collections.OrderedDict([
     ('btn-block', 'width:100%'),
     ('btn-grow',  'flex:1'),
     ('btn-xs',    'font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5)'),
+    ('btn-md',    'font-size:var(--fs-base);padding:var(--space-2) var(--space-3)'),
     ('btn-plain', 'background:none;border:none;color:var(--muted);cursor:pointer;padding:var(--space-1)'),
 ])
+# A `.btn` whose style CONTAINS one of these keeps the rest inline and gets the class for this part (exact).
+EXTRACT = ['btn-xs', 'btn-md', 'btn-block', 'btn-grow']
+# --snap: near-matches of a size variant move onto it (VISIBLE: a few px). Reviewed per screen.
+SNAP = {('var(--fs-sm)', 'var(--space-1) var(--space-2)'): 'btn-xs', ('var(--fs-sm)', 'var(--space-1) var(--space-3)'): 'btn-xs',
+        ('var(--fs-sm)', 'var(--space-0-5) var(--space-2-5)'): 'btn-xs'}
 # `.field.field-compact` — two classes, because the page's base rule is `input[type=…]` (one attribute + one tag)
 # and a single class would lose to it.
 NAMED_FIELD = collections.OrderedDict([
@@ -169,10 +177,29 @@ by_style = [src.count('\n', 0, m.start()) + 1 for m in re.finditer(r'\[style[*^~
 if by_style: sys.exit('index.html selects elements by inline style at line(s) %s — give them an id or class first' % by_style)
 TAG = re.compile(r'<([a-zA-Z][\w-]*)\b([^<>]*?)\sstyle="([^"\\]*)"([^<>]*?)(/?)>')
 stats = collections.Counter(); kept = collections.Counter(); why = collections.defaultdict(collections.Counter); used = collections.Counter()
+import scope as _scope
+ADMIN_LINES = _scope.admin(lines) if SCOPE else set()
+def plan(tag, st, rest):
+    """-> (class names, declarations they replace, declarations that stay inline) or None"""
+    full = norm(st); name = lookup(tag, full)
+    if name: return name, full, frozenset()
+    cm = re.search(r'\sclass="([^"]*)"', ' ' + rest)
+    if tag != 'button' or not cm or 'btn' not in cm.group(1).split() or '${' in st: return None
+    names = []; gone = set()
+    for k in EXTRACT:
+        need = norm(NAMED_BTN[k])
+        if need <= full and not (need & gone): names.append(k); gone |= need
+    if DO_SNAP and not any(n in ('btn-xs', 'btn-md') for n in names):
+        d = {x.split(':', 1)[0]: x.split(':', 1)[1] for x in full}
+        k = SNAP.get((d.get('font-size'), d.get('padding')))
+        if k: names.append(k); gone |= {'font-size:' + d['font-size'], 'padding:' + d['padding']}
+    return (' '.join(names), frozenset(gone), full - gone) if names else None
 def convert(m):
-    name = lookup(m.group(1).lower(), norm(m.group(3)))
-    if not name: return m.group(0)
+    pl = plan(m.group(1).lower(), m.group(3), m.group(2) + m.group(4))
+    if not pl: return m.group(0)
+    name, replaced, stay = pl
     ln = src.count('\n', 0, m.start())
+    if SCOPE and ((ln in ADMIN_LINES) != (SCOPE == 'admin')): return m.group(0)
     if LINES and not (LINES[0] - 1 <= ln <= LINES[1] - 1): return m.group(0)
     tag = m.group(1).lower(); rest = m.group(2) + m.group(4)
     def skip(reason): kept[name] += 1; why[reason][name] += 1; return m.group(0)
@@ -184,7 +211,7 @@ def convert(m):
     if re.search(r"\sclass='", ' ' + rest): return skip('class built at runtime')
     classes = set(cm.group(1).split()) if cm else set()
     im = re.search(r'\sid="([^"]*)"', ' ' + rest); el_id = im.group(1) if im else None
-    props = {d.split(':')[0] for d in norm(m.group(3))}
+    props = {d.split(':')[0] for d in replaced}
     if el_id:
         jp = js_props_for(el_id) if '$' not in el_id else {'*'}
         if '*' in jp or any(touches(p) & jp for p in props): return skip('JS assigns this property on #' + ('…' if '$' in el_id else 'id'))
@@ -192,6 +219,9 @@ def convert(m):
     if r: return skip('a page rule could override the class: ' + r[0][:40])
     stats[name] += 1; used[name] += 1
     before, after = m.group(2), m.group(4)
+    if stay:                                                          # keep the other declarations, in their original order
+        keep = [d.strip() for d in m.group(3).split(';') if d.strip() and re.sub(r'\s*:\s*', ':', re.sub(r'\s+', ' ', d.strip())) in stay]
+        after = ' style="%s;"' % ';'.join(keep) + after
     if cm:
         new_cls = ' class="%s %s"' % (cm.group(1).strip(), name)
         if re.search(r'\sclass="[^"]*"', before): before = re.sub(r'\sclass="[^"]*"', new_cls, before, 1)
@@ -208,7 +238,7 @@ if not APPLY: sys.exit(0)
 open(ROOT + 'index.html', 'w', encoding='utf-8').write(out)
 # make sure every class in use is declared (append missing ones, in NAMED order)
 block = ds.split(MARK)[1] if MARK in ds else ''
-have = set(re.findall(r'^\.([\w-]+) \{', block, flags=re.M))
+have = set(re.findall(r'^[.\w-]*\.([\w-]+) \{', block, flags=re.M))      # last class of the selector
 in_use = {c for m in re.finditer(r'class="([^"]*)"', out) for c in m.group(1).split()}
 need = [k for k in ALL_NAMED if set(k.split()) <= in_use and k.split()[-1] not in have and k not in EXISTING]
 if need:

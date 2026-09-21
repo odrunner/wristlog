@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=ce78c68c">
+  <link rel="stylesheet" href="/design-system.css?v=191c45af">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -3140,7 +3140,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="anniversary-watch-img" class="stack-5"></div>
     <div id="anniversary-modal-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);line-height:var(--lh-body);margin-bottom:var(--space-1-5);"></div>
     <div id="anniversary-text" style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);"></div>
-    <button class="btn btn-ghost" onclick="dismissAnniversary()" style="width:100%;border-color:var(--gold);color:var(--gold-text);">Dismiss</button>
+    <button class="btn btn-ghost btn-block" onclick="dismissAnniversary()" style="border-color:var(--gold);color:var(--gold-text);">Dismiss</button>
   </div>
 </div>
 
@@ -3167,8 +3167,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="push-ask-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Get the 5pm nudge on your lock screen</div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
     <div style="display:flex;gap:var(--space-2);">
-      <button class="btn btn-ghost" onclick="pushAskNotNow()" style="flex:1;border-color:var(--border);color:var(--muted);">Not now</button>
-      <button class="btn btn-ghost" onclick="pushAskTurnOn()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Turn on</button>
+      <button class="btn btn-ghost btn-grow" onclick="pushAskNotNow()" style="border-color:var(--border);color:var(--muted);">Not now</button>
+      <button class="btn btn-ghost btn-grow" onclick="pushAskTurnOn()" style="border-color:var(--gold);color:var(--gold-text);">Turn on</button>
     </div>
   </div>
 </div>
@@ -3181,8 +3181,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="review-prompt-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Enjoying WRotate?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-ghost" onclick="reviewPromptNo()" style="flex:1;border-color:var(--border);color:var(--muted);">Not really</button>
-        <button class="btn btn-ghost" onclick="reviewPromptYes()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Yes!</button>
+        <button class="btn btn-ghost btn-grow" onclick="reviewPromptNo()" style="border-color:var(--border);color:var(--muted);">Not really</button>
+        <button class="btn btn-ghost btn-grow" onclick="reviewPromptYes()" style="border-color:var(--gold);color:var(--gold-text);">Yes!</button>
       </div>
     </div>
     <!-- Step 2a: Feedback form (unhappy path) -->
@@ -3192,8 +3192,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);">We read every response. Tell us what's on your mind.</div>
       <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);resize:vertical;margin-bottom:var(--space-4);"></textarea>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="flex:1;border-color:var(--border);color:var(--muted);">Skip</button>
-        <button class="btn btn-ghost" onclick="submitReviewFeedback()" style="flex:1;border-color:var(--gold);color:var(--gold-text);">Send</button>
+        <button class="btn btn-ghost btn-grow" onclick="closeReviewPrompt()" style="border-color:var(--border);color:var(--muted);">Skip</button>
+        <button class="btn btn-ghost btn-grow" onclick="submitReviewFeedback()" style="border-color:var(--gold);color:var(--gold-text);">Send</button>
       </div>
     </div>
     <!-- Step 2b: Thank you (after happy or after feedback sent) -->
@@ -3238,7 +3238,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
     </div>
-    <button class="btn btn-ghost" onclick="closeMsrHelp()" style="width:100%;border-color:var(--gold);color:var(--gold-text);">Got it</button>
+    <button class="btn btn-ghost btn-block" onclick="closeMsrHelp()" style="border-color:var(--gold);color:var(--gold-text);">Got it</button>
   </div>
 </div>
 
@@ -3307,7 +3307,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Find people to follow</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2-5);display:inline-flex;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
+      <button class="btn btn-primary btn-block" style="margin-bottom:var(--space-2-5);display:inline-flex;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       <button class="btn btn-ghost btn-block" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
@@ -3388,7 +3388,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span>I agree to the Terms of Use and Privacy Policy</span>
     </label>
     <button class="btn btn-primary btn-block" id="eula-gate-btn" onclick="acceptEula()" disabled>I Agree</button>
-    <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);" onclick="declineEula()">Decline &amp; Sign Out</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:var(--space-2);" onclick="declineEula()">Decline &amp; Sign Out</button>
   </div>
 </div>
 
@@ -3533,7 +3533,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="row">
         <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;gap:var(--space-1-5);white-space:nowrap;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-primary btn-md" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-md);">$</button>
         <button id="coll-share-btn" class="btn btn-ghost" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);gap:var(--space-1-5);white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
@@ -3756,7 +3756,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
 
-        <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:var(--space-1);">Save as Draft</button>
+        <button class="btn btn-primary btn-block" onclick="saveOfficialDraft()" style="margin-top:var(--space-1);">Save as Draft</button>
       </div>
 
       <!-- Draft filter chips -->
@@ -4051,9 +4051,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="help-wrap">
 
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-8);">
-        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
-        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
-        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        <button class="btn btn-ghost btn-grow" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost btn-grow" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+        <button class="btn btn-primary btn-grow" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -4871,7 +4871,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">👋 Log you're wearing it</button>
         <div style="display:flex;gap:var(--space-1-5);">
           <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Share result</button>
-          <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
+          <button class="btn btn-ghost btn-sm btn-grow" style="color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
         <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:var(--space-2);">
           <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);min-height:32px;">Discard this reading</button>
@@ -5524,7 +5524,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" style="font-size:var(--fs-base);" onclick="document.getElementById('photo-file-input').click()">Browse files…</button>
       <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="handlePhotoFileInput(this)">
     </div>
-    <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2-5);color:var(--muted);" onclick="closePhotoPasteModal()">Cancel</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:var(--space-2-5);color:var(--muted);" onclick="closePhotoPasteModal()">Cancel</button>
   </div>
 </div>
 
@@ -5742,8 +5742,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       Head-to-head match-ups between your watches. Tap the one you prefer — you have 3 seconds per round.
       Elo scores accumulate over sessions so your ranking gets more accurate over time.
     </p>
-    <button class="btn btn-primary" onclick="beginRankingGame()" style="width:100%;margin-bottom:var(--space-3-5);">Let's go</button>
-    <button class="btn btn-ghost" onclick="dismissGame()" style="width:100%;margin-bottom:var(--space-3-5);">Try next time</button>
+    <button class="btn btn-primary btn-block" onclick="beginRankingGame()" style="margin-bottom:var(--space-3-5);">Let's go</button>
+    <button class="btn btn-ghost btn-block" onclick="dismissGame()" style="margin-bottom:var(--space-3-5);">Try next time</button>
     <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);color:var(--muted);cursor:pointer;">
       <input type="checkbox" id="game-skip-intro-chk" style="width:auto;margin:0;">
       Don't show this again
@@ -5897,7 +5897,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="msr-share-popup-msg" style="font-size:var(--fs-md);color:var(--text);margin:var(--space-1-5) 0 var(--space-4);line-height:var(--lh-body);"></div>
     <div class="modal-actions" style="flex-direction:column;gap:var(--space-2);">
       <button id="msr-share-popup-confirm" class="btn btn-primary btn-block">Share to feed</button>
-      <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="dismissMsrSharePopup()">Not now</button>
+      <button class="btn btn-ghost btn-block" style="color:var(--muted);" onclick="dismissMsrSharePopup()">Not now</button>
     </div>
   </div>
 </div>
@@ -5983,7 +5983,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
-      <button class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
@@ -5992,7 +5992,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
-      <button id="da-final-btn" class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:#b91c1c;color:#fff;border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button id="da-final-btn" class="btn btn-block" style="margin-bottom:var(--space-2-5);background:#b91c1c;color:#fff;border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
@@ -6017,7 +6017,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-title text-danger" id="delete-club-modal-title">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:var(--fw-bold);margin:var(--space-1) 0 var(--space-3);"></p>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin-bottom:var(--space-5);">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
-      <button class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
+      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -6282,7 +6282,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="badge-reveal-names" style="font-size:var(--fs-base);color:var(--badge-text);opacity:.7;margin-bottom:var(--space-4);line-height:var(--lh-body);"></div>
     <div style="display:flex;gap:var(--space-2);">
       <button class="btn btn-primary btn-grow" onclick="badgeRevealSeeThem()">See them</button>
-      <button class="btn btn-ghost" style="flex:1;color:var(--muted);" onclick="closeBadgeReveal()">Dismiss</button>
+      <button class="btn btn-ghost btn-grow" style="color:var(--muted);" onclick="closeBadgeReveal()">Dismiss</button>
     </div>
   </div>
 </div>
@@ -6294,7 +6294,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="fact-modal-card" style="margin-bottom:var(--space-3-5);"></div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);text-align:center;">You get a new one every day you wear it.</div>
     <button class="btn btn-primary btn-block stack-2" onclick="factModalLogNow()">Log this watch</button>
-    <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="closeFactModal()">Maybe later</button>
+    <button class="btn btn-ghost btn-block" style="color:var(--muted);" onclick="closeFactModal()">Maybe later</button>
   </div>
 </div>
 
@@ -7469,7 +7469,7 @@ function badgeWallProfileSection() {
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center;padding:var(--space-2) 0;">
         ${previewCards}${lockedPreview}
       </div>
-      <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" onclick="openBadgeWall()">View All Badges</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" onclick="openBadgeWall()">View All Badges</button>
     </div>`;
 }
 // ── END BADGE SYSTEM ──────────────────────────────────────────────────────
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.21';
+const APP_VERSION = '21.07.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9101,7 +9101,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
          ${friendIconHtml}
        </div>
        <div style="margin-top:var(--space-1-5);">
-         <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
+         <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
        </div>`
     : '';
 
@@ -9416,7 +9416,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-card">
         <div class="profile-page-section-title">Posts</div>
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
-        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost btn-block" style="margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
@@ -10052,7 +10052,7 @@ function renderFriendPopoverContent(userId, req) {
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);line-height:var(--lh-body);">
         Ask to be close friends. Both users must follow each other first.
       </div>
-      <button class="btn btn-primary" style="width:100%;font-size:var(--fs-base);"
+      <button class="btn btn-primary btn-block" style="font-size:var(--fs-base);"
         onclick="initiateFriendRequest('${userId}')">
         Ask to Be Close Friends
       </button>`;
@@ -10064,7 +10064,7 @@ function renderFriendPopoverContent(userId, req) {
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);line-height:var(--lh-body);">
         Close friend request sent — waiting for them to accept.
       </div>
-      <button class="btn btn-ghost" style="width:100%;font-size:var(--fs-base);"
+      <button class="btn btn-ghost btn-block" style="font-size:var(--fs-base);"
         onclick="closeFriendPopover();removeFriend('${userId}')">Cancel Request</button>`;
   }
 
@@ -10074,9 +10074,9 @@ function renderFriendPopoverContent(userId, req) {
         They sent you a close friend request.
       </div>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-primary" style="flex:1;font-size:var(--fs-base);"
+        <button class="btn btn-primary btn-grow" style="font-size:var(--fs-base);"
           onclick="acceptFriendRequestFromPopover('${userId}')">Accept</button>
-        <button class="btn btn-ghost" style="flex:1;font-size:var(--fs-base);"
+        <button class="btn btn-ghost btn-grow" style="font-size:var(--fs-base);"
           onclick="closeFriendPopover();removeFriend('${userId}')">Decline</button>
       </div>`;
   }
@@ -10614,7 +10614,7 @@ async function searchInviteUsers(query, clubId) {
     const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span class="caption">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
     else btn = `<button class="btn btn-primary btn-xs" ${dataAttrs}
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
@@ -10638,7 +10638,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
     onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
   toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
@@ -10681,7 +10681,7 @@ async function renderPendingInvites(clubId) {
       return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
         ${avatarHtml}
         <span style="flex:1;font-size:var(--fs-base);">${name}</span>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
+        <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
           onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>
       </div>`;
     }).join('');
@@ -19562,7 +19562,7 @@ function renderReportCard(r) {
         <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-2);">
           <button class="btn btn-primary btn-xs" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
           <button class="btn btn-ghost btn-xs" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
-          <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
+          <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
 }
@@ -21738,7 +21738,7 @@ function renderBroadcastDrafts() {
   el.innerHTML = '<div class="eyebrow eyebrow-muted stack-1">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
     drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:var(--space-1-5);padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);">
       <span style="color:var(--muted);font-size:var(--fs-sm);width:1.1rem;text-align:right;flex:0 0 auto;">${i + 1}</span>
-      <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem var(--space-1);font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-ghost btn-grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem var(--space-1);font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
       <span style="color:var(--muted);font-size:var(--fs-sm);white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
@@ -24406,7 +24406,7 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);">
-      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:var(--badge-accent);color:#fff;font-size:var(--fs-sm);font-weight:var(--fw-medium);padding:var(--space-2-5);border-radius:var(--radius-btn);">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="enhanceSingleWatch()" style="background:var(--badge-accent);color:#fff;font-size:var(--fs-sm);font-weight:var(--fw-medium);padding:var(--space-2-5);border-radius:var(--radius-btn);">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
@@ -29811,7 +29811,7 @@ function openWishlistShareSheet() {
     ${priv ? `<div id="wl-share-private-note" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
     <label style="display:block;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
     <textarea id="wl-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, sizes, budget, questions." style="width:100%;resize:vertical;"></textarea>
-    <button class="btn btn-primary" id="wl-share-create" style="margin-top:var(--space-3);width:100%;" onclick="mintWishlistShare()">Create link</button>`;
+    <button class="btn btn-primary btn-block" id="wl-share-create" style="margin-top:var(--space-3);" onclick="mintWishlistShare()">Create link</button>`;
   document.getElementById('wl-share-modal').classList.remove('hidden');
   loadWishlistShareLinks();
 }
@@ -30114,7 +30114,7 @@ function openCollectionShareSheet() {
     ${priv ? `<div id="coll-share-private-note" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
     <label style="display:block;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
     <textarea id="coll-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, what you're asking, questions." style="width:100%;resize:vertical;"></textarea>
-    <button class="btn btn-primary" id="coll-share-create" style="margin-top:var(--space-3);width:100%;" onclick="mintCollectionShare()">Create link</button>`;
+    <button class="btn btn-primary btn-block" id="coll-share-create" style="margin-top:var(--space-3);" onclick="mintCollectionShare()">Create link</button>`;
   document.getElementById('coll-share-modal').classList.remove('hidden');
   loadCollectionShareLinks();
 }
