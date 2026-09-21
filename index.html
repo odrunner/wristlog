@@ -372,19 +372,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     .offline-banner { background: var(--danger); color: #fff; text-align: center; font-size: .78rem; padding: .35rem var(--space-2); font-weight: var(--fw-medium); }
     .offline-banner.hidden { display: none; }
-    .msr-badge { display: none; font-size: .65rem; color: var(--gold-text); font-weight: var(--fw-semibold); margin-left: 2px; white-space: nowrap; }
+    .msr-badge { display: none; font-size: var(--fs-2xs); color: var(--gold-text); font-weight: var(--fw-semibold); margin-left: var(--space-0-5); white-space: nowrap; }
     .msr-badge.on { display: inline-flex; align-items: center; gap: var(--space-1); }
 
     /* ── ADVANCED SETTINGS ── */
-    .msr-preset-card { padding:.6rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;transition:all var(--dur-fast); }
+    .msr-preset-card { padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;transition:all var(--dur-fast); }
     .msr-preset-card.active { border-color:color-mix(in srgb, var(--tg-ink) 50%, transparent);background:color-mix(in srgb, var(--tg-ink) 8%, transparent); }
-    .msr-preset-name { font-size:.8rem;font-weight:var(--fw-semibold);color:var(--text);margin-bottom:.15rem; }
-    .msr-preset-desc { font-size:.65rem;color:var(--muted);line-height:1.3; }
-    .msr-slider-row { display:flex;flex-direction:column;gap:.15rem; }
-    .msr-slider-label { font-size:.78rem;font-weight:var(--fw-semibold);color:var(--text);display:flex;justify-content:space-between;align-items:center; }
-    .msr-slider-val { font-weight:var(--fw-normal);color:var(--muted);font-size:.72rem; }
-    .msr-slider-desc { font-size:.65rem;color:var(--muted); }
-    .msr-slider-row input[type=range] { width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--border);outline:none;margin-top:.2rem; }
+    .msr-preset-name { font-size:var(--fs-base);font-weight:var(--fw-semibold);color:var(--text);margin-bottom:var(--space-0-5); }
+    .msr-preset-desc { font-size:var(--fs-2xs);color:var(--muted);line-height:1.3; }
+    .msr-slider-row { display:flex;flex-direction:column;gap:var(--space-0-5); }
+    .msr-slider-label { font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--text);display:flex;justify-content:space-between;align-items:center; }
+    .msr-slider-val { font-weight:var(--fw-normal);color:var(--muted);font-size:var(--fs-sm); }
+    .msr-slider-desc { font-size:var(--fs-2xs);color:var(--muted); }
+    .msr-slider-row input[type=range] { width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--border);outline:none;margin-top:var(--space-1); }
     .msr-slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--tg-ink);cursor:pointer;border:2px solid var(--bg); }
 
     /* ── USERNAME FIELD ── */
@@ -682,7 +682,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .acc-dot-latest { stroke: var(--surface); stroke-width: 2; }
     .acc-dot.selected { fill: var(--text); }
     .acc-label { fill: var(--muted); font-size: 9px; }
-    .acc-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: var(--radius-pill); padding: .2rem .65rem; font-size: .72rem; cursor: pointer; font-family: inherit; min-height: 30px; }
+    .acc-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: var(--radius-pill); padding: var(--space-1) var(--space-2-5); font-size: var(--fs-sm); cursor: pointer; font-family: inherit; min-height: 30px; }
     .acc-chip.active { border-color: var(--gold); color: var(--gold-text); background: var(--gold-dim); }
     @keyframes pulse-gold {
       0%, 100% { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
@@ -4744,14 +4744,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-measure" class="page">
     <div class="page-header">
       <h1 class="page-title" style="flex:1;">Measure Accuracy</h1>
-      <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:5px;background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:var(--radius-pill);padding:3px 10px;font-size:.7rem;font-weight:var(--fw-semibold);line-height:1;cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
-      <button id="msr-history-btn" onclick="openMsrHistory('header')" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
+      <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:var(--space-1-5);background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);font-size:var(--fs-xs);font-weight:var(--fw-semibold);line-height:1;cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
+      <button id="msr-history-btn" onclick="openMsrHistory('header')" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
       </button>
-      <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
+      <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Advanced settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="How to measure">
+      <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="How to measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </button>
     </div>
@@ -4759,15 +4759,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="measure-no-watches" style="display:none;text-align:center;padding:var(--space-8) var(--space-4);">
       <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:var(--space-4);opacity:.5;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
       <div style="font-size:var(--fs-lg);font-weight:var(--fw-semibold);margin-bottom:var(--space-2);">Add a watch first</div>
-      <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:1.2rem;line-height:1.5;">To measure accuracy, you need at least one watch in your collection. Add your first watch to get started.</div>
+      <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);line-height:var(--lh-body);">To measure accuracy, you need at least one watch in your collection. Add your first watch to get started.</div>
       <button class="btn btn-primary" onclick="nav(document.querySelector('[data-page=collection]'));openAddWatch()">+ Add Your First Watch</button>
     </div>
     <!-- Measure content (shown when user has watches) -->
     <div id="measure-content" style="display:none;">
       <!-- Watch + BPH selection — compact row -->
       <div style="display:grid;grid-template-columns:1fr auto;gap:var(--space-2);margin-bottom:var(--space-3);">
-        <select id="msr-watch-select" aria-label="Watch to measure" onchange="onMsrWatchChange()" style="width:100%;padding:.45rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
-        <select id="msr-bph-select" aria-label="Beat rate" onchange="onMsrBphChange()" style="padding:.45rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <select id="msr-watch-select" aria-label="Watch to measure" onchange="onMsrWatchChange()" style="width:100%;padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);"></select>
+        <select id="msr-bph-select" aria-label="Beat rate" onchange="onMsrBphChange()" style="padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           <option value="0" selected>Auto</option>
           <option value="18000">18,000</option>
           <option value="19800">19,800</option>
@@ -4778,50 +4778,50 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </select>
       </div>
       <!-- Input source (admin-gated by tg_piezo; hidden by default) -->
-      <select id="tg-input-source" onchange="onTgSourceChange()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:.45rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+      <select id="tg-input-source" onchange="onTgSourceChange()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
         <option value="mic">iPhone mic</option>
         <option value="piezo">Piezo (contact)</option>
       </select>
       <details id="tg-knob-raw" style="display:none;margin-bottom:var(--space-3);">
-      <summary style="font-size:var(--fs-xs);color:var(--muted);cursor:pointer;margin-bottom:.4rem;">Raw engine knobs</summary>
+      <summary style="font-size:var(--fs-xs);color:var(--muted);cursor:pointer;margin-bottom:var(--space-1-5);">Raw engine knobs</summary>
       <!-- tg convergence knobs (admin, gated by tg_dev_knobs). Applied live via the tuning message. -->
-      <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem;margin-bottom:var(--space-3);font-size:var(--fs-2xs);color:var(--muted);">
-        <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab s/d<input type="number" step="0.5" id="tg-knob-stabth" oninput="onTgKnob('tg_stabth',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+      <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:var(--space-1-5);margin-bottom:var(--space-3);font-size:var(--fs-2xs);color:var(--muted);">
+        <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Stab s/d<input type="number" step="0.5" id="tg-knob-stabth" oninput="onTgKnob('tg_stabth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <!-- 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md); need a 2.5 binary. Fleet: guard=refuse (live 2026-08-23), the rest off. -->
-        <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
-        <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
+        <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
       </details>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
-      <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:var(--space-3);font-size:.66rem;color:var(--muted);">
-        <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>BP high Hz<input type="number" step="100" id="pz-tune-bphigh" oninput="onPzTune('pz_bp_high',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Smooth ms<input type="number" step="1" id="pz-tune-smooth" oninput="onPzTune('pz_smooth',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Search win<input type="number" step="0.01" id="pz-tune-searchwin" oninput="onPzTune('pz_searchwin',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Rate win s<input type="number" step="1" id="pz-tune-ratewindow" oninput="onPzTune('pz_ratewindow',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab s/d<input type="number" step="1" id="pz-tune-stabthresh" oninput="onPzTune('pz_stabthresh',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Skip pairs<input type="number" step="1" id="pz-tune-regskip" oninput="onPzTune('pz_regskip',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="default">default</option><option value="measurement">measure</option></select></label>
-        <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:.3rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+      <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:var(--space-1-5);margin-bottom:var(--space-3);font-size:var(--fs-xs);color:var(--muted);">
+        <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>BP high Hz<input type="number" step="100" id="pz-tune-bphigh" oninput="onPzTune('pz_bp_high',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Smooth ms<input type="number" step="1" id="pz-tune-smooth" oninput="onPzTune('pz_smooth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Search win<input type="number" step="0.01" id="pz-tune-searchwin" oninput="onPzTune('pz_searchwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Rate win s<input type="number" step="1" id="pz-tune-ratewindow" oninput="onPzTune('pz_ratewindow',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Stab s/d<input type="number" step="1" id="pz-tune-stabthresh" oninput="onPzTune('pz_stabthresh',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Skip pairs<input type="number" step="1" id="pz-tune-regskip" oninput="onPzTune('pz_regskip',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="default">default</option><option value="measurement">measure</option></select></label>
+        <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
-      <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:.45rem;border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--tg-ink) 40%, transparent);background:var(--tg-bg);color:var(--tg-ink);font-size:.72rem;cursor:pointer;">Batch ×12 (6 manual @ selected BPH + 6 auto)</button>
-      <select id="msr-mode-select" onchange="onMsrModeChange()" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.78rem;">
+      <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--tg-ink) 40%, transparent);background:var(--tg-bg);color:var(--tg-ink);font-size:var(--fs-sm);cursor:pointer;">Batch ×12 (6 manual @ selected BPH + 6 auto)</button>
+      <select id="msr-mode-select" onchange="onMsrModeChange()" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-sm);">
         <option value="quick">Quick (default)</option>
         <option value="accurate">Longer measurement (lower error bar, waits longer)</option>
       </select>
-          <input id="msr-tdm-input" type="number" step="0.01" min="0" placeholder="tickDetectMult (blank = default 0.3)" oninput="onTdmChange()" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
-      <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
-      <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:.45rem;border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
-          <button id="mic-sweep-btn" onclick="runMicSweep()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:.45rem;border-radius:var(--radius-btn);border:1px solid rgba(167,139,250,.5);background:#150a20;color:#c4b5fd;font-size:.72rem;cursor:pointer;">Mic Sweep (native knob · unattended)</button>
-          <button id="deep-test-btn" onclick="runDeepTest()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(52,211,153,.6);background:#06231a;color:#6ee7b7;font-size:.78rem;font-weight:var(--fw-semibold);cursor:pointer;">Deep Test (3–6 runs · median ± STD)</button>
+          <input id="msr-tdm-input" type="number" step="0.01" min="0" placeholder="tickDetectMult (blank = default 0.3)" oninput="onTdmChange()" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);">
+      <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);">
+      <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
+          <button id="mic-sweep-btn" onclick="runMicSweep()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(167,139,250,.5);background:#150a20;color:#c4b5fd;font-size:var(--fs-sm);cursor:pointer;">Mic Sweep (native knob · unattended)</button>
+          <button id="deep-test-btn" onclick="runDeepTest()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(52,211,153,.6);background:#06231a;color:#6ee7b7;font-size:var(--fs-sm);font-weight:var(--fw-semibold);cursor:pointer;">Deep Test (3–6 runs · median ± STD)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:var(--tg-bg);border-radius:var(--radius);overflow:hidden;margin-bottom:var(--space-3);">
         <!-- Chart with HUD overlay -->
@@ -4829,9 +4829,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <canvas id="msr-scatter-plot" style="width:100%;height:100%;"></canvas>
           <!-- Rate HUD overlay — top right -->
           <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity var(--dur-slow);pointer-events:none;">
-            <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;">
+            <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:var(--space-1);">
               <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:var(--fs-3xl);font-weight:var(--fw-bold);color:var(--tg-ink);text-shadow:0 0 12px color-mix(in srgb, var(--tg-ink) 30%, transparent);line-height:1;">—</div>
-              <div style="font-size:.6rem;color:color-mix(in srgb, var(--tg-ink) 70%, transparent);letter-spacing:.05em;">s/day</div>
+              <div style="font-size:var(--fs-2xs);color:color-mix(in srgb, var(--tg-ink) 70%, transparent);letter-spacing:.05em;">s/day</div>
             </div>
           </div>
           <!-- PRELIMINARY / CONVERGED badge — top center -->
@@ -4840,12 +4840,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <!-- Beat error + BPH — top left -->
           <div style="position:absolute;top:10px;left:12px;pointer-events:none;">
             <div id="msr-live-be" style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:color-mix(in srgb, var(--tg-ink) 60%, transparent);">—</div>
-            <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:color-mix(in srgb, var(--tg-ink) 70%, transparent);display:none;"></span>
-            <div id="msr-live-amp-wrap" style="display:none;font-size:var(--fs-2xs);color:color-mix(in srgb, var(--tg-ink) 70%, transparent);margin-top:2px;letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:var(--fw-bold);color:var(--tg-ink);">—</span></div>
+            <span id="msr-detected-bph" aria-live="polite" style="font-size:var(--fs-2xs);color:color-mix(in srgb, var(--tg-ink) 70%, transparent);display:none;"></span>
+            <div id="msr-live-amp-wrap" style="display:none;font-size:var(--fs-2xs);color:color-mix(in srgb, var(--tg-ink) 70%, transparent);margin-top:var(--space-0-5);letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:var(--fw-bold);color:var(--tg-ink);">—</span></div>
           </div>
           <!-- Signal quality indicator — bottom left -->
           <div id="msr-signal-bars" style="position:absolute;bottom:8px;left:12px;display:none;pointer-events:none;">
-            <div style="display:flex;align-items:flex-end;gap:2px;height:16px;">
+            <div style="display:flex;align-items:flex-end;gap:var(--space-0-5);height:16px;">
               <div id="msr-bar-1" style="width:3px;height:4px;border-radius:1px;background:color-mix(in srgb, var(--tg-ink) 20%, transparent);"></div>
               <div id="msr-bar-2" style="width:3px;height:8px;border-radius:1px;background:color-mix(in srgb, var(--tg-ink) 20%, transparent);"></div>
               <div id="msr-bar-3" style="width:3px;height:12px;border-radius:1px;background:color-mix(in srgb, var(--tg-ink) 20%, transparent);"></div>
@@ -4862,13 +4862,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
         <!-- Status bar — bottom of instrument -->
-        <div style="display:flex;align-items:center;justify-content:center;padding:.45rem var(--space-3);border-top:1px solid color-mix(in srgb, var(--tg-ink) 8%, transparent);">
-          <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:color-mix(in srgb, var(--tg-ink) 50%, transparent);letter-spacing:.03em;">&nbsp;</span>
-          <div id="msr-troubleshoot" style="display:none;margin-top:var(--space-2);padding:var(--space-2) .6rem;border-radius:var(--radius-btn);background:color-mix(in srgb, var(--status-warn) 8%, transparent);border:1px solid color-mix(in srgb, var(--status-warn) 20%, transparent);font-size:.7rem;color:color-mix(in srgb, var(--status-warn) 80%, transparent);line-height:1.5;"></div>
+        <div style="display:flex;align-items:center;justify-content:center;padding:var(--space-2) var(--space-3);border-top:1px solid color-mix(in srgb, var(--tg-ink) 8%, transparent);">
+          <span id="msr-status-text" aria-live="polite" style="font-size:var(--fs-xs);color:color-mix(in srgb, var(--tg-ink) 50%, transparent);letter-spacing:.03em;">&nbsp;</span>
+          <div id="msr-troubleshoot" style="display:none;margin-top:var(--space-2);padding:var(--space-2) var(--space-2-5);border-radius:var(--radius-btn);background:color-mix(in srgb, var(--status-warn) 8%, transparent);border:1px solid color-mix(in srgb, var(--status-warn) 20%, transparent);font-size:var(--fs-xs);color:color-mix(in srgb, var(--status-warn) 80%, transparent);line-height:var(--lh-body);"></div>
         </div>
       </div>
       <!-- Averaged-beat scope (tg core) — the folded tick/tock waveform behind amplitude & beat error -->
-      <div id="msr-beat-scope-panel" style="display:none;background:var(--tg-bg);border-radius:var(--radius);padding:var(--space-2) var(--space-3) .4rem;margin-bottom:var(--space-3);">
+      <div id="msr-beat-scope-panel" style="display:none;background:var(--tg-bg);border-radius:var(--radius);padding:var(--space-2) var(--space-3) var(--space-1-5);margin-bottom:var(--space-3);">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span style="font-size:.55rem;color:color-mix(in srgb, var(--tg-ink) 45%, transparent);letter-spacing:.05em;">AVERAGED BEAT</span>
           <span style="font-size:.5rem;color:color-mix(in srgb, var(--tg-ink) 30%, transparent);">all beats overlaid — sharp spikes = clean signal</span>
@@ -4877,7 +4877,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Record / Stop button with progress ring -->
       <div style="position:relative;margin-bottom:var(--space-2);">
-        <button id="msr-listen-btn" onclick="toggleMsrListen()" style="width:100%;padding:.65rem;border-radius:var(--radius-btn);border:1.5px solid color-mix(in srgb, var(--tg-ink) 30%, transparent);background:var(--tg-bg);color:var(--tg-ink);font-size:.85rem;font-weight:var(--fw-semibold);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:all var(--dur-base);">
+        <button id="msr-listen-btn" onclick="toggleMsrListen()" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1.5px solid color-mix(in srgb, var(--tg-ink) 30%, transparent);background:var(--tg-bg);color:var(--tg-ink);font-size:var(--fs-base);font-weight:var(--fw-semibold);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:var(--space-2);transition:all var(--dur-base);">
           <svg id="msr-btn-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           <svg id="msr-btn-stop" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
           <span id="msr-btn-label">Measure</span>
@@ -4940,17 +4940,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
-        <div id="msr-complete-msg" style="font-size:.8rem;font-weight:var(--fw-semibold);color:var(--text);margin-bottom:var(--space-2);text-align:center;">Measurement complete</div>
-        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:.4rem;align-items:center;">
-          <div style="display:flex;align-items:center;gap:.3rem;">
-            <input type="text" id="msr-rate-input" style="width:70px;padding:.35rem .4rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:var(--fw-semibold);text-align:center;" value="">
+        <div id="msr-complete-msg" style="font-size:var(--fs-base);font-weight:var(--fw-semibold);color:var(--text);margin-bottom:var(--space-2);text-align:center;">Measurement complete</div>
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:var(--space-1-5);align-items:center;">
+          <div style="display:flex;align-items:center;gap:var(--space-1);">
+            <input type="text" id="msr-rate-input" style="width:70px;padding:var(--space-1-5) var(--space-1-5);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);font-weight:var(--fw-semibold);text-align:center;" value="">
             <span style="font-size:var(--fs-sm);color:var(--muted);">s/day</span>
           </div>
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
           <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm" onclick="shareMsrFromComplete()" style="border-color:var(--gold);color:var(--gold-text);" disabled>Share</button>
         </div>
-        <div style="text-align:center;margin-top:.45rem;">
-          <button onclick="discardMsrReading()" style="background:none;border:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:.2rem;">Discard</button>
+        <div style="text-align:center;margin-top:var(--space-2);">
+          <button onclick="discardMsrReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);">Discard</button>
         </div>
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
@@ -4958,22 +4958,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Post-save CTA: log a wear (primary, the core action) + share result -->
       <div id="msr-share-cta" style="display:none;">
         <div id="msr-cta-title" style="font-size:var(--fs-base);font-weight:var(--fw-semibold);color:var(--text);margin-bottom:var(--space-2);text-align:center;">Saved &mdash; log your wear?</div>
-        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm" style="width:100%;margin-bottom:.4rem;">👋 Log you're wearing it</button>
-        <div style="display:flex;gap:.4rem;">
+        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm" style="width:100%;margin-bottom:var(--space-1-5);">👋 Log you're wearing it</button>
+        <div style="display:flex;gap:var(--space-1-5);">
           <button id="msr-share-btn" class="btn btn-ghost btn-sm" style="flex:1;">Share result</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
-        <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:.45rem;">
-          <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:.2rem;min-height:32px;">Discard this reading</button>
+        <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:var(--space-2);">
+          <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);min-height:32px;">Discard this reading</button>
         </div>
       </div>
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
-      <div id="msr-history-hint" class="card" style="display:none;margin-top:var(--space-4);padding:.8rem .95rem;cursor:pointer;" onclick="openMsrHistory('hint_card')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory('hint_card');}">
+      <div id="msr-history-hint" class="card" style="display:none;margin-top:var(--space-4);padding:var(--space-3) var(--space-4);cursor:pointer;" onclick="openMsrHistory('hint_card')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory('hint_card');}">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2);">
-          <div style="font-size:.7rem;font-weight:var(--fw-semibold);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Accuracy history</div>
+          <div style="font-size:var(--fs-xs);font-weight:var(--fw-semibold);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Accuracy history</div>
           <div style="font-size:var(--fs-sm);color:var(--gold-text);font-weight:var(--fw-semibold);white-space:nowrap;">See all &rarr;</div>
         </div>
-        <div id="msr-history-hint-line" style="font-size:.85rem;margin:var(--space-1) 0 .35rem;"></div>
+        <div id="msr-history-hint-line" style="font-size:var(--fs-base);margin:var(--space-1) 0 var(--space-1-5);"></div>
         <div id="msr-history-hint-chart"></div>
       </div>
     </div>
@@ -4982,23 +4982,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ ACCURACY HISTORY PAGE ════ -->
   <div id="page-msr-history" class="page">
     <div class="page-header">
-      <button onclick="closeMsrHistory()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Back to Measure">
+      <button onclick="closeMsrHistory()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h1 class="page-title" style="flex:1;">Accuracy History</h1>
     </div>
     <div style="padding:0 var(--space-2);">
-      <select id="msr-hist-watch-select" onchange="renderMsrHistory()" style="width:100%;padding:.45rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;margin-bottom:.7rem;"></select>
-      <div id="msr-hist-range" style="display:flex;gap:.4rem;margin-bottom:.6rem;">
+      <select id="msr-hist-watch-select" onchange="renderMsrHistory()" style="width:100%;padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);margin-bottom:var(--space-3);"></select>
+      <div id="msr-hist-range" style="display:flex;gap:var(--space-1-5);margin-bottom:var(--space-2-5);">
         <button class="acc-chip" data-range="1M" onclick="setMsrHistRange('1M')">1M</button>
         <button class="acc-chip active" data-range="3M" onclick="setMsrHistRange('3M')">3M</button>
         <button class="acc-chip" data-range="1Y" onclick="setMsrHistRange('1Y')">1Y</button>
         <button class="acc-chip" data-range="ALL" onclick="setMsrHistRange('ALL')">All</button>
       </div>
-      <div class="card" style="padding:.8rem .95rem;margin-bottom:.8rem;">
-        <div id="msr-hist-summary" style="font-size:.85rem;margin-bottom:.4rem;"></div>
+      <div class="card" style="padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3);">
+        <div id="msr-hist-summary" style="font-size:var(--fs-base);margin-bottom:var(--space-1-5);"></div>
         <div id="msr-hist-chart"></div>
-        <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--muted);margin-top:.2rem;"><span id="msr-hist-x0"></span><span id="msr-hist-x1"></span></div>
+        <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);"><span id="msr-hist-x0"></span><span id="msr-hist-x1"></span></div>
       </div>
       <div id="msr-hist-days"></div>
     </div>
@@ -5007,7 +5007,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ ADVANCED SETTINGS PAGE ════ -->
   <div id="page-msr-settings" class="page">
     <div class="page-header">
-      <button onclick="closeMsrSettings()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Back to Measure">
+      <button onclick="closeMsrSettings()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h1 class="page-title" style="flex:1;">Advanced Settings</h1>
@@ -5015,18 +5015,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div style="padding:0 var(--space-2);">
       <!-- Detection core selector. Pro V2 is the default; Standard is the session-only opt-out.
            Shown only on native 2.1+ builds (both engines live in the native app). -->
-      <div id="msr-engine-section" style="display:none;margin-bottom:1.2rem;">
+      <div id="msr-engine-section" style="display:none;margin-bottom:var(--space-5);">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:.03em;">ENGINE</div>
-        <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="width:100%;margin-bottom:.35rem;padding:.45rem var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="width:100%;margin-bottom:var(--space-1-5);padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           <option value="tg">Pro V2 ⚡ (recommended)</option>
           <option value="original">Standard</option>
         </select>
-        <div id="tg-algo-hint" style="font-size:var(--fs-xs);color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:var(--lh-snug);">Pro V2 measures amplitude (°) and holds steadier between runs. Picking Standard lasts until the app is next relaunched.</div>
+        <div id="tg-algo-hint" style="font-size:var(--fs-xs);color:var(--muted);margin:-.1rem 0 var(--space-2-5) .1rem;line-height:var(--lh-snug);">Pro V2 measures amplitude (°) and holds steadier between runs. Picking Standard lasts until the app is next relaunched.</div>
       </div>
       <!-- Pro V2 engine settings — shown instead of the Standard sections when Pro V2 is selected -->
-      <div id="msr-prov2-settings" style="display:none;margin-bottom:1.2rem;">
+      <div id="msr-prov2-settings" style="display:none;margin-bottom:var(--space-5);">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:.03em;">PRO V2 · PRECISION</div>
-        <div id="msr-prov2-precision" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-2);margin-bottom:1.2rem;">
+        <div id="msr-prov2-precision" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-5);">
           <button class="msr-preset-card" data-prec="quick" onclick="onProV2Precision('quick')">
             <div class="msr-preset-name">Quick</div>
             <div class="msr-preset-desc">~10s, roughest</div>
@@ -5047,7 +5047,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="range" id="msr-prov2-lift" min="40" max="60" step="1" value="52" oninput="onProV2Lift(this.value)">
         </div>
       </div>
-      <div id="msr-std-preset-section" style="margin-bottom:1.2rem;">
+      <div id="msr-std-preset-section" style="margin-bottom:var(--space-5);">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:.03em;">ENVIRONMENT PRESET</div>
         <div id="msr-settings-presets" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);">
           <button class="msr-preset-card active" data-preset="default" onclick="tgSelectPreset('default')">
@@ -5068,9 +5068,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </button>
         </div>
       </div>
-      <div id="msr-std-tuning-section" style="margin-bottom:1.2rem;">
+      <div id="msr-std-tuning-section" style="margin-bottom:var(--space-5);">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:.03em;">TUNING</div>
-        <div id="msr-settings-sliders" style="display:flex;flex-direction:column;gap:.8rem;">
+        <div id="msr-settings-sliders" style="display:flex;flex-direction:column;gap:var(--space-3);">
           <div class="msr-slider-row">
             <div class="msr-slider-label">Sensitivity <span class="msr-slider-val" id="msr-adv-sensitivity-val">5</span></div>
             <div class="msr-slider-desc">How easily ticks are detected</div>
@@ -5103,7 +5103,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
       </div>
-      <button onclick="tgResetDefaults()" style="width:100%;padding:.6rem;border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.8rem;cursor:pointer;">Restore Defaults</button>
+      <button onclick="tgResetDefaults()" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:var(--fs-base);cursor:pointer;">Restore Defaults</button>
     </div>
   </div>
 
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.40';
+const APP_VERSION = '20.20.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -32498,7 +32498,7 @@ function _deepRender(text, color) {
   const host = document.getElementById('msr-scatter-plot')?.parentElement;
   if (!host) return;
   let el = document.getElementById('deep-test-readout');
-  if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:monospace;font-size:.72rem;padding:.3rem .4rem;line-height:var(--lh-snug);'; host.insertAdjacentElement('afterend', el); }
+  if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:monospace;font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);'; host.insertAdjacentElement('afterend', el); }
   el.textContent = text; el.style.color = color || '#6ee7b7';
 }
 async function runDeepTest() {
@@ -33920,18 +33920,18 @@ function renderMsrHistoryView() {
     const shown = days.slice().reverse();
     list.innerHTML = shown.map(d => {
       const open = d.date === _msrHistSelectedDay;
-      const spread = d.n > 1 ? `<span style="color:var(--muted);margin-left:.4rem;">${_fmtRateSigned(d.min)} … ${_fmtRateSigned(d.max)}</span>` : '';
+      const spread = d.n > 1 ? `<span style="color:var(--muted);margin-left:var(--space-1-5);">${_fmtRateSigned(d.min)} … ${_fmtRateSigned(d.max)}</span>` : '';
       const rowsHtml = open ? d.rows.map(r => {
         const t = new Date(r.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
         const extra = [r.amplitude ? 'Amp ' + r.amplitude + '°' : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0 .3rem var(--space-4);font-size:.78rem;border-top:1px dashed var(--border);">
-          <div><span style="font-weight:var(--fw-semibold);">${_fmtRateSigned(r.rate)}</span>${extra ? `<span style="color:var(--muted);margin-left:.4rem;">${extra}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.7rem;">${t}</span></div>
-          <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-1) 0 var(--space-1) var(--space-4);font-size:var(--fs-sm);border-top:1px dashed var(--border);">
+          <div><span style="font-weight:var(--fw-semibold);">${_fmtRateSigned(r.rate)}</span>${extra ? `<span style="color:var(--muted);margin-left:var(--space-1-5);">${extra}</span>` : ''}<span style="color:var(--muted);margin-left:var(--space-1-5);font-size:var(--fs-xs);">${t}</span></div>
+          <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" style="background:none;border:none;color:var(--danger-text);cursor:pointer;font-size:var(--fs-base);min-height:32px;min-width:32px;">✕</button>
         </div>`; }).join('') : '';
-      return `<div class="card" style="padding:.55rem .85rem;margin-bottom:.45rem;cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
+      return `<div class="card" style="padding:var(--space-2) var(--space-3-5);margin-bottom:var(--space-2);cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
         <div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-base);">
           <div><span style="font-weight:var(--fw-semibold);">${_fmtRateSigned(d.median)}</span>${spread}</div>
-          <div style="color:var(--muted);font-size:.74rem;">${_fmtDayLabel(d.date)}${d.n > 1 ? ` · ×${d.n}` : ''} <span style="margin-left:.3rem;">${open ? '▾' : '▸'}</span></div>
+          <div style="color:var(--muted);font-size:var(--fs-sm);">${_fmtDayLabel(d.date)}${d.n > 1 ? ` · ×${d.n}` : ''} <span style="margin-left:var(--space-1);">${open ? '▾' : '▸'}</span></div>
         </div>${rowsHtml}</div>`;
     }).join('');
   }
