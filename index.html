@@ -464,22 +464,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .toggle-switch input { opacity:0; width:0; height:0; }
 
     /* ── PROFILE PAGE ── */
-    .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 var(--space-5); gap:.55rem; }
+    .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 var(--space-5); gap:var(--space-2); }
     .profile-avatar-lg { position:relative; width:72px; height:72px; border-radius:50%; background:var(--gold); color:#000; font-size:1.5rem; font-weight:var(--fw-bold); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
     .profile-avatar-lg img { width:100%; height:100%; object-fit:cover; }
     .profile-avatar-cam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); opacity:0; transition:opacity var(--dur-fast); cursor:pointer; border-radius:50%; font-size:var(--fs-xl); color:#fff; }
     .profile-avatar-lg:hover .profile-avatar-cam { opacity:1; }
-    .profile-name-row { display:flex; align-items:center; gap:.4rem; }
-    .profile-edit-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:var(--fs-base); padding:.15rem .3rem; border-radius:4px; line-height:1; }
+    .profile-name-row { display:flex; align-items:center; gap:var(--space-1-5); }
+    .profile-edit-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:var(--fs-base); padding:var(--space-0-5) var(--space-1); border-radius:4px; line-height:1; }
     .profile-edit-icon:hover { color:var(--gold-text); background:var(--surface2); }
-    .profile-display-name { font-size:1.25rem; font-weight:var(--fw-bold); }
+    .profile-display-name { font-size:var(--fs-2xl); font-weight:var(--fw-bold); }
     .profile-username-lbl { font-size:var(--fs-base); color:var(--muted); }
-    .profile-bio-text { font-size:.84rem; color:var(--muted); max-width:420px; line-height:var(--lh-body); margin-top:.2rem; }
+    .profile-bio-text { font-size:var(--fs-base); color:var(--muted); max-width:420px; line-height:var(--lh-body); margin-top:var(--space-1); }
     .profile-edit-card { display:none; }
     .profile-edit-card.open { display:block; }
-    .profile-stats-row { display:flex; gap:1.2rem; justify-content:center; flex-wrap:wrap; margin:1.1rem 0 var(--space-5); }
-    .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem var(--space-5); margin-bottom:1.1rem; }
-    .profile-page-section-title { font-size:.72rem; font-weight:var(--fw-bold); letter-spacing:.09em; text-transform:uppercase; color:var(--gold-text); margin-bottom:.9rem; }
+    .profile-stats-row { display:flex; gap:var(--space-5); justify-content:center; flex-wrap:wrap; margin:var(--space-4) 0 var(--space-5); }
+    .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4) var(--space-5); margin-bottom:var(--space-4); }
+    .profile-page-section-title { font-size:var(--fs-sm); font-weight:var(--fw-bold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--gold-text); margin-bottom:var(--space-3-5); }
     .streak-line { display: flex; align-items: center; gap: var(--space-1); font-size: var(--fs-lg); font-weight: var(--fw-semibold);
       color: var(--text); padding: var(--space-1-5) 0 var(--space-0-5); }
     .streak-line .streak-count { font-variant-numeric: tabular-nums; }
@@ -494,12 +494,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
     .prof-section { margin-top:0; }
-    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:0 0 .35rem; color:var(--fg); font-family:inherit; line-height:1; user-select:none; }
+    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:0 0 var(--space-1-5); color:var(--fg); font-family:inherit; line-height:1; user-select:none; }
     .prof-section-hdr:hover .prof-section-label { color:var(--fg); }
-    .prof-section-label { font-size:.7rem; font-weight:var(--fw-bold); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); transition:color var(--dur-fast); }
-    .prof-section-chevron { font-size:.6rem; color:var(--muted); transition:transform var(--dur-base); display:inline-block; line-height:1; }
+    .prof-section-label { font-size:var(--fs-xs); font-weight:var(--fw-bold); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); transition:color var(--dur-fast); }
+    .prof-section-chevron { font-size:var(--fs-2xs); color:var(--muted); transition:transform var(--dur-base); display:inline-block; line-height:1; }
     .prof-section-chevron.open { transform:rotate(90deg); }
-    .prof-section-body { padding-top:.6rem; }
+    .prof-section-body { padding-top:var(--space-2-5); }
     .prof-section-body.collapsed { display:none; }
 
     /* ── TOGGLE SWITCH ── */
@@ -513,8 +513,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); background:#000; }
 
     /* ── COLLECTION SHOWCASE ── */
-    .showcase-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px,1fr)); gap:.65rem; }
-    .showcase-card { background:var(--surface2); border:2px solid var(--border); border-radius:var(--radius); padding:.6rem .45rem var(--space-2); display:flex; flex-direction:column; align-items:center; gap:.3rem; text-align:center; min-width:0; transition:border-color var(--dur-fast), opacity var(--dur-fast); }
+    .showcase-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px,1fr)); gap:var(--space-2-5); }
+    .showcase-card { background:var(--surface2); border:2px solid var(--border); border-radius:var(--radius); padding:var(--space-2-5) var(--space-2) var(--space-2); display:flex; flex-direction:column; align-items:center; gap:var(--space-1); text-align:center; min-width:0; transition:border-color var(--dur-fast), opacity var(--dur-fast); }
     .showcase-card[data-priv="public"]       { border-color: var(--success); }
     .showcase-card[data-priv="friends_only"] { border-color: var(--gold); }
     .showcase-card[data-priv="followers"]    { border-color: var(--gold); }
@@ -524,16 +524,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .showcase-card-img    { width:48px; height:48px; border-radius:var(--radius-btn); object-fit:cover; flex-shrink:0; }
     .showcase-card-avatar { width:48px; height:48px; border-radius:var(--radius-btn); display:flex; align-items:center; justify-content:center; font-weight:var(--fw-heavy); font-size:var(--fs-base); color:#000; flex-shrink:0; }
     .showcase-brand { font-size:.58rem; color:var(--muted); line-height:1.3; word-break:break-word; }
-    .showcase-name  { font-size:.7rem; font-weight:var(--fw-semibold); line-height:1.3; word-break:break-word; }
+    .showcase-name  { font-size:var(--fs-xs); font-weight:var(--fw-semibold); line-height:1.3; word-break:break-word; }
     .showcase-priv-label { font-size:.56rem; font-weight:var(--fw-bold); letter-spacing:.03em; text-transform:uppercase; }
 
     /* ── PROFILE POSTS GRID ── */
-    .profile-posts-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+    .profile-posts-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-1); }
     .profile-post-cell { position:relative; aspect-ratio:1; overflow:hidden; border-radius:4px; background:var(--surface2); cursor:pointer; }
     .profile-post-cell img { width:100%; height:100%; object-fit:cover; display:block; }
     .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:var(--fw-heavy); font-size:var(--fs-xl); color:#000; }
-    .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:.65rem; color:var(--gold-text); background:linear-gradient(transparent, rgba(0,0,0,.7)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .profile-post-vis { position:absolute; top:4px; right:4px; font-size:.58rem; font-weight:var(--fw-bold); padding:2px 5px; border-radius:var(--radius-sm); letter-spacing:.03em; line-height:var(--lh-snug); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:var(--space-1) var(--space-1-5); font-size:var(--fs-2xs); color:var(--gold-text); background:linear-gradient(transparent, rgba(0,0,0,.7)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-post-vis { position:absolute; top:4px; right:4px; font-size:.58rem; font-weight:var(--fw-bold); padding:var(--space-0-5) var(--space-1-5); border-radius:var(--radius-sm); letter-spacing:.03em; line-height:var(--lh-snug); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px rgba(0,0,0,.5); }
     .profile-post-vis.public { background:color-mix(in srgb, var(--tg-ink) 35%, transparent); color:#fff; }
     .profile-post-vis.followers { background:color-mix(in srgb, var(--gold) 40%, transparent); color:#fff; }
     .profile-post-vis.friends { background:rgba(167,123,250,.4); color:#fff; }
@@ -568,12 +568,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-wish-card.wl-priv, .col-watch-card.col-priv { background-color:color-mix(in srgb, var(--status-bad) 8%, transparent); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
-    .pp-log-row { display:flex; align-items:center; gap:.65rem; padding:var(--space-2) 0; border-bottom:1px solid var(--border); }
+    .pp-log-row { display:flex; align-items:center; gap:var(--space-2-5); padding:var(--space-2) 0; border-bottom:1px solid var(--border); }
     .pp-log-row:last-child { border-bottom:none; }
-    .pp-log-date { font-size:.74rem; color:var(--muted); white-space:nowrap; min-width:72px; }
+    .pp-log-date { font-size:var(--fs-sm); color:var(--muted); white-space:nowrap; min-width:72px; }
     .pp-log-info { flex:1; min-width:0; }
-    .pp-log-watch { font-size:.84rem; font-weight:var(--fw-semibold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pp-log-meta  { font-size:.72rem; color:var(--muted); margin-top:.08rem; }
+    .pp-log-watch { font-size:var(--fs-base); font-weight:var(--fw-semibold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pp-log-meta  { font-size:var(--fs-sm); color:var(--muted); margin-top:.08rem; }
 
     /* ── BUTTONS ── */
     .btn {
@@ -1798,7 +1798,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-btn {
       width: 34px; height: 34px; border-radius: 50%;
       background: var(--gold); color: #000; border: none;
-      font-weight: var(--fw-bold); font-size: .72rem; cursor: pointer;
+      font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: box-shadow var(--dur-fast); overflow: hidden; padding: 0;
     }
@@ -2590,8 +2590,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── FOLLOW BUTTON ─────────────────────────── */
     .follow-btn {
-      padding: .28rem .85rem; border-radius: 20px;
-      font-size: .74rem; font-weight: var(--fw-semibold); font-family: inherit;
+      padding: var(--space-1) var(--space-3-5); border-radius: 20px;
+      font-size: var(--fs-sm); font-weight: var(--fw-semibold); font-family: inherit;
       cursor: pointer; transition: all var(--dur-fast); white-space: nowrap;
     }
     .follow-btn.follow    { background: var(--gold); color: #000; border: none; }
@@ -2603,7 +2603,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .follow-btn.following:hover { border-color: var(--danger); color: var(--danger-text); }
       .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger-text); }
     }
-    .follow-btn.remove-follower { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-left: .35rem; }
+    .follow-btn.remove-follower { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-left: var(--space-1-5); }
       .follow-btn.remove-follower:hover { border-color: var(--danger); color: var(--danger-text); }
     .follow-btn.requested {
       background: transparent; color: var(--muted);
@@ -2761,16 +2761,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── DISCOVER / USER CARDS ─────────────────── */
     /* Suggested follows (A/B follow_suggest) */
-    .follow-sugg { margin-bottom: 1.1rem; padding: .85rem .9rem .7rem; }
-    .follow-sugg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
-    .follow-sugg-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.05rem; line-height: 1; padding: .1rem .3rem; }
-    .follow-sugg-row { display: flex; gap: .6rem; overflow-x: auto; padding-bottom: var(--space-1); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .follow-sugg { margin-bottom: var(--space-4); padding: var(--space-3-5) var(--space-3-5) var(--space-3); }
+    .follow-sugg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2-5); }
+    .follow-sugg-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-xl); line-height: 1; padding: .1rem var(--space-1); }
+    .follow-sugg-row { display: flex; gap: var(--space-2-5); overflow-x: auto; padding-bottom: var(--space-1); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .follow-sugg-row::-webkit-scrollbar { display: none; }
-    .follow-sugg-tile { flex: 0 0 132px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .35rem; padding: .7rem var(--space-2) .6rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); }
+    .follow-sugg-tile { flex: 0 0 132px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-1-5); padding: var(--space-3) var(--space-2) var(--space-2-5); border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); }
     .follow-sugg-tile .feed-user-avatar { width: 48px; height: 48px; font-size: var(--fs-lg); cursor: pointer; }
-    .follow-sugg-name { font-size: .8rem; font-weight: var(--fw-semibold); color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    .follow-sugg-name { font-size: var(--fs-base); font-weight: var(--fw-semibold); color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     .follow-sugg-reason { font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; min-height: 1.75em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .follow-sugg-tile .follow-btn { margin-top: .15rem; }
+    .follow-sugg-tile .follow-btn { margin-top: var(--space-0-5); }
     .user-card-reason { font-size: .7rem; color: var(--gold-text); }
     .user-card {
       display: flex; align-items: center; gap: var(--space-3);
@@ -2788,12 +2788,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: var(--fs-xs); color: var(--muted);
       text-transform: uppercase; letter-spacing: .06em;
     }
-    .profile-stat-btn    { cursor: pointer; border-radius: var(--radius-btn); padding: var(--space-1) .4rem; margin: -.25rem -.4rem; transition: background var(--dur-fast); }
+    .profile-stat-btn    { cursor: pointer; border-radius: var(--radius-btn); padding: var(--space-1) var(--space-1-5); margin: -.25rem -.4rem; transition: background var(--dur-fast); }
     .profile-stat-btn:hover { background: var(--surface2); }
     .profile-stat-btn:hover .profile-stat-value { color: var(--gold-text); }
     .profile-bio-edit {
       width: 100%; background: var(--hover); border: 1px solid var(--border);
-      border-radius: var(--radius-btn); padding: var(--space-2) var(--space-3); font-size: .85rem;
+      border-radius: var(--radius-btn); padding: var(--space-2) var(--space-3); font-size: var(--fs-base);
       color: var(--text); font-family: inherit; resize: none; box-sizing: border-box;
     }
     .profile-bio-edit:focus { outline: none; border-color: var(--gold); }
@@ -3663,8 +3663,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ PROFILE PAGE ════ -->
   <div id="page-profile" class="page">
-    <div style="margin-bottom:1.1rem;">
-      <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:.38rem .7rem;">← Back</button>
+    <div style="margin-bottom:var(--space-4);">
+      <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:var(--space-1-5) var(--space-3);">← Back</button>
     </div>
     <div id="profile-page-content">
       <div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.16.54';
+const APP_VERSION = '20.17.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9152,8 +9152,8 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
       <div class="profile-avatar-lg">${heroInitials}</div>
       <div class="profile-display-name">${name}${badge}</div>
       ${uname ? `<div class="profile-username-lbl">${uname}</div>` : ''}
-      <div style="color:var(--muted);margin-top:.55rem;font-size:.84rem;">${msg}</div>
-      <div style="margin-top:.9rem;">${actionHtml}</div>
+      <div style="color:var(--muted);margin-top:var(--space-2);font-size:var(--fs-base);">${msg}</div>
+      <div style="margin-top:var(--space-3-5);">${actionHtml}</div>
     </div>`;
 }
 
@@ -9178,7 +9178,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ? `<div class="profile-avatar-cam" onclick="uploadProfilePic()" title="Change photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`
     : '';
   const removeAvatarBtn = (isOwn && profile.avatar_url)
-    ? `<button class="btn btn-ghost" onclick="removeProfilePic()" style="font-size:.72rem;padding:.2rem var(--space-2);margin-top:.3rem;">Remove photo</button>`
+    ? `<button class="btn btn-ghost" onclick="removeProfilePic()" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);margin-top:var(--space-1);">Remove photo</button>`
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
@@ -9190,8 +9190,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
          ${friendIconHtml}
        </div>
-       <div style="margin-top:.4rem;">
-         <button class="btn btn-ghost" style="font-size:.72rem;padding:var(--space-1) .6rem;color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
+       <div style="margin-top:var(--space-1-5);">
+         <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
        </div>`
     : '';
 
@@ -9241,7 +9241,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group"><label for="pp-bio">Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…" maxlength="300">${escHtml(profile.bio || '')}</textarea>
       </div>
-      <div style="display:flex;gap:.65rem;margin-top:.1rem;">
+      <div style="display:flex;gap:var(--space-2-5);margin-top:.1rem;">
         <button class="btn btn-primary btn-sm" id="profile-save-btn">Save</button>
         <button class="btn btn-ghost btn-sm" onclick="toggleProfileEdit()">Cancel</button>
       </div>
@@ -9264,36 +9264,36 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </button>
         <div class="prof-section-body${prvOpen ? '' : ' collapsed'}" id="prv-section">
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label style="font-size:.78rem;">Profile</label>
+        <label style="font-size:var(--fs-sm);">Profile</label>
         <div class="chips" id="prv-profile-chips">
           ${pChip('prv-profile-chips','public','Public',cur,'profile_privacy')}
           ${pChip('prv-profile-chips','followers','Followers',cur,'profile_privacy')}
           ${pChip('prv-profile-chips','private','Private',cur,'profile_privacy')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:var(--space-1);">Followers or Private does not remove existing followers.</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">Followers or Private does not remove existing followers.</div>
       </div>
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label style="font-size:.78rem;">Collection</label>
+        <label style="font-size:var(--fs-sm);">Collection</label>
         <div class="chips" id="prv-collection-chips">
           ${pChip('prv-collection-chips','public','Public',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','followers','Followers',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','friends','Close Friends',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','private','Private',curCol,'collection_visibility')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:var(--space-1);">You can also tap each watch in your collection to set its visibility individually.</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">You can also tap each watch in your collection to set its visibility individually.</div>
       </div>
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label style="font-size:.78rem;">Wishlist</label>
+        <label style="font-size:var(--fs-sm);">Wishlist</label>
         <div class="chips" id="prv-wishlist-chips">
           ${pChip('prv-wishlist-chips','public','Public',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','followers','Followers',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','friends','Close Friends',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','private','Private',wlVis,'wishlist_visibility')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:var(--space-1);">You can also tap each item in your wishlist to set its visibility individually.</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">You can also tap each item in your wishlist to set its visibility individually.</div>
       </div>
       <div class="form-group" style="margin-bottom:0;">
-        <label style="font-size:.78rem;">Default Post Visibility</label>
+        <label style="font-size:var(--fs-sm);">Default Post Visibility</label>
         <div class="chips" id="pp-default-vis-chips">
           ${['public','followers','friends','private'].map(v => {
             const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : v === 'friends' ? 'Close Friends' : 'Private';
@@ -9301,7 +9301,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               onclick="if(demoGuard())return;selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
           }).join('')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:var(--space-1);">New posts default to this. You can change each post individually.</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">New posts default to this. You can change each post individually.</div>
       </div>
       </div>
       </div>
@@ -9328,7 +9328,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           <span class="prof-section-chevron${notifOpen ? ' open' : ''}" id="chv-notif-section">▶</span>
         </button>
         <div class="prof-section-body${notifOpen ? '' : ' collapsed'}" id="notif-section">
-          <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:.6rem;">Email me when someone…</div>
+          <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2-5);">Email me when someone…</div>
           ${tog('comments','Comments on my posts')}
           ${tog('mentions','Mentions me')}
           ${tog('friends','Follows & friend requests')}
@@ -9340,7 +9340,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div style="font-size:var(--fs-sm);color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">General</div>
+          <div style="font-size:var(--fs-sm);color:var(--muted);margin:var(--space-3) 0 var(--space-2-5);border-top:1px solid var(--border);padding-top:var(--space-3);">General</div>
           ${tog('updates','WRotate updates & new features')}
           <div class="toggle-row">
             <span class="toggle-label">Daily reminders</span>
@@ -9350,10 +9350,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
             </label>
           </div>
           <div class="toggle-row" id="push-setting-row" style="display:none;">
-            <span class="toggle-label">Push notifications <span id="push-setting-state" style="color:var(--muted);font-weight:var(--fw-normal);font-size:.8rem;"></span></span>
-            <button id="push-setting-btn" class="btn btn-ghost btn-sm" style="padding:.2rem .7rem;">Turn on</button>
+            <span class="toggle-label">Push notifications <span id="push-setting-state" style="color:var(--muted);font-weight:var(--fw-normal);font-size:var(--fs-base);"></span></span>
+            <button id="push-setting-btn" class="btn btn-ghost btn-sm" style="padding:var(--space-1) var(--space-3);">Turn on</button>
           </div>
-          <div style="font-size:var(--fs-sm);color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">Sharing</div>
+          <div style="font-size:var(--fs-sm);color:var(--muted);margin:var(--space-3) 0 var(--space-2-5);border-top:1px solid var(--border);padding-top:var(--space-3);">Sharing</div>
           <div class="toggle-row">
             <span class="toggle-label">Share achievements to feed</span>
             <label class="toggle-switch">
@@ -9429,7 +9429,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     showcaseHtml = `
       <div class="profile-page-card">
         <div class="profile-page-section-title">Collection</div>
-        <div style="color:var(--muted);font-size:.84rem;">Your collection is empty — add watches in the Collection tab.</div>
+        <div style="color:var(--muted);font-size:var(--fs-base);">Your collection is empty — add watches in the Collection tab.</div>
       </div>`;
   }
 
@@ -9440,7 +9440,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       wishlistHtml = `
         <div class="profile-page-card">
           <div class="profile-page-section-title">Wishlist</div>
-          <div style="color:var(--muted);font-size:.84rem;">Your wishlist is empty — add watches in the Wishlist tab.</div>
+          <div style="color:var(--muted);font-size:var(--fs-base);">Your wishlist is empty — add watches in the Wishlist tab.</div>
         </div>`;
     } else {
       const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
@@ -9506,7 +9506,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-card">
         <div class="profile-page-section-title">Posts</div>
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
-        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:.78rem;padding:.4rem;" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
@@ -9528,7 +9528,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   const deleteAccountHtml = isOwn ? `
     <div style="margin:var(--space-6) var(--space-4) 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
-      <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
+      <button class="btn-signout" onclick="signOut()" style="font-size:var(--fs-base);padding:var(--space-1-5) var(--space-5);">Sign Out</button>
       ${adminLink}
       <button style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="showHelpPage()">Help &amp; Guide</button>
       <button style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;padding:var(--space-1) var(--space-2);" onclick="openDeleteAccount()">Delete Account</button>
