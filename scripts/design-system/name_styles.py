@@ -60,9 +60,14 @@ NAMED_BTN = collections.OrderedDict([
     ('btn-xs',    'font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5)'),
     ('btn-md',    'font-size:var(--fs-base);padding:var(--space-2) var(--space-3)'),
     ('btn-plain', 'background:none;border:none;color:var(--muted);cursor:pointer;padding:var(--space-1)'),
+    # tones of the ghost button. Declared for :hover too — inline they also beat `.btn-ghost:hover` (which turns gold).
+    ('btn-ghost-gold',   'border-color:var(--gold);color:var(--gold-text)'),
+    ('btn-ghost-muted',  'border-color:var(--border);color:var(--muted)'),
+    ('btn-ghost-danger', 'border-color:var(--danger);color:var(--danger-text)'),
 ])
+TONES = ['btn-ghost-gold', 'btn-ghost-muted', 'btn-ghost-danger']
 # A `.btn` whose style CONTAINS one of these keeps the rest inline and gets the class for this part (exact).
-EXTRACT = ['btn-xs', 'btn-md', 'btn-block', 'btn-grow']
+EXTRACT = ['btn-xs', 'btn-md', 'btn-block', 'btn-grow'] + TONES
 # --snap: near-matches of a size variant move onto it (VISIBLE: a few px). Reviewed per screen.
 SNAP = {('var(--fs-sm)', 'var(--space-1) var(--space-2)'): 'btn-xs', ('var(--fs-sm)', 'var(--space-1) var(--space-3)'): 'btn-xs',
         ('var(--fs-sm)', 'var(--space-0-5) var(--space-2-5)'): 'btn-xs'}
@@ -72,6 +77,7 @@ NAMED_FIELD = collections.OrderedDict([
     ('field field-compact', 'width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text)'),
 ])
 SELECTOR = {'field field-compact': '.field.field-compact'}
+SELECTOR.update({t: '.%s, .%s:hover' % (t, t) for t in TONES})
 LAYOUT = [k for k in NAMED if re.match(r'stack|row|grow', k)]
 norm = lambda st: frozenset(re.sub(r'\s*:\s*', ':', re.sub(r'\s+', ' ', d.strip())) for d in st.split(';') if d.strip())
 BY_SET = {norm(v): k for k, v in NAMED.items()}
@@ -148,16 +154,20 @@ def ancestor_absent(sel, ln):
     parts = re.split(r'\s*[>+~]\s*|\s+', sel.strip())
     if len(parts) < 2: return False
     names = re.findall(r'[.#]([\w-]+)', ' '.join(parts[:-1]))
-    if not names: return False
     reg = region_text(ln)
+    # an ancestor named only by TAG (`nav button:hover`): that tag must be opened in the region
+    tags = [c for c in parts[:-1] if re.fullmatch(r'[a-zA-Z][\w-]*', re.sub(r':[\w-]+(\([^)]*\))?', '', c))]
+    if any(not re.search(r'<' + re.escape(re.sub(r':.*', '', t)) + r'\b', reg) for t in tags if t.lower() not in ('html', 'body', 'main')): return True
+    if not names: return False
     return any(not re.search(r'(?<![\w-])' + re.escape(n) + r'(?![\w-])', reg) for n in names)
-def rivals(tag, el_id, classes, props, ln, mine=(0, 1)):
+def rivals(tag, el_id, classes, props, ln, mine=(0, 1), hover_too=False):
     # The helpers sit LAST in design-system.css and the page's <style> loads after it: a stylesheet rule must
     # weigh MORE than the class to beat it, a page rule only as much.
     want = set().union(*(touches(p) for p in props)); out = []
     for sel, rp, in_ds in rules:
         sp = spec(sel)
         if sp < mine or (in_ds and sp == mine): continue
+        if hover_too and in_ds and sp == (0, 2) and ':hover' in sel: continue   # our own :hover copy comes later and ties
         if rp & want and could_match(sel, tag, el_id, classes) and not ancestor_absent(sel, ln): out.append(sel)
     return out
 camel = lambda p: re.sub(r'[A-Z]', lambda m: '-' + m.group(0).lower(), p)
@@ -215,7 +225,9 @@ def convert(m):
     if el_id:
         jp = js_props_for(el_id) if '$' not in el_id else {'*'}
         if '*' in jp or any(touches(p) & jp for p in props): return skip('JS assigns this property on #' + ('…' if '$' in el_id else 'id'))
-    r = rivals(tag, el_id, classes, props, ln, (0, 2) if name in SELECTOR else (0, 1))
+    tone = any(t in name.split() for t in TONES)
+    if tone and 'btn-ghost' not in classes: return skip('tone needs .btn-ghost')
+    r = rivals(tag, el_id, classes, props, ln, (0, 2) if name == 'field field-compact' else (0, 1), hover_too=tone)
     if r: return skip('a page rule could override the class: ' + r[0][:40])
     stats[name] += 1; used[name] += 1
     before, after = m.group(2), m.group(4)

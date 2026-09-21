@@ -404,3 +404,7 @@
 .btn-xs { font-size: var(--fs-sm); padding: var(--space-1) var(--space-2-5); }
 .btn-md { font-size: var(--fs-base); padding: var(--space-2) var(--space-3); }
 .field.field-compact { width: 100%; padding: var(--space-1); border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.btn-plain { background: none; border: none; color: var(--muted); cursor: pointer; padding: var(--space-1); }
+.btn-ghost-gold, .btn-ghost-gold:hover { border-color: var(--gold); color: var(--gold-text); }
+.btn-ghost-muted, .btn-ghost-muted:hover { border-color: var(--border); color: var(--muted); }
+.btn-ghost-danger, .btn-ghost-danger:hover { border-color: var(--danger); color: var(--danger-text); }

@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=191c45af">
+  <link rel="stylesheet" href="/design-system.css?v=c0908345">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -3140,7 +3140,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="anniversary-watch-img" class="stack-5"></div>
     <div id="anniversary-modal-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);line-height:var(--lh-body);margin-bottom:var(--space-1-5);"></div>
     <div id="anniversary-text" style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);"></div>
-    <button class="btn btn-ghost btn-block" onclick="dismissAnniversary()" style="border-color:var(--gold);color:var(--gold-text);">Dismiss</button>
+    <button class="btn btn-ghost btn-block btn-ghost-gold" onclick="dismissAnniversary()">Dismiss</button>
   </div>
 </div>
 
@@ -3167,8 +3167,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="push-ask-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Get the 5pm nudge on your lock screen</div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
     <div style="display:flex;gap:var(--space-2);">
-      <button class="btn btn-ghost btn-grow" onclick="pushAskNotNow()" style="border-color:var(--border);color:var(--muted);">Not now</button>
-      <button class="btn btn-ghost btn-grow" onclick="pushAskTurnOn()" style="border-color:var(--gold);color:var(--gold-text);">Turn on</button>
+      <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="pushAskNotNow()">Not now</button>
+      <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="pushAskTurnOn()">Turn on</button>
     </div>
   </div>
 </div>
@@ -3181,8 +3181,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="review-prompt-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Enjoying WRotate?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-ghost btn-grow" onclick="reviewPromptNo()" style="border-color:var(--border);color:var(--muted);">Not really</button>
-        <button class="btn btn-ghost btn-grow" onclick="reviewPromptYes()" style="border-color:var(--gold);color:var(--gold-text);">Yes!</button>
+        <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="reviewPromptNo()">Not really</button>
+        <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="reviewPromptYes()">Yes!</button>
       </div>
     </div>
     <!-- Step 2a: Feedback form (unhappy path) -->
@@ -3192,8 +3192,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);">We read every response. Tell us what's on your mind.</div>
       <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);resize:vertical;margin-bottom:var(--space-4);"></textarea>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-ghost btn-grow" onclick="closeReviewPrompt()" style="border-color:var(--border);color:var(--muted);">Skip</button>
-        <button class="btn btn-ghost btn-grow" onclick="submitReviewFeedback()" style="border-color:var(--gold);color:var(--gold-text);">Send</button>
+        <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="closeReviewPrompt()">Skip</button>
+        <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="submitReviewFeedback()">Send</button>
       </div>
     </div>
     <!-- Step 2b: Thank you (after happy or after feedback sent) -->
@@ -3238,7 +3238,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
     </div>
-    <button class="btn btn-ghost btn-block" onclick="closeMsrHelp()" style="border-color:var(--gold);color:var(--gold-text);">Got it</button>
+    <button class="btn btn-ghost btn-block btn-ghost-gold" onclick="closeMsrHelp()">Got it</button>
   </div>
 </div>
 
@@ -4661,7 +4661,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Advanced settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="How to measure">
+      <button onclick="showMsrHelp()" class="btn-plain" aria-label="How to measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </button>
     </div>
@@ -4857,7 +4857,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <span class="caption">s/day</span>
           </div>
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
-          <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm" onclick="shareMsrFromComplete()" style="border-color:var(--gold);color:var(--gold-text);" disabled>Share</button>
+          <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm btn-ghost-gold" onclick="shareMsrFromComplete()" disabled>Share</button>
         </div>
         <div style="text-align:center;margin-top:var(--space-2);">
           <button onclick="discardMsrReading()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;text-decoration:underline;padding:var(--space-1);">Discard</button>
@@ -4892,7 +4892,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ ACCURACY HISTORY PAGE ════ -->
   <div id="page-msr-history" class="page">
     <div class="page-header">
-      <button onclick="closeMsrHistory()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
+      <button onclick="closeMsrHistory()" class="btn-plain" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h1 class="page-title grow">Accuracy History</h1>
@@ -4917,7 +4917,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ ADVANCED SETTINGS PAGE ════ -->
   <div id="page-msr-settings" class="page">
     <div class="page-header">
-      <button onclick="closeMsrSettings()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
+      <button onclick="closeMsrSettings()" class="btn-plain" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h1 class="page-title grow">Advanced Settings</h1>
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.30';
+const APP_VERSION = '21.07.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10614,7 +10614,7 @@ async function searchInviteUsers(query, clubId) {
     const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span class="caption">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost btn-xs btn-ghost-danger" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
     else btn = `<button class="btn btn-primary btn-xs" ${dataAttrs}
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
@@ -10638,7 +10638,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost btn-xs btn-ghost-danger" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
     onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
   toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
@@ -10681,7 +10681,7 @@ async function renderPendingInvites(clubId) {
       return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
         ${avatarHtml}
         <span style="flex:1;font-size:var(--fs-base);">${name}</span>
-        <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
+        <button class="btn btn-ghost btn-xs btn-ghost-danger" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
           onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>
       </div>`;
     }).join('');
