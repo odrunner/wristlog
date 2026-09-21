@@ -2,8 +2,10 @@
 import { chromium } from 'playwright';
 import { readFileSync } from 'fs';
 const C = process.argv[2];
-const PROPS = ['font-size','font-weight','font-family','line-height','letter-spacing','border-top-left-radius','border-top-right-radius','border-bottom-left-radius','border-bottom-right-radius','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','row-gap','column-gap','box-shadow','transition-duration','transition-property','z-index','color','background-color','background-image','border-top-color','border-left-color','fill','stroke','text-shadow','outline-color'];
+const PROPS = ['font-size','font-weight','font-family','line-height','letter-spacing','border-top-left-radius','border-top-right-radius','border-bottom-left-radius','border-bottom-right-radius','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','row-gap','column-gap','box-shadow','transition-duration','transition-property','z-index','color','background-color','background-image','border-top-color','border-left-color','fill','stroke','text-shadow','outline-color','display','align-items','justify-content','flex-grow','flex-shrink','flex-basis','min-width','border-top-width','border-top-style','text-align'];
 const norm = s => s.replace(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/g, (_, r, g, b2, a) => `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b2 * 255)}, ${a ?? 1})`);
+// Rows are 'tag.classes§values'. Only the VALUES are compared: giving an element a new class is not a change.
+const vals = r => r.slice(r.indexOf('§'));
 const b = await chromium.launch();
 async function dump(side, page, theme) {
   const ctx = await b.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
@@ -29,8 +31,8 @@ let total = 0, diffs = 0; const by = {}; let landingRows = 0, landingDiffs = 0; 
 for (const page of ['', 'p/', 'profile/']) for (const theme of ['light', 'dark']) {
   const [o, n] = [await dump('old', page, theme), await dump('new', page, theme)];
   if (o.length !== n.length) { console.log('ELEMENT COUNT DIFFERS', page, theme); diffs++; continue; }
-  o.forEach((v, i) => { if (page === '' && v.includes('landing') ) { landingRows++; if (v !== n[i]) landingDiffs++; } });
-  let d = 0; o.forEach((v, i) => { if (v !== n[i]) { d++; const [tag, a] = v.split('§'), c = n[i].split('§')[1].split('|'); a.split('|').forEach((x, k) => { if (x !== c[k] && theme === 'light') { const key = PROPS[k] + ': ' + x + ' => ' + c[k]; (by[key] ||= []).push(tag); } }); } });
+  o.forEach((v, i) => { if (page === '' && v.includes('landing') ) { landingRows++; if (vals(v) !== vals(n[i])) landingDiffs++; } });
+  let d = 0; o.forEach((v, i) => { if (vals(v) !== vals(n[i])) { d++; const [tag, a] = v.split('§'), c = n[i].split('§')[1].split('|'); a.split('|').forEach((x, k) => { if (x !== c[k] && theme === 'light') { const key = PROPS[k] + ': ' + x + ' => ' + c[k]; (by[key] ||= []).push(tag); } }); } });
   total += o.length; diffs += d; console.log((page || 'index') + ' ' + theme + ': ' + o.length + ' rows, ' + d + ' differ');
 }
 console.log('LANDING elements (class contains "landing"):', landingRows, 'rows, differing:', landingDiffs);

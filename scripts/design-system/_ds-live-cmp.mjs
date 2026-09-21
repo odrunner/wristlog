@@ -21,7 +21,7 @@ await b.close();
 let total = 0, diff = 0; const by = {};
 for (const k of Object.keys(dump).filter(k => k.startsWith('old:'))) { const o = dump[k], n = dump[k.replace('old:', 'new:')]; const name = k.slice(4);
   if (o.length !== n.length) { console.log(name, 'ELEMENT COUNT DIFFERS', o.length, n.length); diff++; continue; }
-  let d = 0; o.forEach((v, i) => { if (v !== n[i]) { d++; const [t, a] = v.split('§'), c = n[i].split('§')[1].split('|'); a.split('|').forEach((x, j) => { if (x !== c[j]) { const key = `${PROPS[j]}: ${x} => ${c[j]}`; (by[key] ||= new Set()).add(t); } }); } });
+  let d = 0; o.forEach((v, i) => { if (v.slice(v.indexOf('§')) !== n[i].slice(n[i].indexOf('§'))) { d++;   /* values only: a new class name is not a change */ const [t, a] = v.split('§'), c = n[i].split('§')[1].split('|'); a.split('|').forEach((x, j) => { if (x !== c[j]) { const key = `${PROPS[j]}: ${x} => ${c[j]}`; (by[key] ||= new Set()).add(t); } }); } });
   total += o.length; diff += d; console.log(`${name.padEnd(18)} ${String(o.length).padStart(5)} elements, ${d} differ`); }
 console.log(`TOTAL ${total} elements x ${PROPS.length} props; differing elements: ${diff}`);
 for (const [k, s] of Object.entries(by).sort((a, c) => c[1].size - a[1].size).slice(0, 25)) console.log(String(s.size).padStart(5), k, ' e.g.', [...s].slice(0, 3).join(', '));
