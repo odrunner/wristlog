@@ -66,6 +66,10 @@
      lives (10 / 11 / 12 / 13 / 14 / 15px), then wider steps for headings.
      --fs-md (.88rem) was added 2026-09-20: the scale used to jump 13 -> 15px
      and 76 labels had nowhere to land. */
+  /* The root size every em and every unsized element inherits from. Exactly
+     15px at the default 16px root; deliberately NOT a step of the scale below —
+     moving it moves the whole app (and the landing screen) at once. */
+  --fs-body: .9375rem;
   --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem; --fs-md: .88rem;
   --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;

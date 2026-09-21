@@ -56,6 +56,7 @@ export const SHARED_LIGHT = {
   '--radius-sm': '6px',
   '--radius-btn': '8px',
   '--radius-pill': '999px',
+  '--fs-body': '.9375rem',
   '--fs-2xs': '.62rem',
   '--fs-xs': '.68rem',
   '--fs-sm': '.75rem',
