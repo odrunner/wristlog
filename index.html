@@ -3501,7 +3501,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <header aria-label="WRotate app header">
   <div class="header-inner">
     <button class="logo" onclick="goHome()" title="Back to Feed">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;margin-right:.3rem;">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;margin-right:var(--space-1);">
         <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
         <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
         <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
@@ -3547,11 +3547,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <main id="main-content" tabindex="-1">
 
   <!-- ════ DEMO MODE BANNER ════ -->
-  <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:.6rem 1.2rem;margin:-.8rem .8rem var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:.8rem;font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.12);">
+  <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:var(--space-2-5) var(--space-5);margin:-.8rem var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-base);font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.12);">
     <span style="flex:1;min-width:0;">Demo Mode — read-only preview of Alex Rivera's collection</span>
     <div style="display:flex;gap:var(--space-2);align-items:center;flex-shrink:0;">
-      <button onclick="exitDemoMode()" style="background:#16161e;color:#f5f5f8;border:none;border-radius:var(--radius-btn);padding:.35rem .8rem;font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
-      <button onclick="exitDemoMode()" style="background:rgba(22,22,30,.1);border:1px solid rgba(22,22,30,.3);color:#16161e;border-radius:var(--radius-btn);padding:.35rem .8rem;font-size:var(--fs-sm);cursor:pointer;font-family:inherit;white-space:nowrap;">Exit</button>
+      <button onclick="exitDemoMode()" style="background:#16161e;color:#f5f5f8;border:none;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
+      <button onclick="exitDemoMode()" style="background:rgba(22,22,30,.1);border:1px solid rgba(22,22,30,.3);color:#16161e;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;white-space:nowrap;">Exit</button>
     </div>
   </div>
 
@@ -3561,8 +3561,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="reminder-banner-body">
       <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
       <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);flex-wrap:wrap;">
-        <button class="btn btn-primary" id="logagain-yes" style="min-height:36px;padding:.3rem .9rem;font-size:.8rem;">Log it</button>
-        <button class="btn" id="logagain-other" style="min-height:36px;padding:.3rem .9rem;font-size:.8rem;" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+        <button class="btn btn-primary" id="logagain-yes" style="min-height:36px;padding:var(--space-1) var(--space-3-5);font-size:var(--fs-base);">Log it</button>
+        <button class="btn" id="logagain-other" style="min-height:36px;padding:var(--space-1) var(--space-3-5);font-size:var(--fs-base);" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
@@ -3649,16 +3649,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:var(--space-2);margin-left:auto;">
-        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
-        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;align-items:center;gap:.4rem;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
-        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
+        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
+        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;align-items:center;gap:var(--space-1-5);" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
+        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
     <div id="follow-suggest-slot"></div>
     <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
-    <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
+    <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
 
   <!-- ════ PROFILE PAGE ════ -->
@@ -3679,31 +3679,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-explore" class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3-5);">
       <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Watches</h1>
     </div>
-    <div class="form-group" style="margin-bottom:.7rem;">
+    <div class="form-group" style="margin-bottom:var(--space-3);">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
-    <div id="explore-brands" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:var(--space-2);margin-bottom:var(--space-2);-webkit-overflow-scrolling:touch;"></div>
+    <div id="explore-brands" style="display:flex;gap:var(--space-1-5);overflow-x:auto;padding-bottom:var(--space-2);margin-bottom:var(--space-2);-webkit-overflow-scrolling:touch;"></div>
     <div id="explore-grid" class="watches-grid"></div>
     <div id="explore-more-wrap" style="text-align:center;margin-top:var(--space-4);display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
-    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:2.5rem 0;font-size:.85rem;">No models match that search.</div>
+    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:2.5rem 0;font-size:var(--fs-base);">No models match that search.</div>
   </div>
 
   <div id="page-clubs" class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
       <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Clubs</h1>
-      <button class="btn btn-primary" style="font-size:var(--fs-base);padding:.4rem .9rem;" onclick="openCreateClub()">+ Create</button>
+      <button class="btn btn-primary" style="font-size:var(--fs-base);padding:var(--space-1-5) var(--space-3-5);" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
   </div>
 
   <div id="page-club-detail" class="page">
-    <div style="margin-bottom:1.1rem;">
-      <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:.38rem .7rem;">&#8592; Back</button>
+    <div style="margin-bottom:var(--space-4);">
+      <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:var(--space-1-5) var(--space-3);">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
       <div style="text-align:center;padding:3rem;color:var(--muted);">Loading&#8230;</div>
@@ -5827,14 +5827,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- Intro screen -->
   <div id="game-intro-screen" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:1.25rem;font-weight:var(--fw-heavy);letter-spacing:.02em;margin-bottom:var(--space-4);">Ranking Game</div>
-    <p id="game-intro-copy" style="font-size:.88rem;color:var(--muted);line-height:1.65;margin-bottom:var(--space-6);">
+    <div style="font-size:var(--fs-2xl);font-weight:var(--fw-heavy);letter-spacing:.02em;margin-bottom:var(--space-4);">Ranking Game</div>
+    <p id="game-intro-copy" style="font-size:var(--fs-md);color:var(--muted);line-height:1.65;margin-bottom:var(--space-6);">
       Head-to-head match-ups between your watches. Tap the one you prefer — you have 3 seconds per round.
       Elo scores accumulate over sessions so your ranking gets more accurate over time.
     </p>
-    <button class="btn btn-primary" onclick="beginRankingGame()" style="width:100%;margin-bottom:.85rem;">Let's go</button>
-    <button class="btn btn-ghost" onclick="dismissGame()" style="width:100%;margin-bottom:.85rem;">Try next time</button>
-    <label style="display:flex;align-items:center;gap:var(--space-2);font-size:.78rem;color:var(--muted);cursor:pointer;">
+    <button class="btn btn-primary" onclick="beginRankingGame()" style="width:100%;margin-bottom:var(--space-3-5);">Let's go</button>
+    <button class="btn btn-ghost" onclick="dismissGame()" style="width:100%;margin-bottom:var(--space-3-5);">Try next time</button>
+    <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);color:var(--muted);cursor:pointer;">
       <input type="checkbox" id="game-skip-intro-chk" style="width:auto;margin:0;">
       Don't show this again
     </label>
@@ -5842,11 +5842,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- Play screen -->
   <div id="game-play-screen" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:520px;">
-    <div style="text-align:center;margin-bottom:1.1rem;">
-      <div style="font-size:1.25rem;font-weight:var(--fw-heavy);letter-spacing:.02em;">Ranking Game</div>
-      <div id="game-match-label" style="font-size:.8rem;color:var(--muted);margin-top:.3rem;">Tap the watch you prefer</div>
+    <div style="text-align:center;margin-bottom:var(--space-4);">
+      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-heavy);letter-spacing:.02em;">Ranking Game</div>
+      <div id="game-match-label" style="font-size:var(--fs-base);color:var(--muted);margin-top:var(--space-1);">Tap the watch you prefer</div>
     </div>
-    <div style="display:flex;align-items:stretch;gap:.85rem;width:100%;">
+    <div style="display:flex;align-items:stretch;gap:var(--space-3-5);width:100%;">
       <div id="game-card-a" class="game-card"></div>
       <div class="game-vs-lbl" style="display:flex;align-items:center;">VS</div>
       <div id="game-card-b" class="game-card"></div>
@@ -5854,7 +5854,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="game-timer-wrap">
       <div id="game-timer-bar" class="game-timer-bar"></div>
     </div>
-    <div style="display:flex;gap:.65rem;margin-top:1.1rem;">
+    <div style="display:flex;gap:var(--space-2-5);margin-top:var(--space-4);">
       <button class="btn btn-ghost btn-sm" onclick="skipMatch()">Skip</button>
       <button class="btn btn-ghost btn-sm" onclick="endGame()">See Results</button>
       <button class="btn btn-ghost btn-sm" onclick="closeGame()">✕ Exit</button>
@@ -5863,12 +5863,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- Results screen -->
   <div id="game-result-screen" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:480px;">
-    <div style="text-align:center;margin-bottom:1.1rem;">
-      <div style="font-size:1.25rem;font-weight:var(--fw-heavy);">Your Ranking</div>
-      <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem;">Based on your head-to-head choices</div>
+    <div style="text-align:center;margin-bottom:var(--space-4);">
+      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-heavy);">Your Ranking</div>
+      <div style="font-size:var(--fs-base);color:var(--muted);margin-top:var(--space-1);">Based on your head-to-head choices</div>
     </div>
     <div id="game-result-list" class="game-result-list"></div>
-    <div style="display:flex;gap:.65rem;margin-top:var(--space-5);flex-wrap:wrap;justify-content:center;">
+    <div style="display:flex;gap:var(--space-2-5);margin-top:var(--space-5);flex-wrap:wrap;justify-content:center;">
       <button class="btn btn-primary" onclick="saveRanking()">Save Ranking</button>
       <button class="btn btn-ghost" onclick="startGame(gameMode)">Play Again</button>
       <button class="btn btn-ghost" onclick="closeGame()">✕ Close</button>
@@ -6846,7 +6846,7 @@ function _drainBadgeToast() {
     el.innerHTML = `<div style="display:flex;align-items:center;gap:var(--space-3);cursor:pointer;" onclick="openBadgeWall()">
       ${badgeMedallionSvg(b, 56, true)}
       <div><div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);color:var(--badge-text);">${escHtml(b.name)}</div>
-      <div style="font-size:.72rem;color:${cc.stroke};margin-top:.15rem;">${escHtml(b.flavor)}</div></div>
+      <div style="font-size:var(--fs-sm);color:${cc.stroke};margin-top:var(--space-0-5);">${escHtml(b.flavor)}</div></div>
     </div>`;
   } else {
     const medallions = batch.map(b => badgeMedallionSvg(b, 44, true)).join('');
@@ -6902,18 +6902,18 @@ function openBadgeWall() {
         <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
       </div>`;
     }).join('');
-    lockedHtml += '<div style="margin:var(--space-4) 0 .6rem;">' + catChip + '</div><div class="badge-wall-grid">' + cards + '</div>';
+    lockedHtml += '<div style="margin:var(--space-4) 0 var(--space-2-5);">' + catChip + '</div><div class="badge-wall-grid">' + cards + '</div>';
   });
 
   const totalVisible = visible.length;
   const earnedCount = earned.length;
 
   const content = `
-    <div style="text-align:center;margin-bottom:1.2rem;">
+    <div style="text-align:center;margin-bottom:var(--space-5);">
       <div style="font-size:1rem;font-weight:var(--fw-semibold);color:var(--badge-text);">Achievements</div>
-      <div style="font-size:.78rem;color:var(--badge-text);opacity:.6;margin-top:var(--space-1);">${earnedCount} of ${totalVisible} earned</div>
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.6;margin-top:var(--space-1);">${earnedCount} of ${totalVisible} earned</div>
     </div>
-    ${earnedCards ? '<div style="margin-bottom:.6rem;font-size:.72rem;color:var(--badge-text);opacity:.55;text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
+    ${earnedCards ? '<div style="margin-bottom:var(--space-2-5);font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
     ${lockedHtml}`;
 
   document.getElementById('badge-wall-content').innerHTML = content;
@@ -7010,12 +7010,12 @@ function openBadgeDetail(ref) {
   el.innerHTML = `
     <div style="text-align:center;">
       ${badgeMedallionSvg(b, 240, earned)}
-      <div style="font-size:1.05rem;font-weight:var(--fw-semibold);color:var(--badge-text);margin-top:var(--space-3);">${escHtml(b.name)}</div>
+      <div style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);color:var(--badge-text);margin-top:var(--space-3);">${escHtml(b.name)}</div>
       <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;font-family:monospace;margin-top:var(--space-1);">${badgeRefLabel(b.ref)}</div>
-      <div style="margin-top:.4rem;">${catChip}</div>
-      ${earned ? `<div style="font-size:var(--fs-base);color:var(--badge-text);opacity:.8;margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
-      <div style="font-size:.78rem;color:var(--badge-text);opacity:.6;margin-top:var(--space-2);">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
-      ${earned ? `<div style="font-size:.72rem;color:var(--badge-text);opacity:.5;margin-top:.3rem;">Earned ${dateStr}</div>` : ''}
+      <div style="margin-top:var(--space-1-5);">${catChip}</div>
+      ${earned ? `<div style="font-size:var(--fs-base);color:var(--badge-text);opacity:.8;margin-top:var(--space-2-5);font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.6;margin-top:var(--space-2);">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
+      ${earned ? `<div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.5;margin-top:var(--space-1);">Earned ${dateStr}</div>` : ''}
     </div>`;
   document.getElementById('badge-detail-modal').classList.remove('hidden');
 }
@@ -7554,12 +7554,12 @@ function badgeWallProfileSection() {
     <div class="profile-page-card">
       <div class="profile-page-section-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Achievements</span>
-        <span style="font-size:.72rem;color:var(--muted);font-weight:var(--fw-normal);">${earned.length} / ${visible.length}</span>
+        <span style="font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-normal);">${earned.length} / ${visible.length}</span>
       </div>
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center;padding:var(--space-2) 0;">
         ${previewCards}${lockedPreview}
       </div>
-      <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:.78rem;padding:.4rem;" onclick="openBadgeWall()">View All Badges</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);font-size:var(--fs-sm);padding:var(--space-1-5);" onclick="openBadgeWall()">View All Badges</button>
     </div>`;
 }
 // ── END BADGE SYSTEM ──────────────────────────────────────────────────────
@@ -7739,17 +7739,17 @@ function showDemoSignupModal() {
   m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);';
   m.innerHTML = `
     <div style="background:var(--bg,#f5f5f8);border-radius:16px;padding:var(--space-8);max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text,#16161e);margin-bottom:.3rem;">Like what you see?</div>
-      <div style="font-size:.85rem;color:var(--muted);margin-bottom:1.4rem;">Sign up free to start tracking your own collection.</div>
-      <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:.7rem;border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#333;font-size:.9rem;font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:var(--space-2);">
+      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text,#16161e);margin-bottom:var(--space-1);">Like what you see?</div>
+      <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-6);">Sign up free to start tracking your own collection.</div>
+      <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:var(--space-3);border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#333;font-size:var(--fs-md);font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:var(--space-2);">
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
         Continue with Google
       </button>
-      <button onclick="exitDemoMode();setTimeout(signInWithApple,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:.7rem;border-radius:var(--radius);border:none;background:#000;color:#fff;font-size:.9rem;font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:.8rem;">
+      <button onclick="exitDemoMode();setTimeout(signInWithApple,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:var(--space-3);border-radius:var(--radius);border:none;background:#000;color:#fff;font-size:var(--fs-md);font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:var(--space-3);">
         <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
       </button>
-      <button onclick="closeDemoSignupModal()" style="background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;font-family:inherit;padding:.3rem;">Keep exploring</button>
+      <button onclick="closeDemoSignupModal()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;font-family:inherit;padding:var(--space-1);">Keep exploring</button>
     </div>`;
   m.addEventListener('click', (e) => { if (e.target === m) closeDemoSignupModal(); });
   document.body.appendChild(m);
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.26';
+const APP_VERSION = '20.20.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9878,17 +9878,17 @@ async function unblockUser(userId) {
 function renderBlockedUsersList() {
   const el = document.getElementById('blocked-users-list');
   if (!el) return;
-  if (blockedUsers.size === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading…</div>';
+  if (blockedUsers.size === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No blocked users.</div>'; return; }
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Loading…</div>';
   db.from('profiles').select('id, username, display_name').in('id', [...blockedUsers]).then(({ data, error }) => {
-    if (error) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList:', error.message); return; }
-    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
+    if (error) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList:', error.message); return; }
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No blocked users.</div>'; return; }
     el.innerHTML = data.map(p => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:.85rem;">${escHtml(p.display_name || p.username || 'User')}</span>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem var(--space-2);" onclick="unblockUser('${p.id}')">Unblock</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:var(--fs-base);">${escHtml(p.display_name || p.username || 'User')}</span>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" onclick="unblockUser('${p.id}')">Unblock</button>
       </div>`).join('');
-  }).catch(e => { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
+  }).catch(e => { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────
@@ -10122,7 +10122,7 @@ function renderFriendPopoverContent(userId, req) {
   if (isFriends) {
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.1rem;">
-        <div style="display:flex;align-items:center;gap:.45rem;color:var(--vis-friends);font-weight:var(--fw-semibold);font-size:.86rem;">
+        <div style="display:flex;align-items:center;gap:var(--space-2);color:var(--vis-friends);font-weight:var(--fw-semibold);font-size:var(--fs-md);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -10142,7 +10142,7 @@ function renderFriendPopoverContent(userId, req) {
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);line-height:var(--lh-body);">
         Ask to be close friends. Both users must follow each other first.
       </div>
-      <button class="btn btn-primary" style="width:100%;font-size:.84rem;"
+      <button class="btn btn-primary" style="width:100%;font-size:var(--fs-base);"
         onclick="initiateFriendRequest('${userId}')">
         Ask to Be Close Friends
       </button>`;
@@ -10154,7 +10154,7 @@ function renderFriendPopoverContent(userId, req) {
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);line-height:var(--lh-body);">
         Close friend request sent — waiting for them to accept.
       </div>
-      <button class="btn btn-ghost" style="width:100%;font-size:.84rem;"
+      <button class="btn btn-ghost" style="width:100%;font-size:var(--fs-base);"
         onclick="closeFriendPopover();removeFriend('${userId}')">Cancel Request</button>`;
   }
 
@@ -10164,9 +10164,9 @@ function renderFriendPopoverContent(userId, req) {
         They sent you a close friend request.
       </div>
       <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-primary" style="flex:1;font-size:.84rem;"
+        <button class="btn btn-primary" style="flex:1;font-size:var(--fs-base);"
           onclick="acceptFriendRequestFromPopover('${userId}')">Accept</button>
-        <button class="btn btn-ghost" style="flex:1;font-size:.84rem;"
+        <button class="btn btn-ghost" style="flex:1;font-size:var(--fs-base);"
           onclick="closeFriendPopover();removeFriend('${userId}')">Decline</button>
       </div>`;
   }
@@ -10452,7 +10452,7 @@ async function renderClubDetail(clubId) {
   let joinBtnHtml = '';
   if (isMember) {
     joinBtnHtml = isOwner
-      ? `<span style="font-size:.78rem;color:var(--muted);font-style:italic;">You own this club</span>`
+      ? `<span style="font-size:var(--fs-sm);color:var(--muted);font-style:italic;">You own this club</span>`
       : `<button class="follow-btn following" onclick="leaveClub('${clubId}')">Joined ✓</button>`;
   } else if (isPending) {
     joinBtnHtml = `<button class="follow-btn requested" onclick="cancelClubRequest('${clubId}')">Requested</button>`;
@@ -10469,7 +10469,7 @@ async function renderClubDetail(clubId) {
     const ownerBadge = m.role === 'owner' ? ' \u{1F451}' : '';
     const ownerMenu = isOwner && m.id !== currentUser.id && m.role !== 'owner' ? `
       <button data-uid="${escAttr(m.id)}" data-cid="${escAttr(clubId)}" data-name="${escAttr(m.display_name || m.username || '')}" onclick="event.stopPropagation();showMemberMenu(this.dataset.uid, this.dataset.cid, this.dataset.name, this)"
-        style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:0 .2rem;">\u{22EF}</button>` : '';
+        style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:var(--fs-base);padding:0 var(--space-1);">\u{22EF}</button>` : '';
     return `<div class="club-member-chip" onclick="viewUserProfile('${m.id}')">
       ${avatarHtml}<span>${escHtml(m.display_name || m.username || 'User')}${ownerBadge}</span>${ownerMenu}
     </div>`;
@@ -10483,34 +10483,34 @@ async function renderClubDetail(clubId) {
       <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-3);">Edit Club</div>
 
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label for="club-edit-name" class="form-label" style="font-size:.78rem;">Club Name</label>
+        <label for="club-edit-name" class="form-label" style="font-size:var(--fs-sm);">Club Name</label>
         <input type="text" id="club-edit-name" value="${escHtml(club.name)}" maxlength="60">
       </div>
 
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label for="club-edit-desc" class="form-label" style="font-size:.78rem;">Description</label>
+        <label for="club-edit-desc" class="form-label" style="font-size:var(--fs-sm);">Description</label>
         <textarea id="club-edit-desc" rows="2" style="resize:none;" maxlength="300">${escHtml(club.description || '')}</textarea>
       </div>
 
       <div class="form-group" style="margin-bottom:var(--space-3);">
-        <label for="club-edit-photo-input" class="form-label" style="font-size:.78rem;">Club Photo</label>
+        <label for="club-edit-photo-input" class="form-label" style="font-size:var(--fs-sm);">Club Photo</label>
         <div id="club-edit-photo-area" class="log-photo-area" style="height:64px;" onclick="document.getElementById('club-edit-photo-input').click()">
           ${club.image_url
             ? `<img id="club-edit-photo-preview" src="${escHtml(club.image_url)}" alt="" class="log-photo-preview" style="display:block;max-height:56px;border-radius:var(--radius-btn);">`
-            : `<div id="club-edit-photo-placeholder" class="log-photo-placeholder" style="font-size:.78rem;">Upload photo</div><img id="club-edit-photo-preview" alt="" class="log-photo-preview" style="display:none;">`}
+            : `<div id="club-edit-photo-placeholder" class="log-photo-placeholder" style="font-size:var(--fs-sm);">Upload photo</div><img id="club-edit-photo-preview" alt="" class="log-photo-preview" style="display:none;">`}
         </div>
         <input type="file" id="club-edit-photo-input" accept="image/*" style="display:none" onchange="handleClubImageUpload(this,'${clubId}')">
       </div>
 
-      <div class="form-group" style="margin-bottom:.85rem;">
-        <label class="form-label" style="font-size:.78rem;">Privacy</label>
+      <div class="form-group" style="margin-bottom:var(--space-3-5);">
+        <label class="form-label" style="font-size:var(--fs-sm);">Privacy</label>
         <div class="chips" id="club-edit-privacy-chips">
           <div class="chip${club.privacy === 'public'  ? ' selected' : ''}" data-val="public"  onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='public'))">🌐 Public</div>
           <div class="chip${club.privacy === 'private' ? ' selected' : ''}" data-val="private" onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='private'))">🔒 Private</div>
         </div>
       </div>
 
-      <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.85rem;">
+      <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;border-top:1px solid var(--border);padding-top:var(--space-3-5);">
         <button class="btn btn-primary" style="font-size:var(--fs-base);" onclick="saveClubEdit('${clubId}')">Save</button>
         <button class="btn btn-ghost"   style="font-size:var(--fs-base);" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
         <button class="btn btn-danger"  style="font-size:var(--fs-base);margin-left:auto;" data-cid="${escAttr(clubId)}" data-name="${escAttr(club.name)}" onclick="openDeleteClubModal(this.dataset.cid, this.dataset.name)">Delete Club</button>
@@ -10520,13 +10520,13 @@ async function renderClubDetail(clubId) {
   el.innerHTML = `
     <div class="club-detail-header">
       <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img ${thumbSrcAttrs(club.image_url)} alt="${escAttr(club.name || '')}" onerror="this.style.display='none'">` : clubInitials}</div>
-      <div style="font-size:1.25rem;font-weight:var(--fw-bold);">${escHtml(club.name)}</div>
-      <div style="font-size:.8rem;color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+      <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);">${escHtml(club.name)}</div>
+      <div style="font-size:var(--fs-base);color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
       ${club.description ? `<div style="font-size:var(--fs-base);color:var(--muted);max-width:340px;margin-top:var(--space-1);">${escHtml(club.description)}</div>` : ''}
       <div style="margin-top:var(--space-2);">${joinBtnHtml}</div>
       ${isOwner ? `<div style="margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-2);">
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="openClubInviteModal('${clubId}')">+ Invite Members</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="openClubInviteModal('${clubId}')">+ Invite Members</button>
       </div>` : ''}
     </div>
     ${ownerEditSection}
@@ -10534,7 +10534,7 @@ async function renderClubDetail(clubId) {
     <div class="club-member-row">${membersHtml || '<span style="color:var(--muted);font-size:var(--fs-base);">No members yet.</span>'}</div>
     <div class="club-section-label">Club Posts</div>
     <div id="club-feed-list" style="max-width:470px;margin:0 auto;">
-      ${clubFeedHtml || '<div style="text-align:center;padding:var(--space-8);color:var(--muted);font-size:.85rem;">No posts in this club yet.</div>'}
+      ${clubFeedHtml || '<div style="text-align:center;padding:var(--space-8);color:var(--muted);font-size:var(--fs-base);">No posts in this club yet.</div>'}
     </div>`;
 
 }
@@ -10546,10 +10546,10 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.id = 'member-menu-popup';
   menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:var(--space-3);z-index:var(--z-menu);min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
   menu.innerHTML = `
-    <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:.6rem;padding-bottom:var(--space-2);border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
-    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
-    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger-text);">Remove member</button>
-    <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--muted);">Cancel</button>`;
+    <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2-5);padding-bottom:var(--space-2);border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--text);">\u{1F451} Promote to owner</button>
+    <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--danger-text);">Remove member</button>
+    <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--muted);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
   const rect = triggerBtn.getBoundingClientRect();
@@ -10654,7 +10654,7 @@ function openClubInviteModal(clubId) {
   _clubInviteModalId = clubId;
   document.getElementById('club-invite-search').value = '';
   document.getElementById('club-invite-results').innerHTML =
-    '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">Type a name or @username to search.</div>';
+    '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Type a name or @username to search.</div>';
   document.getElementById('club-invite-modal').classList.remove('hidden');
   renderPendingInvites(clubId);
 }
@@ -10667,7 +10667,7 @@ function debounceInviteSearch(query, clubId) {
   clearTimeout(_inviteSearchTimer);
   if (!query.trim()) {
     document.getElementById('club-invite-results').innerHTML =
-      '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">Type a name or @username to search.</div>';
+      '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Type a name or @username to search.</div>';
     return;
   }
   _inviteSearchTimer = setTimeout(() => searchInviteUsers(query, clubId), 300);
@@ -10677,7 +10677,7 @@ async function searchInviteUsers(query, clubId) {
   const el = document.getElementById('club-invite-results');
   if (!el) return;
   if (!query.trim()) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:.3rem 0;">Searching…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm);padding:var(--space-1) 0;">Searching…</div>';
 
   // Search profiles
   const { data: profiles } = await db.from('profiles')
@@ -10685,7 +10685,7 @@ async function searchInviteUsers(query, clubId) {
     .or(`username.ilike.%${sanitizeSearch(query)}%,display_name.ilike.%${sanitizeSearch(query)}%`)
     .neq('id', currentUser.id).limit(8);
 
-  if (!profiles || !profiles.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;">No users found.</div>'; return; }
+  if (!profiles || !profiles.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm);">No users found.</div>'; return; }
 
   // Get existing members + pending invites for this club
   const { data: members }  = await db.from('club_members').select('user_id').eq('club_id', clubId);
@@ -10697,18 +10697,18 @@ async function searchInviteUsers(query, clubId) {
     const initStr   = ((p.display_name || p.username || '?')[0]).toUpperCase();
     const avatarHtml = p.avatar_url
       ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
-      : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:var(--fw-bold);flex-shrink:0;">${initStr}</div>`;
+      : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);flex-shrink:0;">${initStr}</div>`;
     const rawName = p.display_name || p.username || 'User';
     const name = escAttr(rawName);
     // Handler args go through data- attributes, never template literals (SEC-8)
     const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
-    if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
+    if (memberSet.has(p.id))     btn = `<span style="font-size:var(--fs-sm);color:var(--muted);">Member</span>`;
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
-    else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;" ${dataAttrs}
+    else btn = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" ${dataAttrs}
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
-    return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
+    return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
       ${avatarHtml}
       <span style="flex:1;font-size:var(--fs-base);">${name}</span>
       ${btn}
@@ -10728,7 +10728,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
     onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
   toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
@@ -10744,7 +10744,7 @@ async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
     .eq('user_id', inviteeId).eq('type', 'club_invite')
     .eq('actor_id', currentUser.id).eq('ref_id', clubId);
   if (btn) {
-    btn.outerHTML = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+    btn.outerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
   }
   toast(`Invite to ${escHtml(inviteeName)} rescinded`);
@@ -10758,7 +10758,7 @@ async function renderPendingInvites(clubId) {
     .select('invitee_id, created_at, profiles:invitee_id(id, username, display_name, avatar_url)')
     .eq('club_id', clubId);
   if (!invites || !invites.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin:var(--space-3) 0 .4rem;padding-top:.65rem;border-top:1px solid var(--border);">Pending Invites</div>`
+  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin:var(--space-3) 0 var(--space-1-5);padding-top:var(--space-2-5);border-top:1px solid var(--border);">Pending Invites</div>`
     + invites.map(inv => {
       const p = inv.profiles;
       if (!p) return '';
@@ -10767,11 +10767,11 @@ async function renderPendingInvites(clubId) {
       const initStr = (rawName[0] || '?').toUpperCase();
       const avatarHtml = p.avatar_url
         ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
-        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:var(--fw-bold);flex-shrink:0;">${escHtml(initStr)}</div>`;
-      return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);flex-shrink:0;">${escHtml(initStr)}</div>`;
+      return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
         ${avatarHtml}
         <span style="flex:1;font-size:var(--fs-base);">${name}</span>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"
           onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>
       </div>`;
     }).join('');
@@ -10880,9 +10880,9 @@ async function searchClubs(query) {
     const initStr = (c.name || '?').slice(0, 2).toUpperCase();
     const count = countMap[c.id] || 0;
     let actionBtn = '';
-    if (isMember)  actionBtn = `<button class="follow-btn following" style="font-size:var(--fs-sm);padding:.3rem .7rem;" onclick="event.stopPropagation();openClubDetail('${c.id}')">Joined</button>`;
-    else if (isPending) actionBtn = `<button class="follow-btn requested" style="font-size:var(--fs-sm);padding:.3rem .7rem;" onclick="event.stopPropagation();cancelClubRequest('${c.id}')">Requested</button>`;
-    else           actionBtn = `<button class="follow-btn follow" style="font-size:var(--fs-sm);padding:.3rem .7rem;" onclick="event.stopPropagation();joinClub('${c.id}','${c.privacy}')">${c.privacy === 'private' ? 'Request' : 'Join'}</button>`;
+    if (isMember)  actionBtn = `<button class="follow-btn following" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="event.stopPropagation();openClubDetail('${c.id}')">Joined</button>`;
+    else if (isPending) actionBtn = `<button class="follow-btn requested" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="event.stopPropagation();cancelClubRequest('${c.id}')">Requested</button>`;
+    else           actionBtn = `<button class="follow-btn follow" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="event.stopPropagation();joinClub('${c.id}','${c.privacy}')">${c.privacy === 'private' ? 'Request' : 'Join'}</button>`;
     return `<div class="club-card" onclick="openClubDetail('${c.id}')">
       <div class="club-card-avatar">${initStr}</div>
       <div style="flex:1;min-width:0;">
@@ -11056,7 +11056,7 @@ function openCloseFriendsModal() {
   const pendingOut = friendRequests.filter(r => r.initiator_id === currentUser.id && r.status === 'pending');
   const pendingIn  = friendRequests.filter(r => r.target_id === currentUser.id && r.status === 'pending');
   const pendingNote = (pendingOut.length + pendingIn.length) > 0
-    ? `<div style="font-size:.73rem;color:var(--muted);padding:var(--space-2) var(--space-4);">${
+    ? `<div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-2) var(--space-4);">${
         pendingOut.length ? `${pendingOut.length} pending (waiting for acceptance)` : ''
       }${pendingOut.length && pendingIn.length ? ' · ' : ''}${
         pendingIn.length ? `${pendingIn.length} waiting for your acceptance` : ''
@@ -11538,7 +11538,7 @@ function renderNotificationPanel() {
   if (btn) {
     const hasUnread = userNotifs.some(n => !n.is_read);
     btn.innerHTML = hasUnread
-      ? `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem var(--space-2);" onclick="markAllNotifsRead()">Mark all read</button>`
+      ? `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" onclick="markAllNotifsRead()">Mark all read</button>`
       : '';
   }
   if (!userNotifs.length) {
@@ -11619,7 +11619,7 @@ function renderNotificationPanel() {
       ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-xl);flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
       : n.type === 'share_comment'
       ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-xl);flex-shrink:0;display:flex;align-items:center;justify-content:center;">💬</div>`
-      : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
+      : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:var(--fs-sm);flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" data-ref="${escAttr(n.ref_id || '')}" data-actor="${escAttr(n.actor_id || '')}" onclick="${notifClick}">
         ${avatarHtml}
@@ -12319,13 +12319,13 @@ function experimentSpeedHtml(key, arms) {
     return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
   const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
-  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:var(--space-2) .6rem;border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:.78rem;font-variant-numeric:tabular-nums;">
-          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:.3rem .6rem;align-items:baseline;">
+  return `<div class="adm-exp-speed" style="margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
+          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-2-5);align-items:baseline;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}
             ${row('Treatment', arms.treatment)}
           </div>
-          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:var(--space-1-5);">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
 
@@ -12472,7 +12472,7 @@ async function loadFeed() {
   // screen (cached feed at boot, foreground re-pull) keeps the cards and swaps
   // them in place when Phase 1 returns.
   const listEl = document.getElementById('feed-list');
-  if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
+  if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:var(--space-3);"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:var(--space-2);"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   // Experiment feed_rpc: the whole first page in ONE request. Any failure falls
   // through to the classic path below, which is untouched.
   _feedViaRpc = false;   // describes this load only — a stale true skipped the follows/blocks-changed reload
@@ -16059,15 +16059,15 @@ function renderEpWatchDisplay() {
     const w = effectiveWatch;
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-    display.innerHTML = `<div class="watch-suggestion" style="margin-top:.3rem;">
+      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+    display.innerHTML = `<div class="watch-suggestion" style="margin-top:var(--space-1);">
       ${thumb}
       <div style="flex:1;min-width:0;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
-      <button class="sug-no" onclick="toggleEpWatchPicker()" style="font-size:.7rem;">Change</button>
-      <button class="sug-no" onclick="removeEpWatch()" style="font-size:.7rem;">Remove</button>
+      <button class="sug-no" onclick="toggleEpWatchPicker()" style="font-size:var(--fs-xs);">Change</button>
+      <button class="sug-no" onclick="removeEpWatch()" style="font-size:var(--fs-xs);">Remove</button>
     </div>`;
   } else {
-    display.innerHTML = `<div class="watch-suggestion" onclick="toggleEpWatchPicker()" style="margin-top:.3rem;cursor:pointer;">
+    display.innerHTML = `<div class="watch-suggestion" onclick="toggleEpWatchPicker()" style="margin-top:var(--space-1);cursor:pointer;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
       <div style="flex:1;color:var(--muted);font-size:var(--fs-base);">Tag a watch from your collection</div>
     </div>`;
@@ -16142,13 +16142,13 @@ function toggleEpWatchPicker() {
   else if (editPostWatchId) currentWatchId = editPostWatchId;
   else { const fi = feedItems.find(i => i.id === editPostLogId); currentWatchId = fi?.watch_id || null; }
 
-  picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:.4rem;">
+  picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:var(--space-1-5);">
     ${watches.map(w => {
       const isSel = w.id === currentWatchId;
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
         : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-      return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:.45rem var(--space-2);">
+      return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div style="flex:1;min-width:0;">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
@@ -16689,7 +16689,7 @@ async function npIdentifyWatch(file) {
   const sugEl = document.getElementById('np-watch-suggestion');
   if (!sugEl) { logNpIdentifyOutcome('no_sug_el', { waited_ms: waited }); return; }
   // Show loading state
-  sugEl.innerHTML = `<div class="watch-suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div style="flex:1;color:var(--muted);font-size:.8rem;">Identifying watch…</div></div>`;
+  sugEl.innerHTML = `<div class="watch-suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div style="flex:1;color:var(--muted);font-size:var(--fs-base);">Identifying watch…</div></div>`;
   sugEl.style.display = '';
   try {
     const base64 = await blobToResizedBase64Fast(file);
@@ -16742,11 +16742,11 @@ function renderNpWatchDisplay() {
   if (w) {
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
     el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
       ${thumb}
       <div style="flex:1;min-width:0;font-size:var(--fs-base);"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
-      <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:.7rem;">Change</button>
+      <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:var(--fs-xs);">Change</button>
     </div><div id="np-watch-picker" style="display:none;"></div>`;
   } else {
     // Retry is offered ONLY when a retry could plausibly change the answer (our
@@ -16754,9 +16754,9 @@ function renderNpWatchDisplay() {
     // call to print the same line, and an always-on Retry teaches people to
     // ignore it.
     const note = _npIdentifyNote
-      ? `<div style="display:flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.78rem;margin-bottom:.35rem;">
+      ? `<div style="display:flex;align-items:center;gap:var(--space-1-5);color:var(--muted);font-size:var(--fs-sm);margin-bottom:var(--space-1-5);">
       <span>${escHtml(_npIdentifyNote.text)}</span>
-      ${_npIdentifyNote.retry ? `<button class="sug-no" onclick="npRetryIdentify()" style="font-size:.7rem;">Retry</button>` : ''}
+      ${_npIdentifyNote.retry ? `<button class="sug-no" onclick="npRetryIdentify()" style="font-size:var(--fs-xs);">Retry</button>` : ''}
     </div>`
       : '';
     el.innerHTML = note + `<div class="watch-suggestion" onclick="toggleNpWatchPicker()" style="cursor:pointer;">
@@ -16824,8 +16824,8 @@ function toggleNpWatchPicker() {
   const picker = document.getElementById('np-watch-picker');
   if (!picker) return;
   if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
-  picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:.4rem;">
-    <div class="watch-option${!npIdentifiedWatchId ? ' selected' : ''}" onclick="selectNpWatch(null)" style="padding:.45rem var(--space-2);">
+  picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:var(--space-1-5);">
+    <div class="watch-option${!npIdentifiedWatchId ? ' selected' : ''}" onclick="selectNpWatch(null)" style="padding:var(--space-2) var(--space-2);">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M18 6L6 18"/></svg>
       <div style="flex:1;min-width:0;"><div class="watch-info-name" style="color:var(--muted);">No watch</div></div>
       ${!npIdentifiedWatchId ? '<span style="color:var(--gold-text);font-size:var(--fs-sm);font-weight:var(--fw-semibold);">Selected</span>' : ''}
@@ -16841,7 +16841,7 @@ function toggleNpWatchPicker() {
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
         : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-      return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:.45rem var(--space-2);">
+      return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div style="flex:1;min-width:0;">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
@@ -17709,7 +17709,7 @@ function openDiscover() {
   discoverUsers = [];
   document.getElementById('discover-search').value = '';
   document.getElementById('discover-results').innerHTML =
-    '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">Type a name or @username to search.</div>';
+    '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Type a name or @username to search.</div>';
   renderFollowingList();
   renderDiscoverSuggested();   // A/B follow_suggest
   document.getElementById('discover-modal').classList.remove('hidden');
@@ -17725,7 +17725,7 @@ function debounceSearch(val) {
   if (!val.trim()) {
     discoverUsers = [];
     document.getElementById('discover-results').innerHTML =
-      '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">Type a name or @username to search.</div>';
+      '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Type a name or @username to search.</div>';
     return;
   }
   document.getElementById('discover-results').innerHTML = '';
@@ -17734,7 +17734,7 @@ function debounceSearch(val) {
 async function doSearchUsers(query) {
   if (!currentUser) return;
   const el = document.getElementById('discover-results');
-  if (el) el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">Searching…</div>';
+  if (el) el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Searching…</div>';
   const { data, error } = await db
     .from('profiles')
     .select('id, username, display_name, avatar_url, profile_privacy')
@@ -17743,7 +17743,7 @@ async function doSearchUsers(query) {
     .limit(10);
   if (error) {
     console.error('[WristLog] Search error:', error.message, error);
-    if (el) el.innerHTML = `<div style="color:var(--danger-text);font-size:var(--fs-base);padding:.4rem 0;">Search failed: ${escHtml(error.message)}</div>`;
+    if (el) el.innerHTML = `<div style="color:var(--danger-text);font-size:var(--fs-base);padding:var(--space-1-5) 0;">Search failed: ${escHtml(error.message)}</div>`;
     return;
   }
   // Hide private accounts that aren't already friends
@@ -17755,11 +17755,11 @@ function renderDiscoverUsers() {
   if (!el) return;
   if (!discoverUsers.length) {
     const query = document.getElementById('discover-search').value.trim();
-    el.innerHTML = query ? '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">No users found for that search.</div>' : '';
+    el.innerHTML = query ? '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">No users found for that search.</div>' : '';
     return;
   }
   el.innerHTML = `
-    <div class="eyebrow eyebrow-muted" style="margin-bottom:.65rem;">Search Results</div>
+    <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2-5);">Search Results</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
@@ -17767,7 +17767,7 @@ async function renderFollowingList() {
   if (!el) return;
   const ids = [...following];
   if (!ids.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);padding:.4rem 0;">You\'re not following anyone yet.</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1-5) 0;">You\'re not following anyone yet.</div>';
     return;
   }
   const { data } = await db.from('profiles').select('id, username, display_name, avatar_url, profile_privacy, is_official').in('id', ids);
@@ -17779,7 +17779,7 @@ function followNeedsRequest(privacy) {
   return privacy === 'followers' || privacy === 'private' || privacy === 'friends_only';
 }
 function friendActionBtn(u) {
-  if (currentUser && u.id === currentUser.id) return '<span style="font-size:.78rem;color:var(--muted);font-style:italic;">You</span>';
+  if (currentUser && u.id === currentUser.id) return '<span style="font-size:var(--fs-sm);color:var(--muted);font-style:italic;">You</span>';
   const isFrd = friendships.has(u.id);
   const isFlw = following.has(u.id);
   const isPending = pendingRequests.has(u.id);
@@ -17977,7 +17977,7 @@ async function renderDiscoverSuggested() {
   if (!currentUser || _isDemoMode || !experiment('follow_suggest')) { el.innerHTML = ''; return; }
   const open = _followSuggOpen(await loadFollowSuggestions());
   if (!open.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin-bottom:.65rem;">Suggested</div>`
+  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2-5);">Suggested</div>`
     + open.map(s => userCardHtml(s, { sub: followSuggestReason(s) })).join('')
     + `<div style="height:1rem;"></div>`;
   if (!_followSuggShown.has('people')) { _followSuggShown.add('people'); _logFollowSuggest('shown', { surface: 'people', n: open.length }); }
@@ -18165,12 +18165,12 @@ function renderRecSettingsBody() {
     const included = !excluded.has(w.id);
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:var(--radius-sm);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
-    return `<div class="toggle-row" style="gap:.6rem;">
+      : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-2xs);border-radius:var(--radius-sm);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+    return `<div class="toggle-row" style="gap:var(--space-2-5);">
       ${thumb}
       <div style="flex:1;min-width:0;">
         <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(w.name)}</div>
-        <div style="font-size:.72rem;color:var(--muted);">${escHtml(w.brand)}</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(w.brand)}</div>
       </div>
       <label class="toggle-switch">
         <input type="checkbox" ${included ? 'checked' : ''} onchange="toggleRecExclude('${w.id}')">
@@ -19627,11 +19627,11 @@ function renderReportCard(r) {
   if (r._content) {
     if (r.content_type === 'log') {
       const photoThumb = r._content.photo_url ? `<img src="${escHtml(r._content.photo_url)}" alt="Reported photo" style="width:40px;height:40px;border-radius:4px;object-fit:cover;margin-right:var(--space-2);">` : '';
-      contentPreview = `<div style="display:flex;align-items:center;margin:.4rem 0;padding:.4rem;background:var(--hover);border-radius:var(--radius-sm);font-size:.78rem;">
+      contentPreview = `<div style="display:flex;align-items:center;margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--hover);border-radius:var(--radius-sm);font-size:var(--fs-sm);">
         ${photoThumb}<span style="color:var(--text);">${escHtml((r._content.notes || '').slice(0, 80))}${(r._content.notes||'').length > 80 ? '…' : ''}</span>
       </div>`;
     } else {
-      contentPreview = `<div style="margin:.4rem 0;padding:.4rem;background:var(--hover);border-radius:var(--radius-sm);font-size:.78rem;color:var(--text);">
+      contentPreview = `<div style="margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--hover);border-radius:var(--radius-sm);font-size:var(--fs-sm);color:var(--text);">
         ${escHtml((r._content.body || '').slice(0, 100))}${(r._content.body||'').length > 100 ? '…' : ''}
       </div>`;
     }
@@ -19639,20 +19639,20 @@ function renderReportCard(r) {
 
   return `
     <div class="fb-card" style="margin-bottom:var(--space-3);padding:var(--space-3);border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? 'var(--success)' : 'var(--muted)'};">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-1);">
         <span class="fb-type-badge" style="text-transform:capitalize;">${escHtml(r.reason)}</span>
-        <span style="font-size:.72rem;${statusCls};font-weight:var(--fw-semibold);text-transform:uppercase;">${r.status}</span>
+        <span style="font-size:var(--fs-sm);${statusCls};font-weight:var(--fw-semibold);text-transform:uppercase;">${r.status}</span>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;">
+      <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">
         ${escHtml(r.content_type)} by <strong>${escHtml(reportedName)}</strong> · reported by ${escHtml(reporterName)} · ${date}
       </div>
-      ${r.details ? `<div style="font-size:.78rem;color:var(--text);margin-bottom:.3rem;">"${escHtml(r.details)}"</div>` : ''}
+      ${r.details ? `<div style="font-size:var(--fs-sm);color:var(--text);margin-bottom:var(--space-1);">"${escHtml(r.details)}"</div>` : ''}
       ${contentPreview}
       ${r.status === 'pending' ? `
-        <div style="display:flex;gap:.4rem;margin-top:var(--space-2);">
-          <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
-          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
-          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
+        <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-2);">
+          <button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
+          <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
+          <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
 }
@@ -20667,7 +20667,7 @@ function renderFunnelFromRpc(f, su) {
   const newUsers7d = su.last_7d || 0;
   const newUsers1d = su.last_1d || 0;
 
-  const row = (label, d, w, all) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.3rem 0;border-bottom:1px solid var(--border);">
+  const row = (label, d, w, all) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);">
     <span style="flex:1;">${escHtml(label)}</span>
     <span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${d}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${w}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${all}</span></span>
   </div>`;
@@ -20680,7 +20680,7 @@ function renderFunnelFromRpc(f, su) {
     ${row('Google sign-in click', signinG1, signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA1, signinA7, signinAAll)}
     ${row('New users created', newUsers1d, newUsers7d, newUsersAll)}
-    <div style="font-size:.78rem;color:var(--muted);margin-top:var(--space-2);line-height:var(--lh-body);">
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-2);line-height:var(--lh-body);">
       Last 24h: <b>${newUsers1d}</b>/${totalSignins1} signups (${conv1})<br>
       Last 7 days: <b>${newUsers7d}</b>/${totalSignins7} signups (${conv7})
     </div>
@@ -20940,7 +20940,7 @@ function exploreSearchInput() {
 async function loadExploreModels(reset) {
   if (reset) _exploreOffset = 0;
   const grid = document.getElementById('explore-grid');
-  if (reset) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:var(--space-8) 0;font-size:.85rem;">Loading…</div>';
+  if (reset) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:var(--space-8) 0;font-size:var(--fs-base);">Loading…</div>';
   const { data, error } = await db.rpc('browse_watch_models', {
     p_q: _exploreQ || null, p_brand: _exploreBrand, p_limit: EXPLORE_PAGE_SIZE, p_offset: _exploreOffset });
   if (error) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:var(--space-8) 0;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
@@ -21115,7 +21115,7 @@ function updateOfficialPreview() {
     ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
     : (caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(caption)}</p></div>` : '');
   const captionHtml = (imgSrc && caption)
-    ? `<div style="padding:.4rem var(--space-4) .7rem;font-size:.88rem;line-height:1.5;">${escHtml(caption)}</div>`
+    ? `<div style="padding:var(--space-1-5) var(--space-4) var(--space-3);font-size:var(--fs-md);line-height:var(--lh-body);">${escHtml(caption)}</div>`
     : '';
   const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -21129,7 +21129,7 @@ function updateOfficialPreview() {
         </div>
       </div>
       ${heroHtml}
-      <div class="feed-actions" style="padding:.3rem var(--space-4);">
+      <div class="feed-actions" style="padding:var(--space-1) var(--space-4);">
         <button class="feed-action-btn" disabled aria-label="Like"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
         <button class="feed-action-btn" disabled aria-label="Comment"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
       </div>
@@ -21141,7 +21141,7 @@ async function loadOfficialDrafts() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('official-drafts-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
   const { data, error } = await db.from('official_drafts')
     .select('*')
     .order('created_at', { ascending: false })
@@ -21166,14 +21166,14 @@ function renderOfficialDrafts() {
     ? _officialDrafts
     : _officialDrafts.filter(d => d.status === _officialFilter);
   if (!filtered.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_officialFilter === 'all' ? '' : _officialFilter + ' '}posts.</div>`;
+    el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_officialFilter === 'all' ? '' : _officialFilter + ' '}posts.</div>`;
     return;
   }
   el.innerHTML = filtered.map(d => {
     const thumb = d.photo_stored_url || d.image_url;
     const thumbHtml = thumb
       ? `<img class="draft-thumb" src="${escHtml(thumb)}" alt="" onerror="this.style.display='none'">`
-      : `<div class="draft-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.72rem;">No image</div>`;
+      : `<div class="draft-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--fs-sm);">No image</div>`;
     const statusBadge = d.status === 'published'
       ? '<span style="color:#4caf7d;font-weight:var(--fw-semibold);">Published</span>'
       : d.status === 'rejected'
@@ -21187,7 +21187,7 @@ function renderOfficialDrafts() {
         <button class="btn btn-ghost btn-sm" style="color:var(--danger-text);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
       </div>` : '';
     const sourceLink = d.source_url
-      ? `<div class="draft-info" style="margin-top:.2rem;"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" style="color:var(--gold-text);">Source ↗</a></div>`
+      ? `<div class="draft-info" style="margin-top:var(--space-1);"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" style="color:var(--gold-text);">Source ↗</a></div>`
       : '';
     return `
     <div class="draft-card" id="draft-${d.id}">
@@ -21214,7 +21214,7 @@ function previewOfficialDraft(draftId) {
     ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
     : (draft.caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(draft.caption)}</p></div>` : '');
   const captionHtml = (imgSrc && draft.caption)
-    ? `<div style="padding:.4rem var(--space-4) .7rem;font-size:.88rem;line-height:1.5;">${escHtml(draft.caption)}</div>`
+    ? `<div style="padding:var(--space-1-5) var(--space-4) var(--space-3);font-size:var(--fs-md);line-height:var(--lh-body);">${escHtml(draft.caption)}</div>`
     : '';
   const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -21229,7 +21229,7 @@ function previewOfficialDraft(draftId) {
           </div>
         </div>
         ${heroHtml}
-        <div class="feed-actions" style="padding:.3rem var(--space-4);">
+        <div class="feed-actions" style="padding:var(--space-1) var(--space-4);">
           <button class="feed-action-btn" disabled aria-label="Like"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
           <button class="feed-action-btn" disabled aria-label="Comment"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
         </div>
@@ -21279,8 +21279,8 @@ async function extractOfficialUrl() {
         <div class="draft-extract-preview">
           <img src="${escHtml(imageUrl)}" alt="" onerror="this.style.display='none'">
           <div style="font-size:var(--fs-base);"><strong>${escHtml(data.title || '')}</strong></div>
-          <div style="font-size:.78rem;color:var(--muted);">${escHtml(data.description || '')}</div>
-          ${data.site_name ? `<div style="font-size:.72rem;color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
+          <div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(data.description || '')}</div>
+          ${data.site_name ? `<div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
         </div>`;
     } else if (!hasUsefulData) {
       preview.style.display = '';
@@ -21383,7 +21383,7 @@ async function deleteOfficialDraft(draftId) {
   // Inline confirmation
   card.innerHTML = `
     <div style="text-align:center;padding:var(--space-2);">
-      <div style="font-size:.84rem;margin-bottom:var(--space-2);">Delete this draft?</div>
+      <div style="font-size:var(--fs-base);margin-bottom:var(--space-2);">Delete this draft?</div>
       <div class="draft-actions" style="justify-content:center;">
         <button class="btn btn-ghost btn-sm" style="color:var(--danger-text);" onclick="confirmDeleteDraft('${draftId}')">Delete</button>
         <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">Cancel</button>
@@ -22144,7 +22144,7 @@ function openTrackModal(id) {
   const thumbEl = document.getElementById('tl-watch-thumb');
   thumbEl.innerHTML = w.image
     ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:48px;height:48px;object-fit:cover;">`
-    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')};font-weight:var(--fw-heavy);font-size:.9rem;border-radius:var(--radius);">${initials(w.brand,w.name)}</div>`;
+    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')};font-weight:var(--fw-heavy);font-size:var(--fs-md);border-radius:var(--radius);">${initials(w.brand,w.name)}</div>`;
   document.getElementById('tl-watch-brand').textContent = w.brand || '';
   document.getElementById('tl-watch-name').textContent  = w.name  || '';
 
@@ -23233,7 +23233,7 @@ function snapToTrack() {
     const statusEl = document.getElementById('snap-status');
     const btnEl = document.getElementById('snap-to-track-btn');
     if (btnEl) btnEl.disabled = true;
-    if (statusEl) { statusEl.style.display = ''; statusEl.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying your watch\u2026</div></div>`; }
+    if (statusEl) { statusEl.style.display = ''; statusEl.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:var(--fs-base);">Identifying your watch\u2026</div></div>`; }
     try {
       const base64 = await blobToResizedBase64Fast(file);
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
@@ -23665,7 +23665,7 @@ function showGameResults() {
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:34px;height:34px;font-size:var(--fs-2xs);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
@@ -23846,27 +23846,27 @@ async function openUpdatePrices() {
 
   db.from('valuation_events').insert({ user_id: currentUser.id, action: 'open', watches_total: eligible.length }).then(() => {});
 
-  body.innerHTML = `<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:.78rem;">
+  body.innerHTML = `<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:var(--fs-sm);">
     <colgroup><col style="width:38%"><col style="width:20%"><col style="width:30%"><col style="width:12%"></colgroup>
     <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
-      <th style="padding:.4rem .2rem;">Watch</th>
-      <th style="padding:.4rem .2rem;text-align:right;">Current</th>
-      <th style="padding:.4rem .2rem;text-align:right;">WRotate</th>
-      <th style="padding:.4rem .2rem;text-align:center;">Use</th>
+      <th style="padding:var(--space-1-5) var(--space-1);">Watch</th>
+      <th style="padding:var(--space-1-5) var(--space-1);text-align:right;">Current</th>
+      <th style="padding:var(--space-1-5) var(--space-1);text-align:right;">WRotate</th>
+      <th style="padding:var(--space-1-5) var(--space-1);text-align:center;">Use</th>
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
-        <td style="padding:.45rem .2rem;vertical-align:top;overflow:hidden;"><div style="font-weight:var(--fw-semibold);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div style="font-size:var(--fs-2xs);color:var(--muted);opacity:.55;">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
-        <td style="padding:.45rem .2rem;text-align:right;vertical-align:top;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
-        <td id="upr-val-${w.id}" style="padding:.45rem .2rem;text-align:right;vertical-align:top;color:var(--muted);white-space:nowrap;">...</td>
-        <td id="upr-chk-${w.id}" style="padding:.45rem .2rem;text-align:center;vertical-align:top;"></td>
+        <td style="padding:var(--space-2) var(--space-1);vertical-align:top;overflow:hidden;"><div style="font-weight:var(--fw-semibold);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:var(--fs-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div style="font-size:var(--fs-2xs);color:var(--muted);opacity:.55;">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
+        <td style="padding:var(--space-2) var(--space-1);text-align:right;vertical-align:top;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
+        <td id="upr-val-${w.id}" style="padding:var(--space-2) var(--space-1);text-align:right;vertical-align:top;color:var(--muted);white-space:nowrap;">...</td>
+        <td id="upr-chk-${w.id}" style="padding:var(--space-2) var(--space-1);text-align:center;vertical-align:top;"></td>
       </tr>`).join('')}
     </tbody>
     <tfoot id="update-prices-totals" style="display:none;">
       <tr style="border-top:2px solid var(--border);">
-        <td style="padding:.55rem .2rem;font-weight:var(--fw-semibold);font-size:var(--fs-sm);">Total</td>
-        <td id="upr-total-current" style="padding:.55rem .2rem;text-align:right;font-weight:var(--fw-semibold);font-size:.78rem;white-space:nowrap;"></td>
-        <td id="upr-total-new" style="padding:.55rem .2rem;text-align:right;font-weight:var(--fw-semibold);font-size:.78rem;white-space:nowrap;"></td>
+        <td style="padding:var(--space-2) var(--space-1);font-weight:var(--fw-semibold);font-size:var(--fs-sm);">Total</td>
+        <td id="upr-total-current" style="padding:var(--space-2) var(--space-1);text-align:right;font-weight:var(--fw-semibold);font-size:var(--fs-sm);white-space:nowrap;"></td>
+        <td id="upr-total-new" style="padding:var(--space-2) var(--space-1);text-align:right;font-weight:var(--fw-semibold);font-size:var(--fs-sm);white-space:nowrap;"></td>
         <td></td>
       </tr>
     </tfoot>
@@ -23882,7 +23882,7 @@ async function openUpdatePrices() {
     _uprCompleteLogged = true;
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0 }).then(() => {});
   };
-  status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
+  status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
   // Dispatch a few at a time, not the whole collection at once. A bare forEach
   // fired one request per watch in the same millisecond, which is fine at ten
@@ -23910,7 +23910,7 @@ async function openUpdatePrices() {
       // and can be applied. Mark this row and keep going.
       if (data.error === 'daily_limit') {
         const limCell = document.getElementById('upr-val-' + w.id);
-        if (limCell) limCell.innerHTML = '<span style="color:var(--danger-text);font-size:.7rem;">Daily limit</span>';
+        if (limCell) limCell.innerHTML = '<span style="color:var(--danger-text);font-size:var(--fs-xs);">Daily limit</span>';
         if (done === eligible.length) {
           status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found (daily limit hit for the rest).`;
           if (Object.keys(_priceUpdateResults).length > 0) actions.style.display = 'flex';
@@ -23919,7 +23919,7 @@ async function openUpdatePrices() {
         return;
       }
       status.innerHTML = done < eligible.length
-        ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
+        ? `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const ev = data.estimated_value_usd || {};
       const mid = ev.mid;
@@ -23931,12 +23931,12 @@ async function openUpdatePrices() {
         const cachedDate = data.looked_up_at || w.marketPriceDate;
         const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;
         const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
-        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span></div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">valid — refresh in ${remaining}d</div>`;
+        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span></div><div style="font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;">valid — refresh in ${remaining}d</div>`;
       } else {
         _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
         const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
-        const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : 'var(--danger)'};font-size:var(--fs-xs);margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
-        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
+        const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : 'var(--danger)'};font-size:var(--fs-xs);margin-left:var(--space-1);">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
         chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
         _updatePriceSubtotals();
       }
@@ -23949,7 +23949,7 @@ async function openUpdatePrices() {
     .catch(() => {
       done++;
       status.innerHTML = done < eligible.length
-        ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
+        ? `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
       if (valCell) valCell.innerHTML = '<span style="color:var(--danger-text);">Error</span>';
@@ -24451,9 +24451,9 @@ function updateTypeSummary() {
   if (!sum) return;
   const tags = getSelectedTags();
   if (!tags.length) { sum.innerHTML = '<span style="color:var(--muted)">Add type tags</span>'; return; }
-  const pill = t => `<span style="font-size:10px;background:var(--badge-bg);color:var(--badge-accent);border:0.5px solid var(--badge-border);padding:1px 6px;border-radius:var(--radius);white-space:nowrap;">${escHtml(t)}</span>`;
+  const pill = t => `<span style="font-size:var(--fs-2xs);background:var(--badge-bg);color:var(--badge-accent);border:0.5px solid var(--badge-border);padding:1px var(--space-1-5);border-radius:var(--radius);white-space:nowrap;">${escHtml(t)}</span>`;
   if (tags.length <= 2) { sum.innerHTML = tags.map(pill).join(' '); return; }
-  sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span style="font-size:10px;color:var(--muted);">+${tags.length - 2}</span>`;
+  sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span style="font-size:var(--fs-2xs);color:var(--muted);">+${tags.length - 2}</span>`;
 }
 function updateSpecsSummary() {
   const sum = document.getElementById('sum-sec-specs');
@@ -24495,25 +24495,25 @@ function renderStorySection() {
   const hasContent = desc || bg || fns;
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
-    el.innerHTML = `<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:10px 12px;">
-      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:var(--badge-accent);color:#fff;font-size:12px;font-weight:var(--fw-medium);padding:9px;border-radius:var(--radius-btn);">⭐ Enhance with AI</button>
+    el.innerHTML = `<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);">
+      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:var(--badge-accent);color:#fff;font-size:var(--fs-sm);font-weight:var(--fw-medium);padding:var(--space-2-5);border-radius:var(--radius-btn);">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
-  let html = '<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:10px 12px;">';
+  let html = '<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);">';
   if (desc) {
-    html += `<div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
-    html += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(desc)}</div>`;
+    html += `<div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Description</div>`;
+    html += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(desc)}</div>`;
   }
   if (bg) {
-    html += `<div style="margin-top:10px;font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
-    html += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(bg)}</div>`;
+    html += `<div style="margin-top:var(--space-2-5);font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Background &amp; History</div>`;
+    html += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(bg)}</div>`;
   }
   if (fns) {
-    html += `<div style="margin-top:10px;font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
-    html += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(fns)}</div>`;
+    html += `<div style="margin-top:var(--space-2-5);font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Functions</div>`;
+    html += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(fns)}</div>`;
   }
-  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:11px;font-weight:var(--fw-medium);font-family:inherit;padding:5px 12px;border-radius:var(--radius-sm);cursor:pointer;">⭐ Re-enhance</button></div>`;
+  html += `<div style="margin-top:var(--space-2-5);"><button type="button" onclick="enhanceSingleWatch()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:var(--fs-xs);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-1-5) var(--space-3);border-radius:var(--radius-sm);cursor:pointer;">⭐ Re-enhance</button></div>`;
   html += '</div>';
   el.innerHTML = html;
 }
@@ -24655,7 +24655,7 @@ function renderStrapList() {
   el.innerHTML = wEditStraps.map((s, i) => {
     if (i === wEditingStrapIdx) {
       return `
-        <div class="strap-row add-strap-row" style="margin-top:0;border-bottom:1px solid var(--border);padding:.3rem 0;">
+        <div class="strap-row add-strap-row" style="margin-top:0;border-bottom:1px solid var(--border);padding:var(--space-1) 0;">
           <input type="text" id="strap-edit-name" aria-label="Strap name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;" maxlength="60">
           <input type="text" id="strap-edit-mat" aria-label="Strap material"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;" maxlength="40">
           <button type="button" class="btn btn-primary btn-sm" onclick="saveStrapEdit(${i})">Save</button>
@@ -24881,7 +24881,7 @@ async function loadModelOwnersRow(w) {
     row.textContent = "You're the only one on WRotate with this one — rare bird.";
   } else {
     const stack = vis.slice(0, 3).map(o =>
-      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
+      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:var(--fs-2xs);display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
     const era = data.era_min && data.era_max && data.era_min !== data.era_max
       ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
     row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
@@ -25280,7 +25280,7 @@ function valueGainHTML(paid, market) {
   const pct = Math.round((diff / paid) * 100);
   const sign = diff >= 0 ? '+' : '−';
   const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
-  return `<div style="margin-top:6px;"><div style="font-size:11px;color:var(--muted);">Gain vs paid</div><div style="font-size:13px;font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
+  return `<div style="margin-top:var(--space-1-5);"><div style="font-size:var(--fs-xs);color:var(--muted);">Gain vs paid</div><div style="font-size:var(--fs-base);font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
 }
 function renderValueSection() {
   const el = document.getElementById('value-section-content');
@@ -25422,12 +25422,12 @@ async function checkSingleWatchValue() {
   if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
 
   const valSpinner = '<span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span>';
-  if (status) status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;">${valSpinner} Looking up market value…</span>`;
+  if (status) status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);">${valSpinner} Looking up market value…</span>`;
   const valMsgs = ['Searching current listings…', 'Checking retail pricing…', 'Comparing market prices…', 'Finalizing estimate…'];
   let valMsgIdx = 0;
   const valMsgTimer = setInterval(() => {
     if (valMsgIdx < valMsgs.length && status) {
-      status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;">${valSpinner} ${valMsgs[valMsgIdx++]}</span>`;
+      status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);">${valSpinner} ${valMsgs[valMsgIdx++]}</span>`;
     }
   }, 5000);
   try {
@@ -25730,7 +25730,7 @@ function renderYearInReview() {
 
   const yirHeader = `
     <div class="yir-header">
-      <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:.3rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Year in Review</div>
+      <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:var(--space-1);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Year in Review</div>
       <div class="yir-year-nav">
         <button class="yir-year-btn" onclick="yirNav(-1)" aria-label="Previous year" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
         <span class="yir-year-label">${yirYear}</span>
@@ -25740,7 +25740,7 @@ function renderYearInReview() {
 
   if (totalWears === 0 && newWatches === 0) {
     el.innerHTML = `<div class="yir-card">${yirHeader}
-      <div style="color:var(--muted);font-size:.85rem;padding:var(--space-2) 0">No wear data for ${yirYear}.</div>
+      <div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-2) 0">No wear data for ${yirYear}.</div>
     </div>`;
     return;
   }
@@ -25808,15 +25808,15 @@ function renderMonthlyReview() {
   const canPrev = !(monthRevYear === 2020 && monthRevMonth === 0);
   const canNext = !(monthRevYear === now.getFullYear() && monthRevMonth === now.getMonth());
   const hdr = `<div class="yir-header">
-    <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:.3rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Review</div>
+    <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:var(--space-1);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Review</div>
     <div class="yir-year-nav">
       <button class="yir-year-btn" onclick="monthRevNav(-1)" aria-label="Previous month" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
-      <span class="yir-year-label" style="min-width:7.5rem;font-size:.8rem">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
+      <span class="yir-year-label" style="min-width:7.5rem;font-size:var(--fs-base)">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
       <button class="yir-year-btn" onclick="monthRevNav(1)" aria-label="Next month"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
     </div>
   </div>`;
   if (!mLogs.length) {
-    el.innerHTML = `<div class="yir-card">${hdr}<div style="color:var(--muted);font-size:.85rem;padding:var(--space-2) 0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}.</div></div>`;
+    el.innerHTML = `<div class="yir-card">${hdr}<div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-2) 0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}.</div></div>`;
     return;
   }
   const totalWears   = uniqueWears(mLogs);
@@ -25884,7 +25884,7 @@ function renderDowReport(fl) {
   });
   el.innerHTML = `<div class="yir-card">
     <div class="yir-header" style="margin-bottom:var(--space-3)">
-      <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:.3rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> By Day of Week</div>
+      <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:var(--space-1);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> By Day of Week</div>
     </div>
     <div class="dow-grid">${cells.map(({ dayName, dow, w, cnt, total }) => {
       const thumb = w
@@ -25896,7 +25896,7 @@ function renderDowReport(fl) {
         <div class="dow-day-name">${dayName}</div>
         <div class="dow-watch-thumb">${thumb}</div>
         ${w ? `<div class="dow-watch-name">${escHtml(w.name)}</div><div class="dow-watch-count">${cnt}× of ${total}</div>`
-            : `<div class="dow-watch-count" style="margin-top:.15rem">—</div>`}
+            : `<div class="dow-watch-count" style="margin-top:var(--space-0-5)">—</div>`}
       </div>`;
     }).join('')}</div>
   </div>`;
@@ -26160,8 +26160,8 @@ function recCardHTML(rec) {
   const todayDOW  = new Date().getDay();
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
-      <div style="color:var(--muted);font-size:.85rem">All watches worn today — great rotation!</div>
+      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+      <div style="color:var(--muted);font-size:var(--fs-base)">All watches worn today — great rotation!</div>
     </div>`;
   }
   const { w, daysSince, dowCount, weatherReason, weekendScore, weekendReason,
@@ -26205,7 +26205,7 @@ function recCardHTML(rec) {
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -26213,9 +26213,9 @@ function recCardHTML(rec) {
         <div class="rec-watch-brand">${escHtml(w.brand)}${w.ref?' · '+escHtml(w.ref):''}</div>
         <div class="rec-tags">${tags.map(t=>`<span class="rec-tag ${t.cls}">${t.text}</span>`).join('')}</div>
         <div class="rec-explanation">${explain}</div>
-        <div style="display:flex;gap:.55rem;align-items:center;margin-top:.65rem;flex-wrap:wrap;">
+        <div style="display:flex;gap:var(--space-2);align-items:center;margin-top:var(--space-2-5);flex-wrap:wrap;">
           ${wornToday
-            ? `<span style="font-size:.78rem;color:var(--success-text)">✓ Already logged today</span>`
+            ? `<span style="font-size:var(--fs-sm);color:var(--success-text)">✓ Already logged today</span>`
             : `<button class="btn-quicklog" onclick="openRecLog('${w.id}')">Log This Wear</button>`}
           <button class="btn-rec-skip" onclick="skipRec()" title="Try another suggestion">↻ Try another</button>
         </div>
@@ -26307,12 +26307,12 @@ function renderWearLeaderboard(fl) {
                  data-wid="${escAttr(w.id)}"
                  onclick="openEditWatch(this.dataset.wid)"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEditWatch(this.dataset.wid)}"
-                 style="display:flex;align-items:center;gap:.6rem;padding:var(--space-2) 0;border-bottom:1px solid var(--border);cursor:pointer;${dim}">
-      <span style="min-width:1.9rem;font-size:.78rem;font-weight:var(--fw-bold);color:var(--muted);flex-shrink:0;">#${r.rank}</span>
+                 style="display:flex;align-items:center;gap:var(--space-2-5);padding:var(--space-2) 0;border-bottom:1px solid var(--border);cursor:pointer;${dim}">
+      <span style="min-width:1.9rem;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--muted);flex-shrink:0;">#${r.rank}</span>
       ${thumb}
       <div style="flex:1;min-width:0;">
         <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);line-height:1.3;">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.1rem;">${r.wears} wear${r.wears !== 1 ? 's' : ''} · ${share}</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:.1rem;">${r.wears} wear${r.wears !== 1 ? 's' : ''} · ${share}</div>
       </div>
     </div>`;
   };
@@ -26320,17 +26320,17 @@ function renderWearLeaderboard(fl) {
   const toggle = unworn.length
     ? `<div style="padding:var(--space-2) 0 0;"><button class="btn btn-ghost btn-sm" onclick="lbToggleAll()">${
          _lbShowAll ? 'Hide not worn' : `Show all ${rows.length}`
-       }</button><span style="font-size:.72rem;color:var(--muted);margin-left:var(--space-2);">${unworn.length} not worn in this period</span></div>`
+       }</button><span style="font-size:var(--fs-sm);color:var(--muted);margin-left:var(--space-2);">${unworn.length} not worn in this period</span></div>`
     : '';
 
   const body = !anyWears
-    ? `<div class="empty-sub" style="padding:.6rem 0;">No wears logged in this period.</div>`
+    ? `<div class="empty-sub" style="padding:var(--space-2-5) 0;">No wears logged in this period.</div>`
     : shown.map(row).join('') + toggle;
 
   // The period lives in a select ~460px above; by the time the card is on screen
   // it is off screen, so switching windows silently changed every number.
   el.innerHTML = `<div class="section-title">Most Worn${label ? ` · ${label}` : ''}</div>`
-    + `<div style="font-size:.72rem;color:var(--muted);margin:-.35rem 0 var(--space-2);">% = share of wears in this period</div>`
+    + `<div style="font-size:var(--fs-sm);color:var(--muted);margin:-.35rem 0 var(--space-2);">% = share of wears in this period</div>`
     + body;
 }
 
@@ -28031,21 +28031,21 @@ function af2RenderRow(watch, idx) {
       break;
     case 'enhancing': {
       const enhFields = watch._af2EnhanceFields || [];
-      const enhFieldList = enhFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${enhFields.join(' · ')}</div>` : '';
+      const enhFieldList = enhFields.length ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);">${enhFields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Enhancing…')}</div>${enhFieldList}`;
       break;
     }
     case 'enhanced': {
       const fields = watch._af2EnhanceFields || [];
-      const fieldList = fields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${fields.join(' · ')}</div>` : '';
+      const fieldList = fields.length ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);">${fields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-status-green">Found ${watch._af2EnhanceCount || 0} details</div>${fieldList}`;
       break;
     }
     case 'pricing': {
       const pricingFields = watch._af2EnhanceFields || [];
-      const pricingFieldList = pricingFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${pricingFields.join(' · ')}</div>` : '';
+      const pricingFieldList = pricingFields.length ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);">${pricingFields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Checking market price…')}</div>${pricingFieldList}`;
       break;
@@ -28067,7 +28067,7 @@ function af2RenderRow(watch, idx) {
         }
       }
       const doneFields = watch._af2EnhanceFields || [];
-      const doneFieldList = doneFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${doneFields.join(' · ')}</div>` : '';
+      const doneFieldList = doneFields.length ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);">${doneFields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}${priceLine}${doneFieldList}`;
       break;
     }
@@ -28088,7 +28088,7 @@ function af2RenderRow(watch, idx) {
       actionsHtml = `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip">×</button>`;
       break;
     case 'identifying':
-      actionsHtml = `<span class="af2-spinner-gold"></span><button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip" style="margin-left:4px;">×</button>`;
+      actionsHtml = `<span class="af2-spinner-gold"></span><button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" aria-label="Skip" style="margin-left:var(--space-1);">×</button>`;
       break;
     case 'enhancing':
     case 'pricing':
@@ -28136,7 +28136,7 @@ function af2RenderSheet() {
   let rowsHtml = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
   if (_af2TotalDetected > 12) {
     const extra = _af2TotalDetected - 12;
-    rowsHtml += `<div style="text-align:center;padding:.6rem;font-size:var(--fs-sm);color:var(--muted);">+ ${extra} more detected. Save these first, then add more.</div>`;
+    rowsHtml += `<div style="text-align:center;padding:var(--space-2-5);font-size:var(--fs-sm);color:var(--muted);">+ ${extra} more detected. Save these first, then add more.</div>`;
   }
   rowsEl.innerHTML = rowsHtml;
 
@@ -28293,7 +28293,7 @@ async function af2RunDetectAndIdentify(base64) {
     // Replace with zero-watch UI
     const rowsEl = document.getElementById('af2-rows');
     rowsEl.innerHTML = `<div style="text-align:center;padding:var(--space-8) var(--space-4);">
-      <div style="font-size:.85rem;">No watches detected in that photo.</div>
+      <div style="font-size:var(--fs-base);">No watches detected in that photo.</div>
       <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-2);">Try a clearer shot or add manually.</div>
       <div style="display:flex;gap:var(--space-2);justify-content:center;margin-top:var(--space-4);">
         <button class="btn btn-primary" onclick="closeAf2Sheet();openAddFlowV2()">Try another photo</button>
@@ -28727,14 +28727,14 @@ function af2Edit(idx) {
   const infoEl = rowEl.querySelector('.af2-info');
   const actionsEl = rowEl.querySelector('.af2-actions');
   if (!infoEl || !actionsEl) return;
-  infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;position:relative;">
-    <input id="af2-edit-brand-${idx}" aria-label="Brand" value="${escHtml(w.brand || '')}" placeholder="Brand" autocomplete="off" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+  infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-1);position:relative;">
+    <input id="af2-edit-brand-${idx}" aria-label="Brand" value="${escHtml(w.brand || '')}" placeholder="Brand" autocomplete="off" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
     <div id="af2-brand-ac-${idx}" style="display:none;position:absolute;top:28px;left:0;right:0;max-height:120px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;z-index:10;box-shadow:var(--shadow-2);"></div>
-    <input id="af2-edit-model-${idx}" aria-label="Model" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-ref-${idx}" aria-label="Reference" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-diameter-${idx}" aria-label="Case size" value="${escHtml(w.caseDiameter || '')}" placeholder="Size (e.g. 41mm)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-movement-${idx}" aria-label="Movement" value="${escHtml(w.movementType || '')}" placeholder="Movement (e.g. automatic)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <input id="af2-edit-years-${idx}" aria-label="Years produced" value="${escHtml(w.yearRange || '')}" placeholder="Years (e.g. 2020-2022)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-model-${idx}" aria-label="Model" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-ref-${idx}" aria-label="Reference" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-diameter-${idx}" aria-label="Case size" value="${escHtml(w.caseDiameter || '')}" placeholder="Size (e.g. 41mm)" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-movement-${idx}" aria-label="Movement" value="${escHtml(w.movementType || '')}" placeholder="Movement (e.g. automatic)" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-years-${idx}" aria-label="Years produced" value="${escHtml(w.yearRange || '')}" placeholder="Years (e.g. 2020-2022)" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
   </div>`;
   const brandInput = document.getElementById('af2-edit-brand-' + idx);
   const acList = document.getElementById('af2-brand-ac-' + idx);
@@ -28746,7 +28746,7 @@ function af2Edit(idx) {
     // data-brand + escAttr, not an inlined JS string: escHtml does not escape
     // apostrophes, so a brand like "Beda'a" terminated the literal and threw.
     // Same fix already applied to the collection and wishlist pickers.
-    acList.innerHTML = matches.map(b => `<div style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" data-brand="${escAttr(b)}" onmousedown="af2PickBrand(${idx}, this.dataset.brand)">${escHtml(b)}</div>`).join('');
+    acList.innerHTML = matches.map(b => `<div style="padding:var(--space-1-5) var(--space-2);font-size:var(--fs-sm);cursor:pointer;border-bottom:1px solid var(--border);" data-brand="${escAttr(b)}" onmousedown="af2PickBrand(${idx}, this.dataset.brand)">${escHtml(b)}</div>`).join('');
     acList.style.display = '';
   };
   brandInput.addEventListener('input', updateAC);
@@ -28802,7 +28802,7 @@ function af2ShowPill() {
   if (!pill) {
     pill = document.createElement('div');
     pill.id = 'af2-pill';
-    pill.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:0.5px solid var(--border);padding:10px 16px;border-radius:var(--radius-pill);font-size:12px;display:flex;align-items:center;gap:8px;cursor:pointer;z-index:var(--z-menu);box-shadow:var(--shadow-2);';
+    pill.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:0.5px solid var(--border);padding:var(--space-2-5) var(--space-4);border-radius:var(--radius-pill);font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--space-2);cursor:pointer;z-index:var(--z-menu);box-shadow:var(--shadow-2);';
     pill.onclick = () => { pill.remove(); document.getElementById('af2-sheet').classList.remove('hidden'); };
     document.body.appendChild(pill);
   }
@@ -28843,7 +28843,7 @@ function openAf2DebugPreview() {
   ];
   const el = document.getElementById('af2-debug-rows');
   el.innerHTML = sample.map((w, i) => {
-    const stateLabel = `<div style="font-size:10px;font-weight:var(--fw-semibold);color:var(--gold-text);text-transform:uppercase;letter-spacing:.06em;margin:${i > 0 ? '12px' : '0'} 0 4px;">${w._af2State}${w._af2Duplicate ? ' (duplicate)' : ''}${w._af2PriceFailed ? ' (price failed)' : ''}</div>`;
+    const stateLabel = `<div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--gold-text);text-transform:uppercase;letter-spacing:.06em;margin:${i > 0 ? '12px' : '0'} 0 4px;">${w._af2State}${w._af2Duplicate ? ' (duplicate)' : ''}${w._af2PriceFailed ? ' (price failed)' : ''}</div>`;
     return stateLabel + af2RenderRow(w, i);
   }).join('');
   document.getElementById('af2-debug-sheet').classList.remove('hidden');
@@ -28883,7 +28883,7 @@ async function checkBatchWatchValues(ids) {
       <div class="pi-card-info">
         <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
         <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
-        <div class="val-status" style="font-size:.72rem;margin-top:var(--space-1);color:var(--muted);">Searching…</div>
+        <div class="val-status" style="font-size:var(--fs-sm);margin-top:var(--space-1);color:var(--muted);">Searching…</div>
       </div>
       <div class="pi-card-actions"></div>
     </div>`;
@@ -28938,7 +28938,7 @@ async function checkBatchWatchValues(ids) {
       if (statusEl) {
         statusEl.innerHTML = `<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span>${rangeStr ? ' <span style="color:var(--muted);font-size:var(--fs-xs);">' + rangeStr + '</span>' : ''}`;
       }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveValueResult(${i})">Save</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
     }
@@ -29204,7 +29204,7 @@ async function saveEnhanceResult(idx) {
     const statusEl = card?.querySelector('.enh-status');
     if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
     const actions = card?.querySelector('.pi-card-actions');
-    if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:var(--gold-text);">Saved</span>';
+    if (actions) actions.innerHTML = '<span style="font-size:var(--fs-sm);color:var(--gold-text);">Saved</span>';
     if (!_enhanceSaving) renderCollection(true);
     if (_enhanceSaveCount === 2) maybeShowReviewPrompt('enhance');
   } catch (e) {
@@ -29335,7 +29335,7 @@ function maybeShowEnhanceNudge(watch, surface) {
       <div class="enh-nudge-title"><b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
       <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
     </div>
-    <div style="display:flex;gap:.4rem;align-items:center;">
+    <div style="display:flex;gap:var(--space-1-5);align-items:center;">
       <button type="button" class="btn btn-primary btn-sm" onclick="enhanceFromNudge('${id}','${sfc}')">Enhance</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="dismissEnhanceNudge('${id}')">Not now</button>
     </div>
@@ -29383,7 +29383,7 @@ async function enhanceAllWatches(scopedIds) {
       <div class="pi-card-info">
         <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
         <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
-        <div class="enh-status" style="font-size:.72rem;margin-top:var(--space-1);color:var(--muted);">Waiting…</div>
+        <div class="enh-status" style="font-size:var(--fs-sm);margin-top:var(--space-1);color:var(--muted);">Waiting…</div>
       </div>
       <div class="pi-card-actions"></div>
     </div>`;
@@ -29471,7 +29471,7 @@ async function enhanceAllWatches(scopedIds) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveEnhanceResult(${i})">Save</button>`;
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
@@ -29498,7 +29498,7 @@ async function enhanceAllWatches(scopedIds) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveEnhanceResult(${i})">Save</button>`;
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
               }
@@ -29534,7 +29534,7 @@ function _openCropUI(sourceBlob, initialBbox, onDone) {
   overlay.innerHTML = `
     <div class="crop-adjuster-header">
       <button class="crop-cancel">Cancel</button>
-      <span style="color:#fff;font-weight:var(--fw-semibold);font-size:.9rem;">Adjust Crop</span>
+      <span style="color:#fff;font-weight:var(--fw-semibold);font-size:var(--fs-md);">Adjust Crop</span>
       <button class="crop-done">Done</button>
     </div>
     <div class="crop-viewport">
@@ -29897,9 +29897,9 @@ function openWishlistShareSheet() {
   const compose = document.getElementById('wl-share-compose');
   compose.style.display = '';
   compose.innerHTML = `
-    <div style="font-size:.86rem;margin-bottom:var(--space-3);">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never your price, notes or tags.</div>
-    ${priv ? `<div id="wl-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
-    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
+    <div style="font-size:var(--fs-md);margin-bottom:var(--space-3);">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never your price, notes or tags.</div>
+    ${priv ? `<div id="wl-share-private-note" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
+    <label style="display:block;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
     <textarea id="wl-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, sizes, budget, questions." style="width:100%;resize:vertical;"></textarea>
     <button class="btn btn-primary" id="wl-share-create" style="margin-top:var(--space-3);width:100%;" onclick="mintWishlistShare()">Create link</button>`;
   document.getElementById('wl-share-modal').classList.remove('hidden');
@@ -29936,13 +29936,13 @@ function renderWishlistShareLinks() {
   if (!el) return;
   if (!_wlShareLinks.length) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
+    <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Your shared links</div>
     ${_wlShareLinks.map(s => `
       <div style="border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:var(--space-2);padding:.4rem 0;">
+      <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:.8rem;font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('wishlist', s.token)}</div>
+          <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:var(--space-1-5);flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('wishlist', s.token)}</div>
         </div>
         <button class="btn btn-ghost btn-sm" data-token="${escAttr(s.token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
         <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeWishlistShare(this.dataset.revoke)">Revoke</button>
@@ -29987,8 +29987,8 @@ async function mintWishlistShare() {
   // is an await — the gesture is gone by here. So the URL is presented and the
   // NEXT tap does the sharing. Do not try to share directly from Create link.
   done.innerHTML = `
-    <div style="font-size:.86rem;margin-bottom:var(--space-2);">Your link is ready.</div>
-    <div id="wl-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
+    <div style="font-size:var(--fs-md);margin-bottom:var(--space-2);">Your link is ready.</div>
+    <div id="wl-share-url" style="font-size:var(--fs-sm);color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
     <div style="display:flex;gap:var(--space-2);">
       <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareWishlistUrl(this.dataset.token)">Share</button>
       <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
@@ -30137,7 +30137,7 @@ async function loadShareComments(kind) {
 function shareCommentChipHtml(kind, token) {
   const th = groupCommentsByToken(_shareComments[kind]).get(token) || [];
   if (!th.length) return '';
-  return `<button class="btn btn-ghost btn-sm" style="padding:.1rem .45rem;font-size:var(--fs-xs);" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
+  return `<button class="btn btn-ghost btn-sm" style="padding:.1rem var(--space-2);font-size:var(--fs-xs);" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
 }
 
 // The expanded thread under a link row (only when _shareThreadOpen === token).
@@ -30146,9 +30146,9 @@ function shareThreadHtml(kind, token) {
   const comments = groupCommentsByToken(_shareComments[kind]).get(token) || [];
   if (!comments.length) return '';
   return `<div class="share-thread" data-token="${escAttr(token)}">${comments.map(c => `
-    <div style="display:flex;gap:var(--space-2);align-items:flex-start;padding:.4rem 0;border-top:1px dashed var(--border);">
+    <div style="display:flex;gap:var(--space-2);align-items:flex-start;padding:var(--space-1-5) 0;border-top:1px dashed var(--border);">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:.72rem;color:var(--muted);"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
         <div style="font-size:var(--fs-base);white-space:pre-wrap;word-break:break-word;">${escHtml(c.body)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}',this.dataset.deleteComment)">Delete</button>
@@ -30200,9 +30200,9 @@ function openCollectionShareSheet() {
   const compose = document.getElementById('coll-share-compose');
   compose.style.display = '';
   compose.innerHTML = `
-    <div style="font-size:.86rem;margin-bottom:var(--space-3);">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never what you paid, market value, wears, notes or tags.</div>
-    ${priv ? `<div id="coll-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
-    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
+    <div style="font-size:var(--fs-md);margin-bottom:var(--space-3);">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never what you paid, market value, wears, notes or tags.</div>
+    ${priv ? `<div id="coll-share-private-note" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
+    <label style="display:block;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">Add a note (optional)</label>
     <textarea id="coll-share-label" aria-label="Share message" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, what you're asking, questions." style="width:100%;resize:vertical;"></textarea>
     <button class="btn btn-primary" id="coll-share-create" style="margin-top:var(--space-3);width:100%;" onclick="mintCollectionShare()">Create link</button>`;
   document.getElementById('coll-share-modal').classList.remove('hidden');
@@ -30239,13 +30239,13 @@ function renderCollectionShareLinks() {
   if (!el) return;
   if (!_collShareLinks.length) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
+    <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Your shared links</div>
     ${_collShareLinks.map(s => `
       <div style="border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:var(--space-2);padding:.4rem 0;">
+      <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:.8rem;font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('collection', s.token)}</div>
+          <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:var(--space-1-5);flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('collection', s.token)}</div>
         </div>
         <button class="btn btn-ghost btn-sm" data-token="${escAttr(s.token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
         <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeCollectionShare(this.dataset.revoke)">Revoke</button>
@@ -30284,8 +30284,8 @@ async function mintCollectionShare() {
   // navigator.share() needs a user gesture and the insert above is an await, so
   // the URL is presented and the NEXT tap does the sharing.
   done.innerHTML = `
-    <div style="font-size:.86rem;margin-bottom:var(--space-2);">Your link is ready.</div>
-    <div id="coll-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
+    <div style="font-size:var(--fs-md);margin-bottom:var(--space-2);">Your link is ready.</div>
+    <div id="coll-share-url" style="font-size:var(--fs-sm);color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
     <div style="display:flex;gap:var(--space-2);">
       <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareCollectionUrl(this.dataset.token)">Share</button>
       <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
@@ -30830,12 +30830,12 @@ function previewWatch(w) {
   }
 
   const refSpan = w.ref
-    ? `<span style="font-size:.78rem;color:var(--muted);font-weight:var(--fw-semibold);">${escHtml(w.ref)}</span>`
+    ? `<span style="font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-semibold);">${escHtml(w.ref)}</span>`
     : '';
   const urlBtn = w.url
     ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" title="Visit official page"
           style="display:inline-flex;align-items:center;outline:none;
-                 padding:.35rem;border-radius:var(--radius-btn);background:var(--surface2);
+                 padding:var(--space-1-5);border-radius:var(--radius-btn);background:var(--surface2);
                  border:1px solid var(--border);color:var(--text);text-decoration:none;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -30852,18 +30852,18 @@ function previewWatch(w) {
 
   let cardHtml = '';
   if (hasContent) {
-    cardHtml = '<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:10px 12px;border:0.5px solid var(--badge-border);">';
+    cardHtml = '<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);border:0.5px solid var(--badge-border);">';
     if (desc) {
-      cardHtml += `<div style="font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(desc)}</div>`;
+      cardHtml += `<div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Description</div>`;
+      cardHtml += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(desc)}</div>`;
     }
     if (bg) {
-      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(bg)}</div>`;
+      cardHtml += `<div style="margin-top:var(--space-2-5);font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Background &amp; History</div>`;
+      cardHtml += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(bg)}</div>`;
     }
     if (fns) {
-      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:var(--lh-body);color:var(--badge-text);">${escHtml(fns)}</div>`;
+      cardHtml += `<div style="margin-top:var(--space-2-5);font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);margin-bottom:var(--space-1);">Functions</div>`;
+      cardHtml += `<div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--badge-text);">${escHtml(fns)}</div>`;
     }
     cardHtml += '</div>';
   }
@@ -30873,7 +30873,7 @@ function previewWatch(w) {
   const modelRow = document.getElementById('wpm-model-row');
   if (modelRow) {
     modelRow.innerHTML = (w.modelId && featureFlag('watch_db'))
-      ? `<div role="button" tabindex="0" style="margin-top:var(--space-3);padding:9px 12px;border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);"
+      ? `<div role="button" tabindex="0" style="margin-top:var(--space-3);padding:var(--space-2-5) var(--space-3);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-base);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);"
              data-mid="${escAttr(w.modelId)}"
              onclick="closeWatchPreview();openModelPage(this.dataset.mid)">
            <span>See this model — who else owns it</span><span style="color:var(--muted);">→</span>
@@ -32211,7 +32211,7 @@ function initApp() {
           <div style="text-align:center;max-width:360px;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8" style="margin-bottom:var(--space-3);"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div style="font-size:1.2rem;font-weight:var(--fw-bold);margin-bottom:var(--space-2);color:var(--danger-text);">Account Suspended</div>
-            <div style="color:var(--muted);font-size:.9rem;line-height:1.5;margin-bottom:var(--space-4);">
+            <div style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin-bottom:var(--space-4);">
               Your account has been suspended for violating our Terms of Use. If you believe this is a mistake, contact <a href="mailto:support@wrotate.com" style="color:var(--gold-text);">support@wrotate.com</a>.
             </div>
             <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
@@ -32683,7 +32683,7 @@ function initTgSection(watchId) {
   // Demo mode: hide manual entry form, only show sign-up CTA in history area
   const secBody = document.getElementById('sec-accuracy');
   if (_isDemoMode && secBody) {
-    const manualEntry = secBody.querySelector('div[style*="margin-bottom:.65rem"]');
+    const manualEntry = secBody.querySelector('div[style*="margin-bottom:var(--space-2-5)"]');
     if (manualEntry) manualEntry.style.display = 'none';
   }
   document.getElementById('tg-rate-input').value = '';
@@ -33383,7 +33383,7 @@ window._tgNativeCallback = function(data) {
           } else if (_msrLastRate != null && _msrLastConf >= 0.45) {
             const r = _msrLastRate;
             const sign = r >= 0 ? '+' : '';
-            statusText.innerHTML = sign + r.toFixed(1) + ' s/day <span style="color:color-mix(in srgb, var(--status-warn) 60%, transparent);font-size:.6rem;font-weight:var(--fw-normal);">· lower confidence · retry for better accuracy</span>';
+            statusText.innerHTML = sign + r.toFixed(1) + ' s/day <span style="color:color-mix(in srgb, var(--status-warn) 60%, transparent);font-size:var(--fs-2xs);font-weight:var(--fw-normal);">· lower confidence · retry for better accuracy</span>';
             statusText.style.color = 'rgba(234,179,8,.8)';
             statusText.style.fontSize = '.75rem';
             statusText.style.fontWeight = '600';
@@ -33508,7 +33508,7 @@ async function loadTgHistory() {
   if (_isDemoMode) {
     listEl.innerHTML = `<div style="text-align:center;padding:var(--space-4) 0;">
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2);">Sign up to track your watch accuracy.</div>
-      <button onclick="showDemoSignupModal()" style="padding:.45rem 1.2rem;border-radius:var(--radius-btn);border:none;background:var(--accent,#4f46e5);color:#fff;font-size:.8rem;font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;">Sign up free</button>
+      <button onclick="showDemoSignupModal()" style="padding:var(--space-2) var(--space-5);border-radius:var(--radius-btn);border:none;background:var(--accent,#4f46e5);color:#fff;font-size:var(--fs-base);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;">Sign up free</button>
     </div>`;
     return;
   }
@@ -33518,18 +33518,18 @@ async function loadTgHistory() {
     const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
     const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
-    const noteStr = r.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;font-style:italic;">${escHtml(r.notes)}</div>` : '';
+    const noteStr = r.notes ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);font-style:italic;">${escHtml(r.notes)}</div>` : '';
     const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : 'var(--danger)') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
     const isoDate = d.toISOString().slice(0, 10);
-    return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
+    return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);font-size:var(--fs-base);">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
           <span style="font-weight:var(--fw-semibold);color:${rateColor};">${rateStr}</span>
-          ${details ? `<span style="color:var(--muted);margin-left:.4rem;">${details}</span>` : ''}
+          ${details ? `<span style="color:var(--muted);margin-left:var(--space-1-5);">${details}</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:var(--space-2);">
-          <span style="color:var(--muted);font-size:.72rem;">${dateStr}</span>
+          <span style="color:var(--muted);font-size:var(--fs-sm);">${dateStr}</span>
           <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Edit" aria-label="Edit">✎</button>
           <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger-text);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Delete" aria-label="Delete">✕</button>
         </div>
@@ -33580,13 +33580,13 @@ async function loadUnsavedReadings() {
   const { data, error } = await db.rpc('unsaved_measurement_sessions', { p_watch: _tgWatchId });
   if (error || !data || !data.length) { box.innerHTML = ''; box._rows = []; return; }
   box._rows = data;
-  box.innerHTML = `<div style="margin:.35rem 0 .6rem;padding:.55rem .7rem;border:1px dashed var(--border);border-radius:var(--radius-sm);">
-    <div style="font-size:.72rem;font-weight:var(--fw-semibold);color:var(--gold-text);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.3rem;">Unsaved readings (${data.length})</div>
-    ${data.map(r => { const l = unsavedReadingLabel(r); return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;font-size:.8rem;">
-      <div><span style="font-weight:var(--fw-semibold);">${l.rateStr}</span>${l.ampStr ? `<span style="color:var(--muted);margin-left:.4rem;">${l.ampStr}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.72rem;">${l.dateStr}</span></div>
-      <div style="display:flex;gap:.6rem;align-items:center;">
-        <button onclick="keepUnsavedReading(${Number(r.id)})" style="background:var(--gold);color:#fff;border:none;border-radius:var(--radius-sm);padding:var(--space-1) .6rem;font-size:.72rem;font-weight:var(--fw-semibold);cursor:pointer;min-height:32px;font-family:inherit;">Keep</button>
-        <button onclick="dismissUnsavedReading(${Number(r.id)})" aria-label="Dismiss reading" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+  box.innerHTML = `<div style="margin:var(--space-1-5) 0 var(--space-2-5);padding:var(--space-2) var(--space-3);border:1px dashed var(--border);border-radius:var(--radius-sm);">
+    <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--gold-text);letter-spacing:.04em;text-transform:uppercase;margin-bottom:var(--space-1);">Unsaved readings (${data.length})</div>
+    ${data.map(r => { const l = unsavedReadingLabel(r); return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-1) 0;font-size:var(--fs-base);">
+      <div><span style="font-weight:var(--fw-semibold);">${l.rateStr}</span>${l.ampStr ? `<span style="color:var(--muted);margin-left:var(--space-1-5);">${l.ampStr}</span>` : ''}<span style="color:var(--muted);margin-left:var(--space-1-5);font-size:var(--fs-sm);">${l.dateStr}</span></div>
+      <div style="display:flex;gap:var(--space-2-5);align-items:center;">
+        <button onclick="keepUnsavedReading(${Number(r.id)})" style="background:var(--gold);color:#fff;border:none;border-radius:var(--radius-sm);padding:var(--space-1) var(--space-2-5);font-size:var(--fs-sm);font-weight:var(--fw-semibold);cursor:pointer;min-height:32px;font-family:inherit;">Keep</button>
+        <button onclick="dismissUnsavedReading(${Number(r.id)})" aria-label="Dismiss reading" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-base);min-height:32px;min-width:32px;">✕</button>
       </div></div>`; }).join('')}
   </div>`;
 }
@@ -33853,7 +33853,7 @@ async function refreshMsrHistoryHint() {
   const line = document.getElementById('msr-history-hint-line');
   if (line) line.innerHTML = `<strong>${_fmtRateSigned(last.rate)}</strong> <span style="color:var(--muted);">· ${l.dateStr} · ${rows.length} reading${rows.length === 1 ? '' : 's'} on ${days.length} day${days.length === 1 ? '' : 's'}</span>`;
   const chart = document.getElementById('msr-history-hint-chart');
-  if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div style="font-size:.74rem;color:var(--muted);">Measure again on another day to see the trend.</div>`;
+  if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div style="font-size:var(--fs-sm);color:var(--muted);">Measure again on another day to see the trend.</div>`;
   card.style.display = '';
 }
 function openMsrHistory(source = 'header') {
@@ -34322,7 +34322,7 @@ function _q2RenderReadout(nativeRateNow, s, params) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'msr-q2-readout';
-    el.style.cssText = 'font-family:monospace;font-size:.66rem;color:#9aa;padding:var(--space-1) .4rem;line-height:1.35;';
+    el.style.cssText = 'font-family:monospace;font-size:var(--fs-xs);color:#9aa;padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);';
     host.insertAdjacentElement('afterend', el);
   }
   const nat = (nativeRateNow != null) ? nativeRateNow : _msrLastRate;
@@ -36143,7 +36143,7 @@ setTimeout(() => {
   } else {
     fl.innerHTML = '<div style="text-align:center;padding:2.5rem var(--space-4);">' +
       '<div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">\u26A0</div>' +
-      '<div style="font-weight:var(--fw-semibold);margin-bottom:.4rem;color:var(--text);">Taking too long to load</div>' +
+      '<div style="font-weight:var(--fw-semibold);margin-bottom:var(--space-1-5);color:var(--text);">Taking too long to load</div>' +
       '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Try refreshing the page.</div>' +
       '<button class="btn btn-primary" onclick="location.reload()">Refresh</button></div>';
   }
@@ -36232,14 +36232,14 @@ function _viewerKeydown(e) {
 </script>
 <!-- Shared-image chooser (iOS share extension) -->
 <div id="shared-img-modal" class="hidden" style="position:fixed;inset:0;z-index:var(--z-top);background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:var(--space-6);" onclick="if(event.target===this)sharedImgChoose(null)">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:340px;width:100%;padding:1.1rem;box-shadow:0 12px 40px rgba(0,0,0,.4);">
-    <div style="font-weight:var(--fw-bold);font-size:1rem;margin-bottom:.2rem;color:var(--text);">Shared photo</div>
-    <div style="font-size:.8rem;color:var(--muted);margin-bottom:var(--space-3);">What would you like to do with it?</div>
-    <img id="shared-img-preview" alt="Shared photo" style="width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius);margin-bottom:.9rem;border:1px solid var(--border);">
-    <button onclick="sharedImgChoose('post')" style="width:100%;padding:.65rem;margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--gold,#b08d3e);color:#fff;font-size:.88rem;font-weight:var(--fw-semibold);cursor:pointer;">Post this watch</button>
-    <button onclick="sharedImgChoose('collection')" style="width:100%;padding:.65rem;margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.88rem;font-weight:var(--fw-semibold);cursor:pointer;">Add to collection</button>
-    <button onclick="sharedImgChoose('wishlist')" style="width:100%;padding:.65rem;margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.88rem;font-weight:var(--fw-semibold);cursor:pointer;">Add to wishlist</button>
-    <button onclick="sharedImgChoose(null)" style="width:100%;padding:.55rem;border-radius:var(--radius);border:none;background:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;">Cancel</button>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:340px;width:100%;padding:var(--space-4);box-shadow:0 12px 40px rgba(0,0,0,.4);">
+    <div style="font-weight:var(--fw-bold);font-size:1rem;margin-bottom:var(--space-1);color:var(--text);">Shared photo</div>
+    <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);">What would you like to do with it?</div>
+    <img id="shared-img-preview" alt="Shared photo" style="width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius);margin-bottom:var(--space-3-5);border:1px solid var(--border);">
+    <button onclick="sharedImgChoose('post')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--gold,#b08d3e);color:#fff;font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Post this watch</button>
+    <button onclick="sharedImgChoose('collection')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Add to collection</button>
+    <button onclick="sharedImgChoose('wishlist')" style="width:100%;padding:var(--space-2-5);margin-bottom:var(--space-2);border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:var(--fs-md);font-weight:var(--fw-semibold);cursor:pointer;">Add to wishlist</button>
+    <button onclick="sharedImgChoose(null)" style="width:100%;padding:var(--space-2);border-radius:var(--radius);border:none;background:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;">Cancel</button>
   </div>
 </div>
 </body>

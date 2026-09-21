@@ -3228,13 +3228,13 @@ export function experimentSpeedHtml(key, arms) {
     return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
   const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${t}</div>`;
-  return `<div class="adm-exp-speed" style="margin:.1rem 0 .6rem;padding:var(--space-2) .6rem;border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:.78rem;font-variant-numeric:tabular-nums;">
-          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:.3rem .6rem;align-items:baseline;">
+  return `<div class="adm-exp-speed" style="margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
+          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-2-5);align-items:baseline;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}
             ${row('Treatment', arms.treatment)}
           </div>
-          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:.35rem;">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:var(--space-1-5);">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
 
