@@ -72,6 +72,11 @@ defined inside `index.html`. `p/` and `profile/` cannot use them, which is why t
 3. **Name the text styles and layout helpers**, replacing exact matches only: `.body-muted`, `.item-title`, `.caption`,
    `.row`, `.row-between`, `.grow`, `.stack-1/2/3/4/5`, `.empty`. Roughly 600 attributes. *Zero visual change.*
    What's New alone drops 133.
+   *Done 2026-09-21: 461 attributes → 24 classes (`scripts/design-system/name_styles.py`); inline `style=` 2,089 → 1,623.
+   65 exact matches stay inline on purpose: buttons/fields (step 4), elements with an id whose property JS assigns,
+   and elements a page rule could override (`.form-group`, `.draft-form-row` …). Two things the diffs could not see
+   and the tests caught: demo mode FOUND an element by its inline style (now an id + a guard test), and tests that
+   pinned inline strings.*
 4. **Add the four button variants and the compact field**, then convert: `.btn-block`, `.btn-grow`, `.btn-plain`,
    and the 52 classless buttons; `.field-compact`. Near-matches get snapped to the variant (e.g. a button with
    `fs-sm` and an odd padding becomes `.btn-sm`). *Small visible change, reviewed per screen like phase 3.*

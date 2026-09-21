@@ -28,4 +28,13 @@ Fences that every pass must keep (each one was learned the hard way):
    (pages + `sw.js` PRECACHE), so the old cache entry can never match the new page's request.
    **After every edit to `design-system.css` run `node scripts/ds-stamp.mjs`** — a unit test fails on a stale
    stamp. `compare.sh skew [ref]` replays the returning-visitor case in a real browser (control + fix + offline).
+9. **Nothing may find an element by its inline style** (`[style*="…"]`, in app code or tests). Styles keep becoming
+   classes; such a selector silently stops matching. `name_styles.py` refuses to run and a unit test fails if one exists.
 
+## Naming inline styles (phase 4 step 3)
+
+`name_styles.py [--lines a-b] [--apply]` replaces a `style="…"` that EXACTLY equals a named decision (the `NAMED`
+table) with its class, and appends the class to `design-system.css`. It converts only when no rule that could apply
+to the element — any state, any ancestor written in the same region — touches those properties. Then run
+`node scripts/ds-stamp.mjs`, `compare.sh static`, `live`, `modals ALL-EXCEPT:none`, `force`, and sync `wrotate_test.js`.
+The diffs compare computed VALUES only, so a new class name is not a difference.

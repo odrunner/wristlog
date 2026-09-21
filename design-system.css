@@ -373,7 +373,29 @@
    One class per DECISION ("muted body copy", "space below a block"), replacing inline style="…" copies of it.
    A class weighs less than the inline style it replaces: scripts/design-system/name_styles.py only converts an
    element when no other rule could override the class. Change a decision here and it changes everywhere. */
+/* text */
 .item-title { font-size: var(--fs-base); font-weight: var(--fw-semibold); margin-bottom: var(--space-1); }
 .body-muted { font-size: var(--fs-base); color: var(--muted); line-height: var(--lh-body); }
+.note { font-size: var(--fs-base); color: var(--muted); }
+.note-md { font-size: var(--fs-md); color: var(--muted); }
+.caption { font-size: var(--fs-sm); color: var(--muted); }
+.caption-xs { font-size: var(--fs-xs); color: var(--muted); }
+.text-muted { color: var(--muted); }
+.text-gold { color: var(--gold-text); }
+.text-gold-strong { color: var(--gold-text); font-weight: var(--fw-semibold); }
+.text-danger { color: var(--danger-text); }
+.text-success { color: var(--success-text); }
 .divider-top { margin: var(--space-3) 0; border-top: 1px solid var(--border); padding-top: var(--space-3); }
+/* layout */
+.stack-1 { margin-bottom: var(--space-1); }
+.stack-1-5 { margin-bottom: var(--space-1-5); }
+.stack-2 { margin-bottom: var(--space-2); }
+.stack-2-5 { margin-bottom: var(--space-2-5); }
 .stack-3 { margin-bottom: var(--space-3); }
+.stack-4 { margin-bottom: var(--space-4); }
+.stack-5 { margin-bottom: var(--space-5); }
+.row { display: flex; align-items: center; gap: var(--space-2); }
+.row-tight { display: flex; align-items: center; gap: var(--space-1-5); }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.grow { flex: 1; }
+.grow-clip { flex: 1; min-width: 0; }

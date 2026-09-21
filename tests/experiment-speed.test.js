@@ -18,12 +18,12 @@ describe('SPEED_EXPERIMENTS', () => {
 describe('experimentSpeedHtml', () => {
   it('shows both arms as median / p90 seconds with loads, users and error rate', () => {
     const out = experimentSpeedHtml('feed_rpc', { control: arm({ loads: 3, users: 2, first_live_p50: 1285, first_live_p90: 2448, enriched_p50: 2043, enriched_p90: 3080, error_pct: 33.4 }), treatment: arm() });
-    expect(out).toContain('Control <span style="color:var(--muted);">(3 loads, 2 users)</span>');
-    expect(out).toContain('1.3s <span style="color:var(--muted);">/ 2.4s</span>');
-    expect(out).toContain('2.0s <span style="color:var(--muted);">/ 3.1s</span>');
+    expect(out).toContain('Control <span class="text-muted">(3 loads, 2 users)</span>');
+    expect(out).toContain('1.3s <span class="text-muted">/ 2.4s</span>');
+    expect(out).toContain('2.0s <span class="text-muted">/ 3.1s</span>');
     expect(out).toContain('>33%<');
-    expect(out).toContain('Treatment <span style="color:var(--muted);">(9 loads, 4 users)</span>');
-    expect(out).toContain('2.4s <span style="color:var(--muted);">/ 3.0s</span>');
+    expect(out).toContain('Treatment <span class="text-muted">(9 loads, 4 users)</span>');
+    expect(out).toContain('2.4s <span class="text-muted">/ 3.0s</span>');
     expect(out).toContain('Repeat loads only');
   });
   it('says so when an arm has no repeat loads yet', () => {
@@ -46,6 +46,6 @@ describe('experimentSpeedHtml', () => {
     expect(out).not.toContain('NaN');
   });
   it('accepts numeric strings', () => {
-    expect(experimentSpeedHtml('feed_rpc', { control: arm({ loads: '5', first_live_p50: '1500', first_live_p90: '3000' }), treatment: arm() })).toContain('1.5s <span style="color:var(--muted);">/ 3.0s</span>');
+    expect(experimentSpeedHtml('feed_rpc', { control: arm({ loads: '5', first_live_p50: '1500', first_live_p90: '3000' }), treatment: arm() })).toContain('1.5s <span class="text-muted">/ 3.0s</span>');
   });
 });

@@ -233,7 +233,8 @@ describe('Advanced Settings — Phase 1 trim', () => {
     const headerStart = html.indexOf('id="page-measure"');
     const titleIdx = html.indexOf('Measure Accuracy', headerStart);
     const titleTag = html.slice(html.lastIndexOf('<h1', titleIdx), titleIdx);
-    expect(titleTag).toContain('flex:1');
+    // `.grow` is flex:1 (design-system.css); the title carried it inline until 2026-09-21.
+    expect(titleTag).toMatch(/flex:1|class="[^"]*\bgrow\b/);
   });
 });
 

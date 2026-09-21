@@ -310,6 +310,14 @@ describe('index.html', () => {
     expect(dupes).toEqual([]);
   });
 
+  // Inline styles keep turning into classes (scripts/design-system/name_styles.py). Code that FINDS an
+  // element through `[style*="…"]` silently stops matching when that happens — on 2026-09-21 demo mode
+  // stopped hiding the manual accuracy form this way. Use an id or a class.
+  it('never selects an element by its inline style', () => {
+    const hits = [...indexHtml.matchAll(/\[style[*^~$|]?=/g)].map(m => indexHtml.slice(0, m.index).split('\n').length);
+    expect(hits, `[style…] selector at line(s) ${hits.join(', ')}`).toEqual([]);
+  });
+
   it('links only design-system.css as a stylesheet', () => {
     const hrefs = [...new Set(stylesheetHrefs(indexHtml))];
     expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual([DS_URL]);

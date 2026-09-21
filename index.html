@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=745a4b55">
+  <link rel="stylesheet" href="/design-system.css?v=da8333cc">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -2816,7 +2816,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ UPDATE PRICES MODAL ════ -->
 <div id="update-prices-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:560px;padding:var(--space-6);">
-    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="modal-title row-between">
       <span>Update Market Prices</span>
       <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:var(--space-1) var(--space-2);font-size:var(--fs-base);">Close</button>
     </div>
@@ -3136,8 +3136,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
   <div class="modal" style="max-width:360px;text-align:center;padding:var(--space-8) 1.75rem;">
-    <div class="eyebrow" style="margin-bottom:var(--space-5);">Anniversary</div>
-    <div id="anniversary-watch-img" style="margin-bottom:var(--space-5);"></div>
+    <div class="eyebrow stack-5">Anniversary</div>
+    <div id="anniversary-watch-img" class="stack-5"></div>
     <div id="anniversary-modal-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);line-height:var(--lh-body);margin-bottom:var(--space-1-5);"></div>
     <div id="anniversary-text" style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);"></div>
     <button class="btn btn-ghost" onclick="dismissAnniversary()" style="width:100%;border-color:var(--gold);color:var(--gold-text);">Dismiss</button>
@@ -3150,7 +3150,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="follow-sugg-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="follow-sugg-modal-title">
   <div class="modal" style="max-width:420px;">
     <div class="follow-sugg" data-surface="add">
-      <div class="eyebrow" style="margin-bottom:var(--space-1-5);">You're in good company</div>
+      <div class="eyebrow stack-1-5">You're in good company</div>
       <div class="modal-title" id="follow-sugg-modal-title" style="margin-bottom:var(--space-3-5);"></div>
       <div class="follow-sugg-row" id="follow-sugg-modal-row"></div>
     </div>
@@ -3163,7 +3163,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
      reading while notifications still deliver quietly; Turn on spends the one-shot OS dialog. -->
 <div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
   <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) 1.75rem;">
-    <div class="eyebrow" style="margin-bottom:var(--space-4);">Reminders</div>
+    <div class="eyebrow stack-4">Reminders</div>
     <div id="push-ask-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Get the 5pm nudge on your lock screen</div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
     <div style="display:flex;gap:var(--space-2);">
@@ -3177,7 +3177,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" style="display:none;position:absolute;top:.6rem;right:.6rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:var(--fs-2xl);line-height:var(--lh-none);padding:var(--space-1) var(--space-2);">&times;</button>
     <!-- Step 1: Enjoying WRotate? -->
     <div id="review-step-ask">
-      <div class="eyebrow" style="margin-bottom:var(--space-4);">Quick question</div>
+      <div class="eyebrow stack-4">Quick question</div>
       <div id="review-prompt-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Enjoying WRotate?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
       <div style="display:flex;gap:var(--space-2);">
@@ -3187,7 +3187,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Step 2a: Feedback form (unhappy path) -->
     <div id="review-step-feedback" style="display:none;">
-      <div class="eyebrow" style="margin-bottom:var(--space-4);">Feedback</div>
+      <div class="eyebrow stack-4">Feedback</div>
       <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">What could be better?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);">We read every response. Tell us what's on your mind.</div>
       <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:var(--space-2-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:var(--fs-base);resize:vertical;margin-bottom:var(--space-4);"></textarea>
@@ -3213,7 +3213,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ MEASURE HELP MODAL ════ -->
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
   <div class="modal" style="max-width:380px;padding:var(--space-8) 1.75rem;">
-    <div class="eyebrow" style="margin-bottom:var(--space-5);">How to Measure</div>
+    <div class="eyebrow stack-5">How to Measure</div>
     <div id="msr-help-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-5);">Measure Your Watch's Accuracy</div>
     <div style="display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-6);">
       <div style="display:flex;gap:var(--space-3);align-items:flex-start;">
@@ -3295,7 +3295,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             oninput="onUsernameInput(this, 'ws-username-status')">
         </div>
       </div>
-      <div id="ws-username-status" class="username-status" style="margin-bottom:var(--space-3);"></div>
+      <div id="ws-username-status" class="username-status stack-3"></div>
       <div class="form-group" style="text-align:left;margin-bottom:var(--space-4);">
         <label for="ws-bio" style="font-size:var(--fs-base);margin-bottom:var(--space-1);display:block;">About you</label>
         <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
@@ -3319,21 +3319,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div style="flex-shrink:0;line-height:var(--lh-snug);display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
           <div>
             <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--text);">Theme</div>
-            <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);">Tap the icon to cycle Dark, Light, or System.</div>
+            <div class="body-muted">Tap the icon to cycle Dark, Light, or System.</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
           <div style="flex-shrink:0;line-height:var(--lh-snug);display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
           <div>
             <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--text);">Notifications</div>
-            <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);">Likes and comments on your posts.</div>
+            <div class="body-muted">Likes and comments on your posts.</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
           <div style="flex-shrink:0;line-height:var(--lh-snug);display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div>
             <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--text);">Your profile</div>
-            <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);">Collection, privacy settings, and sign out.</div>
+            <div class="body-muted">Collection, privacy settings, and sign out.</div>
           </div>
         </div>
       </div>
@@ -3343,14 +3343,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Terms of Use</div>
       <div style="color:var(--muted);font-size:var(--fs-base);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-4);max-height:200px;overflow-y:auto;text-align:left;padding:0 var(--space-2);">
-        <p style="margin-bottom:var(--space-2);">By using WRotate, you agree to:</p>
+        <p class="stack-2">By using WRotate, you agree to:</p>
         <ul style="margin:0 0 var(--space-2);padding-left:var(--space-5);">
           <li>Not post objectionable, offensive, or inappropriate content</li>
           <li>Not harass, bully, or threaten other users</li>
           <li>Content that violates these terms will be removed</li>
           <li>Accounts that violate these terms may be suspended or terminated</li>
         </ul>
-        <p>Read the full <a href="/terms.html" target="_blank" style="color:var(--gold-text);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--gold-text);">Privacy Policy</a>.</p>
+        <p>Read the full <a href="/terms.html" target="_blank" class="text-gold">Terms of Use</a> and <a href="/privacy.html" target="_blank" class="text-gold">Privacy Policy</a>.</p>
       </div>
       <label style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4);cursor:pointer;font-size:var(--fs-md);">
         <input type="checkbox" id="ws-eula-check" onchange="document.getElementById('ws-eula-btn').disabled = !this.checked">
@@ -3374,14 +3374,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;text-align:center;">
     <div class="modal-title" id="eula-modal-title" style="font-size:var(--fs-xl);">Terms of Use</div>
     <div style="color:var(--muted);font-size:var(--fs-base);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-4);max-height:250px;overflow-y:auto;text-align:left;padding:0 var(--space-2);">
-      <p style="margin-bottom:var(--space-2);">We've added Terms of Use to keep our community safe. By continuing, you agree to:</p>
+      <p class="stack-2">We've added Terms of Use to keep our community safe. By continuing, you agree to:</p>
       <ul style="margin:0 0 var(--space-2);padding-left:var(--space-5);">
         <li>Not post objectionable, offensive, or inappropriate content</li>
         <li>Not harass, bully, or threaten other users</li>
         <li>Content that violates these terms will be removed</li>
         <li>Accounts that violate these terms may be suspended or terminated</li>
       </ul>
-      <p>Read the full <a href="/terms.html" target="_blank" style="color:var(--gold-text);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--gold-text);">Privacy Policy</a>.</p>
+      <p>Read the full <a href="/terms.html" target="_blank" class="text-gold">Terms of Use</a> and <a href="/privacy.html" target="_blank" class="text-gold">Privacy Policy</a>.</p>
     </div>
     <label style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4);cursor:pointer;font-size:var(--fs-md);">
       <input type="checkbox" id="eula-gate-check" onchange="document.getElementById('eula-gate-btn').disabled = !this.checked">
@@ -3458,7 +3458,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ DEMO MODE BANNER ════ -->
   <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:var(--space-2-5) var(--space-5);margin:-.8rem var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-base);font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:var(--shadow-2);">
-    <span style="flex:1;min-width:0;">Demo Mode — read-only preview of Alex Rivera's collection</span>
+    <span class="grow-clip">Demo Mode — read-only preview of Alex Rivera's collection</span>
     <div style="display:flex;gap:var(--space-2);align-items:center;flex-shrink:0;">
       <button onclick="exitDemoMode()" style="background:#16161e;color:#f5f5f8;border:none;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
       <button onclick="exitDemoMode()" style="background:rgba(22,22,30,.1);border:1px solid rgba(22,22,30,.3);color:#16161e;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;white-space:nowrap;">Exit</button>
@@ -3496,7 +3496,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="font-size:var(--fs-xs);font-weight:var(--fw-semibold);letter-spacing:var(--ls-tight);text-transform:uppercase;color:var(--muted);margin-bottom:var(--space-1-5);">Not worn in a while</div>
       <div id="neglected-chips" style="display:flex;gap:var(--space-2);overflow-x:auto;padding-bottom:var(--space-1);-webkit-overflow-scrolling:touch;"></div>
     </div>
-    <div class="card" id="snap-to-track-card" style="margin-bottom:var(--space-5);">
+    <div class="card stack-5" id="snap-to-track-card">
       <h2 class="card-label">Snap to Track</h2>
       <button id="snap-to-track-btn" class="snap-btn" onclick="snapToTrack()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -3504,7 +3504,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div id="snap-status" style="display:none;"></div>
     </div>
-    <div class="card" style="margin-bottom:var(--space-5);">
+    <div class="card stack-5">
       <h2 class="card-label">Select a watch to log</h2>
       <div id="watch-selector"></div>
     </div>
@@ -3530,7 +3530,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
-      <div style="display:flex;gap:var(--space-2);align-items:center;">
+      <div class="row">
         <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;gap:var(--space-1-5);white-space:nowrap;padding:var(--space-2) var(--space-3);font-size:var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
@@ -3543,7 +3543,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span id="coll-select-count" style="font-size:var(--fs-base);font-weight:var(--fw-semibold);">0 selected</span>
       <button id="coll-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="coll-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
-      <span style="flex:1;"></span>
+      <span class="grow"></span>
       <button id="coll-share-links" class="btn btn-ghost btn-sm sel-bar-btn" onclick="openCollectionShareLinks()" title="Shared links" aria-label="Shared links"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="sel-bar-text">Shared links</span></button>
       <button id="coll-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitCollectionSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="coll-share-go" class="btn btn-primary btn-sm" onclick="openCollectionShareSheet()" disabled>Share</button>
@@ -3573,7 +3573,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ PROFILE PAGE ════ -->
   <div id="page-profile" class="page">
-    <div style="margin-bottom:var(--space-4);">
+    <div class="stack-4">
       <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:var(--space-1-5) var(--space-3);">← Back</button>
     </div>
     <div id="profile-page-content">
@@ -3612,7 +3612,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-club-detail" class="page">
-    <div style="margin-bottom:var(--space-4);">
+    <div class="stack-4">
       <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:var(--space-1-5) var(--space-3);">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
@@ -3627,7 +3627,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Admin Tabs -->
-    <div class="chips" id="admin-tabs" role="tablist" aria-label="Admin sections" style="margin-bottom:var(--space-4);">
+    <div class="chips stack-4" id="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="chip selected" data-tab="usage" role="tab" aria-selected="true" aria-controls="admin-tab-usage" onclick="switchAdminTab('usage')">Usage</button>
       <button type="button" class="chip" data-tab="traffic" role="tab" aria-selected="false" aria-controls="admin-tab-traffic" onclick="switchAdminTab('traffic')">Traffic</button>
       <button type="button" class="chip" data-tab="promos" role="tab" aria-selected="false" aria-controls="admin-tab-promos" onclick="switchAdminTab('promos')">Promos</button>
@@ -3648,14 +3648,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="text" id="adm-merge-src" placeholder="merge: src slug" style="flex:1;min-width:130px;">
         <input type="text" id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
         <button class="chip" onclick="adminMergeModels()">Merge</button>
-        <label style="font-size:var(--fs-sm);color:var(--muted);"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
+        <label class="caption"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
         <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
         <span id="adm-enrich-status" style="font-size:var(--fs-sm);color:var(--muted);"></span>
       </div>
       <div id="admin-models-list" style="font-size:var(--fs-base);">Loading…</div>
     </div>
     <div id="admin-tab-featured" class="admin-tab" role="tabpanel" style="display:none;">
-      <div class="eyebrow" style="margin-bottom:var(--space-3);">Featured posts</div>
+      <div class="eyebrow stack-3">Featured posts</div>
       <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">One post is featured at a time (24h), the rest queue up. Feature a post from its ★ menu in the feed.</div>
       <div id="admin-featured-list">Loading…</div>
     </div>
@@ -3684,14 +3684,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="eyebrow">Feedback</div>
         <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
-      <div class="chips" id="admin-filter-chips" style="margin-bottom:var(--space-3);">
+      <div class="chips stack-3" id="admin-filter-chips">
         <button type="button" class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</button>
         <button type="button" class="chip selected" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</button>
         <button type="button" class="chip" data-filter="reviewed" onclick="filterAdminFeedback('reviewed')">Reviewed</button>
         <button type="button" class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</button>
         <button type="button" class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</button>
       </div>
-      <div id="admin-feedback-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
+      <div id="admin-feedback-list"><div class="note-md">Loading…</div></div>
     </div>
 
     <!-- Tab: Reports -->
@@ -3700,13 +3700,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="eyebrow">Content Reports</div>
         <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
-      <div class="chips" id="report-filter-chips" style="margin-bottom:var(--space-3);">
+      <div class="chips stack-3" id="report-filter-chips">
         <button type="button" class="chip selected" data-filter="all" onclick="filterReports('all')">All</button>
         <button type="button" class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</button>
         <button type="button" class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</button>
         <button type="button" class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</button>
       </div>
-      <div id="admin-reports-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
+      <div id="admin-reports-list"><div class="note-md">Loading…</div></div>
     </div>
 
     <!-- Tab: Official -->
@@ -3760,13 +3760,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <!-- Draft filter chips -->
-      <div class="chips" id="official-filter-chips" style="margin-bottom:var(--space-3);">
+      <div class="chips stack-3" id="official-filter-chips">
         <button type="button" class="chip selected" data-filter="draft" onclick="filterOfficialDrafts('draft')">Drafts</button>
         <button type="button" class="chip" data-filter="published" onclick="filterOfficialDrafts('published')">Published</button>
         <button type="button" class="chip" data-filter="all" onclick="filterOfficialDrafts('all')">All</button>
       </div>
 
-      <div id="official-drafts-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
+      <div id="official-drafts-list"><div class="note-md">Loading…</div></div>
     </div>
 
     <!-- Tab: Broadcast -->
@@ -3829,12 +3829,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="broadcast-draft-status" aria-live="polite" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2);"></div>
 
         <!-- Saved drafts list (localStorage — this browser only) -->
-        <div id="broadcast-drafts-list" style="margin-bottom:var(--space-2-5);"></div>
+        <div id="broadcast-drafts-list" class="stack-2-5"></div>
 
         <!-- Real sends from broadcast_queue. Separate from drafts above, which
              live in localStorage: a send queued server-side has no local draft
              and would otherwise be invisible on this tab. -->
-        <div id="broadcast-sends-list" style="margin-bottom:var(--space-2-5);"></div>
+        <div id="broadcast-sends-list" class="stack-2-5"></div>
 
         <!-- Segment selector -->
         <div class="draft-form-row" style="margin-bottom:var(--space-2);">
@@ -3882,7 +3882,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="eyebrow">Email Campaigns</div>
         <button class="btn btn-ghost" onclick="createCampaign()" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2-5);">+ New campaign</button>
       </div>
-      <div id="campaigns-list" style="margin-bottom:var(--space-4);">
+      <div id="campaigns-list" class="stack-4">
         <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Loading campaigns...</div>
       </div>
     </div>
@@ -3898,7 +3898,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="promo-list" style="margin-bottom:var(--space-6);">Loading…</div>
 
       <!-- 2. Design — the SELECTED slot's content. Per-slot, not global. -->
-      <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Design — this slot's content</div></div>
+      <div class="stack-2"><div class="eyebrow">Design — this slot's content</div></div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-4);">
         <div class="draft-form-row">
           <label for="promo-variant">Style</label>
@@ -3958,7 +3958,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <!-- 3. Delivery — the SELECTED slot's targeting & pacing. Per-slot, not global. -->
-      <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Delivery — this slot's targeting &amp; pacing</div></div>
+      <div class="stack-2"><div class="eyebrow">Delivery — this slot's targeting &amp; pacing</div></div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);">
         <div class="draft-form-row">
           <label for="promo-audience">Audience</label>
@@ -3994,7 +3994,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="promo-status" aria-live="polite" style="font-size:var(--fs-base);margin-top:var(--space-2);margin-bottom:var(--space-6);"></div>
 
       <!-- 4. Defaults — GLOBAL fallback/kill-switch, applies only when a slot leaves a field blank. -->
-      <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Global Defaults — fallback &amp; kill switch for ALL slots</div></div>
+      <div class="stack-2"><div class="eyebrow">Global Defaults — fallback &amp; kill switch for ALL slots</div></div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);">
         <div class="draft-form-row"><label for="promo-cfg-enabled">Show promo cards to users</label>
           <input type="checkbox" id="promo-cfg-enabled">
@@ -4016,8 +4016,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Experiments -->
     <div id="admin-tab-experiments" class="admin-tab" role="tabpanel" style="display:none;">
-      <div class="eyebrow" style="margin-bottom:var(--space-2-5);">A/B experiments</div>
-      <details style="margin-bottom:var(--space-3);">
+      <div class="eyebrow stack-2-5">A/B experiments</div>
+      <details class="stack-3">
         <summary style="cursor:pointer;font-size:var(--fs-base);">New experiment</summary>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-1-5);margin-top:var(--space-2);font-size:var(--fs-base);">
           <input id="adm-exp-key" placeholder="key (a-z0-9_)">
@@ -4034,7 +4034,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Dev -->
     <div id="admin-tab-dev" class="admin-tab" role="tabpanel" style="display:none;">
-      <div style="margin-bottom:var(--space-3);">
+      <div class="stack-3">
         <div class="eyebrow">Feature Flags</div>
       </div>
       <div id="admin-dev-flags"></div>
@@ -4234,27 +4234,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Collection Features</div>
         <div class="help-grid2">
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
             <div class="help-mini-desc">The toggle in the Collection header switches between full cards and an <strong>images-only gallery</strong>. The gallery follows your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
             <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection (or at the top of your Wishlist) for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time. On the Wishlist, saving reorders the list by preference &#8212; you can still drag items afterwards.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
             <div class="help-mini-desc">Add tags when editing a watch (Chronograph, Dress Watch, Diver…). Tag chips appear above the grid — tap one to filter, tap again to clear.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Market Prices</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Market Prices</div>
             <div class="help-mini-desc">Tap <strong>Check Value</strong> inside any watch to get an AI-powered market estimate, or use the <strong>$</strong> button in the collection menu to update all watches at once. You can also enter values manually. Price history is tracked over time.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per-Watch Privacy</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per-Watch Privacy</div>
             <div class="help-mini-desc">On your profile page, tap any watch in your Collection showcase to cycle its privacy: Public &#8594; Followers Only &#8594; Close Friends &#8594; Private. Private watches are hidden from everyone else.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Post Pics</div>
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Post Pics</div>
             <div class="help-mini-desc">Toggle <strong>Post Pics</strong> above the collection grid to swap watch photos for your latest wrist shots. Each card shows the most recent post photo for that watch. Toggle off to go back to the standard watch image.</div>
           </div>
         </div>
@@ -4653,7 +4653,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ MEASURE PAGE ════ -->
   <div id="page-measure" class="page">
     <div class="page-header">
-      <h1 class="page-title" style="flex:1;">Measure Accuracy</h1>
+      <h1 class="page-title grow">Measure Accuracy</h1>
       <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:var(--space-1-5);background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);font-size:var(--fs-xs);font-weight:var(--fw-semibold);line-height:var(--lh-none);cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
       <button id="msr-history-btn" onclick="openMsrHistory('header')" style="display:none;background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
@@ -4854,7 +4854,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:var(--space-1-5);align-items:center;">
           <div style="display:flex;align-items:center;gap:var(--space-1);">
             <input type="text" id="msr-rate-input" style="width:70px;padding:var(--space-1-5) var(--space-1-5);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);font-weight:var(--fw-semibold);text-align:center;" value="">
-            <span style="font-size:var(--fs-sm);color:var(--muted);">s/day</span>
+            <span class="caption">s/day</span>
           </div>
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
           <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm" onclick="shareMsrFromComplete()" style="border-color:var(--gold);color:var(--gold-text);" disabled>Share</button>
@@ -4895,7 +4895,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button onclick="closeMsrHistory()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <h1 class="page-title" style="flex:1;">Accuracy History</h1>
+      <h1 class="page-title grow">Accuracy History</h1>
     </div>
     <div style="padding:0 var(--space-2);">
       <select id="msr-hist-watch-select" onchange="renderMsrHistory()" style="width:100%;padding:var(--space-2) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);margin-bottom:var(--space-3);"></select>
@@ -4920,7 +4920,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button onclick="closeMsrSettings()" style="background:none;border:none;cursor:pointer;padding:var(--space-1);color:var(--muted);" aria-label="Back to Measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <h1 class="page-title" style="flex:1;">Advanced Settings</h1>
+      <h1 class="page-title grow">Advanced Settings</h1>
     </div>
     <div style="padding:0 var(--space-2);">
       <!-- Detection core selector. Pro V2 is the default; Standard is the session-only opt-out.
@@ -4957,7 +4957,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="range" id="msr-prov2-lift" min="40" max="60" step="1" value="52" oninput="onProV2Lift(this.value)">
         </div>
       </div>
-      <div id="msr-std-preset-section" style="margin-bottom:var(--space-5);">
+      <div id="msr-std-preset-section" class="stack-5">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:var(--ls-tight);">ENVIRONMENT PRESET</div>
         <div id="msr-settings-presets" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);">
           <button class="msr-preset-card active" data-preset="default" onclick="tgSelectPreset('default')">
@@ -4978,7 +4978,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </button>
         </div>
       </div>
-      <div id="msr-std-tuning-section" style="margin-bottom:var(--space-5);">
+      <div id="msr-std-tuning-section" class="stack-5">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--muted);margin-bottom:var(--space-2);letter-spacing:var(--ls-tight);">TUNING</div>
         <div id="msr-settings-sliders" style="display:flex;flex-direction:column;gap:var(--space-3);">
           <div class="msr-slider-row">
@@ -5035,7 +5035,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span id="wl-select-count" style="font-size:var(--fs-base);font-weight:var(--fw-semibold);">0 selected</span>
       <button id="wl-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="wl-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
-      <span style="flex:1;"></span>
+      <span class="grow"></span>
       <button id="wl-share-links" class="btn btn-ghost btn-sm sel-bar-btn" onclick="openWishlistShareLinks()" title="Shared links" aria-label="Shared links"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="sel-bar-text">Shared links</span></button>
       <button id="wl-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitWishlistSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
@@ -5060,9 +5060,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="stats-row" id="stats-row"></div>
 
-    <div class="card" id="wear-leaderboard" style="margin-bottom:var(--space-5);"></div>
+    <div class="card stack-5" id="wear-leaderboard"></div>
 
-    <div class="card" style="margin-bottom:var(--space-5);">
+    <div class="card stack-5">
       <div class="section-title">Collection Report</div>
       <div id="coll-report-summary"></div>
       <div id="coll-report-table" style="overflow-x:auto;margin-top:var(--space-2-5);"></div>
@@ -5070,7 +5070,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div id="dow-report"></div>
 
-    <div class="card" style="margin-bottom:var(--space-5);">
+    <div class="card stack-5">
       <div class="section-title">Wears by Use Case</div>
       <div style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
         <div style="position:relative;width:220px;height:220px;flex-shrink:0;">
@@ -5081,7 +5081,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:var(--space-5);">
+    <div class="card stack-5">
       <div class="section-title">Collection Value Over Time</div>
       <div class="chart-wrap" style="height:260px;">
         <canvas id="ch-collvalue"></canvas>
@@ -5108,7 +5108,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
 <div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="row-between">
       <div class="modal-title" id="watch-modal-title" style="margin-bottom:0;">Add Watch</div>
       <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-none);">&times;</button>
     </div>
@@ -5414,25 +5414,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
         <!-- Manual entry form -->
-        <div style="margin-bottom:var(--space-2-5);">
+        <div class="stack-2-5" id="tg-manual-entry">
           <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1-5);text-transform:uppercase;letter-spacing:var(--ls-tight);">Manual Entry</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-rate-input" style="font-size:var(--fs-xs);color:var(--muted);">Rate (s/day) *</label>
+              <label for="tg-rate-input" class="caption-xs">Rate (s/day) *</label>
               <input type="number" id="tg-rate-input" step="0.1" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-be-input" style="font-size:var(--fs-xs);color:var(--muted);">Beat Error (ms)</label>
+              <label for="tg-be-input" class="caption-xs">Beat Error (ms)</label>
               <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2);">
             <div>
-              <label for="tg-amplitude-input" style="font-size:var(--fs-xs);color:var(--muted);">Amplitude (°)</label>
+              <label for="tg-amplitude-input" class="caption-xs">Amplitude (°)</label>
               <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
             </div>
             <div>
-              <label for="tg-bph-select" style="font-size:var(--fs-xs);color:var(--muted);">BPH</label>
+              <label for="tg-bph-select" class="caption-xs">BPH</label>
               <select id="tg-bph-select" style="width:100%;color:var(--text);font-size:var(--fs-base);">
                 <option value="18000">18,000</option>
                 <option value="19800">19,800</option>
@@ -5443,8 +5443,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               </select>
             </div>
           </div>
-          <div style="margin-bottom:var(--space-2);">
-            <label for="tg-notes-input" style="font-size:var(--fs-xs);color:var(--muted);">Notes</label>
+          <div class="stack-2">
+            <label for="tg-notes-input" class="caption-xs">Notes</label>
             <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           </div>
           <button class="btn btn-primary btn-sm" onclick="saveTimegrapherManual()" style="width:100%;">Save Reading</button>
@@ -5533,7 +5533,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" id="af2-sheet-title" style="display:flex;align-items:center;gap:var(--space-2);">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--badge-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      <span id="af2-title-text" style="flex:1;">Identifying Watches</span>
+      <span id="af2-title-text" class="grow">Identifying Watches</span>
       <span id="af2-progress-chip" style="font-size:var(--fs-xs);color:var(--muted);display:none;"></span>
     </div>
     <div id="af2-rows" style="max-height:60vh;overflow-y:auto;"></div>
@@ -5544,7 +5544,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ADD FLOW V2 DEBUG PREVIEW ════ -->
 <div id="af2-debug-sheet" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="modal-title row-between">
       <span>Add Flow V2 — State Preview</span>
       <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" style="background:none;border:none;font-size:var(--fs-xl);color:var(--muted);cursor:pointer;padding:0 var(--space-0-5);line-height:var(--lh-none);">&times;</button>
     </div>
@@ -5605,7 +5605,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
 <div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
   <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="row-between">
       <div class="modal-title" id="wishlist-modal-title" style="margin-bottom:0;">Add to Wishlist</div>
       <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:var(--fs-2xl);color:var(--muted);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-none);">&times;</button>
     </div>
@@ -5703,7 +5703,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div style="display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-2);">
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div class="modal-title" id="watch-preview-modal-title" style="margin-bottom:0;"></div>
       </div>
       <div id="wpm-thumb"></div>
@@ -5797,7 +5797,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="discover-suggested"></div>
     <div id="discover-results"></div>
     <div style="margin-top:var(--space-5);">
-      <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2-5);">People You Follow</div>
+      <div class="eyebrow eyebrow-muted stack-2-5">People You Follow</div>
       <div id="following-list"></div>
     </div>
     <div class="modal-actions" style="margin-top:var(--space-5);">
@@ -5866,8 +5866,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Location (optional)</label>
-      <div style="display:flex;align-items:center;gap:var(--space-2);">
+      <label class="caption">Location (optional)</label>
+      <div class="row">
         <div class="chips" id="np-location-chips" style="flex-wrap:nowrap;">
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
@@ -5878,7 +5878,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div class="form-group">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Who can see this?</label>
+      <label class="caption">Who can see this?</label>
       <div class="chips" id="np-vis-chips"></div>
     </div>
     <div class="modal-actions">
@@ -5916,7 +5916,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         style="display:none" onchange="handleEditPostPhotos(this)">
     </div>
     <div class="form-group" id="ep-watch-field">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Tagged Watch</label>
+      <label class="caption">Tagged Watch</label>
       <div id="ep-watch-display"></div>
       <div id="ep-watch-picker" style="display:none;"></div>
       <!-- Occasion + strap, shown only while a watch is tagged (not measurement shares) -->
@@ -5942,8 +5942,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Location (optional)</label>
-      <div style="display:flex;align-items:center;gap:var(--space-2);">
+      <label class="caption">Location (optional)</label>
+      <div class="row">
         <div class="chips" id="ep-location-chips" style="flex-wrap:nowrap;">
           <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
           <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
@@ -5954,11 +5954,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div class="form-group">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Who can see this?</label>
+      <label class="caption">Who can see this?</label>
       <div class="chips" id="ep-vis-chips"></div>
     </div>
     <div class="form-group" id="ep-club-field" style="display:none;">
-      <label style="font-size:var(--fs-sm);color:var(--muted);">Share to Club <span style="color:var(--muted);font-weight:var(--fw-normal);">(optional)</span></label>
+      <label class="caption">Share to Club <span style="color:var(--muted);font-weight:var(--fw-normal);">(optional)</span></label>
       <div class="chips" id="ep-club-chips"></div>
     </div>
     <div class="modal-actions">
@@ -5988,7 +5988,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
       <div style="margin-bottom:var(--space-2);display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-      <div class="modal-title" style="color:var(--danger-text);">Absolutely sure?</div>
+      <div class="modal-title text-danger">Absolutely sure?</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
@@ -6057,7 +6057,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <input type="hidden" id="report-user-id">
     <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);" id="report-context"></div>
     <div style="font-size:var(--fs-base);margin-bottom:var(--space-1-5);">What's the problem?</div>
-    <div class="chips" id="report-reason-chips" style="margin-bottom:var(--space-3);">
+    <div class="chips stack-3" id="report-reason-chips">
       <div class="chip selected" data-reason="inappropriate" onclick="setReportReason('inappropriate')">Inappropriate</div>
       <div class="chip" data-reason="spam" onclick="setReportReason('spam')">Spam</div>
       <div class="chip" data-reason="harassment" onclick="setReportReason('harassment')">Harassment</div>
@@ -6065,7 +6065,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Comment selection (shown when reporting a post that has comments) -->
-    <div id="report-target-section" class="hidden" style="margin-bottom:var(--space-3);">
+    <div id="report-target-section" class="hidden stack-3">
       <div style="font-size:var(--fs-base);margin-bottom:var(--space-1-5);">What are you reporting?</div>
       <div id="report-target-list"></div>
     </div>
@@ -6085,7 +6085,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="admin-user-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">User Detail</div>
     <div id="admin-user-modal-body" style="max-height:70vh;overflow-y:auto;margin:0 -.25rem;padding:0 var(--space-1);">
-      <div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>
+      <div class="note-md">Loading…</div>
     </div>
     <div class="modal-actions" style="margin-top:var(--space-4);">
       <button class="btn btn-ghost" onclick="viewUserProfile(window._adminDetailUserId);closeAdminUserModal()">View Profile</button>
@@ -6112,7 +6112,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           oninput="onUsernameInput(this, 'up-username-status')">
       </div>
     </div>
-    <div id="up-username-status" class="username-status" style="margin-bottom:var(--space-3);"></div>
+    <div id="up-username-status" class="username-status stack-3"></div>
     <button class="btn btn-primary" id="up-save-btn" style="width:100%;margin-bottom:var(--space-2);" onclick="saveUsernamePrompt()">Continue</button>
     <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('username-prompt-modal').classList.add('hidden')">Cancel</button>
   </div>
@@ -7462,7 +7462,7 @@ function badgeWallProfileSection() {
 
   return `
     <div class="profile-page-card">
-      <div class="profile-page-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="profile-page-section-title row-between">
         <span>Achievements</span>
         <span style="font-size:var(--fs-sm);color:var(--muted);font-weight:var(--fw-normal);">${earned.length} / ${visible.length}</span>
       </div>
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.06.59';
+const APP_VERSION = '21.07.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9339,7 +9339,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     showcaseHtml = `
       <div class="profile-page-card">
         <div class="profile-page-section-title">Collection</div>
-        <div style="color:var(--muted);font-size:var(--fs-base);">Your collection is empty — add watches in the Collection tab.</div>
+        <div class="note">Your collection is empty — add watches in the Collection tab.</div>
       </div>`;
   }
 
@@ -9350,7 +9350,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       wishlistHtml = `
         <div class="profile-page-card">
           <div class="profile-page-section-title">Wishlist</div>
-          <div style="color:var(--muted);font-size:var(--fs-base);">Your wishlist is empty — add watches in the Wishlist tab.</div>
+          <div class="note">Your wishlist is empty — add watches in the Wishlist tab.</div>
         </div>`;
     } else {
       const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
@@ -9788,17 +9788,17 @@ async function unblockUser(userId) {
 function renderBlockedUsersList() {
   const el = document.getElementById('blocked-users-list');
   if (!el) return;
-  if (blockedUsers.size === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No blocked users.</div>'; return; }
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Loading…</div>';
+  if (blockedUsers.size === 0) { el.innerHTML = '<div class="note">No blocked users.</div>'; return; }
+  el.innerHTML = '<div class="note">Loading…</div>';
   db.from('profiles').select('id, username, display_name').in('id', [...blockedUsers]).then(({ data, error }) => {
-    if (error) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList:', error.message); return; }
-    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No blocked users.</div>'; return; }
+    if (error) { el.innerHTML = '<div class="note">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList:', error.message); return; }
+    if (!data || !data.length) { el.innerHTML = '<div class="note">No blocked users.</div>'; return; }
     el.innerHTML = data.map(p => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);">
         <span style="font-size:var(--fs-base);">${escHtml(p.display_name || p.username || 'User')}</span>
         <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" onclick="unblockUser('${p.id}')">Unblock</button>
       </div>`).join('');
-  }).catch(e => { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
+  }).catch(e => { el.innerHTML = '<div class="note">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────
@@ -10390,7 +10390,7 @@ async function renderClubDetail(clubId) {
 
   const ownerEditSection = isOwner ? `
     <div id="club-edit-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-5);">
-      <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-3);">Edit Club</div>
+      <div class="eyebrow eyebrow-muted stack-3">Edit Club</div>
 
       <div class="form-group" style="margin-bottom:var(--space-3);">
         <label for="club-edit-name" class="form-label" style="font-size:var(--fs-sm);">Club Name</label>
@@ -10431,7 +10431,7 @@ async function renderClubDetail(clubId) {
     <div class="club-detail-header">
       <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img ${thumbSrcAttrs(club.image_url)} alt="${escAttr(club.name || '')}" onerror="this.style.display='none'">` : clubInitials}</div>
       <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);">${escHtml(club.name)}</div>
-      <div style="font-size:var(--fs-base);color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+      <div class="note">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
       ${club.description ? `<div style="font-size:var(--fs-base);color:var(--muted);max-width:340px;margin-top:var(--space-1);">${escHtml(club.description)}</div>` : ''}
       <div style="margin-top:var(--space-2);">${joinBtnHtml}</div>
       ${isOwner ? `<div style="margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-2);">
@@ -10441,7 +10441,7 @@ async function renderClubDetail(clubId) {
     </div>
     ${ownerEditSection}
     <div class="club-section-label">Members</div>
-    <div class="club-member-row">${membersHtml || '<span style="color:var(--muted);font-size:var(--fs-base);">No members yet.</span>'}</div>
+    <div class="club-member-row">${membersHtml || '<span class="note">No members yet.</span>'}</div>
     <div class="club-section-label">Club Posts</div>
     <div id="club-feed-list" style="max-width:470px;margin:0 auto;">
       ${clubFeedHtml || '<div style="text-align:center;padding:var(--space-8);color:var(--muted);font-size:var(--fs-base);">No posts in this club yet.</div>'}
@@ -10595,7 +10595,7 @@ async function searchInviteUsers(query, clubId) {
     .or(`username.ilike.%${sanitizeSearch(query)}%,display_name.ilike.%${sanitizeSearch(query)}%`)
     .neq('id', currentUser.id).limit(8);
 
-  if (!profiles || !profiles.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm);">No users found.</div>'; return; }
+  if (!profiles || !profiles.length) { el.innerHTML = '<div class="caption">No users found.</div>'; return; }
 
   // Get existing members + pending invites for this club
   const { data: members }  = await db.from('club_members').select('user_id').eq('club_id', clubId);
@@ -10613,7 +10613,7 @@ async function searchInviteUsers(query, clubId) {
     // Handler args go through data- attributes, never template literals (SEC-8)
     const dataAttrs = `data-uid="${escAttr(p.id)}" data-name="${escAttr(rawName)}" data-cid="${escAttr(clubId)}"`;
     let btn = '';
-    if (memberSet.has(p.id))     btn = `<span style="font-size:var(--fs-sm);color:var(--muted);">Member</span>`;
+    if (memberSet.has(p.id))     btn = `<span class="caption">Member</span>`;
     else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
     else btn = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" ${dataAttrs}
@@ -10775,7 +10775,7 @@ async function searchClubs(query) {
   q = q.ilike('name', `%${sanitizeSearch(query)}%`);
   const { data: clubs } = await q;
   if (!clubs || !clubs.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No clubs found.</div>';
+    el.innerHTML = '<div class="note">No clubs found.</div>';
     return;
   }
   // Count members for display
@@ -10795,7 +10795,7 @@ async function searchClubs(query) {
     else           actionBtn = `<button class="follow-btn follow" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="event.stopPropagation();joinClub('${c.id}','${c.privacy}')">${c.privacy === 'private' ? 'Request' : 'Join'}</button>`;
     return `<div class="club-card" onclick="openClubDetail('${c.id}')">
       <div class="club-card-avatar">${initStr}</div>
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div class="club-card-name">${escHtml(c.name)}</div>
         <div class="club-card-meta">${count} member${count !== 1 ? 's' : ''}${c.description ? ' · ' + escHtml(c.description.slice(0, 40)) + (c.description.length > 40 ? '\u2026' : '') : ''}</div>
       </div>
@@ -11533,7 +11533,7 @@ function renderNotificationPanel() {
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" data-ref="${escAttr(n.ref_id || '')}" data-actor="${escAttr(n.actor_id || '')}" onclick="${notifClick}">
         ${avatarHtml}
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="notif-body">${body}</div>
           <div class="notif-time">${time}</div>
           ${actionsHtml}
@@ -12027,7 +12027,7 @@ function firstLoadCardHtml(days) {
   const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
-  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const td = (html, left) => `<td style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
   const th = (label, left) => `<th style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
   const body = rows.map(d => '<tr>'
@@ -12042,7 +12042,7 @@ function firstLoadCardHtml(days) {
     + td(pct(d.error_pct))
     + '</tr>').join('');
   return `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">First load (last ${rows.length} days, UTC)</div>
+        <div class="eyebrow stack-2">First load (last ${rows.length} days, UTC)</div>
         <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
@@ -12223,10 +12223,10 @@ function experimentSpeedHtml(key, arms) {
   if (!SPEED_EXPERIMENTS.includes(key) || !arms || typeof arms !== 'object') return '';
   const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
-  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const row = (label, a) => {
     if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
-    return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
+    return `<div style="display:contents;"><div>${label} <span class="text-muted">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
   const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${t}</div>`;
   return `<div class="adm-exp-speed" style="margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
@@ -15136,7 +15136,7 @@ function renderFeedCard(item) {
         ? `<div class="comment-menu-wrap">
             <button class="comment-menu-btn" onclick="event.stopPropagation();toggleFeedMenu('cmt-${c.id}')" title="Comment options" aria-label="Comment options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
             <div class="feed-menu hidden" id="feed-menu-cmt-${c.id}">
-              <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger-text);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
+              <div class="feed-menu-item text-danger" role="button" tabindex="0" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
             </div>
           </div>`
         : '';
@@ -15232,7 +15232,7 @@ function renderFeedCard(item) {
     <div class="feed-card" id="feedcard-${item.id}">
       <div class="feed-card-header">
         <div class="feed-user-avatar" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${profileInitials(p)}</div>
-        <div style="flex:1;min-width:0;">${headerBody}</div>
+        <div class="grow-clip">${headerBody}</div>
         ${heroIsPhoto ? '' : visBadgeInline}
         <div class="feed-dots-wrap" style="position:relative;">
           ${isMe
@@ -15249,7 +15249,7 @@ function renderFeedCard(item) {
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
-                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger-text);" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
+                <div class="feed-menu-item text-danger" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
                   ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
@@ -15972,7 +15972,7 @@ function renderEpWatchDisplay() {
       : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
     display.innerHTML = `<div class="watch-suggestion" style="margin-top:var(--space-1);">
       ${thumb}
-      <div style="flex:1;min-width:0;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
+      <div class="grow-clip"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
       <button class="sug-no" onclick="toggleEpWatchPicker()" style="font-size:var(--fs-xs);">Change</button>
       <button class="sug-no" onclick="removeEpWatch()" style="font-size:var(--fs-xs);">Remove</button>
     </div>`;
@@ -16060,7 +16060,7 @@ function toggleEpWatchPicker() {
         : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
         </div>
         ${isSel ? '<span style="color:var(--gold-text);font-size:var(--fs-sm);font-weight:var(--fw-semibold);">Selected</span>' : ''}
@@ -16737,7 +16737,7 @@ function toggleNpWatchPicker() {
   picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:var(--space-1-5);">
     <div class="watch-option${!npIdentifiedWatchId ? ' selected' : ''}" onclick="selectNpWatch(null)" style="padding:var(--space-2) var(--space-2);">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M18 6L6 18"/></svg>
-      <div style="flex:1;min-width:0;"><div class="watch-info-name" style="color:var(--muted);">No watch</div></div>
+      <div class="grow-clip"><div class="watch-info-name text-muted">No watch</div></div>
       ${!npIdentifiedWatchId ? '<span style="color:var(--gold-text);font-size:var(--fs-sm);font-weight:var(--fw-semibold);">Selected</span>' : ''}
     </div>
     ${[...watches].sort((a, b) => {
@@ -16753,7 +16753,7 @@ function toggleNpWatchPicker() {
         : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
         </div>
         ${isSel ? '<span style="color:var(--gold-text);font-size:var(--fs-sm);font-weight:var(--fw-semibold);">Selected</span>' : ''}
@@ -17669,7 +17669,7 @@ function renderDiscoverUsers() {
     return;
   }
   el.innerHTML = `
-    <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2-5);">Search Results</div>
+    <div class="eyebrow eyebrow-muted stack-2-5">Search Results</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
@@ -17887,7 +17887,7 @@ async function renderDiscoverSuggested() {
   if (!currentUser || _isDemoMode || !experiment('follow_suggest')) { el.innerHTML = ''; return; }
   const open = _followSuggOpen(await loadFollowSuggestions());
   if (!open.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2-5);">Suggested</div>`
+  el.innerHTML = `<div class="eyebrow eyebrow-muted stack-2-5">Suggested</div>`
     + open.map(s => userCardHtml(s, { sub: followSuggestReason(s) })).join('')
     + `<div style="height:1rem;"></div>`;
   if (!_followSuggShown.has('people')) { _followSuggShown.add('people'); _logFollowSuggest('shown', { surface: 'people', n: open.length }); }
@@ -18078,9 +18078,9 @@ function renderRecSettingsBody() {
       : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-2xs);border-radius:var(--radius-sm);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
     return `<div class="toggle-row" style="gap:var(--space-2-5);">
       ${thumb}
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(w.name)}</div>
-        <div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(w.brand)}</div>
+        <div class="caption">${escHtml(w.brand)}</div>
       </div>
       <label class="toggle-switch">
         <input type="checkbox" ${included ? 'checked' : ''} onchange="toggleRecExclude('${w.id}')">
@@ -18089,15 +18089,15 @@ function renderRecSettingsBody() {
     </div>`;
   }).join('');
   el.innerHTML = `
-    <div style="margin-bottom:var(--space-4);">
-      <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2);">Algorithm</div>
+    <div class="stack-4">
+      <div class="eyebrow eyebrow-muted stack-2">Algorithm</div>
       ${tog('prioritizeUnworn', 'Boost neglected watches')}
       ${tog('anniversaryPicks', 'Anniversary reminders')}
       ${tog('weatherMatch', 'Weather × color matching')}
       ${tog('useCaseMatch', 'Weekday/weekend occasion matching')}
     </div>
     <div>
-      <div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-2);">Include in rotation</div>
+      <div class="eyebrow eyebrow-muted stack-2">Include in rotation</div>
       ${watchRows}
     </div>`;
 }
@@ -18737,7 +18737,7 @@ async function renderBroadcastQueueStatus() {
           ? '<span style="color:var(--gold-text);font-weight:var(--fw-bold);">held for review</span>'
           : (done ? '<span style="color:var(--error);">failed</span>'
                   : (isNext ? '<span style="color:var(--gold-text);font-weight:var(--fw-bold);">sending next</span>'
-                            : `<span style="color:var(--muted);">#${position} in line</span>`));
+                            : `<span class="text-muted">#${position} in line</span>`));
         // Metrics + release controls load per campaign, on demand — one RPC per
         // held campaign, and only for the one the operator is actually judging.
         const gate = held > 0
@@ -18747,18 +18747,18 @@ async function renderBroadcastQueueStatus() {
              </div>`
           : '';
         return `<div style="padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);border-left:3px solid ${(isNext || waiting) ? 'var(--gold)' : 'var(--border)'};">
-          <div style="display:flex;align-items:center;gap:var(--space-1-5);">
+          <div class="row-tight">
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(label)}</span>
             <span style="font-size:var(--fs-sm);white-space:nowrap;">${rank}</span>${arrows}
           </div>
           <div style="color:var(--muted);font-size:var(--fs-sm);margin-top:var(--space-0-5);">
-            ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span style="color:var(--gold-text);">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
+            ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span class="text-gold">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
           </div>
           ${gate}
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
-        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-1);">In Flight <span style="text-transform:none;font-weight:var(--fw-normal);">— one at a time, in this order</span></div>' + rows
+        ? '<div class="eyebrow eyebrow-muted stack-1">In Flight <span style="text-transform:none;font-weight:var(--fw-normal);">— one at a time, in this order</span></div>' + rows
         : '';
     }
 
@@ -18794,7 +18794,7 @@ function installBroadcastQueueDelegation() {
 async function showBroadcastBatchMetrics(label, btn) {
   const gate = btn.closest('[data-bc-gate]');
   if (!gate) return;
-  gate.innerHTML = '<span style="color:var(--muted);font-size:var(--fs-sm);">Loading…</span>';
+  gate.innerHTML = '<span class="caption">Loading…</span>';
   let m;
   try {
     const { data, error } = await db.rpc('admin_broadcast_batch_metrics', { p_label: label });
@@ -18869,7 +18869,7 @@ async function moveBroadcast(label, direction) {
 
 async function drainBroadcastNow() {
   const el = document.getElementById('broadcast-queue-status');
-  if (el) el.innerHTML = '<span style="color:var(--gold-text);">Draining…</span>';
+  if (el) el.innerHTML = '<span class="text-gold">Draining…</span>';
   try {
     const session = await db.auth.getSession();
     const token = session.data?.session?.access_token;
@@ -19143,7 +19143,7 @@ function renderDevExperiments() {
     const opt = (v, label) => `<option value="${v}" ${forced === v ? 'selected' : ''}>${label}</option>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2-5) 0;border-bottom:1px solid var(--border);">
       <div><div style="font-size:var(--fs-base);font-family:monospace;">${escHtml(k)}</div>
-           <div style="font-size:var(--fs-sm);color:var(--muted);">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
+           <div class="caption">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
       <select data-key="${escAttr(k)}" onchange="setExperimentOverride(this.dataset.key, this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
     </div>`;
   }).join('');
@@ -19179,8 +19179,8 @@ async function loadAdminModels() {
     <table style="width:100%;border-collapse:collapse;">
     <tr style="color:var(--muted);text-align:left;"><th>Model</th><th>Slug</th><th>Own</th><th>W</th><th></th></tr>` +
     rows.slice(0, 200).map(m => `<tr style="border-top:0.5px solid var(--border);">
-      <td>${escHtml(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span style="color:var(--muted);">(auto)</span>' : ''}</td>
-      <td style="color:var(--muted);">${escHtml(m.slug)}</td>
+      <td>${escHtml(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span class="text-muted">(auto)</span>' : ''}</td>
+      <td class="text-muted">${escHtml(m.slug)}</td>
       <td>${m.owners}</td><td>${m.watches}</td>
       <td style="white-space:nowrap;">${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}
         <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button>
@@ -19324,7 +19324,7 @@ async function loadAdminExperiments() {
   const sel = document.getElementById('adm-exp-metric');
   if (sel && metrics.data) sel.innerHTML = metrics.data.map(m => `<option value="${escAttr(m.key)}">${escHtml(m.label)}</option>`).join('');
   _adminExps = (data || []).slice().sort((a, b) => experimentSortRank(a.status) - experimentSortRank(b.status));
-  if (!_adminExps.length) { el.innerHTML = '<div style="color:var(--muted);">No experiments yet.</div>'; return; }
+  if (!_adminExps.length) { el.innerHTML = '<div class="text-muted">No experiments yet.</div>'; return; }
   // Archived rows are history, not work: one muted line at the bottom, expanded on tap.
   const archived = _adminExps.filter(x => x.status === 'archived');
   const archivedHtml = archived.length ? `<div style="margin-top:var(--space-1);">
@@ -19338,7 +19338,7 @@ async function loadAdminExperiments() {
       const ev = x.eval;
       const gates = { min_users_per_arm: x.min_users_per_arm, min_days: x.min_days, min_lift_pct: x.min_lift_pct, max_guardrail_drop_pct: x.max_guardrail_drop_pct };
       const verdict = ev ? (ev.verdict || experimentVerdict(ev, gates)) : 'not evaluated';
-      const evaluatedAt = ev && ev.evaluated_at ? ` <span style="color:var(--muted);font-size:var(--fs-xs);">· ${escHtml(new Date(ev.evaluated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))}</span>` : '';
+      const evaluatedAt = ev && ev.evaluated_at ? ` <span class="caption-xs">· ${escHtml(new Date(ev.evaluated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))}</span>` : '';
       const editablePct = x.status === 'draft' || x.status === 'running';
       const pctCell = editablePct
         ? `<input id="adm-exp-pct-${escAttr(x.key)}" type="number" min="0" max="100" value="${x.rollout_pct}" style="width:4.5rem;">`
@@ -19360,7 +19360,7 @@ async function loadAdminExperiments() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-2-5);flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-weight:var(--fw-medium);">${escHtml(x.name)}</div>
             <div style="color:var(--muted);font-family:monospace;font-size:var(--fs-xs);word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
-          <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span style="color:var(--muted);">· knob trial, judged Sundays</span>` : ''}</div>
+          <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span class="text-muted">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span class="text-muted">· knob trial, judged Sundays</span>` : ''}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2) var(--space-2-5);margin:var(--space-2-5) 0;">
           ${cell('Rollout', pctCell)}
@@ -19371,7 +19371,7 @@ async function loadAdminExperiments() {
           ${cell('Lift · p', (ev && ev.lift_pct != null ? (ev.lift_pct > 0 ? '+' : '') + ev.lift_pct + '%' : '—') + ' · ' + (ev && ev.p_value != null ? ev.p_value : '—'))}
         </div>
         ${experimentSpeedHtml(x.key, _expSpeed[x.key])}
-        <div style="margin-bottom:var(--space-2);"><span style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">Verdict</span> ${escHtml(verdict)}${evaluatedAt}</div>
+        <div class="stack-2"><span style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">Verdict</span> ${escHtml(verdict)}${evaluatedAt}</div>
         <div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${actions.join('')}</div>
         <div id="adm-exp-log-${escAttr(x.key)}" style="display:none;padding:var(--space-2) 0 0;color:var(--muted);font-size:var(--fs-sm);">
           ${(x.decisions || []).map(d => `<div>${escHtml(d.at ? new Date(d.at).toLocaleString() : '—')} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
@@ -19438,15 +19438,15 @@ async function loadAdminFeatured() {
   if (!el) return;
   el.innerHTML = 'Loading…';
   const { data, error } = await db.rpc('admin_featured_queue');
-  if (error) { el.innerHTML = `<div style="color:var(--danger-text);">${escHtml(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div class="text-danger">${escHtml(error.message)}</div>`; return; }
   const rows = data || [];
   if (!rows.length) { el.innerHTML = '<div style="font-size:var(--fs-base);color:var(--muted);padding:var(--space-2) 0;">No featured posts. Use a post’s ★ menu to feature one.</div>'; return; }
   el.innerHTML = rows.map(r => {
     const who = r.display_name || r.username || 'Unknown';
     const txt = (r.notes || '').slice(0, 80);
     const badge = r.status === 'active'
-      ? `<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">★ Active</span>${r.expires_at ? ` <span style="color:var(--muted);">· expires ${escHtml(new Date(r.expires_at).toLocaleString())}</span>` : ''}`
-      : `<span style="color:var(--muted);">Queued</span>`;
+      ? `<span class="text-gold-strong">★ Active</span>${r.expires_at ? ` <span class="text-muted">· expires ${escHtml(new Date(r.expires_at).toLocaleString())}</span>` : ''}`
+      : `<span class="text-muted">Queued</span>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2-5);padding:var(--space-2-5) 0;border-bottom:1px solid var(--border);">
       <div style="min-width:0;">
         <div style="font-size:var(--fs-base);">${badge}</div>
@@ -19471,7 +19471,7 @@ let _reportFilter = 'all';
 async function loadAdminReports() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-reports-list');
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
+  el.innerHTML = '<div class="note-md">Loading…</div>';
   const { data, error } = await withTimeout(db.from('content_reports')
     .select('*')
     .order('created_at', { ascending: false })
@@ -19521,7 +19521,7 @@ function renderAdminReports() {
     ? _adminReportsData
     : _adminReportsData.filter(r => r.status === _reportFilter);
   if (!filtered.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_reportFilter === 'all' ? '' : _reportFilter + ' '}reports.</div>`;
+    el.innerHTML = `<div class="note-md">No ${_reportFilter === 'all' ? '' : _reportFilter + ' '}reports.</div>`;
     return;
   }
   el.innerHTML = filtered.map(r => renderReportCard(r)).join('');
@@ -19614,7 +19614,7 @@ async function loadAdminStats(force = false) {
   if (!el) return;
   const cacheArgs = { p_force: force === true };
   await loadInternalIds();
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
+  el.innerHTML = '<div class="note-md">Loading…</div>';
   try {
     // Parallel queries for all stats
     const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
@@ -19878,7 +19878,7 @@ async function loadAdminStats(force = false) {
       const deltaHtml = typeof delta === 'number'
         ? `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:var(--space-1-5);">${delta > 0 ? '+' : ''}${delta}</span>` : '';
       const subHtml = sub ? `<span style="color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:var(--space-1-5);">${sub}</span>` : '';
-      return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${value}${deltaHtml}${subHtml}</span></div>`;
+      return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span class="text-gold-strong">${value}${deltaHtml}${subHtml}</span></div>`;
     };
     // Colored day-over-day delta to embed INSIDE a sub string, so the change sits next
     // to the 24h figure it describes (not glued to an all-time total). `invert`: a rise is bad.
@@ -19943,7 +19943,7 @@ async function loadAdminStats(force = false) {
       const container = document.getElementById(tableId);
       if (container) {
         container.innerHTML = `
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">${title}</div>
+        <div class="eyebrow stack-2">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
             <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
@@ -19956,7 +19956,7 @@ async function loadAdminStats(force = false) {
         </table>`;
       }
       return `<div id="${tableId}" class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">${title}</div>
+        <div class="eyebrow stack-2">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
             <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
@@ -19970,7 +19970,7 @@ async function loadAdminStats(force = false) {
 
     el.innerHTML = `
       <div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Totals (external users only)</div>
+        <div class="eyebrow stack-2">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
         ${statRow('Active (24h)', activeDau, dauDelta)}
         ${statRow('Active (7d)', activeWau, wauDelta)}
@@ -20016,7 +20016,7 @@ async function loadAdminStats(force = false) {
         ${statRow('Comments', comments, dod.comments)}
       </div>
       <div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Per-User Averages (external)</div>
+        <div class="eyebrow stack-2">Per-User Averages (external)</div>
         ${statRow('Watches / User', avg(extWatches, extUsers), null, trendSub('watches'))}
         ${statRow('Wears / User', avg(extWears, extUsers), null, trendSub('wears'))}
         ${statRow('Price Checks / User', avg(extVal, extUsers), null, trendSub('price_checks'))}
@@ -20094,7 +20094,7 @@ async function openAdminUserDetail(userId) {
       ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:48px;height:48px;border-radius:var(--radius-round);object-fit:cover;">`
       : `<div style="width:48px;height:48px;border-radius:var(--radius-round);background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg);font-weight:var(--fw-bold);">${(name[0]||'?').toUpperCase()}</div>`;
 
-    const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:var(--fw-semibold);">${value}</span></div>`;
+    const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span class="text-muted">${label}</span><span style="color:var(--text);font-weight:var(--fw-semibold);">${value}</span></div>`;
 
     const watches = (d.watch_list || []);
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -20110,23 +20110,23 @@ async function openAdminUserDetail(userId) {
         ${initHTML}
         <div>
           <div style="font-weight:var(--fw-bold);font-size:var(--fs-lg);">${escHtml(name)}</div>
-          <div style="font-size:var(--fs-sm);color:var(--muted);">@${escHtml(p.username || '—')}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
+          <div class="caption">@${escHtml(p.username || '—')}</div>
+          <div class="caption-xs">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
           ${p.is_suspended ? '<div style="font-size:var(--fs-xs);color:var(--danger-text);font-weight:var(--fw-semibold);">SUSPENDED</div>' : ''}
         </div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Activity</div>
+        <div class="eyebrow stack-1-5">Activity</div>
         ${row('Joined', joinDate + (joinedAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + joinedAgo + ')</span>' : ''))}
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + lastActiveAgo + ')</span>' : ''))}
         ${row('Last open', lastOpen + (lastOpenAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + lastOpenAgo + ')</span>' : ''))}
         ${row('Active days', d.active_days)}
-        ${row('Repeat user', isRepeat ? '<span style="color:var(--success-text);">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
+        ${row('Repeat user', isRepeat ? '<span class="text-success">Yes</span>' : '<span class="text-muted">No</span>')}
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Collection</div>
+        <div class="eyebrow stack-1-5">Collection</div>
         ${row('Watches', d.watches)}
         ${row('Wears', d.wears)}
         ${row('Posts', d.posts)}
@@ -20134,17 +20134,17 @@ async function openAdminUserDetail(userId) {
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Features Used</div>
+        <div class="eyebrow stack-1-5">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + msrRate + ' success)</span>' : ''))}
         ${row('Advanced mode', d.advanced_sessions > 0
-          ? '<span style="color:var(--success-text);">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
-          : '<span style="color:var(--muted);">No</span>')}
+          ? '<span class="text-success">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
+          : '<span class="text-muted">No</span>')}
         ${row('Enhances', d.enhances)}
         ${row('Value checks', d.price_checks)}
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Social</div>
+        <div class="eyebrow stack-1-5">Social</div>
         ${row('Followers', d.followers)}
         ${row('Following', d.following)}
         ${row('Friends', d.friends)}
@@ -20154,13 +20154,13 @@ async function openAdminUserDetail(userId) {
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Feedback</div>
+        <div class="eyebrow stack-1-5">Feedback</div>
         ${row('Review prompted', d.feedback_asked)}
         ${row('Feedback given', d.feedback_given)}
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);">
-        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Watches (${watches.length})</div>
+        <div class="eyebrow stack-1-5">Watches (${watches.length})</div>
         ${watchListHtml}
       </div>`;
   } catch(e) {
@@ -20183,7 +20183,7 @@ async function renderAdminTraffic(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-traffic');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Loading traffic…</div>';
+  el.innerHTML = '<div class="note">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
     const [trafficR, emailEventsR, demoR, clickR, bootR] = await withTimeout(Promise.all([
@@ -20206,11 +20206,11 @@ async function renderAdminTraffic(force = false) {
     const dv = (demoR && !demoR.error) ? demoR.data : null;
 
     const sourceRows = (t.by_source || [])
-      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.total}</span></span></div>`)
+      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span class="grow">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span class="text-gold-strong">${s.total}</span></span></div>`)
       .join('');
 
     const deviceRows = (t.by_device_7d || []).filter(d => d.count > 0)
-      .map(d => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${d.count}</span></div>`)
+      .map(d => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span class="text-gold-strong">${d.count}</span></div>`)
       .join('');
 
     // Bars scale to the busiest day in the window. (Was a fixed 3-visits-per-
@@ -20220,23 +20220,23 @@ async function renderAdminTraffic(force = false) {
     const dailyRows = (t.daily || [])
       .map(d => {
         const pct = Math.round(((Number(d.count) || 0) / dailyMax) * 100);
-        return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="flex:1;"><span style="display:block;height:.65rem;width:${pct}%;background:var(--gold-text);border-radius:2px;"></span></span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);width:2rem;text-align:right;">${d.count}</span></div>`;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span class="grow"><span style="display:block;height:.65rem;width:${pct}%;background:var(--gold-text);border-radius:2px;"></span></span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);width:2rem;text-align:right;">${d.count}</span></div>`;
       }).join('');
 
-    const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
+    const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span class="text-gold">${value}</span>${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
 
     const f = t.funnel || {};
     const su = t.signups || {};
     const funnelHtml = renderFunnelFromRpc(f, su);
 
     const signupSourceRows = (t.signups_by_source || [])
-      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.count}</span></span></div>`)
+      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span class="grow">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span class="text-gold-strong">${s.count}</span></span></div>`)
       .join('');
 
     // Demo views = clicks of "Try the demo" (the alexrivera demo account), counted
     // by distinct hashed IP. Captured server-side in the demo-login edge function.
     const demoViewsHtml = dv ? `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Demo Views (Alex Rivera)</div>
+        <div class="eyebrow stack-2">Demo Views (Alex Rivera)</div>
         ${statRow('Total opens', dv.total, (dv.unique_ips || 0) + ' unique IPs')}
         <div style="height:.5rem;"></div>
         ${statRow('Last 24 hours', dv.views_1d, (dv.unique_1d || 0) + ' unique IPs')}
@@ -20255,20 +20255,20 @@ async function renderAdminTraffic(force = false) {
       ${demoViewsHtml}
       ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">By Source</div>
+        <div class="eyebrow stack-2">By Source</div>
         ${sourceRows}
       </div>` : ''}
       ${dailyRows ? `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Daily (last 14 days)</div>
+        <div class="eyebrow stack-2">Daily (last 14 days)</div>
         ${dailyRows}
       </div>` : ''}
       ${deviceRows ? `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Device (7 days)</div>
+        <div class="eyebrow stack-2">Device (7 days)</div>
         ${deviceRows}
       </div>` : ''}
       ${funnelHtml}
       ${signupSourceRows ? `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">Signups by Source</div>
+        <div class="eyebrow stack-2">Signups by Source</div>
         ${signupSourceRows}
       </div>` : ''}
       ${renderEmailClickthrough((clickR && !clickR.error) ? clickR.data : null)}
@@ -20302,7 +20302,7 @@ function renderEmailHealth(data) {
     + `<span style="font-weight:var(--fw-semibold);"><span style="color:${color};">${value}</span>`
     + `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${limit}</span></span></div>`;
   return `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-2);">Deliverability (7 days)</div>
+    <div class="eyebrow stack-2">Deliverability (7 days)</div>
     ${row('Bounce', bounce7.toFixed(2) + '%', 'limit 5%', tone(bounce7, 2.5, 5))}
     ${row('Complaint', complaint7.toFixed(3) + '%', 'limit 0.1%', tone(complaint7, 0.05, 0.1))}
     ${row('Sent', (+health.sent_7d).toLocaleString(), '', 'var(--gold)', true)}
@@ -20337,12 +20337,12 @@ function renderEmailClickthrough(rows) {
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.campaign)}${legacy ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">untagged era</span>' : ''}</span>
       <span style="font-variant-numeric:tabular-nums;white-space:nowrap;">
         <span style="color:var(--muted);font-size:var(--fs-xs);margin-right:var(--space-2);">${ago(r.last_visit)}</span>
-        <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success-text);font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:var(--space-1);">+${r.visits_24h}</span>` : ''}
+        <span class="text-gold-strong">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success-text);font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:var(--space-1);">+${r.visits_24h}</span>` : ''}
       </span>
     </div>`;
   }).join('');
   return `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-1);">Email Click-throughs</div>
+    <div class="eyebrow stack-1">Email Click-throughs</div>
     <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-2);">app opens from a tagged email link · SES "Clicked" only covers broadcasts to iOS 2.6+ (since 08-21), so this is the fuller count</div>
     ${body}
   </div>`;
@@ -20412,7 +20412,7 @@ function renderEmailEngagement(data) {
     return `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:var(--space-1);">+${d}</span>`;
   };
 
-  const statRow = (label, value, sub, delta) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${delta || ''}${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
+  const statRow = (label, value, sub, delta) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span class="text-gold">${value}</span>${delta || ''}${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
 
   // Collapse per-actor notification subjects into one campaign bucket each.
   // (campaignSubject / campaignGroupOf / CAMPAIGN_GROUP_LABELS are defined once
@@ -20518,8 +20518,8 @@ function renderEmailEngagement(data) {
       return `${header}<div style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);">
         <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);margin-bottom:var(--space-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;gap:var(--space-2-5);flex-wrap:wrap;">
-          ${queued ? `<span style="color:var(--gold-text);">Queued: ${queued}</span>` : ''}
-          ${held ? `<span style="color:var(--gold-text);">Held for review: ${held}</span>` : ''}
+          ${queued ? `<span class="text-gold">Queued: ${queued}</span>` : ''}
+          ${held ? `<span class="text-gold">Held for review: ${held}</span>` : ''}
           <span>Delivered: ${s.delivered}${dodDelta(s.delivered24)}</span>
           <span>Opened: ${s.openedHuman} (${pct(s.openedHuman, base)})${dodDelta(s.openedHuman24)}${prefetch(s.opened, s.openedHuman) ? `<span style="opacity:.55;"> +${prefetch(s.opened, s.openedHuman)} prefetch</span>` : ''}</span>
           <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})${dodDelta(s.clicked24)}</span>
@@ -20542,23 +20542,23 @@ function renderEmailEngagement(data) {
     // but dimmed and labelled so the list can't be misread as 15 real readers.
     const icon = e.event_type === 'clicked' ? '🔗' : e.machine ? '⟳' : '👁';
     const dim = e.machine ? 'opacity:.5;' : '';
-    return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">prefetch</span>' : ''}</span><span style="color:var(--muted);font-size:var(--fs-xs);">${ago}</span></div>`;
+    return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">prefetch</span>' : ''}</span><span class="caption-xs">${ago}</span></div>`;
   }).join('');
 
   return `
   <div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-2);">Email Engagement <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:var(--fw-normal);">· green = last 24h</span></div>
+    <div class="eyebrow stack-2">Email Engagement <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:var(--fw-normal);">· green = last 24h</span></div>
     ${statRow('Delivered', delivered, null, dodDelta(delivered24))}
     ${statRow('Opened', openedHuman, pct(openedHuman, delivered) + (prefetch(opened, openedHuman) ? ` · +${prefetch(opened, openedHuman)} prefetch` : ''), dodDelta(openedHuman24))}
     ${statRow('Clicked', clicked, pct(clicked, delivered), dodDelta(clicked24))}
     ${bounced ? statRow('Bounced / Complained', bounced, null, dodDelta(bounced24, true)) : ''}
   </div>
   ${subjectRows ? `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-2);">By Campaign</div>
+    <div class="eyebrow stack-2">By Campaign</div>
     ${subjectRows}
   </div>` : ''}
   ${recentRows ? `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-2);">Recent Opens & Clicks</div>
+    <div class="eyebrow stack-2">Recent Opens & Clicks</div>
     ${recentRows}
   </div>` : ''}`;
 }
@@ -20578,15 +20578,15 @@ function renderFunnelFromRpc(f, su) {
   const newUsers1d = su.last_1d || 0;
 
   const row = (label, d, w, all) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);">
-    <span style="flex:1;">${escHtml(label)}</span>
-    <span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${d}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${w}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${all}</span></span>
+    <span class="grow">${escHtml(label)}</span>
+    <span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${d}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${w}</span><span class="text-gold-strong">${all}</span></span>
   </div>`;
 
   const conv7 = totalSignins7 > 0 ? (newUsers7d / totalSignins7 * 100).toFixed(1) + '%' : '—';
   const conv1 = totalSignins1 > 0 ? (newUsers1d / totalSignins1 * 100).toFixed(1) + '%' : '—';
 
   return `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:var(--space-2);">Signup Funnel</div>
+    <div class="eyebrow stack-2">Signup Funnel</div>
     ${row('Google sign-in click', signinG1, signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA1, signinA7, signinAAll)}
     ${row('New users created', newUsers1d, newUsers7d, newUsersAll)}
@@ -20625,7 +20625,7 @@ function renderAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
   const filtered = _adminFilter === 'all' ? _adminFeedbackData : _adminFeedbackData.filter(f => (f.status || 'pending') === _adminFilter);
-  if (!filtered.length) { el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
+  if (!filtered.length) { el.innerHTML = `<div class="note-md">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
   const totalPages = Math.ceil(filtered.length / ADMIN_FB_PER_PAGE);
   if (_adminFbPage >= totalPages) _adminFbPage = totalPages - 1;
   const start = _adminFbPage * ADMIN_FB_PER_PAGE;
@@ -20633,7 +20633,7 @@ function renderAdminFeedback() {
   const paginationHtml = totalPages > 1 ? `
     <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:var(--space-4);">
       <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
-      <span style="font-size:var(--fs-sm);color:var(--muted);">${_adminFbPage + 1} / ${totalPages}</span>
+      <span class="caption">${_adminFbPage + 1} / ${totalPages}</span>
       <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
     </div>` : '';
   el.innerHTML = page.map(f => renderFeedbackCard(f)).join('') + paginationHtml;
@@ -20648,7 +20648,7 @@ async function loadAdminFeedback() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
+  el.innerHTML = '<div class="note-md">Loading…</div>';
   const [fbRes, appFbRes] = await Promise.all([
     withTimeout(db.from('feedback').select('*').order('created_at', { ascending: false }).limit(1000), 10000),
     withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
@@ -20692,7 +20692,7 @@ async function loadAdminFeedback() {
     return new Date(b.created_at) - new Date(a.created_at); // newest first
   });
   updateAdminFilterCounts();
-  if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">No feedback yet.</div>'; return; }
+  if (!_adminFeedbackData.length) { el.innerHTML = '<div class="note-md">No feedback yet.</div>'; return; }
   renderAdminFeedback();
 }
 
@@ -20860,7 +20860,7 @@ async function loadExploreModels(reset) {
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
         ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="watch-card-name">${escHtml(m.name)}</div>
           <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
         </div>
@@ -21033,7 +21033,7 @@ function updateOfficialPreview() {
     <div class="feed-card" style="pointer-events:none;">
       <div class="feed-card-header">
         <div class="feed-user-avatar" style="background:var(--gold);color:#000;">W</div>
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="feed-user-name">WRotate Official</div>
           <div class="feed-meta">${todayFmt}</div>
         </div>
@@ -21051,12 +21051,12 @@ async function loadOfficialDrafts() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('official-drafts-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
+  el.innerHTML = '<div class="note-md">Loading…</div>';
   const { data, error } = await db.from('official_drafts')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(1000);
-  if (error) { el.innerHTML = `<div style="color:var(--danger-text);">Error: ${escHtml(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div class="text-danger">Error: ${escHtml(error.message)}</div>`; return; }
   _officialDrafts = data || [];
   renderOfficialDrafts();
 }
@@ -21076,7 +21076,7 @@ function renderOfficialDrafts() {
     ? _officialDrafts
     : _officialDrafts.filter(d => d.status === _officialFilter);
   if (!filtered.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_officialFilter === 'all' ? '' : _officialFilter + ' '}posts.</div>`;
+    el.innerHTML = `<div class="note-md">No ${_officialFilter === 'all' ? '' : _officialFilter + ' '}posts.</div>`;
     return;
   }
   el.innerHTML = filtered.map(d => {
@@ -21088,7 +21088,7 @@ function renderOfficialDrafts() {
       ? '<span style="color:#4caf7d;font-weight:var(--fw-semibold);">Published</span>'
       : d.status === 'rejected'
         ? '<span style="color:var(--danger-text);font-weight:var(--fw-semibold);">Rejected</span>'
-        : '<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">Draft</span>';
+        : '<span class="text-gold-strong">Draft</span>';
     const actions = d.status === 'draft' ? `
       <div class="draft-actions">
         <button class="btn btn-primary btn-sm" onclick="approveOfficialDraft('${d.id}')">Approve & Publish</button>
@@ -21097,7 +21097,7 @@ function renderOfficialDrafts() {
         <button class="btn btn-ghost btn-sm" style="color:var(--danger-text);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
       </div>` : '';
     const sourceLink = d.source_url
-      ? `<div class="draft-info" style="margin-top:var(--space-1);"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" style="color:var(--gold-text);">Source ↗</a></div>`
+      ? `<div class="draft-info" style="margin-top:var(--space-1);"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" class="text-gold">Source ↗</a></div>`
       : '';
     return `
     <div class="draft-card" id="draft-${d.id}">
@@ -21133,7 +21133,7 @@ function previewOfficialDraft(draftId) {
       <div class="feed-card" style="pointer-events:none;">
         <div class="feed-card-header">
           <div class="feed-user-avatar" style="background:var(--gold);color:#000;">W</div>
-          <div style="flex:1;min-width:0;">
+          <div class="grow-clip">
             <div class="feed-user-name">WRotate Official</div>
             <div class="feed-meta">${todayFmt}</div>
           </div>
@@ -21189,8 +21189,8 @@ async function extractOfficialUrl() {
         <div class="draft-extract-preview">
           <img src="${escHtml(imageUrl)}" alt="" onerror="this.style.display='none'">
           <div style="font-size:var(--fs-base);"><strong>${escHtml(data.title || '')}</strong></div>
-          <div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(data.description || '')}</div>
-          ${data.site_name ? `<div style="font-size:var(--fs-sm);color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
+          <div class="caption">${escHtml(data.description || '')}</div>
+          ${data.site_name ? `<div class="caption">${escHtml(data.site_name)}</div>` : ''}
         </div>`;
     } else if (!hasUsefulData) {
       preview.style.display = '';
@@ -21735,7 +21735,7 @@ function renderBroadcastDrafts() {
   if (!el) return;
   const drafts = getBroadcastDrafts();
   if (!drafts.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-1);">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
+  el.innerHTML = '<div class="eyebrow eyebrow-muted stack-1">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
     drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:var(--space-1-5);padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);">
       <span style="color:var(--muted);font-size:var(--fs-sm);width:1.1rem;text-align:right;flex:0 0 auto;">${i + 1}</span>
       <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem var(--space-1);font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
@@ -21782,7 +21782,7 @@ async function sendBroadcastTest() {
   _broadcastSending = true;
   setBroadcastBtnsDisabled(true);
   const statusEl = document.getElementById('broadcast-status');
-  statusEl.innerHTML = '<span style="color:var(--gold-text);">Uploading images & sending test…</span>';
+  statusEl.innerHTML = '<span class="text-gold">Uploading images & sending test…</span>';
 
   try {
     const images = await uploadBroadcastImages();
@@ -21806,10 +21806,10 @@ async function sendBroadcastTest() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    statusEl.innerHTML = `<span style="color:var(--success-text);">Test email sent to ${user.email}</span>`;
+    statusEl.innerHTML = `<span class="text-success">Test email sent to ${user.email}</span>`;
     toast('Test email sent! Check your inbox.');
   } catch (e) {
-    statusEl.innerHTML = `<span style="color:var(--danger-text);">Error: ${escHtml(e.message)}</span>`;
+    statusEl.innerHTML = `<span class="text-danger">Error: ${escHtml(e.message)}</span>`;
     toast('Failed to send test: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
@@ -21874,7 +21874,7 @@ async function confirmBroadcastAll() {
   const statusEl = document.getElementById('broadcast-status');
   // Read BEFORE the status area is overwritten — the radios live inside it.
   const firstBatch = selectedFirstBatch();
-  statusEl.innerHTML = '<span style="color:var(--gold-text);">Uploading images & queueing broadcast…</span>';
+  statusEl.innerHTML = '<span class="text-gold">Uploading images & queueing broadcast…</span>';
 
   try {
     const images = await uploadBroadcastImages();
@@ -21901,12 +21901,12 @@ async function confirmBroadcastAll() {
     // would promise a review gate that doesn't exist.
     const held = Number(data.held) || 0;
     statusEl.innerHTML = held
-      ? `<span style="color:var(--success-text);">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
-      : `<span style="color:var(--success-text);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
+      ? `<span class="text-success">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
+      : `<span class="text-success">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
     toast(held ? `First batch of ${data.first_batch} queued, ${held} held` : `Broadcast queued for ${data.queued} users`);
     renderBroadcastQueueStatus();
   } catch (e) {
-    statusEl.innerHTML = `<span style="color:var(--danger-text);">Error: ${escHtml(e.message)}</span>`;
+    statusEl.innerHTML = `<span class="text-danger">Error: ${escHtml(e.message)}</span>`;
     toast('Broadcast failed: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
@@ -22032,7 +22032,7 @@ function renderWatchSelector() {
       return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}${pct != null ? ` · ${pct}% all-time` : ''}</div>
         </div>
@@ -22123,7 +22123,7 @@ function renderTrackHistory() {
     return `<tr>
       <td style="white-space:nowrap">${fmtDate(log.date)}</td>
       <td>
-        <div style="display:flex;align-items:center;gap:var(--space-2)">
+        <div class="row">
           ${thumb}<span>${escHtml(w.brand)} ${escHtml(w.name)}</span>
         </div>
       </td>
@@ -22820,7 +22820,7 @@ async function loadPromoAdmin() {
                card used to list with a blank title. Fall back to the eyebrow, then
                to the variant, so every row is identifiable. -->
           <div style="font-weight:var(--fw-semibold);">${escHtml(s.heading || s.eyebrow || `${promoVariantOf(s)} card`)}</div>
-          <div style="font-size:var(--fs-sm);color:var(--muted);">
+          <div class="caption">
             ${escHtml(statusLabel)} · ${escHtml(promoVariantOf(s))}/${escHtml(promoSizeOf(s))} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
             ${st.submissions || 0} submissions · ${st.distinct_users || 0} users${
@@ -22855,7 +22855,7 @@ async function loadPromoAdmin() {
       </div>`
     : '';
   listEl.innerHTML = _promoAdminSlots.length === 0
-    ? '<div style="color:var(--muted);font-size:var(--fs-base);">No slots yet.</div>'
+    ? '<div class="note">No slots yet.</div>'
     : liveSlots.map(slotCard).join('') + archivedHtml;
 }
 
@@ -22900,7 +22900,7 @@ async function loadCampaigns() {
     <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-3);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);">
         <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);">${escHtml(c.name)}</div>
-        <div style="display:flex;align-items:center;gap:var(--space-2);">
+        <div class="row">
           <span style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:${statusColor};">${statusLabel}</span>
           <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2);">${toggleIcon} ${toggleLabel}</button>
         </div>
@@ -23271,9 +23271,9 @@ function showSnapMatchPicker(matches, file) {
     const matchLabel = m.matchType === 'reference' ? 'Ref match' : m.matchType === 'brand+model' ? 'Model match' : 'Brand match';
     return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
       ${thumb}
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div style="font-weight:var(--fw-semibold);font-size:var(--fs-md);">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-        ${w.ref ? `<div style="font-size:var(--fs-sm);color:var(--muted);">Ref. ${escHtml(w.ref)}</div>` : ''}
+        ${w.ref ? `<div class="caption">Ref. ${escHtml(w.ref)}</div>` : ''}
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);">${matchLabel}</div>
       </div>
       <span class="pi-card-conf ${m.confidence}">${m.confidence}</span>
@@ -23579,7 +23579,7 @@ function showGameResults() {
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div class="game-result-watch">${escHtml(w.name)}</div>
         <div class="game-result-brand">${escHtml(w.brand)} · ${elo} pts</div>
       </div>
@@ -23836,7 +23836,7 @@ async function openUpdatePrices() {
       const valCell = document.getElementById('upr-val-' + w.id);
       const chkCell = document.getElementById('upr-chk-' + w.id);
       if (!mid) {
-        valCell.innerHTML = '<span style="color:var(--muted);">N/A</span>';
+        valCell.innerHTML = '<span class="text-muted">N/A</span>';
       } else if (data.cached) {
         const cachedDate = data.looked_up_at || w.marketPriceDate;
         const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;
@@ -23862,7 +23862,7 @@ async function openUpdatePrices() {
         ? `<span style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:var(--radius-round);animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
-      if (valCell) valCell.innerHTML = '<span style="color:var(--danger-text);">Error</span>';
+      if (valCell) valCell.innerHTML = '<span class="text-danger">Error</span>';
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
@@ -24105,7 +24105,7 @@ function renderCollection(force) {
           return `${imgBlock}
         <div class="watch-card-top">
           ${noImgAvatar}
-          <div style="flex:1;min-width:0;">
+          <div class="grow-clip">
             <div class="watch-card-name" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.name)}</div>
             <div class="watch-card-brand" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w, wLogs)}
@@ -24146,7 +24146,7 @@ function renderCollection(force) {
 
 function renderCollectionList(visible, today) {
   if (!visible.length) return '';
-  const na = '<span style="color:var(--muted)">—</span>';
+  const na = '<span class="text-muted">—</span>';
 
   // Enrich each watch with sort-ready numeric values
   const now = new Date();
@@ -24207,7 +24207,7 @@ function renderCollectionList(visible, today) {
     return `<tr style="cursor:pointer" onclick="openEditWatch('${w.id}')">
       <td><div style="display:flex;align-items:center;gap:var(--space-2-5)">${thumb}<div>
         <div style="font-weight:var(--fw-semibold);font-size:var(--fs-base)">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-        ${w.ref ? `<div style="font-size:var(--fs-xs);color:var(--muted)">${escHtml(w.ref)}</div>` : ''}
+        ${w.ref ? `<div class="caption-xs">${escHtml(w.ref)}</div>` : ''}
       </div></div></td>
       <td style="text-align:right;font-weight:var(--fw-semibold)">${wears}</td>
       <td style="text-align:right">${lastWornCell}</td>
@@ -24329,7 +24329,7 @@ function updateStrapsSummary() {
   const sum = document.getElementById('sum-sec-straps');
   if (!sum) return;
   const straps = wEditStraps || [];
-  if (!straps.length) { sum.innerHTML = '<span style="color:var(--muted);">Add straps</span>'; return; }
+  if (!straps.length) { sum.innerHTML = '<span class="text-muted">Add straps</span>'; return; }
   const onWrist = straps.find(s => s.onWrist);
   const count = straps.length;
   if (onWrist) {
@@ -24360,7 +24360,7 @@ function updateTypeSummary() {
   const sum = document.getElementById('sum-sec-tags');
   if (!sum) return;
   const tags = getSelectedTags();
-  if (!tags.length) { sum.innerHTML = '<span style="color:var(--muted)">Add type tags</span>'; return; }
+  if (!tags.length) { sum.innerHTML = '<span class="text-muted">Add type tags</span>'; return; }
   const pill = t => `<span style="font-size:var(--fs-2xs);background:var(--badge-bg);color:var(--badge-accent);border:0.5px solid var(--badge-border);padding:1px var(--space-1-5);border-radius:var(--radius);white-space:nowrap;">${escHtml(t)}</span>`;
   if (tags.length <= 2) { sum.innerHTML = tags.map(pill).join(' '); return; }
   sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span style="font-size:var(--fs-2xs);color:var(--muted);">+${tags.length - 2}</span>`;
@@ -24753,7 +24753,7 @@ function openAddWatch() {
   wEditingStrapIdx = null;
   renderStrapList();
   hideAddStrapRow();
-  document.getElementById('edit-receipts-list').innerHTML = `<div style="color:var(--muted);font-size:var(--fs-base);">No receipts yet.</div>`;
+  document.getElementById('edit-receipts-list').innerHTML = `<div class="note">No receipts yet.</div>`;
   updateUrlBtn();
   renderValueSection();
   // All sections collapsed for a fresh add
@@ -24793,7 +24793,7 @@ async function loadModelOwnersRow(w) {
     const stack = vis.slice(0, 3).map(o =>
       `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:var(--fs-2xs);display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:var(--radius-round);object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
     const era = data.era_min && data.era_max && data.era_min !== data.era_max
-      ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
+      ? ` <span class="text-muted">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
     row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
   }
   row.style.display = '';
@@ -25190,7 +25190,7 @@ function valueGainHTML(paid, market) {
   const pct = Math.round((diff / paid) * 100);
   const sign = diff >= 0 ? '+' : '−';
   const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
-  return `<div style="margin-top:var(--space-1-5);"><div style="font-size:var(--fs-xs);color:var(--muted);">Gain vs paid</div><div style="font-size:var(--fs-base);font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
+  return `<div style="margin-top:var(--space-1-5);"><div class="caption-xs">Gain vs paid</div><div style="font-size:var(--fs-base);font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
 }
 function renderValueSection() {
   const el = document.getElementById('value-section-content');
@@ -25240,13 +25240,13 @@ function renderValueSection() {
     if (isSamePrice) {
       // State B2 — same price
       html += `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);margin-top:var(--space-2-5);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="row-between">
           <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--muted);">Market Price</div>
           <div style="font-size:var(--fs-2xs);color:var(--muted);">${freshLabel}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:var(--space-2);margin-top:var(--space-1);">
           <span style="font-size:var(--fs-2xl);font-weight:var(--fw-medium);color:var(--fg);">${fmtMoney(pending)}</span>
-          <span style="font-size:var(--fs-sm);color:var(--muted);">unchanged</span>
+          <span class="caption">unchanged</span>
         </div>
         <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2-5);">
           <button type="button" disabled style="flex:1;background:var(--surface2);color:var(--muted);border:0.5px solid var(--border);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2);border-radius:var(--radius-sm);cursor:not-allowed;">Apply ${fmtMoney(pending)}</button>
@@ -25257,7 +25257,7 @@ function renderValueSection() {
       // State B — different price
       const deltaColor = delta >= 0 ? 'var(--success)' : '#A32D2D';
       html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);margin-top:var(--space-2-5);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="row-between">
           <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);">New Market Price</div>
           <div style="font-size:var(--fs-2xs);color:var(--badge-accent);">${freshLabel}</div>
         </div>
@@ -25634,7 +25634,7 @@ function renderYearInReview() {
   const topMonth = Object.keys(mMap).sort((a,b) => mMap[b]-mMap[a])[0] || null;
   const topMonthLabel = topMonth ? new Date(topMonth+'-15').toLocaleDateString('en-US',{month:'long'}) : null;
 
-  const na = '<span style="color:var(--muted)">—</span>';
+  const na = '<span class="text-muted">—</span>';
   const canPrev = yirYear > 2020;
   const canNext = yirYear < curYear;
 
@@ -26070,8 +26070,8 @@ function recCardHTML(rec) {
   const todayDOW  = new Date().getDay();
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
-      <div style="color:var(--muted);font-size:var(--fs-base)">All watches worn today — great rotation!</div>
+      <div class="rec-label row-between">Today's Pick<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+      <div class="note">All watches worn today — great rotation!</div>
     </div>`;
   }
   const { w, daysSince, dowCount, weatherReason, weekendScore, weekendReason,
@@ -26115,7 +26115,7 @@ function recCardHTML(rec) {
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="rec-label row-between">${recLabel}<button aria-label="Pick settings" onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:var(--space-0-5);line-height:var(--lh-none);" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -26220,7 +26220,7 @@ function renderWearLeaderboard(fl) {
                  style="display:flex;align-items:center;gap:var(--space-2-5);padding:var(--space-2) 0;border-bottom:1px solid var(--border);cursor:pointer;${dim}">
       <span style="min-width:1.9rem;font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--muted);flex-shrink:0;">#${r.rank}</span>
       ${thumb}
-      <div style="flex:1;min-width:0;">
+      <div class="grow-clip">
         <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);line-height:var(--lh-snug);">${escHtml(w.brand)} ${escHtml(w.name)}</div>
         <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:.1rem;">${r.wears} wear${r.wears !== 1 ? 's' : ''} · ${share}</div>
       </div>
@@ -26296,7 +26296,7 @@ function renderStatsRow(fl) {
     bits.push(cvs.daysSinceChecked == null ? 'never checked' : cvs.daysSinceChecked === 0 ? 'checked today' : cvs.daysSinceChecked === 1 ? 'checked yesterday' : `checked ${cvs.daysSinceChecked}d ago`);
     if (cvs.staleCount) bits.push(`${cvs.staleCount} stale`);
     if (cvs.unpricedCount) bits.push(`${cvs.unpricedCount} unpriced`);
-    valFresh = `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1-5);">${bits.join(' · ')}${valTap ? ' · <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">Update</span>' : ''}</div>`;
+    valFresh = `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1-5);">${bits.join(' · ')}${valTap ? ' · <span class="text-gold-strong">Update</span>' : ''}</div>`;
   } else if (valTap) {
     valFresh = `<div style="font-size:var(--fs-xs);color:var(--gold-text);font-weight:var(--fw-semibold);margin-top:var(--space-1-5);">Check values</div>`;
   }
@@ -26315,11 +26315,11 @@ function renderStatsRow(fl) {
     <div class="stat-card"><div class="stat-val">${unique}</div><div class="stat-lbl">Watches Worn</div></div>
     <div class="stat-card"><div class="stat-val">${watches.length}</div><div class="stat-lbl">In Collection</div></div>
     <div class="stat-card">
-      <div class="stat-lbl" style="margin-bottom:var(--space-1)">Not Worn</div>
+      <div class="stat-lbl stack-1">Not Worn</div>
       <div class="stat-sub">${unwornLbl}</div>
     </div>
     <div class="stat-card" ${valTap ? 'onclick="openUpdatePrices()" role="button" tabindex="0" style="cursor:pointer;" title="Update prices"' : ''}>
-      <div class="stat-lbl" style="margin-bottom:var(--space-1)">Collection Value</div>
+      <div class="stat-lbl stack-1">Collection Value</div>
       ${valHtml}
       ${valFresh}
     </div>`;
@@ -26372,10 +26372,10 @@ function renderChUsecase(fl) {
       const label = k[0].toUpperCase() + k.slice(1);
       return `<div style="display:flex;align-items:center;gap:var(--space-3);">
         <div style="width:10px;height:10px;border-radius:var(--radius-round);background:${color};flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-1);">
             <span style="font-size:var(--fs-base);font-weight:var(--fw-semibold);">${label}</span>
-            <span style="font-size:var(--fs-sm);color:var(--muted);">${cnt} wear${cnt!==1?'s':''} &nbsp;<strong style="color:var(--text)">${pct}%</strong></span>
+            <span class="caption">${cnt} wear${cnt!==1?'s':''} &nbsp;<strong style="color:var(--text)">${pct}%</strong></span>
           </div>
           <div style="height:4px;border-radius:2px;background:var(--surface2);overflow:hidden;">
             <div style="height:100%;border-radius:2px;background:${color};width:${barW}%;"></div>
@@ -27678,7 +27678,7 @@ function renderEditReceiptsList(w) {
   const receipts = w.receipts || [];
   const el = document.getElementById('edit-receipts-list');
   if (!receipts.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-base);">No receipts yet.</div>`;
+    el.innerHTML = `<div class="note">No receipts yet.</div>`;
     return;
   }
   el.innerHTML = `<div class="receipt-list">${receipts.map(r => {
@@ -28725,7 +28725,7 @@ function af2UpdatePill() {
   const total = _af2Watches.filter(w => w._af2State !== 'skipped' && w._af2State !== 'failed').length;
   const done = _af2Watches.filter(w => w._af2State === 'done').length;
   if (done >= total) {
-    pill.innerHTML = `<span style="color:var(--success-text);">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
+    pill.innerHTML = `<span class="text-success">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
     setTimeout(() => pill.remove(), 3000);
   } else {
     pill.innerHTML = `<span class="af2-spinner-gold"></span> Enriching ${total} watch${total !== 1 ? 'es' : ''} · ${done} of ${total} done`;
@@ -28830,7 +28830,7 @@ async function checkBatchWatchValues(ids) {
           const ageMs = Date.now() - new Date(cachedDate).getTime();
           const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${fmtMoney(cachedMid)}</span> <span style="color:var(--muted);font-size:var(--fs-xs);">still valid — refresh in ${remaining} day${remaining !== 1 ? 's' : ''}</span>`;
+            statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(cachedMid)}</span> <span class="caption-xs">still valid — refresh in ${remaining} day${remaining !== 1 ? 's' : ''}</span>`;
           }
           continue;
         }
@@ -28846,7 +28846,7 @@ async function checkBatchWatchValues(ids) {
       totalWithValues++;
       const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${fmtMoney(mid)}</span>${rangeStr ? ' <span style="color:var(--muted);font-size:var(--fs-xs);">' + rangeStr + '</span>' : ''}`;
+        statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
       }
       if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
@@ -29245,7 +29245,7 @@ function maybeShowEnhanceNudge(watch, surface) {
       <div class="enh-nudge-title"><b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
       <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
     </div>
-    <div style="display:flex;gap:var(--space-1-5);align-items:center;">
+    <div class="row-tight">
       <button type="button" class="btn btn-primary btn-sm" onclick="enhanceFromNudge('${id}','${sfc}')">Enhance</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="dismissEnhanceNudge('${id}')">Not now</button>
     </div>
@@ -29380,7 +29380,7 @@ async function enhanceAllWatches(scopedIds) {
         if (addedCount > 0) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
-          if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
+          if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
           if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
@@ -29407,7 +29407,7 @@ async function enhanceAllWatches(scopedIds) {
               if (rc > 0) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
-                if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
+                if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
                 if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
@@ -29846,11 +29846,11 @@ function renderWishlistShareLinks() {
   if (!el) return;
   if (!_wlShareLinks.length) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Your shared links</div>
+    <div class="eyebrow stack-1-5">Your shared links</div>
     ${_wlShareLinks.map(s => `
       <div style="border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
           <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:var(--space-1-5);flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('wishlist', s.token)}</div>
         </div>
@@ -30057,8 +30057,8 @@ function shareThreadHtml(kind, token) {
   if (!comments.length) return '';
   return `<div class="share-thread" data-token="${escAttr(token)}">${comments.map(c => `
     <div style="display:flex;gap:var(--space-2);align-items:flex-start;padding:var(--space-1-5) 0;border-top:1px dashed var(--border);">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:var(--fs-sm);color:var(--muted);"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
+      <div class="grow-clip">
+        <div class="caption"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
         <div style="font-size:var(--fs-base);white-space:pre-wrap;word-break:break-word;">${escHtml(c.body)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}',this.dataset.deleteComment)">Delete</button>
@@ -30149,11 +30149,11 @@ function renderCollectionShareLinks() {
   if (!el) return;
   if (!_collShareLinks.length) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Your shared links</div>
+    <div class="eyebrow stack-1-5">Your shared links</div>
     ${_collShareLinks.map(s => `
       <div style="border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
-        <div style="flex:1;min-width:0;">
+        <div class="grow-clip">
           <div style="font-size:var(--fs-base);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
           <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:var(--space-1-5);flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('collection', s.token)}</div>
         </div>
@@ -30786,7 +30786,7 @@ function previewWatch(w) {
       ? `<div role="button" tabindex="0" style="margin-top:var(--space-3);padding:var(--space-2-5) var(--space-3);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-base);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);"
              data-mid="${escAttr(w.modelId)}"
              onclick="closeWatchPreview();openModelPage(this.dataset.mid)">
-           <span>See this model — who else owns it</span><span style="color:var(--muted);">→</span>
+           <span>See this model — who else owns it</span><span class="text-muted">→</span>
          </div>`
       : '';
   }
@@ -32122,7 +32122,7 @@ function initApp() {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8" style="margin-bottom:var(--space-3);"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);color:var(--danger-text);">Account Suspended</div>
             <div style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin-bottom:var(--space-4);">
-              Your account has been suspended for violating our Terms of Use. If you believe this is a mistake, contact <a href="mailto:support@wrotate.com" style="color:var(--gold-text);">support@wrotate.com</a>.
+              Your account has been suspended for violating our Terms of Use. If you believe this is a mistake, contact <a href="mailto:support@wrotate.com" class="text-gold">support@wrotate.com</a>.
             </div>
             <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
           </div>
@@ -32593,7 +32593,7 @@ function initTgSection(watchId) {
   // Demo mode: hide manual entry form, only show sign-up CTA in history area
   const secBody = document.getElementById('sec-accuracy');
   if (_isDemoMode && secBody) {
-    const manualEntry = secBody.querySelector('div[style*="margin-bottom:var(--space-2-5)"]');
+    const manualEntry = secBody.querySelector('#tg-manual-entry');
     if (manualEntry) manualEntry.style.display = 'none';
   }
   document.getElementById('tg-rate-input').value = '';
@@ -33413,7 +33413,7 @@ async function loadTgHistory() {
   const { data, error } = await db.from('timegrapher_results').select('*')
     .eq('user_id', currentUser.id).eq('watch_id', _tgWatchId)
     .order('created_at', { ascending: false }).limit(20);
-  if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">No readings yet.</div>'; updateAccuracySummary(); loadUnsavedReadings(); return; }
+  if (error || !data || data.length === 0) { listEl.innerHTML = '<div class="note">No readings yet.</div>'; updateAccuracySummary(); loadUnsavedReadings(); return; }
   // Demo mode: hide all readings, prompt sign-up
   if (_isDemoMode) {
     listEl.innerHTML = `<div style="text-align:center;padding:var(--space-4) 0;">
@@ -33433,13 +33433,13 @@ async function loadTgHistory() {
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
     const isoDate = d.toISOString().slice(0, 10);
     return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);font-size:var(--fs-base);">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="row-between">
         <div>
           <span style="font-weight:var(--fw-semibold);color:${rateColor};">${rateStr}</span>
           ${details ? `<span style="color:var(--muted);margin-left:var(--space-1-5);">${details}</span>` : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-2);">
-          <span style="color:var(--muted);font-size:var(--fs-sm);">${dateStr}</span>
+        <div class="row">
+          <span class="caption">${dateStr}</span>
           <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Edit" aria-label="Edit">✎</button>
           <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger-text);cursor:pointer;padding:0;font-size:var(--fs-sm);" title="Delete" aria-label="Delete">✕</button>
         </div>
@@ -33761,9 +33761,9 @@ async function refreshMsrHistoryHint() {
   const last = rows[0];
   const l = unsavedReadingLabel(last);
   const line = document.getElementById('msr-history-hint-line');
-  if (line) line.innerHTML = `<strong>${_fmtRateSigned(last.rate)}</strong> <span style="color:var(--muted);">· ${l.dateStr} · ${rows.length} reading${rows.length === 1 ? '' : 's'} on ${days.length} day${days.length === 1 ? '' : 's'}</span>`;
+  if (line) line.innerHTML = `<strong>${_fmtRateSigned(last.rate)}</strong> <span class="text-muted">· ${l.dateStr} · ${rows.length} reading${rows.length === 1 ? '' : 's'} on ${days.length} day${days.length === 1 ? '' : 's'}</span>`;
   const chart = document.getElementById('msr-history-hint-chart');
-  if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div style="font-size:var(--fs-sm);color:var(--muted);">Measure again on another day to see the trend.</div>`;
+  if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div class="caption">Measure again on another day to see the trend.</div>`;
   card.style.display = '';
 }
 function openMsrHistory(source = 'header') {
@@ -33809,7 +33809,7 @@ function renderMsrHistoryView() {
   const list = document.getElementById('msr-hist-days');
   const x0 = document.getElementById('msr-hist-x0'), x1 = document.getElementById('msr-hist-x1');
   if (!days.length) {
-    if (sum) sum.innerHTML = allDays.length ? `<span style="color:var(--muted);">No readings in this range.</span>` : `<span style="color:var(--muted);">No readings yet — measure this watch and they will collect here.</span>`;
+    if (sum) sum.innerHTML = allDays.length ? `<span class="text-muted">No readings in this range.</span>` : `<span class="text-muted">No readings yet — measure this watch and they will collect here.</span>`;
     if (chart) chart.innerHTML = '';
     if (x0) x0.textContent = ''; if (x1) x1.textContent = '';
     if (list) list.innerHTML = '';
@@ -33819,7 +33819,7 @@ function renderMsrHistoryView() {
   const medians = days.map(d => d.median);
   const avg = medians.reduce((a, b) => a + b, 0) / medians.length;
   const nRead = days.reduce((a, d) => a + d.n, 0);
-  if (sum) sum.innerHTML = `<strong>${_fmtRateSigned(latest.median)}</strong> <span style="color:var(--muted);">latest (${_fmtDayLabel(latest.date)}) · avg ${_fmtRateSigned(avg)} over ${days.length} day${days.length === 1 ? '' : 's'}, ${nRead} reading${nRead === 1 ? '' : 's'}</span>`;
+  if (sum) sum.innerHTML = `<strong>${_fmtRateSigned(latest.median)}</strong> <span class="text-muted">latest (${_fmtDayLabel(latest.date)}) · avg ${_fmtRateSigned(avg)} over ${days.length} day${days.length === 1 ? '' : 's'}, ${nRead} reading${nRead === 1 ? '' : 's'}</span>`;
   if (chart) {
     chart.innerHTML = accuracyTrendSvg(days, { width: chart.clientWidth || 320, height: 180, pad: 12, labels: true });
     chart.querySelectorAll('.acc-dot').forEach(c => { c.addEventListener('click', (e) => { e.stopPropagation(); msrHistorySelectDay(c.dataset.day); }); if (c.dataset.day === _msrHistSelectedDay) c.classList.add('selected'); });
@@ -33841,7 +33841,7 @@ function renderMsrHistoryView() {
       return `<div class="card" style="padding:var(--space-2) var(--space-3-5);margin-bottom:var(--space-2);cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
         <div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-base);">
           <div><span style="font-weight:var(--fw-semibold);">${_fmtRateSigned(d.median)}</span>${spread}</div>
-          <div style="color:var(--muted);font-size:var(--fs-sm);">${_fmtDayLabel(d.date)}${d.n > 1 ? ` · ×${d.n}` : ''} <span style="margin-left:var(--space-1);">${open ? '▾' : '▸'}</span></div>
+          <div class="caption">${_fmtDayLabel(d.date)}${d.n > 1 ? ` · ×${d.n}` : ''} <span style="margin-left:var(--space-1);">${open ? '▾' : '▸'}</span></div>
         </div>${rowsHtml}</div>`;
     }).join('');
   }

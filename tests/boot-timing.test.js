@@ -90,9 +90,9 @@ describe('firstLoadCardHtml', () => {
     expect(html).toContain('>09-18<');
     expect(html).toContain('>09-17<');
     expect(html).toContain('>42<');
-    expect(html).toContain('0.8s <span style="color:var(--muted);">/ 2.4s</span>');   // page ready
-    expect(html).toContain('1.6s <span style="color:var(--muted);">/ 4.0s</span>');   // first posts
-    expect(html).toContain('2.1s <span style="color:var(--muted);">/ 5.2s</span>');   // feed complete
+    expect(html).toContain('0.8s <span class="text-muted">/ 2.4s</span>');   // page ready
+    expect(html).toContain('1.6s <span class="text-muted">/ 4.0s</span>');   // first posts
+    expect(html).toContain('2.1s <span class="text-muted">/ 5.2s</span>');   // feed complete
     expect(html).toContain('>1.0s<');                                                  // cached feed paint
     expect(html).toContain('>71%<');
     expect(html).toContain('>64%<');
@@ -102,13 +102,13 @@ describe('firstLoadCardHtml', () => {
   it('shows a dash for anything a day has no value for', () => {
     const html = firstLoadCardHtml([day({ cached_paint_p50: null, enriched_p50: null, enriched_p90: 'n/a', cached_pct: '', loads: undefined, error_pct: null })]);
     expect(html).toContain('>–<');
-    expect(html).toContain('– <span style="color:var(--muted);">/ –</span>');
+    expect(html).toContain('– <span class="text-muted">/ –</span>');
     expect(html).not.toContain('NaN');
   });
 
   it('accepts numeric strings (PostgREST returns numerics as strings) and escapes the day', () => {
     const html = firstLoadCardHtml([day({ day: '2026-<b>x', script_p50: '1500', script_p90: '3000', cached_pct: '50' })]);
-    expect(html).toContain('1.5s <span style="color:var(--muted);">/ 3.0s</span>');
+    expect(html).toContain('1.5s <span class="text-muted">/ 3.0s</span>');
     expect(html).toContain('>50%<');
     expect(html).not.toContain('<b>x');
   });

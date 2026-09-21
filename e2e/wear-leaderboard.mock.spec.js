@@ -58,7 +58,7 @@ async function rows(page, opts = {}) {
   return page.evaluate(() =>
     [...document.querySelectorAll('#wear-leaderboard .wlb-row')].map(d => {
       const rank = d.querySelector('span')?.textContent.trim() || '';
-      const divs = d.querySelectorAll('[style*="flex:1"] > div');
+      const divs = d.querySelectorAll('.grow-clip > div');
       const stats = (divs[1]?.textContent || '').trim();      // "4 wears · 57%"
       const [wears, share] = stats.split('·').map(t => t.trim());
       return { rank, name: (divs[0]?.textContent || '').trim(), wears, share };
@@ -188,7 +188,7 @@ test.describe('Wear leaderboard (mocked)', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openStats(page);
     const clipped = await page.evaluate(() =>
-      [...document.querySelectorAll('#wear-leaderboard .wlb-row [style*="flex:1"] > div')]
+      [...document.querySelectorAll('#wear-leaderboard .wlb-row .grow-clip > div')]
         .filter(d => d.scrollWidth > d.clientWidth + 1).length);
     expect(clipped).toBe(0);
   });

@@ -3122,7 +3122,7 @@ export function firstLoadCardHtml(days) {
   const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
-  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const td = (html, left) => `<td style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
   const th = (label, left) => `<th style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
   const body = rows.map(d => '<tr>'
@@ -3137,7 +3137,7 @@ export function firstLoadCardHtml(days) {
     + td(pct(d.error_pct))
     + '</tr>').join('');
   return `<div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:var(--space-2);">First load (last ${rows.length} days, UTC)</div>
+        <div class="eyebrow stack-2">First load (last ${rows.length} days, UTC)</div>
         <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
@@ -3222,10 +3222,10 @@ export function experimentSpeedHtml(key, arms) {
   if (!SPEED_EXPERIMENTS.includes(key) || !arms || typeof arms !== 'object') return '';
   const num = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
-  const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
+  const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const row = (label, a) => {
     if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
-    return `<div style="display:contents;"><div>${label} <span style="color:var(--muted);">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
+    return `<div style="display:contents;"><div>${label} <span class="text-muted">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
   const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${t}</div>`;
   return `<div class="adm-exp-speed" style="margin:.1rem 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">

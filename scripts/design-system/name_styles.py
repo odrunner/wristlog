@@ -121,6 +121,10 @@ def rivals(tag, el_id, classes, props, ln):
     return out
 js_assigned = {JS_PROP[m] for m in re.findall(r'\.style\.([a-zA-Z]+)\s*=[^=]', src) if m in JS_PROP}
 
+# Code that FINDS an element by its inline style breaks the moment that style becomes a class
+# (2026-09-21: demo mode hid the manual accuracy form through `div[style*="margin-bottom:…"]`).
+by_style = [src.count('\n', 0, m.start()) + 1 for m in re.finditer(r'\[style[*^~$|]?=', src)]
+if by_style: sys.exit('index.html selects elements by inline style at line(s) %s — give them an id or class first' % by_style)
 TAG = re.compile(r'<([a-zA-Z][\w-]*)\b([^<>]*?)\sstyle="([^"\\]*)"([^<>]*?)(/?)>')
 stats = collections.Counter(); kept = collections.Counter(); why = collections.defaultdict(collections.Counter); used = collections.Counter()
 def convert(m):
