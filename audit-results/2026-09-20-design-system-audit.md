@@ -61,22 +61,24 @@ Out of reach by design: email templates (mail clients do not support CSS variabl
 
 ## Progress — hardcoded values remaining in index.html (from `node scripts/ds-count.mjs`)
 
-| Category | Start | After phase 2 |
+| Category | At the audit | 2026-09-20, end of phase 3 |
 |---|---|---|
+| font-size | 1,217 | 27 |
 | font-weight | 461 | 1 |
+| padding | 663 | 58 |
+| margin | 905 | 62 |
+| gap | 353 | 7 |
+| border-radius | 333 | 14 |
+| line-height | 218 | 10 |
+| letter-spacing | 105 | 26 |
 | transition | 98 | 8 |
+| box-shadow | 40 | 8 |
 | z-index | 39 | 13 |
-| line-height | 218 | 85 |
-| border-radius | 333 | 151 |
-| margin | 905 | 406 |
-| gap | 353 | 205 |
-| padding | 663 | 536 |
-| font-size | 1,217 | 919 |
-| letter-spacing | 105 | 88 |
-| color | 631 | 531 |
-| box-shadow | 40 | 32 |
+| color | 631 | 517 |
 | inline `style=` attributes | 2,137 | 2,089 (phase 4) |
 
-Counts exclude the email-HTML ranges, which are outside the design system on purpose. z-index: what remains is local 1/2/3 stacking inside a component.
+Counts exclude the email-HTML ranges. What remains outside colour is deliberate: the landing screen (fenced), the promo cards (14px corner kept unlike a post's 16px on purpose), the coupled `.funfact-row`, display numerals (28-48px), 1-2px hairline corners, negative heading tracking, local 1/2/3 z-index stacking, and six one-off shadows that are effects rather than elevation (badge-toast glow, game-card rings, crop mask, server dot, promo inset, landing sign-in buttons).
 
-What is left is, by construction, everything that is NOT on the scale — that is phase 3 (snap) and phase 4 (classes).
+**Shipped after the snap, all 2026-09-20:** zero-change tokens for circles / 4px / 16px corners / line-height 1 / tight tracking / input text (`7732d67`); approved decisions pass — corners by role, headings to nearest step, tracking, tiny text (`888de01`); four-level elevation ramp + `--ring` (`b10637f`); tooling kept in `scripts/design-system/` with the seven fences (`7157123`).
+
+**Still open:** phase 4 component classes (the step that makes the design changeable in one place, and removes many colour literals on the way); 531 colour literals (not blindly swappable: theme colours would start following the theme); phase 5 small pages (p, profile, privacy, terms). Unverified on a real device: the Measure screen mid-measurement (`83d31f5`).
