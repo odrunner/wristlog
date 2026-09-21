@@ -3123,8 +3123,8 @@ export function firstLoadCardHtml(days) {
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
   const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
-  const td = (html, left) => `<td style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
-  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
+  const td = (html, left) => `<td style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
+  const th = (label, left) => `<th style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
   const body = rows.map(d => '<tr>'
     + td(escHtml(String(d.day).slice(5)), true)
     + td(escHtml(String(num(d.loads) == null ? '–' : num(d.loads))))
@@ -3138,11 +3138,11 @@ export function firstLoadCardHtml(days) {
     + '</tr>').join('');
   return `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:var(--space-2);">First load (last ${rows.length} days, UTC)</div>
-        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;font-variant-numeric:tabular-nums;">
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
         </table></div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
 }
 

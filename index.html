@@ -877,11 +877,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--space-4); }
 
     #page-model { max-width: 480px; margin: 0 auto; padding: 0; }
-    #admin-tab-models table { font-size:.8rem; }
-    #admin-tab-models th { font-weight:var(--fw-semibold); font-size:.7rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:.35rem .4rem .35rem 0; }
-    #admin-tab-models td { padding:.45rem .4rem .45rem 0; vertical-align:middle; }
-    #admin-tab-models .chip { font-size:.72rem; padding:var(--space-1) .6rem; }
-    #admin-tab-models input[type=text] { padding:.45rem .65rem; font-size:var(--fs-base); }
+    #admin-tab-models table { font-size:var(--fs-base); }
+    #admin-tab-models th { font-weight:var(--fw-semibold); font-size:var(--fs-xs); letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:var(--space-1-5) var(--space-1-5) var(--space-1-5) 0; }
+    #admin-tab-models td { padding:var(--space-2) var(--space-1-5) var(--space-2) 0; vertical-align:middle; }
+    #admin-tab-models .chip { font-size:var(--fs-sm); padding:var(--space-1) var(--space-2-5); }
+    #admin-tab-models input[type=text] { padding:var(--space-2) var(--space-2-5); font-size:var(--fs-base); }
     #admin-tab-models .adm-models-bar input[type=text] { width:auto; }
     .watch-card {
       position: relative;
@@ -2720,7 +2720,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     #theme-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
     #theme-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
-    #admin-nav-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted); opacity:.55; padding:0; margin-left:2px; align-self:center;
+    #admin-nav-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted); opacity:.55; padding:0; margin-left:var(--space-0-5); align-self:center;
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), opacity var(--dur-fast), color var(--dur-fast); }
     #admin-nav-btn:hover { box-shadow:0 0 0 1px var(--gold); opacity:1; color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:var(--radius-btn);
@@ -3734,19 +3734,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Featured -->
     <div id="admin-tab-models" class="admin-tab" role="tabpanel" style="display:none;">
-      <div class="adm-models-bar" style="display:flex;gap:var(--space-2);align-items:center;margin-bottom:.6rem;flex-wrap:wrap;">
+      <div class="adm-models-bar" style="display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2-5);flex-wrap:wrap;">
         <input type="text" id="adm-merge-src" placeholder="merge: src slug" style="flex:1;min-width:130px;">
         <input type="text" id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
         <button class="chip" onclick="adminMergeModels()">Merge</button>
         <label style="font-size:var(--fs-sm);color:var(--muted);"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
         <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
-        <span id="adm-enrich-status" style="font-size:.72rem;color:var(--muted);"></span>
+        <span id="adm-enrich-status" style="font-size:var(--fs-sm);color:var(--muted);"></span>
       </div>
-      <div id="admin-models-list" style="font-size:.8rem;">Loading…</div>
+      <div id="admin-models-list" style="font-size:var(--fs-base);">Loading…</div>
     </div>
     <div id="admin-tab-featured" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="eyebrow" style="margin-bottom:var(--space-3);">Featured posts</div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:var(--space-3);">One post is featured at a time (24h), the rest queue up. Feature a post from its ★ menu in the feed.</div>
+      <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">One post is featured at a time (24h), the rest queue up. Feature a post from its ★ menu in the feed.</div>
       <div id="admin-featured-list">Loading…</div>
     </div>
 
@@ -3754,25 +3754,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-traffic" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Traffic</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic(true)">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="renderAdminTraffic(true)">↻ Refresh</button>
       </div>
-      <div id="admin-traffic" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+      <div id="admin-traffic" style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>
     </div>
 
     <!-- Tab: Usage -->
     <div id="admin-tab-usage" class="admin-tab" role="tabpanel">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Site Usage</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats(true)">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminStats(true)">↻ Refresh</button>
       </div>
-      <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+      <div id="admin-stats" style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>
     </div>
 
     <!-- Tab: Feedback -->
     <div id="admin-tab-feedback" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Feedback</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
       <div class="chips" id="admin-filter-chips" style="margin-bottom:var(--space-3);">
         <button type="button" class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</button>
@@ -3781,14 +3781,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button type="button" class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</button>
         <button type="button" class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</button>
       </div>
-      <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+      <div id="admin-feedback-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
     </div>
 
     <!-- Tab: Reports -->
     <div id="admin-tab-reports" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Content Reports</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminReports()">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
       <div class="chips" id="report-filter-chips" style="margin-bottom:var(--space-3);">
         <button type="button" class="chip selected" data-filter="all" onclick="filterReports('all')">All</button>
@@ -3796,21 +3796,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button type="button" class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</button>
         <button type="button" class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</button>
       </div>
-      <div id="admin-reports-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+      <div id="admin-reports-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
     </div>
 
     <!-- Tab: Official -->
     <div id="admin-tab-official" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Official Posts</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadOfficialDrafts()">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadOfficialDrafts()">↻ Refresh</button>
       </div>
 
       <!-- URL extraction form -->
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:var(--space-4);">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-4);">
         <div class="draft-form-row">
           <label for="official-url-input">Source URL (Instagram, blog, web page)</label>
-          <div style="display:flex;gap:.4rem;">
+          <div style="display:flex;gap:var(--space-1-5);">
             <input type="text" id="official-url-input" placeholder="https://…">
             <button class="btn btn-primary btn-sm" onclick="extractOfficialUrl()" id="official-extract-btn" style="white-space:nowrap;">Extract</button>
           </div>
@@ -3846,7 +3846,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
 
-        <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:.3rem;">Save as Draft</button>
+        <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:var(--space-1);">Save as Draft</button>
       </div>
 
       <!-- Draft filter chips -->
@@ -3856,7 +3856,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button type="button" class="chip" data-filter="all" onclick="filterOfficialDrafts('all')">All</button>
       </div>
 
-      <div id="official-drafts-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+      <div id="official-drafts-list"><div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div></div>
     </div>
 
     <!-- Tab: Broadcast -->
@@ -3866,7 +3866,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <!-- Composer -->
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:var(--space-4);">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-4);">
         <div class="draft-form-row">
           <label for="broadcast-subject">Subject</label>
           <input type="text" id="broadcast-subject" placeholder="What's new at WRotate" oninput="updateBroadcastPreview()">
@@ -3900,7 +3900,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <input type="text" class="broadcast-image-caption" data-idx="0" placeholder="Image caption (optional)" oninput="updateBroadcastPreview()" aria-label="Image 1 caption">
           </div>
         </div>
-        <button class="btn btn-ghost" onclick="addBroadcastImageSlot()" id="broadcast-add-image-btn" style="font-size:.78rem;margin-bottom:.6rem;">+ Add another image</button>
+        <button class="btn btn-ghost" onclick="addBroadcastImageSlot()" id="broadcast-add-image-btn" style="font-size:var(--fs-sm);margin-bottom:var(--space-2-5);">+ Add another image</button>
 
         <!-- Preview -->
         <div class="draft-form-row">
@@ -3911,20 +3911,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
 
         <!-- Draft management -->
-        <div style="display:flex;gap:var(--space-2);margin-top:.3rem;margin-bottom:var(--space-2);">
+        <div style="display:flex;gap:var(--space-2);margin-top:var(--space-1);margin-bottom:var(--space-2);">
           <button class="btn btn-ghost" onclick="saveBroadcastDraft()" style="flex:1;">Save Draft</button>
           <button class="btn btn-ghost" onclick="loadBroadcastDraft()" style="flex:1;">Load Draft</button>
           <button class="btn btn-ghost" onclick="clearBroadcastForm()" style="flex:1;">Clear</button>
         </div>
-        <div id="broadcast-draft-status" aria-live="polite" style="font-size:.78rem;color:var(--muted);margin-bottom:var(--space-2);"></div>
+        <div id="broadcast-draft-status" aria-live="polite" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2);"></div>
 
         <!-- Saved drafts list (localStorage — this browser only) -->
-        <div id="broadcast-drafts-list" style="margin-bottom:.6rem;"></div>
+        <div id="broadcast-drafts-list" style="margin-bottom:var(--space-2-5);"></div>
 
         <!-- Real sends from broadcast_queue. Separate from drafts above, which
              live in localStorage: a send queued server-side has no local draft
              and would otherwise be invisible on this tab. -->
-        <div id="broadcast-sends-list" style="margin-bottom:.6rem;"></div>
+        <div id="broadcast-sends-list" style="margin-bottom:var(--space-2-5);"></div>
 
         <!-- Segment selector -->
         <div class="draft-form-row" style="margin-bottom:var(--space-2);">
@@ -3941,12 +3941,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
              cannot find when deciding whether to. -->
         <div class="draft-form-row" style="margin-bottom:var(--space-2);">
           <label for="broadcast-first-batch">Send in stages</label>
-          <div style="display:flex;flex-direction:column;gap:.4rem;">
+          <div style="display:flex;flex-direction:column;gap:var(--space-1-5);">
             <label class="radio-option">
               <input type="radio" name="bc-stage" value="batch" checked onchange="syncBroadcastStageUI()">
               <span>First batch of</span>
               <input type="number" id="broadcast-first-batch" value="50" min="1" step="1"
-                     style="width:4rem;padding:.15rem .3rem;font-size:var(--fs-base);">
+                     style="width:4rem;padding:var(--space-0-5) var(--space-1);font-size:var(--fs-base);">
               <span>then hold the rest for review</span>
             </label>
             <label class="radio-option">
@@ -3962,7 +3962,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to Segment</button>
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:var(--fs-base);margin-top:var(--space-2);"></div>
-        <div id="broadcast-queue-status" aria-live="polite" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;"></div>
+        <div id="broadcast-queue-status" aria-live="polite" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);"></div>
       </div>
     </div>
 
@@ -3970,7 +3970,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-campaigns" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Email Campaigns</div>
-        <button class="btn btn-ghost" onclick="createCampaign()" style="font-size:.78rem;padding:2px 10px;">+ New campaign</button>
+        <button class="btn btn-ghost" onclick="createCampaign()" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2-5);">+ New campaign</button>
       </div>
       <div id="campaigns-list" style="margin-bottom:var(--space-4);">
         <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Loading campaigns...</div>
@@ -3983,13 +3983,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- 1. Slots — pick or start a slot to edit below. -->
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Slots</div>
-        <button class="btn btn-ghost" onclick="newPromoSlot()" style="font-size:.78rem;padding:2px 10px;">+ New slot</button>
+        <button class="btn btn-ghost" onclick="newPromoSlot()" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2-5);">+ New slot</button>
       </div>
       <div id="promo-list" style="margin-bottom:var(--space-6);">Loading…</div>
 
       <!-- 2. Design — the SELECTED slot's content. Per-slot, not global. -->
       <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Design — this slot's content</div></div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:var(--space-4);">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-4);">
         <div class="draft-form-row">
           <label for="promo-variant">Style</label>
           <select id="promo-variant" onchange="updatePromoPreview()"></select>
@@ -4001,7 +4001,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Month in review builds its slides from each VIEWER's own wear log,
              so the copy fields below do nothing for it. Eyebrow and the CTA are
              the only two it reads. -->
-        <div style="font-size:.72rem;color:var(--muted);line-height:1.45;margin:-.2rem 0 .6rem;">
+        <div style="font-size:var(--fs-sm);color:var(--muted);line-height:var(--lh-snug);margin:-.2rem 0 var(--space-2-5);">
           <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the first 10 days of a month. Only the Eyebrow and the CTA apply, and the CTA is best left empty: the card is the content, and a button that only lands on Stats is a step nobody needs.
         </div>
         <div class="draft-form-row">
@@ -4049,7 +4049,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       <!-- 3. Delivery — the SELECTED slot's targeting & pacing. Per-slot, not global. -->
       <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Delivery — this slot's targeting &amp; pacing</div></div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);">
         <div class="draft-form-row">
           <label for="promo-audience">Audience</label>
           <select id="promo-audience"></select>
@@ -4085,10 +4085,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       <!-- 4. Defaults — GLOBAL fallback/kill-switch, applies only when a slot leaves a field blank. -->
       <div style="margin-bottom:var(--space-2);"><div class="eyebrow">Global Defaults — fallback &amp; kill switch for ALL slots</div></div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);">
         <div class="draft-form-row"><label for="promo-cfg-enabled">Show promo cards to users</label>
           <input type="checkbox" id="promo-cfg-enabled">
-          <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem;">Unchecked hides every slot from everyone</div></div>
+          <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-0-5);">Unchecked hides every slot from everyone</div></div>
         <div class="draft-form-row"><label for="promo-cfg-first">Default position (posts before the first card, for slots that don't set their own)</label>
           <input type="number" id="promo-cfg-first" min="0"></div>
         <div class="draft-form-row"><label for="promo-cfg-repeat">Repeat every N posts (0 = no repeat)</label>
@@ -4106,10 +4106,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Experiments -->
     <div id="admin-tab-experiments" class="admin-tab" role="tabpanel" style="display:none;">
-      <div class="eyebrow" style="margin-bottom:.6rem;">A/B experiments</div>
-      <details style="margin-bottom:.8rem;">
-        <summary style="cursor:pointer;font-size:.8rem;">New experiment</summary>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:var(--space-2);font-size:.8rem;">
+      <div class="eyebrow" style="margin-bottom:var(--space-2-5);">A/B experiments</div>
+      <details style="margin-bottom:var(--space-3);">
+        <summary style="cursor:pointer;font-size:var(--fs-base);">New experiment</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-1-5);margin-top:var(--space-2);font-size:var(--fs-base);">
           <input id="adm-exp-key" placeholder="key (a-z0-9_)">
           <input id="adm-exp-name" placeholder="name">
           <input id="adm-exp-hyp" placeholder="hypothesis" style="grid-column:1/3;">
@@ -4119,7 +4119,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="chip" onclick="adminExpCreate()">Create draft</button>
         </div>
       </details>
-      <div id="admin-experiments-list" style="font-size:.8rem;">Loading…</div>
+      <div id="admin-experiments-list" style="font-size:var(--fs-base);">Loading…</div>
     </div>
 
     <!-- Tab: Dev -->
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.10';
+const APP_VERSION = '20.20.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12118,8 +12118,8 @@ function firstLoadCardHtml(days) {
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pct = v => num(v) == null ? '–' : Math.round(num(v)) + '%';
   const pair = (p50, p90) => `${secs(p50)} <span style="color:var(--muted);">/ ${secs(p90)}</span>`;
-  const td = (html, left) => `<td style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
-  const th = (label, left) => `<th style="padding:.3rem .45rem;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
+  const td = (html, left) => `<td style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:${left ? 'left' : 'right'};">${html}</td>`;
+  const th = (label, left) => `<th style="padding:var(--space-1) var(--space-2);border-bottom:1px solid var(--border);white-space:nowrap;font-weight:var(--fw-semibold);color:var(--muted);text-align:${left ? 'left' : 'right'};">${label}</th>`;
   const body = rows.map(d => '<tr>'
     + td(escHtml(String(d.day).slice(5)), true)
     + td(escHtml(String(num(d.loads) == null ? '–' : num(d.loads))))
@@ -12133,11 +12133,11 @@ function firstLoadCardHtml(days) {
     + '</tr>').join('');
   return `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:var(--space-2);">First load (last ${rows.length} days, UTC)</div>
-        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;font-variant-numeric:tabular-nums;">
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
         </table></div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
 }
 
@@ -18814,9 +18814,9 @@ async function renderBroadcastQueueStatus() {
         const label = b.label || '(unnamed)';
         const when = b.last_sent ? new Date(b.last_sent).toLocaleDateString() : '';
         const arrows = done ? '' : `
-          <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:var(--lh-tight);" ${position === 1 ? 'disabled' : ''}
+          <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${position === 1 ? 'disabled' : ''}
             onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, -1)" aria-label="Send ${escAttr(label)} earlier">▲</button>
-          <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:var(--lh-tight);" ${position === pendingCount ? 'disabled' : ''}
+          <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${position === pendingCount ? 'disabled' : ''}
             onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, 1)" aria-label="Send ${escAttr(label)} later">▼</button>`;
         // A drained row only survives the filter above when it has failures, so
         // labelling it "done" would misreport a send that did not complete.
@@ -18831,31 +18831,31 @@ async function renderBroadcastQueueStatus() {
         // Metrics + release controls load per campaign, on demand — one RPC per
         // held campaign, and only for the one the operator is actually judging.
         const gate = held > 0
-          ? `<div data-bc-gate style="margin-top:.35rem;padding-top:.35rem;border-top:1px dashed var(--border,rgba(128,128,128,.25));">
-               <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem var(--space-2);"
+          ? `<div data-bc-gate style="margin-top:var(--space-1-5);padding-top:var(--space-1-5);border-top:1px dashed var(--border,rgba(128,128,128,.25));">
+               <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);"
                  data-bc-metrics="${escAttr(label)}">Show batch results</button>
              </div>`
           : '';
-        return `<div style="padding:.4rem var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);border-left:3px solid ${(isNext || waiting) ? 'var(--gold)' : 'var(--border)'};">
-          <div style="display:flex;align-items:center;gap:.4rem;">
+        return `<div style="padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);border-left:3px solid ${(isNext || waiting) ? 'var(--gold)' : 'var(--border)'};">
+          <div style="display:flex;align-items:center;gap:var(--space-1-5);">
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(label)}</span>
-            <span style="font-size:.72rem;white-space:nowrap;">${rank}</span>${arrows}
+            <span style="font-size:var(--fs-sm);white-space:nowrap;">${rank}</span>${arrows}
           </div>
-          <div style="color:var(--muted);font-size:.74rem;margin-top:.15rem;">
+          <div style="color:var(--muted);font-size:var(--fs-sm);margin-top:var(--space-0-5);">
             ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span style="color:var(--gold-text);">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
           </div>
           ${gate}
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
-        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">In Flight <span style="text-transform:none;font-weight:var(--fw-normal);">— one at a time, in this order</span></div>' + rows
+        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-1);">In Flight <span style="text-transform:none;font-weight:var(--fw-normal);">— one at a time, in this order</span></div>' + rows
         : '';
     }
 
     // Per-broadcast progress lives in the list above; this line is only the
     // shared Resend quota, which is genuinely global.
     el.innerHTML = `Shared quota today ${Number(q.used_today) || 0}/${BROADCAST_DAILY_LIMIT} · next drain ≈ ${budget} emails (nightly 21:30 UTC)
-      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem var(--space-2);margin-left:.4rem;">Drain now</button>`;
+      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);margin-left:var(--space-1-5);">Drain now</button>`;
   } catch (_) { el.innerHTML = ''; }
 }
 
@@ -18884,14 +18884,14 @@ function installBroadcastQueueDelegation() {
 async function showBroadcastBatchMetrics(label, btn) {
   const gate = btn.closest('[data-bc-gate]');
   if (!gate) return;
-  gate.innerHTML = '<span style="color:var(--muted);font-size:.74rem;">Loading…</span>';
+  gate.innerHTML = '<span style="color:var(--muted);font-size:var(--fs-sm);">Loading…</span>';
   let m;
   try {
     const { data, error } = await db.rpc('admin_broadcast_batch_metrics', { p_label: label });
     if (error) throw error;
     m = data || {};
   } catch (err) {
-    gate.innerHTML = `<span style="color:var(--error);font-size:.74rem;">Could not load results: ${escHtml(err.message)}</span>`;
+    gate.innerHTML = `<span style="color:var(--error);font-size:var(--fs-sm);">Could not load results: ${escHtml(err.message)}</span>`;
     return;
   }
   const sent = Number(m.sent) || 0;
@@ -18906,14 +18906,14 @@ async function showBroadcastBatchMetrics(label, btn) {
   const human = Number(m.opened_human) || 0;
   const machine = Math.max(0, (Number(m.opened) || 0) - human);
   gate.innerHTML = `
-    <div style="font-size:.74rem;color:var(--muted);margin-bottom:.3rem;">
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">
       batch of ${sent}: ${m.delivered || 0} delivered · ${human} opened (${pct(human)}%)${machine ? `<span style="opacity:.55;"> +${machine} prefetch</span>` : ''}
       · <span style="${warn ? 'color:var(--gold-text);' : ''}">${m.unsubscribed || 0} unsubscribed</span>
       · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--error);">${m.complained} spam complaints</span>` : ''}
     </div>
-    <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-      <button class="btn btn-primary" style="font-size:.72rem;padding:.2rem var(--space-2);" data-bc-release="${escAttr(label)}">Send remaining</button>
-      <button class="btn btn-danger" style="font-size:.72rem;padding:.2rem var(--space-2);" data-bc-cancel="${escAttr(label)}">Cancel remaining</button>
+    <div style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;">
+      <button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" data-bc-release="${escAttr(label)}">Send remaining</button>
+      <button class="btn btn-danger" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" data-bc-cancel="${escAttr(label)}">Cancel remaining</button>
     </div>`;
 }
 
@@ -19204,19 +19204,19 @@ function renderDevFlags() {
   const el = document.getElementById('admin-dev-flags');
   if (!el) return;
   if (Object.keys(FEATURE_FLAGS).length === 0) {
-    el.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:var(--space-2) 0;">No active feature flags.</div>';
+    el.innerHTML = '<div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-2) 0;">No active feature flags.</div>';
     return;
   }
   el.innerHTML = Object.entries(FEATURE_FLAGS).map(([key, cfg]) => {
     const on = featureFlag(key);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid var(--border);">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) 0;border-bottom:1px solid var(--border);">
       <div>
-        <div style="font-size:.85rem;font-weight:var(--fw-medium);">${escHtml(cfg.label)}</div>
-        <div style="font-size:.72rem;color:var(--muted);font-family:monospace;">${escHtml(key)}</div>
+        <div style="font-size:var(--fs-base);font-weight:var(--fw-medium);">${escHtml(cfg.label)}</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);font-family:monospace;">${escHtml(key)}</div>
       </div>
       <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
         <input type="checkbox" ${on ? 'checked' : ''} data-flag="${escAttr(key)}" onchange="setFeatureFlag(this.dataset.flag,this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:11px;transition:background var(--dur-base);"></span>
+        <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:var(--radius);transition:background var(--dur-base);"></span>
         <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left var(--dur-base);box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
     </div>`;
@@ -19226,14 +19226,14 @@ function renderDevExperiments() {
   const el = document.getElementById('admin-dev-experiments');
   if (!el) return;
   const keys = Object.keys(EXPERIMENTS);
-  if (!keys.length) { el.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:var(--space-2) 0;">No running experiments.</div>'; return; }
-  el.innerHTML = `<div style="padding:var(--space-2) 0 .6rem;"><button class="chip" onclick="resetEnhanceNudgeState()">Reset nudge state</button>
-    <span style="font-size:.72rem;color:var(--muted);margin-left:.4rem;">clears the once-per-watch and once-per-day gates for my account</span></div>` + keys.map(k => {
+  if (!keys.length) { el.innerHTML = '<div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-2) 0;">No running experiments.</div>'; return; }
+  el.innerHTML = `<div style="padding:var(--space-2) 0 var(--space-2-5);"><button class="chip" onclick="resetEnhanceNudgeState()">Reset nudge state</button>
+    <span style="font-size:var(--fs-sm);color:var(--muted);margin-left:var(--space-1-5);">clears the once-per-watch and once-per-day gates for my account</span></div>` + keys.map(k => {
     const forced = safeLS.get('exp_force_' + k) || '';
     const opt = (v, label) => `<option value="${v}" ${forced === v ? 'selected' : ''}>${label}</option>`;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:.85rem;font-family:monospace;">${escHtml(k)}</div>
-           <div style="font-size:.72rem;color:var(--muted);">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2-5) 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:var(--fs-base);font-family:monospace;">${escHtml(k)}</div>
+           <div style="font-size:var(--fs-sm);color:var(--muted);">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
       <select data-key="${escAttr(k)}" onchange="setExperimentOverride(this.dataset.key, this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
     </div>`;
   }).join('');
@@ -19265,7 +19265,7 @@ async function loadAdminModels() {
   _adminModels = data || [];
   const autoOnly = document.getElementById('adm-models-auto-only').checked;
   const rows = _adminModels.filter(m => !autoOnly || m.is_auto);
-  el.innerHTML = `<div style="color:var(--muted);margin-bottom:.4rem;">${_adminModels.length} models · ${_adminModels.filter(m => !m.is_auto).length} curated</div>
+  el.innerHTML = `<div style="color:var(--muted);margin-bottom:var(--space-1-5);">${_adminModels.length} models · ${_adminModels.filter(m => !m.is_auto).length} curated</div>
     <table style="width:100%;border-collapse:collapse;">
     <tr style="color:var(--muted);text-align:left;"><th>Model</th><th>Slug</th><th>Own</th><th>W</th><th></th></tr>` +
     rows.slice(0, 200).map(m => `<tr style="border-top:0.5px solid var(--border);">
@@ -19276,19 +19276,19 @@ async function loadAdminModels() {
         <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button>
         <button class="chip" id="adm-enrich-${m.id}" onclick="adminEnrichModel('${m.id}')" title="${m.enriched_at ? 'Enriched ' + escAttr(String(m.enriched_at).slice(0, 10)) + ' — re-run' : 'Generate the family write-up'}">${m.enriched_at ? '✓ Enrich' : 'Enrich'}</button></td>
     </tr>
-    <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:.4rem 0;">
-      <div class="adm-model-edit" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
+    <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:var(--space-1-5) 0;">
+      <div class="adm-model-edit" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-1-5);">
       <input type="text" id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name">
       <input type="text" id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug">
       <input type="text" id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="grid-column:1/-1;">
       </div>
-      <div style="margin-top:.4rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+      <div style="margin-top:var(--space-1-5);display:flex;gap:var(--space-1-5);align-items:center;flex-wrap:wrap;">
         <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
         <label class="chip" style="cursor:pointer;">Upload hero photo <input type="file" accept="image/*" style="display:none;" onchange="adminUploadModelHero('${m.id}', this)"></label>
         <input type="text" id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;width:auto;">
         ${m.hero_image ? `<img loading="lazy" src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:var(--radius-sm);">` : ''}
       </div>
-    </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:.4rem;">Showing 200 of ${rows.length}</div>` : '');
+    </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:var(--space-1-5);">Showing 200 of ${rows.length}</div>` : '');
 }
 function adminEditModel(id) {
   const tr = document.getElementById('adm-model-edit-' + id);
@@ -19417,10 +19417,10 @@ async function loadAdminExperiments() {
   if (!_adminExps.length) { el.innerHTML = '<div style="color:var(--muted);">No experiments yet.</div>'; return; }
   // Archived rows are history, not work: one muted line at the bottom, expanded on tap.
   const archived = _adminExps.filter(x => x.status === 'archived');
-  const archivedHtml = archived.length ? `<div style="margin-top:.2rem;">
+  const archivedHtml = archived.length ? `<div style="margin-top:var(--space-1);">
         <button class="btn btn-ghost btn-sm" style="color:var(--muted);" onclick="adminExpToggleArchived()">${archived.length} archived</button>
-        <div id="adm-exp-archived" style="display:none;padding:.3rem .4rem 0;color:var(--muted);font-size:.72rem;">
-          ${archived.map(x => `<div style="padding:.15rem 0;">${escHtml(x.name)} <span style="font-family:monospace;font-size:var(--fs-xs);">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
+        <div id="adm-exp-archived" style="display:none;padding:var(--space-1) var(--space-1-5) 0;color:var(--muted);font-size:var(--fs-sm);">
+          ${archived.map(x => `<div style="padding:var(--space-0-5) 0;">${escHtml(x.name)} <span style="font-family:monospace;font-size:var(--fs-xs);">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
         </div></div>` : '';
   // Stacked cards (not a table) so it fits a phone: identity → metrics grid → verdict → actions row.
   const cell = (label, val) => `<div><div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${label}</div><div>${val}</div></div>`;
@@ -19446,13 +19446,13 @@ async function loadAdminExperiments() {
       }
       if (x.status === 'won' || x.status === 'killed') actions.push(b('Archive', `adminExpAction(this.dataset.key,'archived')`));
       actions.push(b('Log', `adminExpToggleLog(this.dataset.key)`));
-      return `<div class="adm-exp-card" style="border:0.5px solid var(--border);border-radius:var(--radius);padding:.7rem .8rem;margin-bottom:.7rem;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem;flex-wrap:wrap;">
+      return `<div class="adm-exp-card" style="border:0.5px solid var(--border);border-radius:var(--radius);padding:var(--space-3) var(--space-3);margin-bottom:var(--space-3);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-2-5);flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-weight:var(--fw-medium);">${escHtml(x.name)}</div>
-            <div style="color:var(--muted);font-family:monospace;font-size:.7rem;word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
+            <div style="color:var(--muted);font-family:monospace;font-size:var(--fs-xs);word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
           <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span style="color:var(--muted);">· knob trial, judged Sundays</span>` : ''}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2) .6rem;margin:.6rem 0;">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2) var(--space-2-5);margin:var(--space-2-5) 0;">
           ${cell('Rollout', pctCell)}
           ${cell('Days', ev ? ev.days_running : '—')}
           ${cell('Guard Δ', ev && ev.guardrail ? (ev.guardrail.drop_pct > 0 ? '−' : '+') + Math.abs(ev.guardrail.drop_pct) + '%' : '—')}
@@ -19462,8 +19462,8 @@ async function loadAdminExperiments() {
         </div>
         ${experimentSpeedHtml(x.key, _expSpeed[x.key])}
         <div style="margin-bottom:var(--space-2);"><span style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Verdict</span> ${escHtml(verdict)}${evaluatedAt}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.4rem;">${actions.join('')}</div>
-        <div id="adm-exp-log-${escAttr(x.key)}" style="display:none;padding:var(--space-2) 0 0;color:var(--muted);font-size:.72rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${actions.join('')}</div>
+        <div id="adm-exp-log-${escAttr(x.key)}" style="display:none;padding:var(--space-2) 0 0;color:var(--muted);font-size:var(--fs-sm);">
           ${(x.decisions || []).map(d => `<div>${escHtml(d.at ? new Date(d.at).toLocaleString() : '—')} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
         </div>
       </div>`;
@@ -19537,10 +19537,10 @@ async function loadAdminFeatured() {
     const badge = r.status === 'active'
       ? `<span style="color:var(--gold-text);font-weight:var(--fw-semibold);">★ Active</span>${r.expires_at ? ` <span style="color:var(--muted);">· expires ${escHtml(new Date(r.expires_at).toLocaleString())}</span>` : ''}`
       : `<span style="color:var(--muted);">Queued</span>`;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--border);">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2-5);padding:var(--space-2-5) 0;border-bottom:1px solid var(--border);">
       <div style="min-width:0;">
         <div style="font-size:var(--fs-base);">${badge}</div>
-        <div style="font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(who)}: ${escHtml(txt)}</div>
+        <div style="font-size:var(--fs-base);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(who)}: ${escHtml(txt)}</div>
       </div>
       <button type="button" class="btn btn-sm" onclick="unfeatureAdmin('${r.id}')">Remove</button>
     </div>`;
@@ -19561,12 +19561,12 @@ let _reportFilter = 'all';
 async function loadAdminReports() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-reports-list');
-  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
   const { data, error } = await withTimeout(db.from('content_reports')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(1000), 10000);
-  if (error) { el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;"><div style="color:var(--danger-text);font-size:.85rem;margin-bottom:var(--space-3);">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;"><div style="color:var(--danger-text);font-size:var(--fs-base);margin-bottom:var(--space-3);">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:var(--fs-sm);">↻ Retry</button></div>`; return; }
   _adminReportsData = data || [];
 
   // Fetch profiles for reporters and reported users
@@ -19611,7 +19611,7 @@ function renderAdminReports() {
     ? _adminReportsData
     : _adminReportsData.filter(r => r.status === _reportFilter);
   if (!filtered.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_reportFilter === 'all' ? '' : _reportFilter + ' '}reports.</div>`;
+    el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_reportFilter === 'all' ? '' : _reportFilter + ' '}reports.</div>`;
     return;
   }
   el.innerHTML = filtered.map(r => renderReportCard(r)).join('');
@@ -19704,7 +19704,7 @@ async function loadAdminStats(force = false) {
   if (!el) return;
   const cacheArgs = { p_force: force === true };
   await loadInternalIds();
-  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
   try {
     // Parallel queries for all stats
     const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
@@ -19966,9 +19966,9 @@ async function loadAdminStats(force = false) {
       // only a drop shows green. sub (string): muted context shown after the delta.
       const good = invert ? delta < 0 : delta > 0;
       const deltaHtml = typeof delta === 'number'
-        ? `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
-      const subHtml = sub ? `<span style="color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:.4rem;">${sub}</span>` : '';
-      return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${value}${deltaHtml}${subHtml}</span></div>`;
+        ? `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:var(--space-1-5);">${delta > 0 ? '+' : ''}${delta}</span>` : '';
+      const subHtml = sub ? `<span style="color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-medium);margin-left:var(--space-1-5);">${sub}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${value}${deltaHtml}${subHtml}</span></div>`;
     };
     // Colored day-over-day delta to embed INSIDE a sub string, so the change sits next
     // to the 24h figure it describes (not glued to an all-time total). `invert`: a rise is bad.
@@ -20015,19 +20015,19 @@ async function loadAdminStats(force = false) {
         { key: 'repeat', label: 'R?' },
         { key: 'lastActiveAt', label: 'Seen', fmt: v => v ? _shortAgo(v) : '—', recentMs: 24 * 3600000 },
       ];
-      const thStyle = 'text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';
+      const thStyle = 'text-align:center;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';
       const userArrow = sort && sort.col === 'joinedAt' ? (sort.asc ? ' ↑' : ' ↓') : '';
-      const userThStyle = 'text-align:left;padding:.35rem var(--space-1);font-size:.64rem;font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;';
+      const userThStyle = 'text-align:left;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;';
       const rows = sorted.map(u => {
         const initHTML = u.avatar
           ? `<img src="${escHtml(u.avatar)}" alt="${escAttr(u.username || '')}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
           : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:var(--fw-bold);flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
-          <td style="padding:.4rem var(--space-1);border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
+          <td style="padding:var(--space-1-5) var(--space-1);border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:var(--space-1-5);min-width:0;">
             <div style="cursor:pointer;flex-shrink:0;" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
-            <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:var(--fw-semibold);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
+            <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:var(--fw-semibold);font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:var(--success-text);font-weight:var(--fw-bold);' : ''}">${cell}</td>`; }).join('')}
+          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:var(--space-1-5) var(--space-1);text-align:center;font-size:var(--fs-sm);border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:var(--success-text);font-weight:var(--fw-bold);' : ''}">${cell}</td>`; }).join('')}
         </tr>`;
       }).join('');
       const container = document.getElementById(tableId);
@@ -20118,8 +20118,8 @@ async function loadAdminStats(force = false) {
       ${renderAdminUserTable('admin-internal', internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;">
-      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:var(--space-3);">Failed to load stats: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:.78rem;">↻ Retry</button>
+      <div style="color:var(--danger-text);font-size:var(--fs-base);margin-bottom:var(--space-3);">Failed to load stats: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:var(--fs-sm);">↻ Retry</button>
     </div>`;
   }
 }
@@ -20159,7 +20159,7 @@ async function openAdminUserDetail(userId) {
   window._adminDetailUserId = userId;
   const modal = document.getElementById('admin-user-modal');
   const body = document.getElementById('admin-user-modal-body');
-  body.innerHTML = '<div style="color:var(--muted);font-size:.9rem;text-align:center;padding:var(--space-8) 0;">Loading…</div>';
+  body.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);text-align:center;padding:var(--space-8) 0;">Loading…</div>';
   modal.classList.remove('hidden');
 
   try {
@@ -20184,13 +20184,13 @@ async function openAdminUserDetail(userId) {
       ? `<img ${thumbSrcAttrs(p.avatar_url)} alt="${escAttr(p.display_name || p.username || '')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:48px;height:48px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:var(--fw-bold);">${(name[0]||'?').toUpperCase()}</div>`;
 
-    const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:var(--fw-semibold);">${value}</span></div>`;
+    const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:var(--fw-semibold);">${value}</span></div>`;
 
     const watches = (d.watch_list || []);
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const isNewWatch = w => w.created_at && new Date(w.created_at).getTime() >= dayAgo;
     const watchListHtml = watches.length > 0
-      ? `<div style="margin-top:var(--space-2);">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? '#16a34a' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:.15rem 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
+      ? `<div style="margin-top:var(--space-2);">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? '#16a34a' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:var(--space-0-5) 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
       : '<div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-1) 0;">No watches</div>';
 
     document.getElementById('admin-user-modal-title').textContent = name;
@@ -20200,14 +20200,14 @@ async function openAdminUserDetail(userId) {
         ${initHTML}
         <div>
           <div style="font-weight:var(--fw-bold);font-size:var(--fs-lg);">${escHtml(name)}</div>
-          <div style="font-size:.72rem;color:var(--muted);">@${escHtml(p.username || '—')}</div>
+          <div style="font-size:var(--fs-sm);color:var(--muted);">@${escHtml(p.username || '—')}</div>
           <div style="font-size:var(--fs-xs);color:var(--muted);">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
           ${p.is_suspended ? '<div style="font-size:var(--fs-xs);color:var(--danger-text);font-weight:var(--fw-semibold);">SUSPENDED</div>' : ''}
         </div>
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Activity</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Activity</div>
         ${row('Joined', joinDate + (joinedAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + joinedAgo + ')</span>' : ''))}
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + lastActiveAgo + ')</span>' : ''))}
         ${row('Last open', lastOpen + (lastOpenAgo ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + lastOpenAgo + ')</span>' : ''))}
@@ -20215,16 +20215,16 @@ async function openAdminUserDetail(userId) {
         ${row('Repeat user', isRepeat ? '<span style="color:var(--success-text);">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Collection</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Collection</div>
         ${row('Watches', d.watches)}
         ${row('Wears', d.wears)}
         ${row('Posts', d.posts)}
         ${row('Wishlist', d.wishlist)}
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Features Used</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(' + msrRate + ' success)</span>' : ''))}
         ${row('Advanced mode', d.advanced_sessions > 0
           ? '<span style="color:var(--success-text);">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
@@ -20233,8 +20233,8 @@ async function openAdminUserDetail(userId) {
         ${row('Value checks', d.price_checks)}
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Social</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Social</div>
         ${row('Followers', d.followers)}
         ${row('Following', d.following)}
         ${row('Friends', d.friends)}
@@ -20243,20 +20243,20 @@ async function openAdminUserDetail(userId) {
         ${row('Clubs', d.clubs)}
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:var(--space-3);">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Feedback</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);margin-bottom:var(--space-3);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Feedback</div>
         ${row('Review prompted', d.feedback_asked)}
         ${row('Feedback given', d.feedback_given)}
       </div>
 
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;">
-        <div class="eyebrow" style="margin-bottom:.35rem;">Watches (${watches.length})</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2-5);">
+        <div class="eyebrow" style="margin-bottom:var(--space-1-5);">Watches (${watches.length})</div>
         ${watchListHtml}
       </div>`;
   } catch(e) {
     body.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;">
-      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:var(--space-3);">Failed to load: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)" style="font-size:.78rem;">Retry</button>
+      <div style="color:var(--danger-text);font-size:var(--fs-base);margin-bottom:var(--space-3);">Failed to load: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)" style="font-size:var(--fs-sm);">Retry</button>
     </div>`;
   }
 }
@@ -20273,7 +20273,7 @@ async function renderAdminTraffic(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-traffic');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
     const [trafficR, emailEventsR, demoR, clickR, bootR] = await withTimeout(Promise.all([
@@ -20296,11 +20296,11 @@ async function renderAdminTraffic(force = false) {
     const dv = (demoR && !demoR.error) ? demoR.data : null;
 
     const sourceRows = (t.by_source || [])
-      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.total}</span></span></div>`)
+      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.total}</span></span></div>`)
       .join('');
 
     const deviceRows = (t.by_device_7d || []).filter(d => d.count > 0)
-      .map(d => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${d.count}</span></div>`)
+      .map(d => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${d.count}</span></div>`)
       .join('');
 
     // Bars scale to the busiest day in the window. (Was a fixed 3-visits-per-
@@ -20310,17 +20310,17 @@ async function renderAdminTraffic(force = false) {
     const dailyRows = (t.daily || [])
       .map(d => {
         const pct = Math.round(((Number(d.count) || 0) / dailyMax) * 100);
-        return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:.78rem;padding:var(--space-1) 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="flex:1;"><span style="display:block;height:.65rem;width:${pct}%;background:var(--gold-text);border-radius:2px;"></span></span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);width:2rem;text-align:right;">${d.count}</span></div>`;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="flex:1;"><span style="display:block;height:.65rem;width:${pct}%;background:var(--gold-text);border-radius:2px;"></span></span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);width:2rem;text-align:right;">${d.count}</span></div>`;
       }).join('');
 
-    const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
+    const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
 
     const f = t.funnel || {};
     const su = t.signups || {};
     const funnelHtml = renderFunnelFromRpc(f, su);
 
     const signupSourceRows = (t.signups_by_source || [])
-      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.count}</span></span></div>`)
+      .map(s => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-base);padding:var(--space-1) 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">1d: ${s.day}</span><span style="color:var(--muted);font-size:var(--fs-sm);margin-right:var(--space-2);">7d: ${s.week}</span><span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${s.count}</span></span></div>`)
       .join('');
 
     // Demo views = clicks of "Try the demo" (the alexrivera demo account), counted
@@ -20365,8 +20365,8 @@ async function renderAdminTraffic(force = false) {
       ${renderEmailEngagement(emailEventsR.data || {})}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;">
-      <div style="color:var(--danger-text);font-size:.85rem;margin-bottom:var(--space-3);">Failed to load traffic: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:.78rem;">↻ Retry</button>
+      <div style="color:var(--danger-text);font-size:var(--fs-base);margin-bottom:var(--space-3);">Failed to load traffic: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:var(--fs-sm);">↻ Retry</button>
     </div>`;
   }
 }
@@ -20387,10 +20387,10 @@ function renderEmailHealth(data) {
   const tone = (v, warnAt, badAt) => v >= badAt ? 'var(--danger)'
     : v >= warnAt ? 'var(--warn)' : 'var(--gold)';
   const row = (label, value, limit, color, last) =>
-    `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:.35rem 0;${last ? '' : 'border-bottom:1px solid var(--border);'}">`
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;${last ? '' : 'border-bottom:1px solid var(--border);'}">`
     + `<span>${label}</span>`
     + `<span style="font-weight:var(--fw-semibold);"><span style="color:${color};">${value}</span>`
-    + `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${limit}</span></span></div>`;
+    + `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${limit}</span></span></div>`;
   return `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:var(--space-2);">Deliverability (7 days)</div>
     ${row('Bounce', bounce7.toFixed(2) + '%', 'limit 5%', tone(bounce7, 2.5, 5))}
@@ -20423,16 +20423,16 @@ function renderEmailClickthrough(rows) {
   };
   const body = rows.map(r => {
     const legacy = r.campaign === 'welcome' || r.campaign === 'april-winback';
-    return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.78rem;padding:.35rem 0;border-bottom:1px solid var(--border);gap:var(--space-2);">
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.campaign)}${legacy ? '<span style="color:var(--muted);font-size:.66rem;margin-left:.35rem;">untagged era</span>' : ''}</span>
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);gap:var(--space-2);">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.campaign)}${legacy ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">untagged era</span>' : ''}</span>
       <span style="font-variant-numeric:tabular-nums;white-space:nowrap;">
         <span style="color:var(--muted);font-size:var(--fs-xs);margin-right:var(--space-2);">${ago(r.last_visit)}</span>
-        <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success-text);font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:.3rem;">+${r.visits_24h}</span>` : ''}
+        <span style="color:var(--gold-text);font-weight:var(--fw-semibold);">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success-text);font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:var(--space-1);">+${r.visits_24h}</span>` : ''}
       </span>
     </div>`;
   }).join('');
   return `<div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:.2rem;">Email Click-throughs</div>
+    <div class="eyebrow" style="margin-bottom:var(--space-1);">Email Click-throughs</div>
     <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-2);">app opens from a tagged email link · SES "Clicked" only covers broadcasts to iOS 2.6+ (since 08-21), so this is the fuller count</div>
     ${body}
   </div>`;
@@ -20499,10 +20499,10 @@ function renderEmailEngagement(data) {
     const d = +n || 0;
     if (!d) return '';
     const good = invert ? d < 0 : d > 0;
-    return `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:.3rem;">+${d}</span>`;
+    return `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:var(--fs-xs);font-weight:var(--fw-semibold);margin-left:var(--space-1);">+${d}</span>`;
   };
 
-  const statRow = (label, value, sub, delta) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${delta || ''}${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
+  const statRow = (label, value, sub, delta) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:var(--fw-semibold);"><span style="color:var(--gold-text);">${value}</span>${delta || ''}${sub ? `<span style="color:var(--muted);font-size:var(--fs-sm);margin-left:var(--space-1);">${sub}</span>` : ''}</span></div>`;
 
   // Collapse per-actor notification subjects into one campaign bucket each.
   // (campaignSubject / campaignGroupOf / CAMPAIGN_GROUP_LABELS are defined once
@@ -20605,9 +20605,9 @@ function renderEmailEngagement(data) {
       // than as a campaign that only reached the handful already delivered.
       const queued = pendingByLabel[subj] || 0;
       const held = heldByLabel[subj] || 0;
-      return `${header}<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
-        <div style="font-size:.78rem;font-weight:var(--fw-semibold);margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
-        <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
+      return `${header}<div style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);margin-bottom:var(--space-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);display:flex;gap:var(--space-2-5);flex-wrap:wrap;">
           ${queued ? `<span style="color:var(--gold-text);">Queued: ${queued}</span>` : ''}
           ${held ? `<span style="color:var(--gold-text);">Held for review: ${held}</span>` : ''}
           <span>Delivered: ${s.delivered}${dodDelta(s.delivered24)}</span>
@@ -20632,7 +20632,7 @@ function renderEmailEngagement(data) {
     // but dimmed and labelled so the list can't be misread as 15 real readers.
     const icon = e.event_type === 'clicked' ? '🔗' : e.machine ? '⟳' : '👁';
     const dim = e.machine ? 'opacity:.5;' : '';
-    return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:.35rem;">prefetch</span>' : ''}</span><span style="color:var(--muted);font-size:.7rem;">${ago}</span></div>`;
+    return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">prefetch</span>' : ''}</span><span style="color:var(--muted);font-size:var(--fs-xs);">${ago}</span></div>`;
   }).join('');
 
   return `
@@ -20715,16 +20715,16 @@ function renderAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
   const filtered = _adminFilter === 'all' ? _adminFeedbackData : _adminFeedbackData.filter(f => (f.status || 'pending') === _adminFilter);
-  if (!filtered.length) { el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
+  if (!filtered.length) { el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-md);">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
   const totalPages = Math.ceil(filtered.length / ADMIN_FB_PER_PAGE);
   if (_adminFbPage >= totalPages) _adminFbPage = totalPages - 1;
   const start = _adminFbPage * ADMIN_FB_PER_PAGE;
   const page = filtered.slice(start, start + ADMIN_FB_PER_PAGE);
   const paginationHtml = totalPages > 1 ? `
     <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:var(--space-4);">
-      <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .6rem;" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
-      <span style="font-size:.78rem;color:var(--muted);">${_adminFbPage + 1} / ${totalPages}</span>
-      <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .6rem;" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+      <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
+      <span style="font-size:var(--fs-sm);color:var(--muted);">${_adminFbPage + 1} / ${totalPages}</span>
+      <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
     </div>` : '';
   el.innerHTML = page.map(f => renderFeedbackCard(f)).join('') + paginationHtml;
 }
@@ -20738,13 +20738,13 @@ async function loadAdminFeedback() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>';
   const [fbRes, appFbRes] = await Promise.all([
     withTimeout(db.from('feedback').select('*').order('created_at', { ascending: false }).limit(1000), 10000),
     withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
   ]);
   const { data, error } = fbRes;
-  if (error) { el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;"><div style="color:var(--danger-text);font-size:.85rem;margin-bottom:var(--space-3);">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:var(--space-6) 0;"><div style="color:var(--danger-text);font-size:var(--fs-base);margin-bottom:var(--space-3);">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:var(--fs-sm);">↻ Retry</button></div>`; return; }
   // Normalize review-prompt feedback (app_feedback) into the same card shape
   const appFeedback = (appFbRes?.data || []).map(a => ({
     id: a.id,
@@ -20782,7 +20782,7 @@ async function loadAdminFeedback() {
     return new Date(b.created_at) - new Date(a.created_at); // newest first
   });
   updateAdminFilterCounts();
-  if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
+  if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);">No feedback yet.</div>'; return; }
   renderAdminFeedback();
 }
 
@@ -21825,14 +21825,14 @@ function renderBroadcastDrafts() {
   if (!el) return;
   const drafts = getBroadcastDrafts();
   if (!drafts.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
-    drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);">
-      <span style="color:var(--muted);font-size:.72rem;width:1.1rem;text-align:right;flex:0 0 auto;">${i + 1}</span>
-      <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem .3rem;font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
-      <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
-      <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
-      <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
-      <button class="btn btn-ghost" style="padding:.1rem .3rem;font-size:.7rem;" onclick="deleteBroadcastDraft(${d.id})" aria-label="Delete draft: ${escAttr(d.subject || 'untitled')}">✕</button>
+  el.innerHTML = '<div class="eyebrow eyebrow-muted" style="margin-bottom:var(--space-1);">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
+    drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:var(--space-1-5);padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);">
+      <span style="color:var(--muted);font-size:var(--fs-sm);width:1.1rem;text-align:right;flex:0 0 auto;">${i + 1}</span>
+      <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem var(--space-1);font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
+      <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
+      <span style="color:var(--muted);font-size:var(--fs-sm);white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
+      <button class="btn btn-ghost" style="padding:.1rem var(--space-1);font-size:var(--fs-xs);" onclick="deleteBroadcastDraft(${d.id})" aria-label="Delete draft: ${escAttr(d.subject || 'untitled')}">✕</button>
     </div>`).join('');
 }
 
@@ -21928,8 +21928,8 @@ async function sendBroadcastAll() {
     ? `First batch of ${n}, rest held for your review.`
     : 'Everyone at once — no review step.';
   statusEl.innerHTML = `<div style="padding:var(--space-2);background:var(--surface2);border-radius:var(--radius-btn);" role="alertdialog" aria-label="Confirm broadcast">
-    <div style="color:var(--danger-text);font-weight:var(--fw-semibold);margin-bottom:.2rem;">Send to ${escHtml(segmentLabel)}?</div>
-    <div style="font-size:.8rem;color:var(--muted);margin-bottom:var(--space-2);">${escHtml(plan)}</div>
+    <div style="color:var(--danger-text);font-weight:var(--fw-semibold);margin-bottom:var(--space-1);">Send to ${escHtml(segmentLabel)}?</div>
+    <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2);">${escHtml(plan)}</div>
     <div style="display:flex;gap:var(--space-2);">
       <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, queue it</button>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML='';document.getElementById('broadcast-send-btn').focus()">Cancel</button>
@@ -22910,7 +22910,7 @@ async function loadPromoAdmin() {
                card used to list with a blank title. Fall back to the eyebrow, then
                to the variant, so every row is identifiable. -->
           <div style="font-weight:var(--fw-semibold);">${escHtml(s.heading || s.eyebrow || `${promoVariantOf(s)} card`)}</div>
-          <div style="font-size:.78rem;color:var(--muted);">
+          <div style="font-size:var(--fs-sm);color:var(--muted);">
             ${escHtml(statusLabel)} · ${escHtml(promoVariantOf(s))}/${escHtml(promoSizeOf(s))} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
             ${st.submissions || 0} submissions · ${st.distinct_users || 0} users${
@@ -22924,7 +22924,7 @@ async function loadPromoAdmin() {
                used to be. nowrap + compact sizing rather than wrap — the admin
                panel is narrower than it looks, and a wrapped Delete on its own
                row made every card taller than its content deserved. -->
-          <div class="promo-slot-actions" style="display:flex;gap:.35rem;margin-top:.4rem;flex-wrap:nowrap;align-items:center;">
+          <div class="promo-slot-actions" style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);flex-wrap:nowrap;align-items:center;">
             <button class="btn btn-ghost" data-promo-edit="${escAttr(s.id)}">Edit</button>
             ${actionsHtml}
             <span style="flex:1;min-width:.5rem;"></span>
@@ -22939,9 +22939,9 @@ async function loadPromoAdmin() {
   const liveSlots = _promoAdminSlots.filter((s) => s.status !== 'archived');
   const archivedSlots = _promoAdminSlots.filter((s) => s.status === 'archived');
   const archivedHtml = archivedSlots.length
-    ? `<div style="margin-top:.2rem;">
+    ? `<div style="margin-top:var(--space-1);">
         <button class="btn btn-ghost" style="color:var(--muted);" data-promo-archived-toggle>${archivedSlots.length} archived</button>
-        <div id="promo-archived-list" style="display:none;margin-top:.4rem;">${archivedSlots.map(slotCard).join('')}</div>
+        <div id="promo-archived-list" style="display:none;margin-top:var(--space-1-5);">${archivedSlots.map(slotCard).join('')}</div>
       </div>`
     : '';
   listEl.innerHTML = _promoAdminSlots.length === 0
@@ -22987,32 +22987,32 @@ async function loadCampaigns() {
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
     return `
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:var(--space-3);">
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:var(--space-3-5);margin-bottom:var(--space-3);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);">
-        <div style="font-size:.88rem;font-weight:var(--fw-semibold);">${escHtml(c.name)}</div>
+        <div style="font-size:var(--fs-md);font-weight:var(--fw-semibold);">${escHtml(c.name)}</div>
         <div style="display:flex;align-items:center;gap:var(--space-2);">
-          <span style="font-size:.72rem;font-weight:var(--fw-semibold);color:${statusColor};">${statusLabel}</span>
-          <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:.72rem;padding:2px 8px;">${toggleIcon} ${toggleLabel}</button>
+          <span style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:${statusColor};">${statusLabel}</span>
+          <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2);">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:var(--space-2);">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup${(c.backfill_daily || 0) > 0 ? ` · backfill ${c.backfill_daily}/day` : ''} · ${sends} sent total</div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2);">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup${(c.backfill_daily || 0) > 0 ? ` · backfill ${c.backfill_daily}/day` : ''} · ${sends} sent total</div>
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Name (internal)</label>
         <input type="text" id="camp-name-${c.id}" value="${escHtml(c.name)}" style="font-size:var(--fs-base);">
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Subject</label>
         <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:var(--fs-base);" oninput="updateCampaignPreview('${c.id}')">
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Body (HTML) — {{name}}, plus {{watch}} / {{watchPhrase}} / {{fact}} for their own watch and a fact about it. Preview and test send show a sample; real sends resolve per recipient.</label>
         <textarea id="camp-body-${c.id}" rows="10" style="font-size:var(--fs-base);min-height:160px;" oninput="updateCampaignPreview('${c.id}')">${escHtml(c.body_html)}</textarea>
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Delay (days after signup)</label>
         <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="90" style="font-size:var(--fs-base);width:60px;">
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Skip if user already…</label>
         <select id="camp-skip-${c.id}" style="font-size:var(--fs-base);">
           <option value="" ${!c.skip_if_done ? 'selected' : ''}>Don't skip — send to everyone</option>
@@ -23021,7 +23021,7 @@ async function loadCampaigns() {
           <option value="has_measurement" ${c.skip_if_done === 'has_measurement' ? 'selected' : ''}>Has measured a watch</option>
         </select>
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:var(--space-1-5);">
         <label>Backfill per day (0 = off) — also emails existing members who signed up before the delay window, newest first, this many per daily run</label>
         <input type="number" id="camp-backfill-${c.id}" value="${c.backfill_daily || 0}" min="0" max="100" style="font-size:var(--fs-base);width:60px;">
       </div>
@@ -23030,8 +23030,8 @@ async function loadCampaigns() {
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
       </div>
-      <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
-      <div class="draft-form-row" style="margin-top:.6rem;">
+      <div id="camp-status-${c.id}" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);" aria-live="polite"></div>
+      <div class="draft-form-row" style="margin-top:var(--space-2-5);">
         <label>Email Preview</label>
         <div id="camp-preview-${c.id}" style="background:#f4f4f4;border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;"></div>
       </div>
