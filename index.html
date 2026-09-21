@@ -3664,7 +3664,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-traffic" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Traffic</div>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="renderAdminTraffic(true)">↻ Refresh</button>
+        <button class="btn btn-ghost btn-xs" onclick="renderAdminTraffic(true)">↻ Refresh</button>
       </div>
       <div id="admin-traffic" style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>
     </div>
@@ -3673,7 +3673,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-usage" class="admin-tab" role="tabpanel">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Site Usage</div>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminStats(true)">↻ Refresh</button>
+        <button class="btn btn-ghost btn-xs" onclick="loadAdminStats(true)">↻ Refresh</button>
       </div>
       <div id="admin-stats" style="color:var(--muted);font-size:var(--fs-md);">Loading…</div>
     </div>
@@ -3682,7 +3682,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-feedback" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Feedback</div>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminFeedback()">↻ Refresh</button>
+        <button class="btn btn-ghost btn-xs" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
       <div class="chips stack-3" id="admin-filter-chips">
         <button type="button" class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</button>
@@ -3698,7 +3698,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-reports" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Content Reports</div>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadAdminReports()">↻ Refresh</button>
+        <button class="btn btn-ghost btn-xs" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
       <div class="chips stack-3" id="report-filter-chips">
         <button type="button" class="chip selected" data-filter="all" onclick="filterReports('all')">All</button>
@@ -3713,7 +3713,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-official" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Official Posts</div>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);" onclick="loadOfficialDrafts()">↻ Refresh</button>
+        <button class="btn btn-ghost btn-xs" onclick="loadOfficialDrafts()">↻ Refresh</button>
       </div>
 
       <!-- URL extraction form -->
@@ -3880,7 +3880,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-campaigns" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Email Campaigns</div>
-        <button class="btn btn-ghost" onclick="createCampaign()" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2-5);">+ New campaign</button>
+        <button class="btn btn-ghost btn-xs" onclick="createCampaign()">+ New campaign</button>
       </div>
       <div id="campaigns-list" class="stack-4">
         <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Loading campaigns...</div>
@@ -3893,7 +3893,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- 1. Slots — pick or start a slot to edit below. -->
       <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Slots</div>
-        <button class="btn btn-ghost" onclick="newPromoSlot()" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2-5);">+ New slot</button>
+        <button class="btn btn-ghost btn-xs" onclick="newPromoSlot()">+ New slot</button>
       </div>
       <div id="promo-list" style="margin-bottom:var(--space-6);">Loading…</div>
 
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.28';
+const APP_VERSION = '21.07.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18742,7 +18742,7 @@ async function renderBroadcastQueueStatus() {
         // held campaign, and only for the one the operator is actually judging.
         const gate = held > 0
           ? `<div data-bc-gate style="margin-top:var(--space-1-5);padding-top:var(--space-1-5);border-top:1px dashed var(--border,rgba(128,128,128,.25));">
-               <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);"
+               <button class="btn btn-ghost btn-xs"
                  data-bc-metrics="${escAttr(label)}">Show batch results</button>
              </div>`
           : '';
@@ -18765,7 +18765,7 @@ async function renderBroadcastQueueStatus() {
     // Per-broadcast progress lives in the list above; this line is only the
     // shared Resend quota, which is genuinely global.
     el.innerHTML = `Shared quota today ${Number(q.used_today) || 0}/${BROADCAST_DAILY_LIMIT} · next drain ≈ ${budget} emails (nightly 21:30 UTC)
-      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);margin-left:var(--space-1-5);">Drain now</button>`;
+      <button class="btn btn-ghost btn-xs" onclick="drainBroadcastNow()" style="margin-left:var(--space-1-5);">Drain now</button>`;
   } catch (_) { el.innerHTML = ''; }
 }
 
@@ -18822,8 +18822,8 @@ async function showBroadcastBatchMetrics(label, btn) {
       · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--error);">${m.complained} spam complaints</span>` : ''}
     </div>
     <div style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;">
-      <button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" data-bc-release="${escAttr(label)}">Send remaining</button>
-      <button class="btn btn-danger" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" data-bc-cancel="${escAttr(label)}">Cancel remaining</button>
+      <button class="btn btn-primary btn-xs" data-bc-release="${escAttr(label)}">Send remaining</button>
+      <button class="btn btn-danger btn-xs" data-bc-cancel="${escAttr(label)}">Cancel remaining</button>
     </div>`;
 }
 
