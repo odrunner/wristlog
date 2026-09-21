@@ -1077,21 +1077,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── HELP PAGE ── */
     .help-wrap { max-width: 720px; margin: 0 auto; }
     .help-section { margin-bottom: 2.25rem; }
-    .help-section-title { font-size: .78rem; font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); margin-bottom: .9rem; display: flex; align-items: center; gap: var(--space-2); }
-    .help-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: 1.1rem var(--space-5); margin-bottom: .6rem; }
-    .help-step { display: flex; gap: .8rem; padding: .55rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .help-section-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); margin-bottom: var(--space-3-5); display: flex; align-items: center; gap: var(--space-2); }
+    .help-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-2-5); }
+    .help-step { display: flex; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
     .help-step:last-child { border-bottom: none; padding-bottom: 0; }
-    .help-step-num { font-size: .72rem; font-weight: var(--fw-heavy); color: var(--gold-text); background: var(--gold-dim); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+    .help-step-num { font-size: var(--fs-sm); font-weight: var(--fw-heavy); color: var(--gold-text); background: var(--gold-dim); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
     .help-step-body { flex: 1; }
-    .help-step-title { font-size: .88rem; font-weight: var(--fw-semibold); margin-bottom: .15rem; }
-    .help-step-desc { font-size: .8rem; color: var(--muted); line-height: var(--lh-body); }
-    .help-tip { background: color-mix(in srgb, var(--gold) 7%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent); border-radius: var(--radius-btn); padding: .7rem var(--space-4); font-size: var(--fs-base); color: var(--gold-lt); line-height: 1.5; margin-top: var(--space-2); }
+    .help-step-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); margin-bottom: var(--space-0-5); }
+    .help-step-desc { font-size: var(--fs-base); color: var(--muted); line-height: var(--lh-body); }
+    .help-tip { background: color-mix(in srgb, var(--gold) 7%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent); border-radius: var(--radius-btn); padding: var(--space-3) var(--space-4); font-size: var(--fs-base); color: var(--gold-lt); line-height: var(--lh-body); margin-top: var(--space-2); }
     .help-tip strong { color: var(--gold-text); }
-    .help-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    .help-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2-5); }
     @media (max-width: 640px) { .help-grid2 { grid-template-columns: 1fr; } }
-    .help-mini-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: .9rem var(--space-4); }
-    .help-mini-title { font-size: .8rem; font-weight: var(--fw-bold); margin-bottom: .3rem; }
-    .help-mini-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+    .help-mini-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: var(--space-3-5) var(--space-4); }
+    .help-mini-title { font-size: var(--fs-base); font-weight: var(--fw-bold); margin-bottom: var(--space-1); }
+    .help-mini-desc { font-size: var(--fs-sm); color: var(--muted); line-height: var(--lh-body); }
 
     /* ── FEEDBACK ── */
 
@@ -4141,9 +4141,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="help-wrap">
 
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-8);">
-        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
-        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
-        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:var(--space-1-5);flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -4193,13 +4193,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
         </div>
       </div>
 
       <!-- ── MEASURE ACCURACY ── -->
       <div class="help-section">
-        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy <span style="font-size:.6rem;font-weight:var(--fw-semibold);color:var(--gold-text);margin-left:.35rem;letter-spacing:.04em;">iOS APP</span></div>
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy <span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--gold-text);margin-left:var(--space-1-5);letter-spacing:.04em;">iOS APP</span></div>
         <div class="help-card">
           <div class="help-step">
             <div class="help-step-num">1</div>
@@ -4264,7 +4264,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
         </div>
       </div>
 
@@ -4314,8 +4314,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Logged the wrong watch or use case? Tap the <strong>pencil icon</strong> on any feed card or in the Wear History table to edit it.</span></div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Every wear surfaces a <strong>fun fact</strong> about that watch &#8212; a fresh bit of trivia each day you wear it. It shows when you log, and rides along on your post so others can read it too &#8212; tap it to read the whole thing.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Logged the wrong watch or use case? Tap the <strong>pencil icon</strong> on any feed card or in the Wear History table to edit it.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Every wear surfaces a <strong>fun fact</strong> about that watch &#8212; a fresh bit of trivia each day you wear it. It shows when you log, and rides along on your post so others can read it too &#8212; tap it to read the whole thing.</span></div>
         </div>
       </div>
 
@@ -4324,27 +4324,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Collection Features</div>
         <div class="help-grid2">
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
             <div class="help-mini-desc">The toggle in the Collection header switches between full cards and an <strong>images-only gallery</strong>. The gallery follows your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
             <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection (or at the top of your Wishlist) for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time. On the Wishlist, saving reorders the list by preference &#8212; you can still drag items afterwards.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
             <div class="help-mini-desc">Add tags when editing a watch (Chronograph, Dress Watch, Diver…). Tag chips appear above the grid — tap one to filter, tap again to clear.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Market Prices</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Market Prices</div>
             <div class="help-mini-desc">Tap <strong>Check Value</strong> inside any watch to get an AI-powered market estimate, or use the <strong>$</strong> button in the collection menu to update all watches at once. You can also enter values manually. Price history is tracked over time.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per-Watch Privacy</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per-Watch Privacy</div>
             <div class="help-mini-desc">On your profile page, tap any watch in your Collection showcase to cycle its privacy: Public &#8594; Followers Only &#8594; Close Friends &#8594; Private. Private watches are hidden from everyone else.</div>
           </div>
           <div class="help-mini-card">
-            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Post Pics</div>
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Post Pics</div>
             <div class="help-mini-desc">Toggle <strong>Post Pics</strong> above the collection grid to swap watch photos for your latest wrist shots. Each card shows the most recent post photo for that watch. Toggle off to go back to the standard watch image.</div>
           </div>
         </div>
@@ -4438,7 +4438,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Once you scroll past the top, a <strong>Post button</strong> floats in the top-right corner so you can post without scrolling back up. Keep scrolling and a <strong>You&#8217;re all caught up</strong> line marks where you got to last time &#8212; everything below it was already there on your previous visit. Your own posts don&#8217;t count as new, so they never push the line down.</div>
             </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
           <div class="help-tip">To unfollow, go to their profile and tap <strong>Following</strong> → it turns red and asks <strong>Unfollow?</strong> — tap again to confirm.</div>
         </div>
       </div>
@@ -4728,7 +4728,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Reported content is hidden from feeds immediately. An admin reviews every report and either confirms the removal or restores the content. Repeated violations may result in account suspension.</div>
             </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>By using WRotate you agree to the <a href="terms.html" target="_blank" style="color:var(--accent);">Terms of Use</a> and <a href="privacy.html" target="_blank" style="color:var(--accent);">Privacy Policy</a>. We have zero tolerance for objectionable content or abusive behaviour.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>By using WRotate you agree to the <a href="terms.html" target="_blank" style="color:var(--accent);">Terms of Use</a> and <a href="privacy.html" target="_blank" style="color:var(--accent);">Privacy Policy</a>. We have zero tolerance for objectionable content or abusive behaviour.</span></div>
         </div>
       </div>
 
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.04';
+const APP_VERSION = '20.20.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
