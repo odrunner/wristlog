@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect } from 'vitest';
 import { EMAIL_RANGES } from '../scripts/ds-count.mjs';
+import { STAMPED, dsHash, stamp } from '../scripts/ds-stamp.mjs';
 
 // The design tokens used to be copy-pasted into index.html, p/index.html and
 // profile/index.html, plus a fourth inline copy under #auth-screen. r.html had
@@ -14,6 +15,9 @@ import { EMAIL_RANGES } from '../scripts/ds-count.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const css = readFileSync(join(root, 'design-system.css'), 'utf8');
+// The stylesheet is always loaded by a URL carrying its content hash — see scripts/ds-stamp.mjs.
+const DS_URL = `/design-system.css?v=${dsHash()}`;
+const DS_LINK = `<link rel="stylesheet" href="${DS_URL}">`;
 
 // Tokens design-system.css owns. Nothing else may declare these.
 export const SHARED_LIGHT = {
@@ -295,7 +299,7 @@ const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 
 describe('index.html', () => {
   it('links design-system.css before its inline style block', () => {
-    const link = indexHtml.indexOf('<link rel="stylesheet" href="/design-system.css">');
+    const link = indexHtml.indexOf(DS_LINK);
     const style = indexHtml.indexOf('<style>');
     expect(link).toBeGreaterThan(-1);
     expect(link).toBeLessThan(style);
@@ -308,7 +312,7 @@ describe('index.html', () => {
 
   it('links only design-system.css as a stylesheet', () => {
     const hrefs = [...new Set(stylesheetHrefs(indexHtml))];
-    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual(['/design-system.css']);
+    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual([DS_URL]);
   });
 
   // --page-gutter is layout state, not a design value: `main` sets it per
@@ -348,7 +352,7 @@ describe.each([
   const src = readFileSync(join(root, relPath), 'utf8');
 
   it('links design-system.css before its inline style block', () => {
-    const link = src.indexOf('<link rel="stylesheet" href="/design-system.css">');
+    const link = src.indexOf(DS_LINK);
     expect(link).toBeGreaterThan(-1);
     expect(link).toBeLessThan(src.indexOf('<style>'));
   });
@@ -359,7 +363,7 @@ describe.each([
 
   it('links only design-system.css as a stylesheet', () => {
     const hrefs = [...new Set(stylesheetHrefs(src))];
-    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual(['/design-system.css']);
+    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual([DS_URL]);
   });
 
   it('references only tokens that design-system.css owns', () => {
@@ -382,7 +386,16 @@ describe('sw.js', () => {
   it('precaches design-system.css', () => {
     const match = sw.match(/const PRECACHE = \[(.*?)\];/s);
     expect(match, "couldn't find 'const PRECACHE = [...]' in sw.js").not.toBeNull();
-    expect(match[1]).toContain("'/design-system.css'");
+    expect(match[1]).toContain(`'${DS_URL}'`);
+  });
+
+  // sw.js serves pages network-first and assets cache-first. Under one fixed URL a returning visitor's
+  // first load after a deploy got the NEW page with the PREVIOUS stylesheet (2026-09-20). The hash in
+  // the URL is what keeps them a pair, so a stale stamp is a release blocker.
+  it.each(STAMPED)('%s loads the stylesheet by its current content hash (else: node scripts/ds-stamp.mjs)', (file) => {
+    const src = readFileSync(join(root, file), 'utf8');
+    expect(src).toContain(DS_URL);
+    expect(stamp(src, dsHash())).toBe(src);
   });
 
   // The branch started at v1042. A bump is what makes activate() purge the old

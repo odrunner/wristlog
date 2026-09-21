@@ -24,5 +24,8 @@ Fences that every pass must keep (each one was learned the hard way):
    move shipped `.hidden { display: none }` out of the page and into the stylesheet: for that one load every
    hidden modal would have been visible. Live ~3 minutes, reverted (`ad33037`); 1 signed-in load in the window,
    an internal account. The same pairing makes any NEW token undefined for one load — additive changes degrade
-   mildly, moves break. Fix the fetch strategy (or version the URL) before re-landing `move_components.py`.
+   mildly, moves break. **Fixed 2026-09-21:** the stylesheet is loaded as `/design-system.css?v=<content hash>`
+   (pages + `sw.js` PRECACHE), so the old cache entry can never match the new page's request.
+   **After every edit to `design-system.css` run `node scripts/ds-stamp.mjs`** — a unit test fails on a stale
+   stamp. `compare.sh skew [ref]` replays the returning-visitor case in a real browser (control + fix + offline).
 
