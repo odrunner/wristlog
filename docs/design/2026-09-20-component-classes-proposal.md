@@ -63,6 +63,10 @@ defined inside `index.html`. `p/` and `profile/` cannot use them, which is why t
 2. **Move the shared components into `design-system.css`** (`.btn*`, `.card`, `.chip`, `.pill`, `.modal*`, `.eyebrow`,
    `.empty*`, form fields). A cut-and-paste; computed styles must be identical. Makes them available to `p/` and
    `profile/` — that is most of phase 5. *Zero visual change.*
+   *Shipped and reverted 2026-09-20 (`ec38f88` → `ad33037`): the service worker paired the new page with the
+   visitor's cached OLD stylesheet for one load, so moved rules (`.hidden`!) were in neither. Prerequisite shipped
+   2026-09-21 (`cd55c78`): the stylesheet URL carries its content hash. Re-land with
+   `scripts/design-system/move_components.py --apply`, then `node scripts/ds-stamp.mjs`, then `compare.sh skew`.*
 3. **Name the text styles and layout helpers**, replacing exact matches only: `.body-muted`, `.item-title`, `.caption`,
    `.row`, `.row-between`, `.grow`, `.stack-1/2/3/4/5`, `.empty`. Roughly 600 attributes. *Zero visual change.*
    What's New alone drops 133.
