@@ -958,7 +958,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       position: fixed; z-index: var(--z-popover); background: var(--surface);
       border: 1px solid var(--border); border-radius: var(--radius-btn);
       padding: var(--space-1-5) 0; min-width: 150px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      box-shadow: var(--shadow-3);
     }
     .photo-menu-item {
       display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3-5);
@@ -1023,7 +1023,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: var(--fs-xl); user-select: none; z-index: 2; touch-action: none; line-height: var(--lh-none); }
     .rank-drag-handle:hover { color: var(--muted); }
     .watch-card.dragging  { opacity: .4; }
-    .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold); }
+    .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: var(--ring); }
 
     /* ── COLLECTION RANKING GAME ── */
     .game-card {
@@ -1149,7 +1149,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       cursor: pointer; transition: transform var(--dur-fast), box-shadow var(--dur-fast);
       border: 2px solid transparent;
     }
-    .color-swatch.chosen { border-color: #fff; box-shadow: 0 0 0 1px var(--gold); transform: scale(1.15); }
+    .color-swatch.chosen { border-color: #fff; box-shadow: var(--ring); transform: scale(1.15); }
     .color-swatches { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1-5); }
 
     /* ── MODAL ── */
@@ -1422,8 +1422,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-select-box:checked::after { content:''; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
     .wl-select-box.partial { background:color-mix(in srgb, var(--gold) 30%, transparent); border-color:var(--gold); }
     .wl-select-box.partial::after { content:''; position:absolute; left:3px; top:7px; width:10px; height:2px; background:var(--gold); }
-    .wl-tile .wl-select-box { position:absolute; top:.4rem; left:.4rem; z-index:2; box-shadow:0 1px 4px rgba(0,0,0,.3); }
-    .watch-card .coll-select-box { position:absolute; top:.5rem; left:.5rem; z-index:3; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .wl-tile .wl-select-box { position:absolute; top:.4rem; left:.4rem; z-index:2; box-shadow:var(--shadow-1); }
+    .watch-card .coll-select-box { position:absolute; top:.5rem; left:.5rem; z-index:3; box-shadow:var(--shadow-1); }
     .sel-bar-btn { display:inline-flex; align-items:center; gap:var(--space-1); white-space:nowrap; }
     .wl-tile { position:relative; }
 
@@ -1802,7 +1802,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: box-shadow var(--dur-fast); overflow: hidden; padding: 0;
     }
-    .profile-btn:hover { box-shadow: 0 0 0 1px var(--gold); }
+    .profile-btn:hover { box-shadow: var(--ring); }
     .help-btn {
       width: 34px; height: 34px; border-radius: var(--radius-round);
       background: none; border: none;
@@ -1811,14 +1811,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       flex-shrink: 0; transition: box-shadow var(--dur-fast), color var(--dur-fast); padding: 0;
       font-family: inherit;
     }
-    .help-btn:hover { box-shadow: 0 0 0 1px var(--gold); color: var(--text); }
+    .help-btn:hover { box-shadow: var(--ring); color: var(--text); }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
       background: var(--surface); border-radius: var(--radius-lg);
       margin-bottom: var(--space-5); overflow: hidden;
       border: 1px solid var(--border);
-      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+      box-shadow: var(--shadow-2);
     }
     .feed-card-header {
       display: flex; align-items: center; gap: var(--space-3);
@@ -2013,7 +2013,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--surface); border-radius: var(--radius-lg);
       margin-bottom: var(--space-5); overflow: hidden;
       border: 1px solid var(--gold-dim);          /* a tint, not an outline */
-      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+      box-shadow: var(--shadow-2);
       position: relative;
     }
     .promo-card-header { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3-5) var(--space-4) var(--space-2-5); }
@@ -2415,7 +2415,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Three-dot feed menu */
     .feed-menu { position:absolute; right:0; top:100%; min-width:130px; background:var(--surface);
-      border:1px solid var(--border); border-radius:var(--radius-btn); box-shadow:0 4px 12px rgba(0,0,0,.15);
+      border:1px solid var(--border); border-radius:var(--radius-btn); box-shadow:var(--shadow-3);
       z-index:20; overflow:hidden; }
     .feed-menu-item { padding:var(--space-2) var(--space-3); font-size:var(--fs-base); cursor:pointer; white-space:nowrap; }
     .feed-menu-item:hover { background:var(--hover); }
@@ -2554,7 +2554,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── @mention autocomplete dropdown ── */
     .mention-ac {
       position: fixed; background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); box-shadow: 0 6px 24px var(--scrim);
+      border-radius: var(--radius); box-shadow: var(--shadow-3);
       z-index: var(--z-popover); min-width: 220px; max-width: min(300px, calc(100vw - 16px));
       max-height: 220px; overflow-y: auto; display: none;
     }
@@ -2687,7 +2687,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── BELL ICON ──────────────────────────────── */
     .bell-btn { position:relative; width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
-    .bell-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
+    .bell-btn:hover { box-shadow:var(--ring); color:var(--text); }
     /* Floating Post button — sits over the feed at top right, appearing only
        once the feed's own Post button has scrolled out of view, so there are
        never two Post buttons on screen. --header-h is measured in JS so it
@@ -2695,9 +2695,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     #feed-post-fab { position:fixed; top:calc(var(--header-h, 60px) + .6rem); right:1rem; z-index:var(--z-fab);
       width:46px; height:46px; border-radius:var(--radius-round); background:var(--gold); color:#0a0a0e;
       border:none; cursor:pointer; display:none; align-items:center; justify-content:center;
-      box-shadow:0 4px 14px rgba(0,0,0,.20); transition:background var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
+      box-shadow:var(--shadow-3); transition:background var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
     #feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
-    #feed-post-fab:hover { background:var(--gold-lt); box-shadow:0 6px 18px rgba(0,0,0,.26); transform:translateY(-1px); }
+    #feed-post-fab:hover { background:var(--gold-lt); box-shadow:var(--shadow-3); transform:translateY(-1px); }
     /* On wide screens the feed is a 470px centred column — hug its right edge
        rather than the far side of the viewport. */
     @media (min-width: 641px) {
@@ -2714,15 +2714,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-stale { display:flex; align-items:center; justify-content:center; gap:var(--space-2-5); flex-wrap:wrap; margin:.1rem var(--space-0-5) var(--space-3-5); padding:var(--space-2) var(--space-3); border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--muted); font-size:var(--fs-sm); }
     .feed-stale button { font:inherit; font-weight:var(--fw-semibold); color:var(--gold-text); background:none; border:0; padding:0; cursor:pointer; display:inline-flex; align-items:center; gap:var(--space-1); }
     .streak-chip { display:inline-flex; align-items:center; gap:var(--space-1); height:34px; padding:0 var(--space-1-5); font-size:var(--fs-base); font-weight:var(--fw-semibold); color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:var(--lh-none); transition:box-shadow var(--dur-fast), color var(--dur-fast); }
-    .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
+    .streak-chip:hover { box-shadow:var(--ring); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
     .streak-chip.streak-chip-atrisk { color:var(--warn); }
     #theme-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
-    #theme-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
+    #theme-btn:hover { box-shadow:var(--ring); color:var(--text); }
     #admin-nav-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted); opacity:.55; padding:0; margin-left:var(--space-0-5); align-self:center;
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), opacity var(--dur-fast), color var(--dur-fast); }
-    #admin-nav-btn:hover { box-shadow:0 0 0 1px var(--gold); opacity:1; color:var(--text); }
+    #admin-nav-btn:hover { box-shadow:var(--ring); opacity:1; color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:var(--radius-btn);
       background:var(--danger); color:#fff; font-size:var(--fs-2xs); font-weight:var(--fw-bold);
       display:flex; align-items:center; justify-content:center; padding:0 var(--space-1); pointer-events:none; }
@@ -2733,7 +2733,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-panel { position:absolute; top:calc(100% + 2px); right:.75rem;
       width:310px; max-height:420px; overflow-y:auto;
       background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--radius); box-shadow:0 8px 32px var(--scrim); z-index:var(--z-float); }
+      border-radius:var(--radius); box-shadow:var(--shadow-4); z-index:var(--z-float); }
     .notif-panel-header { display:flex; align-items:center; justify-content:space-between;
       padding:var(--space-2-5) var(--space-4); border-bottom:1px solid var(--border);
       font-size:var(--fs-sm); font-weight:var(--fw-bold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
@@ -3547,7 +3547,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <main id="main-content" tabindex="-1">
 
   <!-- ════ DEMO MODE BANNER ════ -->
-  <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:var(--space-2-5) var(--space-5);margin:-.8rem var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-base);font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.12);">
+  <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:var(--space-2-5) var(--space-5);margin:-.8rem var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-base);font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:var(--shadow-2);">
     <span style="flex:1;min-width:0;">Demo Mode — read-only preview of Alex Rivera's collection</span>
     <div style="display:flex;gap:var(--space-2);align-items:center;flex-shrink:0;">
       <button onclick="exitDemoMode()" style="background:#16161e;color:#f5f5f8;border:none;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
@@ -7738,7 +7738,7 @@ function showDemoSignupModal() {
   m.id = 'demo-signup-modal';
   m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);';
   m.innerHTML = `
-    <div style="background:var(--bg,#f5f5f8);border-radius:var(--radius-lg);padding:var(--space-8);max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <div style="background:var(--bg,#f5f5f8);border-radius:var(--radius-lg);padding:var(--space-8);max-width:340px;width:90%;text-align:center;box-shadow:var(--shadow-4);">
       <div style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text,#16161e);margin-bottom:var(--space-1);">Like what you see?</div>
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-6);">Sign up free to start tracking your own collection.</div>
       <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:var(--space-3);border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#333;font-size:var(--fs-md);font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;margin-bottom:var(--space-2);">
@@ -8322,7 +8322,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.42';
+const APP_VERSION = '20.20.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10544,7 +10544,7 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   if (existing) existing.remove();
   const menu = document.createElement('div');
   menu.id = 'member-menu-popup';
-  menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3);z-index:var(--z-menu);min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+  menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3);z-index:var(--z-menu);min-width:180px;box-shadow:var(--shadow-4)';
   menu.innerHTML = `
     <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2-5);padding-bottom:var(--space-2);border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
     <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:var(--space-1-5) var(--space-1);font-size:var(--fs-base);color:var(--text);">\u{1F451} Promote to owner</button>
@@ -18571,7 +18571,7 @@ function showNextAnniversary() {
   const { watch: w, years } = _annivQueue[0];
   const imgEl = document.getElementById('anniversary-watch-img');
   if (w.image) {
-    imgEl.innerHTML = `<img src="${escHtml(w.image)}" alt="" style="width:140px;height:140px;object-fit:cover;border-radius:var(--radius-lg);border:1.5px solid var(--gold);box-shadow:0 2px 16px rgba(0,0,0,.15);">`;
+    imgEl.innerHTML = `<img src="${escHtml(w.image)}" alt="" style="width:140px;height:140px;object-fit:cover;border-radius:var(--radius-lg);border:1.5px solid var(--gold);box-shadow:var(--shadow-2);">`;
   } else {
     imgEl.innerHTML = '';
   }
@@ -19217,7 +19217,7 @@ function renderDevFlags() {
       <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
         <input type="checkbox" ${on ? 'checked' : ''} data-flag="${escAttr(key)}" onchange="setFeatureFlag(this.dataset.flag,this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
         <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:var(--radius);transition:background var(--dur-base);"></span>
-        <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:var(--radius-round);transition:left var(--dur-base);box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+        <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:var(--radius-round);transition:left var(--dur-base);box-shadow:var(--shadow-1);"></span>
       </label>
     </div>`;
   }).join('');
@@ -36232,7 +36232,7 @@ function _viewerKeydown(e) {
 </script>
 <!-- Shared-image chooser (iOS share extension) -->
 <div id="shared-img-modal" class="hidden" style="position:fixed;inset:0;z-index:var(--z-top);background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:var(--space-6);" onclick="if(event.target===this)sharedImgChoose(null)">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:340px;width:100%;padding:var(--space-4);box-shadow:0 12px 40px rgba(0,0,0,.4);">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:340px;width:100%;padding:var(--space-4);box-shadow:var(--shadow-4);">
     <div style="font-weight:var(--fw-bold);font-size:var(--fs-lg);margin-bottom:var(--space-1);color:var(--text);">Shared photo</div>
     <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-3);">What would you like to do with it?</div>
     <img id="shared-img-preview" alt="Shared photo" style="width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius);margin-bottom:var(--space-3-5);border:1px solid var(--border);">

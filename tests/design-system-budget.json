@@ -1,6 +1,6 @@
 {
   "index.html": {
-    "color": 531,
+    "color": 517,
     "font-size": 27,
     "font-weight": 1,
     "font-family": 10,
@@ -10,7 +10,7 @@
     "padding": 58,
     "margin": 62,
     "gap": 7,
-    "box-shadow": 32,
+    "box-shadow": 8,
     "transition": 8,
     "z-index": 13,
     "js-style-assign": 62,

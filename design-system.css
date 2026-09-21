@@ -50,6 +50,8 @@
   --error: var(--danger);
   --fg: var(--text);
   --accent: var(--gold);
+  /* Hover / chosen outline on round header buttons and swatches. */
+  --ring: 0 0 0 1px var(--gold);
 
   /* ── Scale tokens (theme-independent) ── */
   /* Spacing is in rem, like every font size here, so it follows the reader's
@@ -91,11 +93,17 @@
   /* ── Motion ── */
   --dur-fast: .15s; --dur-base: .2s; --dur-slow: .3s;
 
-  /* ── Elevation ── */
+  /* ── Elevation ── four levels, same light source: offset and blur double as
+     a surface lifts. Pick by ROLE, never by eye:
+       1  a control on a surface      (toggle knob, select box)
+       2  a card resting on the page  (feed card, promo card, banner)
+       3  something floating over it  (menu, autocomplete, the Post button)
+       4  an overlay above everything (dialog, toast, popover, notification panel)
+     Level 2 is the feed card's value, the most-seen shadow in the app. */
   --shadow-1: 0 1px 4px rgba(0,0,0,.18);
-  --shadow-2: 0 2px 8px rgba(0,0,0,.15);
-  --shadow-3: 0 4px 16px rgba(0,0,0,.35);
-  --shadow-4: 0 8px 32px rgba(0,0,0,.45);
+  --shadow-2: 0 2px 12px rgba(0,0,0,.18);
+  --shadow-3: 0 4px 16px rgba(0,0,0,.25);
+  --shadow-4: 0 8px 32px rgba(0,0,0,.4);
   /* Dimmed backdrop behind sheets, viewers and popovers. */
   --scrim: rgba(0,0,0,.55);
 
@@ -193,6 +201,7 @@
   --error: var(--danger);
   --fg: var(--text);
   --accent: var(--gold);
+  --ring: 0 0 0 1px var(--gold);
 }
 
 /* ── Runtime layout seed ──

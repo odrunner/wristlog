@@ -96,9 +96,9 @@ export const SHARED_LIGHT = {
   '--dur-base': '.2s',
   '--dur-slow': '.3s',
   '--shadow-1': '0 1px 4px rgba(0,0,0,.18)',
-  '--shadow-2': '0 2px 8px rgba(0,0,0,.15)',
-  '--shadow-3': '0 4px 16px rgba(0,0,0,.35)',
-  '--shadow-4': '0 8px 32px rgba(0,0,0,.45)',
+  '--shadow-2': '0 2px 12px rgba(0,0,0,.18)',
+  '--shadow-3': '0 4px 16px rgba(0,0,0,.25)',
+  '--shadow-4': '0 8px 32px rgba(0,0,0,.4)',
   '--scrim': 'rgba(0,0,0,.55)',
   '--z-fab': '90',
   '--z-header': '100',
@@ -140,6 +140,8 @@ export const SHARED_LIGHT = {
   '--error': 'var(--danger)',
   '--fg': 'var(--text)',
   '--accent': 'var(--gold)',
+  // An alias of --gold, so like the five above it is declared in both themes.
+  '--ring': '0 0 0 1px var(--gold)',
 };
 
 export const SHARED_DARK = {
@@ -184,6 +186,8 @@ export const SHARED_DARK = {
   '--error': 'var(--danger)',
   '--fg': 'var(--text)',
   '--accent': 'var(--gold)',
+  // An alias of --gold, so like the five above it is declared in both themes.
+  '--ring': '0 0 0 1px var(--gold)',
 };
 
 // Declared in design-system.css outside the two theme blocks: the --header-h
