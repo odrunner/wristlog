@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=da8333cc">
+  <link rel="stylesheet" href="/design-system.css?v=ce78c68c">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -2832,7 +2832,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ WHAT'S NEW MODAL ════ -->
 <div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
   <div class="modal" style="max-width:440px;">
-    <div class="modal-title" id="whats-new-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="whats-new-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
@@ -3269,15 +3269,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
       <div class="modal-title" id="welcome-modal-title" style="font-size:var(--fs-2xl);">Welcome to WRotate</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">Track every wear, build your collection story, and discover what other enthusiasts are wearing.</p>
-      <button class="btn btn-primary" style="width:100%;" onclick="welcomeStep(2)">Get started →</button>
+      <button class="btn btn-primary btn-block" onclick="welcomeStep(2)">Get started →</button>
     </div>
     <div class="welcome-step hidden" id="ws-2">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Add your first watch</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">Your collection is the heart of WRotate. Add watches manually, or snap a photo and let AI identify them for you.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2-5);" onclick="pauseWelcome(3);openPhotoIdentify()">Add from Photo</button>
-      <button class="btn btn-ghost" style="width:100%;margin-bottom:var(--space-2-5);" onclick="pauseWelcome(3);openAddWatch()">Add Manually</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(3)">Skip for now</button>
+      <button class="btn btn-primary btn-block stack-2-5" onclick="pauseWelcome(3);openPhotoIdentify()">Add from Photo</button>
+      <button class="btn btn-ghost btn-block stack-2-5" onclick="pauseWelcome(3);openAddWatch()">Add Manually</button>
+      <button class="btn btn-ghost btn-block" onclick="welcomeStep(3)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-3">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -3300,15 +3300,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label for="ws-bio" style="font-size:var(--fs-base);margin-bottom:var(--space-1);display:block;">About you</label>
         <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
       </div>
-      <button class="btn btn-primary" id="ws-profile-btn" style="width:100%;margin-bottom:var(--space-2-5);" onclick="saveWelcomeProfile()">Save & Continue →</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(4)">Skip for now</button>
+      <button class="btn btn-primary btn-block stack-2-5" id="ws-profile-btn" onclick="saveWelcomeProfile()">Save & Continue →</button>
+      <button class="btn btn-ghost btn-block" onclick="welcomeStep(4)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-4">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Find people to follow</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2-5);display:inline-flex;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
+      <button class="btn btn-ghost btn-block" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
@@ -3337,7 +3337,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="welcomeStep(6)">Start tracking →</button>
+      <button class="btn btn-primary btn-block" onclick="welcomeStep(6)">Start tracking →</button>
     </div>
     <div class="welcome-step hidden" id="ws-6">
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
@@ -3356,7 +3356,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="checkbox" id="ws-eula-check" onchange="document.getElementById('ws-eula-btn').disabled = !this.checked">
         <span>I agree to the Terms of Use and Privacy Policy</span>
       </label>
-      <button class="btn btn-primary" id="ws-eula-btn" style="width:100%;" onclick="acceptEula()" disabled>Accept &amp; Start</button>
+      <button class="btn btn-primary btn-block" id="ws-eula-btn" onclick="acceptEula()" disabled>Accept &amp; Start</button>
     </div>
     <div style="display:flex;justify-content:center;gap:var(--space-1-5);margin-top:var(--space-4);">
       <div class="welcome-dot active" id="wd-1"></div>
@@ -3387,7 +3387,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <input type="checkbox" id="eula-gate-check" onchange="document.getElementById('eula-gate-btn').disabled = !this.checked">
       <span>I agree to the Terms of Use and Privacy Policy</span>
     </label>
-    <button class="btn btn-primary" id="eula-gate-btn" style="width:100%;" onclick="acceptEula()" disabled>I Agree</button>
+    <button class="btn btn-primary btn-block" id="eula-gate-btn" onclick="acceptEula()" disabled>I Agree</button>
     <button class="btn btn-ghost" style="width:100%;margin-top:var(--space-2);" onclick="declineEula()">Decline &amp; Sign Out</button>
   </div>
 </div>
@@ -3404,7 +3404,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
       Continue with Apple
     </button>
-    <button class="btn btn-ghost" style="width:100%;" onclick="closeLoginPrompt()">Cancel</button>
+    <button class="btn btn-ghost btn-block" onclick="closeLoginPrompt()">Cancel</button>
   </div>
 </div>
 
@@ -3592,7 +3592,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3-5);">
       <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Watches</h1>
     </div>
-    <div class="form-group" style="margin-bottom:var(--space-3);">
+    <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
     <div id="explore-brands" style="display:flex;gap:var(--space-1-5);overflow-x:auto;padding-bottom:var(--space-2);margin-bottom:var(--space-2);-webkit-overflow-scrolling:touch;"></div>
@@ -3650,7 +3650,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="chip" onclick="adminMergeModels()">Merge</button>
         <label class="caption"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
         <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
-        <span id="adm-enrich-status" style="font-size:var(--fs-sm);color:var(--muted);"></span>
+        <span id="adm-enrich-status" class="caption"></span>
       </div>
       <div id="admin-models-list" style="font-size:var(--fs-base);">Loading…</div>
     </div>
@@ -3822,9 +3822,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
         <!-- Draft management -->
         <div style="display:flex;gap:var(--space-2);margin-top:var(--space-1);margin-bottom:var(--space-2);">
-          <button class="btn btn-ghost" onclick="saveBroadcastDraft()" style="flex:1;">Save Draft</button>
-          <button class="btn btn-ghost" onclick="loadBroadcastDraft()" style="flex:1;">Load Draft</button>
-          <button class="btn btn-ghost" onclick="clearBroadcastForm()" style="flex:1;">Clear</button>
+          <button class="btn btn-ghost btn-grow" onclick="saveBroadcastDraft()">Save Draft</button>
+          <button class="btn btn-ghost btn-grow" onclick="loadBroadcastDraft()">Load Draft</button>
+          <button class="btn btn-ghost btn-grow" onclick="clearBroadcastForm()">Clear</button>
         </div>
         <div id="broadcast-draft-status" aria-live="polite" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2);"></div>
 
@@ -3868,8 +3868,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
         <!-- Actions -->
         <div style="display:flex;gap:var(--space-2);">
-          <button class="btn btn-ghost" id="broadcast-test-btn" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
-          <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to Segment</button>
+          <button class="btn btn-ghost btn-grow" id="broadcast-test-btn" onclick="sendBroadcastTest()">Send Test to Me</button>
+          <button class="btn btn-primary btn-grow" id="broadcast-send-btn" onclick="sendBroadcastAll()">Send to Segment</button>
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:var(--fs-base);margin-top:var(--space-2);"></div>
         <div id="broadcast-queue-status" aria-live="polite" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);"></div>
@@ -3988,8 +3988,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       <!-- Save/cancel act on Design + Delivery together, so they live right after both. -->
       <div style="display:flex;gap:var(--space-2);margin-top:var(--space-4);">
-        <button class="btn btn-primary" id="promo-save-btn" onclick="savePromoSlot()" style="flex:1;">Save as Draft</button>
-        <button class="btn btn-ghost" id="promo-cancel-edit-btn" onclick="clearPromoForm()" style="flex:1;">Clear form</button>
+        <button class="btn btn-primary btn-grow" id="promo-save-btn" onclick="savePromoSlot()">Save as Draft</button>
+        <button class="btn btn-ghost btn-grow" id="promo-cancel-edit-btn" onclick="clearPromoForm()">Clear form</button>
       </div>
       <div id="promo-status" aria-live="polite" style="font-size:var(--fs-base);margin-top:var(--space-2);margin-bottom:var(--space-6);"></div>
 
@@ -4009,7 +4009,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="number" id="promo-cfg-imp" min="0"></div>
         <div class="draft-form-row"><label for="promo-cfg-suppress">Suppress when a modal already fired</label>
           <input type="checkbox" id="promo-cfg-suppress"></div>
-        <button class="btn btn-ghost" onclick="savePromoConfig()" style="width:100%;">Save Global Defaults</button>
+        <button class="btn btn-ghost btn-block" onclick="savePromoConfig()">Save Global Defaults</button>
         <div id="promo-cfg-status" aria-live="polite" style="font-size:var(--fs-base);margin-top:var(--space-2);"></div>
       </div>
     </div>
@@ -4696,31 +4696,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <summary style="font-size:var(--fs-xs);color:var(--muted);cursor:pointer;margin-bottom:var(--space-1-5);">Raw engine knobs</summary>
       <!-- tg convergence knobs (admin, gated by tg_dev_knobs). Applied live via the tuning message. -->
       <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:var(--space-1-5);margin-bottom:var(--space-3);font-size:var(--fs-2xs);color:var(--muted);">
-        <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab s/d<input type="number" step="0.5" id="tg-knob-stabth" oninput="onTgKnob('tg_stabth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" class="field field-compact"></label>
+        <label>Stab s/d<input type="number" step="0.5" id="tg-knob-stabth" oninput="onTgKnob('tg_stabth',this.value)" class="field field-compact"></label>
+        <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" class="field field-compact"></label>
+        <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" class="field field-compact"></label>
+        <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" class="field field-compact"></label>
+        <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" class="field field-compact"></label>
+        <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" class="field field-compact"></label>
         <!-- 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md); need a 2.5 binary. Fleet: guard=refuse (live 2026-08-23), the rest off. -->
-        <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
-        <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" class="field field-compact"></label>
+        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" class="field field-compact"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
+        <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" class="field field-compact"></label>
+        <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" class="field field-compact"></label>
       </div>
       </details>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:var(--space-1-5);margin-bottom:var(--space-3);font-size:var(--fs-xs);color:var(--muted);">
-        <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>BP high Hz<input type="number" step="100" id="pz-tune-bphigh" oninput="onPzTune('pz_bp_high',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Smooth ms<input type="number" step="1" id="pz-tune-smooth" oninput="onPzTune('pz_smooth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Search win<input type="number" step="0.01" id="pz-tune-searchwin" oninput="onPzTune('pz_searchwin',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Rate win s<input type="number" step="1" id="pz-tune-ratewindow" oninput="onPzTune('pz_ratewindow',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Stab s/d<input type="number" step="1" id="pz-tune-stabthresh" oninput="onPzTune('pz_stabthresh',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Skip pairs<input type="number" step="1" id="pz-tune-regskip" oninput="onPzTune('pz_regskip',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="default">default</option><option value="measurement">measure</option></select></label>
-        <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" class="field field-compact"></label>
+        <label>BP high Hz<input type="number" step="100" id="pz-tune-bphigh" oninput="onPzTune('pz_bp_high',this.value)" class="field field-compact"></label>
+        <label>Smooth ms<input type="number" step="1" id="pz-tune-smooth" oninput="onPzTune('pz_smooth',this.value)" class="field field-compact"></label>
+        <label>Search win<input type="number" step="0.01" id="pz-tune-searchwin" oninput="onPzTune('pz_searchwin',this.value)" class="field field-compact"></label>
+        <label>Rate win s<input type="number" step="1" id="pz-tune-ratewindow" oninput="onPzTune('pz_ratewindow',this.value)" class="field field-compact"></label>
+        <label>Stab s/d<input type="number" step="1" id="pz-tune-stabthresh" oninput="onPzTune('pz_stabthresh',this.value)" class="field field-compact"></label>
+        <label>Skip pairs<input type="number" step="1" id="pz-tune-regskip" oninput="onPzTune('pz_regskip',this.value)" class="field field-compact"></label>
+        <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" class="field field-compact"><option value="default">default</option><option value="measurement">measure</option></select></label>
+        <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" class="field field-compact"></label>
       </div>
       <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--tg-ink) 40%, transparent);background:var(--tg-bg);color:var(--tg-ink);font-size:var(--fs-sm);cursor:pointer;">Batch ×12 (6 manual @ selected BPH + 6 auto)</button>
       <select id="msr-mode-select" onchange="onMsrModeChange()" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-sm);">
@@ -4868,9 +4868,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Post-save CTA: log a wear (primary, the core action) + share result -->
       <div id="msr-share-cta" style="display:none;">
         <div id="msr-cta-title" style="font-size:var(--fs-base);font-weight:var(--fw-semibold);color:var(--text);margin-bottom:var(--space-2);text-align:center;">Saved &mdash; log your wear?</div>
-        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm" style="width:100%;margin-bottom:var(--space-1-5);">👋 Log you're wearing it</button>
+        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">👋 Log you're wearing it</button>
         <div style="display:flex;gap:var(--space-1-5);">
-          <button id="msr-share-btn" class="btn btn-ghost btn-sm" style="flex:1;">Share result</button>
+          <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Share result</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
         <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:var(--space-2);">
@@ -5447,7 +5447,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <label for="tg-notes-input" class="caption-xs">Notes</label>
             <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-btn);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:var(--fs-base);">
           </div>
-          <button class="btn btn-primary btn-sm" onclick="saveTimegrapherManual()" style="width:100%;">Save Reading</button>
+          <button class="btn btn-primary btn-sm btn-block" onclick="saveTimegrapherManual()">Save Reading</button>
         </div>
         <!-- History list -->
         <div id="tg-history-list" style="margin-top:var(--space-2);"></div>
@@ -5455,7 +5455,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <div class="modal-actions" style="flex-wrap:nowrap;gap:var(--space-1-5);">
-      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()" style="flex:1;">Save</button>
+      <button id="save-watch-btn" class="btn btn-primary btn-grow" onclick="saveWatch()">Save</button>
       <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
       <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);font-family:inherit;padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-btn);cursor:pointer;white-space:nowrap;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
@@ -5531,7 +5531,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ADD FLOW V2 SHEET ════ -->
 <div id="af2-sheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="af2-sheet-title">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title" id="af2-sheet-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="af2-sheet-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--badge-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="af2-title-text" class="grow">Identifying Watches</span>
       <span id="af2-progress-chip" style="font-size:var(--fs-xs);color:var(--muted);display:none;"></span>
@@ -5555,7 +5555,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ENHANCE ALL MODAL ════ -->
 <div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title" id="enhance-all-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="enhance-all-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance Collection Data
     </div>
     <div id="enhance-all-list" style="max-height:60vh;overflow-y:auto;"></div>
@@ -5569,7 +5569,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ BATCH VALUE CHECK MODAL ════ -->
 <div id="value-check-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="value-check-modal-title">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title" id="value-check-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="value-check-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Market Value Check
     </div>
     <div id="value-check-list" style="max-height:60vh;overflow-y:auto;"></div>
@@ -5583,7 +5583,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
 <div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="snap-match-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" id="snap-match-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="snap-match-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Which watch is this?
     </div>
     <div id="snap-match-list" style="max-height:50vh;overflow-y:auto;"></div>
@@ -5664,7 +5664,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          `.modal-actions { flex-wrap: wrap }` rule, which pushed the delete button
          off the right edge on phones. -->
     <div class="modal-actions" style="gap:var(--space-1-5);">
-      <button class="btn btn-primary" onclick="saveWishlistItem()" style="flex:1;">Save</button>
+      <button class="btn btn-primary btn-grow" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
       <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;white-space:nowrap;">Move to Collection</button>
       <button id="wl-delete-btn" class="btn btn-danger" onclick="wlDeleteFromEdit()" style="display:none;" aria-label="Delete">
@@ -5712,8 +5712,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="wpm-fields" style="max-height:50vh;overflow-y:auto;"></div>
     <div id="wpm-model-row"></div>
     <div class="modal-actions wpm-actions" style="flex-direction:row;gap:var(--space-2);">
-      <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()" style="flex:1;">+ Wishlist</button>
-      <button class="btn btn-ghost" onclick="closeWatchPreview()" style="flex:1;">Close</button>
+      <button class="btn btn-primary btn-grow" onclick="addPreviewedWatchToWishlist()">+ Wishlist</button>
+      <button class="btn btn-ghost btn-grow" onclick="closeWatchPreview()">Close</button>
     </div>
   </div>
 </div>
@@ -5790,8 +5790,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
 <div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="discover-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" id="discover-modal-title" style="display:flex;align-items:center;gap:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
-    <div class="form-group" style="margin-bottom:var(--space-4);">
+    <div class="modal-title row" id="discover-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
+    <div class="form-group stack-4">
       <input type="text" id="discover-search" aria-label="Search people" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
     </div>
     <div id="discover-suggested"></div>
@@ -5811,7 +5811,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="club-invite-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="club-invite-modal-title">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" id="club-invite-modal-title">Invite Members</div>
-    <div class="form-group" style="margin-bottom:var(--space-4);">
+    <div class="form-group stack-4">
       <input type="text" id="club-invite-search" aria-label="Search people to invite" placeholder="Search by name or username…"
         oninput="debounceInviteSearch(this.value, _clubInviteModalId)" autocomplete="off">
     </div>
@@ -5833,7 +5833,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ NEW POST MODAL ════ -->
 <div id="new-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-post-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title" id="new-post-modal-title" style="display:flex;align-items:center;gap:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
+    <div class="modal-title row" id="new-post-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
       <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
         <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
@@ -5896,7 +5896,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="msr-share-popup-title" style="justify-content:center;">Share to feed?</div>
     <div id="msr-share-popup-msg" style="font-size:var(--fs-md);color:var(--text);margin:var(--space-1-5) 0 var(--space-4);line-height:var(--lh-body);"></div>
     <div class="modal-actions" style="flex-direction:column;gap:var(--space-2);">
-      <button id="msr-share-popup-confirm" class="btn btn-primary" style="width:100%;">Share to feed</button>
+      <button id="msr-share-popup-confirm" class="btn btn-primary btn-block">Share to feed</button>
       <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="dismissMsrSharePopup()">Not now</button>
     </div>
   </div>
@@ -5979,12 +5979,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="da-step-1" class="del-acct-step">
       <div style="margin-bottom:var(--space-2);display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-account-modal-title" style="color:var(--danger-text);">Delete Account?</div>
+      <div class="modal-title text-danger" id="delete-account-modal-title">Delete Account?</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
       <button class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteAccount()">Cancel</button>
+      <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
       <div style="margin-bottom:var(--space-2);display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
@@ -5993,7 +5993,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
       <button id="da-final-btn" class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:#b91c1c;color:#fff;border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteAccount()">Cancel</button>
+      <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
 </div>
@@ -6001,7 +6001,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ REC SETTINGS MODAL ════ -->
 <div id="rec-settings-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rec-settings-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" id="rec-settings-modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="modal-title row-between" id="rec-settings-modal-title">
       <span>Pick Settings</span>
       <button type="button" class="btn-ghost" aria-label="Close" onclick="closeRecSettings()" style="background:none;border:none;font-size:var(--fs-xl);cursor:pointer;color:var(--muted);">&times;</button>
     </div>
@@ -6014,11 +6014,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
       <div style="margin-bottom:var(--space-2);display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-club-modal-title" style="color:var(--danger-text);">Delete this club?</div>
+      <div class="modal-title text-danger" id="delete-club-modal-title">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:var(--fw-bold);margin:var(--space-1) 0 var(--space-3);"></p>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin-bottom:var(--space-5);">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
       <button class="btn" style="width:100%;margin-bottom:var(--space-2-5);background:var(--danger);color:#fff;border:none;padding:var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
+      <button class="btn btn-ghost btn-block" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -6029,13 +6029,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="feedback-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" id="feedback-modal-title" style="display:flex;align-items:center;gap:var(--space-2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span id="fb-modal-title-text">Send Feedback</span></div>
+    <div class="modal-title row" id="feedback-modal-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span id="fb-modal-title-text">Send Feedback</span></div>
     <div id="fb-request-hint" style="display:none;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-2);line-height:var(--lh-body);">We&#8217;ll check the brand and add it automatically &#8212; usually within a few minutes.</div>
     <div id="fb-type-picker" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2);">
       <div class="chip selected" data-val="bug" onclick="setFeedbackType('bug')">&#128027; Bug Report</div>
       <div class="chip" data-val="feature" onclick="setFeedbackType('feature')">&#128161; Feature Request</div>
     </div>
-    <div class="form-group" style="margin-bottom:var(--space-1);">
+    <div class="form-group stack-1">
       <textarea id="fb-desc" aria-label="Describe the issue or idea" placeholder="Describe the issue or idea…" style="height:110px;" maxlength="2000"></textarea>
     </div>
 
@@ -6049,7 +6049,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ REPORT MODAL ════ -->
 <div id="report-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
   <div class="modal" style="max-width:380px;">
-    <div class="modal-title" id="report-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">
+    <div class="modal-title row" id="report-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report
     </div>
     <input type="hidden" id="report-content-type">
@@ -6070,7 +6070,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="report-target-list"></div>
     </div>
 
-    <div class="form-group" style="margin-bottom:var(--space-2);">
+    <div class="form-group stack-2">
       <textarea id="report-details" aria-label="Additional details" placeholder="Additional details (optional)" style="height:70px;" maxlength="500"></textarea>
     </div>
     <div class="modal-actions">
@@ -6083,7 +6083,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ADMIN USER DETAIL MODAL ════ -->
 <div id="admin-user-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" id="admin-user-modal-title" style="display:flex;align-items:center;gap:var(--space-2);">User Detail</div>
+    <div class="modal-title row" id="admin-user-modal-title">User Detail</div>
     <div id="admin-user-modal-body" style="max-height:70vh;overflow-y:auto;margin:0 -.25rem;padding:0 var(--space-1);">
       <div class="note-md">Loading…</div>
     </div>
@@ -6100,11 +6100,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div style="text-align:center;margin-bottom:var(--space-3);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <div class="modal-title" id="username-prompt-title" style="text-align:center;font-size:var(--fs-xl);">Set up your profile</div>
     <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);text-align:center;margin:var(--space-1-5) 0 var(--space-4);">Add your name and pick a username so others can find you. You can always change these later.</p>
-    <div class="form-group" style="margin-bottom:var(--space-3);">
+    <div class="form-group stack-3">
       <label for="up-display-name" style="font-size:var(--fs-base);margin-bottom:var(--space-1);display:block;">Display Name</label>
       <input type="text" id="up-display-name" placeholder="Your name" maxlength="50" style="width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-lg);">
     </div>
-    <div class="form-group" style="margin-bottom:var(--space-1);">
+    <div class="form-group stack-1">
       <label for="up-username" style="font-size:var(--fs-base);margin-bottom:var(--space-1);display:block;">Username</label>
       <div class="username-field">
         <span class="username-prefix">@</span>
@@ -6113,8 +6113,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
     <div id="up-username-status" class="username-status stack-3"></div>
-    <button class="btn btn-primary" id="up-save-btn" style="width:100%;margin-bottom:var(--space-2);" onclick="saveUsernamePrompt()">Continue</button>
-    <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('username-prompt-modal').classList.add('hidden')">Cancel</button>
+    <button class="btn btn-primary btn-block stack-2" id="up-save-btn" onclick="saveUsernamePrompt()">Continue</button>
+    <button class="btn btn-ghost btn-block" onclick="document.getElementById('username-prompt-modal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
@@ -6212,7 +6212,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-log-modal-title">
   <div class="modal" style="max-width:380px;">
-    <div class="modal-title" id="edit-log-modal-title" style="display:flex;align-items:center;gap:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
+    <div class="modal-title row" id="edit-log-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
     <div class="form-group">
       <label for="edit-log-date">Date</label>
       <input type="date" id="edit-log-date">
@@ -6281,7 +6281,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="badge-reveal-medallions" style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;justify-content:center;margin:var(--space-3) 0 var(--space-1-5);"></div>
     <div id="badge-reveal-names" style="font-size:var(--fs-base);color:var(--badge-text);opacity:.7;margin-bottom:var(--space-4);line-height:var(--lh-body);"></div>
     <div style="display:flex;gap:var(--space-2);">
-      <button class="btn btn-primary" style="flex:1;" onclick="badgeRevealSeeThem()">See them</button>
+      <button class="btn btn-primary btn-grow" onclick="badgeRevealSeeThem()">See them</button>
       <button class="btn btn-ghost" style="flex:1;color:var(--muted);" onclick="closeBadgeReveal()">Dismiss</button>
     </div>
   </div>
@@ -6293,7 +6293,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="fact-modal-eyebrow" style="font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold-text);margin:var(--space-2) 0 var(--space-1-5);text-align:center;"></div>
     <div id="fact-modal-card" style="margin-bottom:var(--space-3-5);"></div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-4);text-align:center;">You get a new one every day you wear it.</div>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:var(--space-2);" onclick="factModalLogNow()">Log this watch</button>
+    <button class="btn btn-primary btn-block stack-2" onclick="factModalLogNow()">Log this watch</button>
     <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="closeFactModal()">Maybe later</button>
   </div>
 </div>
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.07';
+const APP_VERSION = '21.07.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9173,7 +9173,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           <span class="prof-section-chevron${prvOpen ? ' open' : ''}" id="chv-prv-section">▶</span>
         </button>
         <div class="prof-section-body${prvOpen ? '' : ' collapsed'}" id="prv-section">
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label style="font-size:var(--fs-sm);">Profile</label>
         <div class="chips" id="prv-profile-chips">
           ${pChip('prv-profile-chips','public','Public',cur,'profile_privacy')}
@@ -9182,7 +9182,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </div>
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">Followers or Private does not remove existing followers.</div>
       </div>
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label style="font-size:var(--fs-sm);">Collection</label>
         <div class="chips" id="prv-collection-chips">
           ${pChip('prv-collection-chips','public','Public',curCol,'collection_visibility')}
@@ -9192,7 +9192,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </div>
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);">You can also tap each watch in your collection to set its visibility individually.</div>
       </div>
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label style="font-size:var(--fs-sm);">Wishlist</label>
         <div class="chips" id="prv-wishlist-chips">
           ${pChip('prv-wishlist-chips','public','Public',wlVis,'wishlist_visibility')}
@@ -10392,17 +10392,17 @@ async function renderClubDetail(clubId) {
     <div id="club-edit-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-5);">
       <div class="eyebrow eyebrow-muted stack-3">Edit Club</div>
 
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label for="club-edit-name" class="form-label" style="font-size:var(--fs-sm);">Club Name</label>
         <input type="text" id="club-edit-name" value="${escHtml(club.name)}" maxlength="60">
       </div>
 
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label for="club-edit-desc" class="form-label" style="font-size:var(--fs-sm);">Description</label>
         <textarea id="club-edit-desc" rows="2" style="resize:none;" maxlength="300">${escHtml(club.description || '')}</textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom:var(--space-3);">
+      <div class="form-group stack-3">
         <label for="club-edit-photo-input" class="form-label" style="font-size:var(--fs-sm);">Club Photo</label>
         <div id="club-edit-photo-area" class="log-photo-area" style="height:64px;" onclick="document.getElementById('club-edit-photo-input').click()">
           ${club.image_url
@@ -10435,8 +10435,8 @@ async function renderClubDetail(clubId) {
       ${club.description ? `<div style="font-size:var(--fs-base);color:var(--muted);max-width:340px;margin-top:var(--space-1);">${escHtml(club.description)}</div>` : ''}
       <div style="margin-top:var(--space-2);">${joinBtnHtml}</div>
       ${isOwner ? `<div style="margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-2);">
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="openClubInviteModal('${clubId}')">+ Invite Members</button>
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
+        <button class="btn btn-ghost btn-xs" onclick="openClubInviteModal('${clubId}')">+ Invite Members</button>
       </div>` : ''}
     </div>
     ${ownerEditSection}
@@ -10616,7 +10616,7 @@ async function searchInviteUsers(query, clubId) {
     if (memberSet.has(p.id))     btn = `<span class="caption">Member</span>`;
     else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);border-color:var(--danger);" ${dataAttrs}
       onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`;
-    else btn = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" ${dataAttrs}
+    else btn = `<button class="btn btn-primary btn-xs" ${dataAttrs}
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
     return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1-5) 0;">
       ${avatarHtml}
@@ -10654,7 +10654,7 @@ async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
     .eq('user_id', inviteeId).eq('type', 'club_invite')
     .eq('actor_id', currentUser.id).eq('ref_id', clubId);
   if (btn) {
-    btn.outerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
+    btn.outerHTML = `<button class="btn btn-primary btn-xs" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
   }
   toast(`Invite to ${escHtml(inviteeName)} rescinded`);
@@ -10758,7 +10758,7 @@ async function renderClubsPage() {
     <div class="club-section-label">My Clubs</div>
     ${myClubsHtml}
     <div class="club-section-label" style="margin-top:var(--space-6);">Discover</div>
-    <div class="form-group" style="margin-bottom:var(--space-3);">
+    <div class="form-group stack-3">
       <input type="text" id="club-search-input" aria-label="Search clubs" placeholder="Search clubs\u2026" oninput="searchClubs(this.value)" autocomplete="off">
     </div>
     <div id="club-search-results"><div style="color:var(--muted);font-size:var(--fs-base);padding:var(--space-1) 0;">Type to search for clubs.</div></div>`;
@@ -19560,8 +19560,8 @@ function renderReportCard(r) {
       ${contentPreview}
       ${r.status === 'pending' ? `
         <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-2);">
-          <button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
-          <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
+          <button class="btn btn-primary btn-xs" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
+          <button class="btn btn-ghost btn-xs" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
           <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);color:var(--danger-text);" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
@@ -20632,9 +20632,9 @@ function renderAdminFeedback() {
   const page = filtered.slice(start, start + ADMIN_FB_PER_PAGE);
   const paginationHtml = totalPages > 1 ? `
     <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:var(--space-4);">
-      <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
+      <button class="btn btn-ghost btn-xs" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
       <span class="caption">${_adminFbPage + 1} / ${totalPages}</span>
-      <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5);" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+      <button class="btn btn-ghost btn-xs" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
     </div>` : '';
   el.innerHTML = page.map(f => renderFeedbackCard(f)).join('') + paginationHtml;
 }
@@ -22936,9 +22936,9 @@ async function loadCampaigns() {
         <input type="number" id="camp-backfill-${c.id}" value="${c.backfill_daily || 0}" min="0" max="100" style="font-size:var(--fs-base);width:60px;">
       </div>
       <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);">
-        <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save</button>
-        <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
-        <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
+        <button class="btn btn-ghost btn-grow" onclick="saveCampaign('${c.id}')">Save</button>
+        <button class="btn btn-ghost btn-grow" onclick="testCampaign('${c.id}')">Send Test to Me</button>
+        <button class="btn btn-ghost btn-grow" onclick="runCampaignNow()">Run Now</button>
       </div>
       <div id="camp-status-${c.id}" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);" aria-live="polite"></div>
       <div class="draft-form-row" style="margin-top:var(--space-2-5);">
@@ -28075,7 +28075,7 @@ function af2RenderSheet() {
   if (anyIdentifying && awaitingConfirm.length === 0) {
     footerEl.innerHTML = '';
   } else if (awaitingConfirm.length > 1) {
-    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">Confirm all</button>`
+    footerEl.innerHTML = `<button class="btn btn-primary btn-grow" onclick="af2ConfirmAll()">Confirm all</button>`
       + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">Skip all</button>`;
   } else if (awaitingConfirm.length === 1) {
     footerEl.innerHTML = '';
@@ -28083,10 +28083,10 @@ function af2RenderSheet() {
     const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
     if (doneWatches.length === 1) {
       const wId = doneWatches[0]._af2WatchId;
-      footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="closeAf2Sheet();renderCollection(true);openEditWatch('${wId}')">See details</button>`
+      footerEl.innerHTML = `<button class="btn btn-primary btn-grow" onclick="closeAf2Sheet();renderCollection(true);openEditWatch('${wId}')">See details</button>`
         + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="closeAf2Sheet();renderCollection(true);openAddFlowV2()">Add another</button>`;
     } else {
-      footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="closeAf2Sheet();renderCollection(true);">View collection</button>`
+      footerEl.innerHTML = `<button class="btn btn-primary btn-grow" onclick="closeAf2Sheet();renderCollection(true);">View collection</button>`
         + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="closeAf2Sheet();renderCollection(true);openAddFlowV2()">Add another</button>`;
     }
   } else {
@@ -28848,7 +28848,7 @@ async function checkBatchWatchValues(ids) {
       if (statusEl) {
         statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
       }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveValueResult(${i})">Save</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
     }
@@ -29381,7 +29381,7 @@ async function enhanceAllWatches(scopedIds) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
@@ -29408,7 +29408,7 @@ async function enhanceAllWatches(scopedIds) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
               }
@@ -29900,8 +29900,8 @@ async function mintWishlistShare() {
     <div style="font-size:var(--fs-md);margin-bottom:var(--space-2);">Your link is ready.</div>
     <div id="wl-share-url" style="font-size:var(--fs-sm);color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
     <div style="display:flex;gap:var(--space-2);">
-      <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareWishlistUrl(this.dataset.token)">Share</button>
-      <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
+      <button class="btn btn-primary btn-grow" data-token="${escAttr(token)}" onclick="shareWishlistUrl(this.dataset.token)">Share</button>
+      <button class="btn btn-ghost btn-grow" data-token="${escAttr(token)}" onclick="copyWishlistShareUrl(this.dataset.token)">Copy</button>
     </div>`;
   exitWishlistSelect();
   loadWishlistShareLinks();
@@ -30197,8 +30197,8 @@ async function mintCollectionShare() {
     <div style="font-size:var(--fs-md);margin-bottom:var(--space-2);">Your link is ready.</div>
     <div id="coll-share-url" style="font-size:var(--fs-sm);color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:var(--radius-btn);padding:var(--space-2);margin-bottom:var(--space-3);">${escHtml(url)}</div>
     <div style="display:flex;gap:var(--space-2);">
-      <button class="btn btn-primary" style="flex:1;" data-token="${escAttr(token)}" onclick="shareCollectionUrl(this.dataset.token)">Share</button>
-      <button class="btn btn-ghost" style="flex:1;" data-token="${escAttr(token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
+      <button class="btn btn-primary btn-grow" data-token="${escAttr(token)}" onclick="shareCollectionUrl(this.dataset.token)">Share</button>
+      <button class="btn btn-ghost btn-grow" data-token="${escAttr(token)}" onclick="copyCollectionShareUrl(this.dataset.token)">Copy</button>
     </div>`;
   exitCollectionSelect();
   loadCollectionShareLinks();

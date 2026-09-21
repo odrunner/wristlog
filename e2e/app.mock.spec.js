@@ -1768,7 +1768,7 @@ test.describe('Watch modal button styling (mocked)', () => {
     await expect(page.locator('#watch-modal')).toBeVisible();
     const saveBtn = page.locator('#save-watch-btn');
     await expect(saveBtn).toHaveClass(/btn-primary/);
-    const style = await saveBtn.getAttribute('style');
+    const style = (await saveBtn.getAttribute('style')) || '';   // no style attribute at all is the best case
     expect(style).not.toContain('#854F0B');
   });
 
@@ -1782,7 +1782,7 @@ test.describe('Watch modal button styling (mocked)', () => {
       if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await editBtn.click();
         await page.waitForTimeout(500);
-        const style = await page.locator('#modal-delete-btn').getAttribute('style');
+        const style = (await page.locator('#modal-delete-btn').getAttribute('style')) || '';
         expect(style).not.toContain('#FCEBEB');
         expect(style).not.toContain('#A32D2D');
       }

@@ -50,9 +50,36 @@ NAMED = collections.OrderedDict([
     ('grow',        'flex:1'),
     ('grow-clip',   'flex:1;min-width:0'),
 ])
+# Step 4: variants for buttons and form fields. Applied only to those tags; a style may also be one of these
+# PLUS one layout helper above (e.g. a full-width button with space below it -> "btn-block stack-2-5").
+NAMED_BTN = collections.OrderedDict([
+    ('btn-block', 'width:100%'),
+    ('btn-grow',  'flex:1'),
+    ('btn-xs',    'font-size:var(--fs-sm);padding:var(--space-1) var(--space-2-5)'),
+    ('btn-plain', 'background:none;border:none;color:var(--muted);cursor:pointer;padding:var(--space-1)'),
+])
+# `.field.field-compact` — two classes, because the page's base rule is `input[type=…]` (one attribute + one tag)
+# and a single class would lose to it.
+NAMED_FIELD = collections.OrderedDict([
+    ('field field-compact', 'width:100%;padding:var(--space-1);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text)'),
+])
+SELECTOR = {'field field-compact': '.field.field-compact'}
+LAYOUT = [k for k in NAMED if re.match(r'stack|row|grow', k)]
 norm = lambda st: frozenset(re.sub(r'\s*:\s*', ':', re.sub(r'\s+', ' ', d.strip())) for d in st.split(';') if d.strip())
 BY_SET = {norm(v): k for k, v in NAMED.items()}
-SKIP_TAGS = {'button', 'input', 'select', 'textarea', 'svg', 'path', 'option'}
+BTN_SET = {norm(v): k for k, v in NAMED_BTN.items()}
+for bk, bv in NAMED_BTN.items():
+    for lk in LAYOUT:
+        if lk.startswith('stack'): BTN_SET[norm(bv) | norm(NAMED[lk])] = bk + ' ' + lk
+BTN_SET[norm(NAMED['btn-sm'] if 'btn-sm' in NAMED else 'font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3)')] = 'btn-sm'
+FIELD_SET = {norm(v): k for k, v in NAMED_FIELD.items()}
+ALL_NAMED = collections.OrderedDict(list(NAMED.items()) + list(NAMED_BTN.items()) + list(NAMED_FIELD.items()))
+EXISTING = {'btn-sm'}                                  # already declared among the components
+SKIP_TAGS = {'svg', 'path', 'option'}
+def lookup(tag, st):
+    if tag == 'button': return BTN_SET.get(st)
+    if tag in ('input', 'select', 'textarea'): return FIELD_SET.get(st)
+    return BY_SET.get(st)
 
 SHORT = {'margin': ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'], 'padding': ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'],
          'border': ['border-top', 'border-width', 'border-style', 'border-color'], 'border-top': ['border-top-width', 'border-top-style', 'border-top-color', 'border-width', 'border-style', 'border-color'],
@@ -76,15 +103,17 @@ ds = open(ROOT + 'design-system.css', encoding='utf-8').read()
 MARK = '/* ══ Text styles and layout helpers ══'
 ds_rules = ds.split(MARK)[0]
 a = src.index('<style>'); b = src.index('</style>')
-css = re.sub(r'/\*.*?\*/', '', ds_rules + '\n' + src[a + 7:b], flags=re.S)
+strip = lambda t: re.sub(r'/\*.*?\*/', '', t, flags=re.S)
+ds_css = strip(ds_rules); css = ds_css + '\n' + strip(src[a + 7:b])
 rules = []
 for m in re.finditer(r'([^{}]+)\{([^{}]*)\}', css):
+    in_ds = m.start() < len(ds_css)
     sel = m.group(1).strip()
     if sel.startswith('@') or sel in ('from', 'to') or re.fullmatch(r'[\d.%,\s]+', sel): continue
     props = {d.split(':', 1)[0].strip().lower() for d in m.group(2).split(';') if ':' in d}
     props = {p for p in props if not p.startswith('--')}
     for s in sel.split(','):
-        if s.strip(): rules.append((s.strip(), props))
+        if s.strip(): rules.append((s.strip(), props, in_ds))
 def subject(sel): return re.split(r'\s*[>+~]\s*|\s+', sel.strip())[-1]
 def spec(sel):
     s = re.sub(r'::?[\w-]+\([^)]*\)', ' :x ', sel)
@@ -108,18 +137,30 @@ def region_text(ln):
     return '\n'.join(lines[REGION_START[k] if k >= 0 else 0:ln + 1])
 def ancestor_absent(sel, ln):
     parts = re.split(r'\s*[>+~]\s*|\s+', sel.strip())
-    if len(parts) < 2 or re.search(r'[.#\[]', re.sub(r':[\w-]+(\([^)]*\))?', '', parts[-1])): return False
+    if len(parts) < 2: return False
     names = re.findall(r'[.#]([\w-]+)', ' '.join(parts[:-1]))
     if not names: return False
     reg = region_text(ln)
     return any(not re.search(r'(?<![\w-])' + re.escape(n) + r'(?![\w-])', reg) for n in names)
-def rivals(tag, el_id, classes, props, ln):
+def rivals(tag, el_id, classes, props, ln, mine=(0, 1)):
+    # The helpers sit LAST in design-system.css and the page's <style> loads after it: a stylesheet rule must
+    # weigh MORE than the class to beat it, a page rule only as much.
     want = set().union(*(touches(p) for p in props)); out = []
-    for sel, rp in rules:
-        if spec(sel) < (0, 1): continue                              # a bare tag rule loses to any class
+    for sel, rp, in_ds in rules:
+        sp = spec(sel)
+        if sp < mine or (in_ds and sp == mine): continue
         if rp & want and could_match(sel, tag, el_id, classes) and not ancestor_absent(sel, ln): out.append(sel)
     return out
-js_assigned = {JS_PROP[m] for m in re.findall(r'\.style\.([a-zA-Z]+)\s*=[^=]', src) if m in JS_PROP}
+camel = lambda p: re.sub(r'[A-Z]', lambda m: '-' + m.group(0).lower(), p)
+def js_props_for(el_id):
+    """CSS properties JS assigns through .style on the element with this id ('*' = cssText / setProperty / unknown)."""
+    q = re.escape(el_id); out = set()
+    names = set(re.findall(r'(\w+)\s*=\s*(?:document\.getElementById|\$|el|byId)\(\s*[\'"]' + q + r'[\'"]\s*\)', src))
+    pats = [r'\(\s*[\'"]' + q + r'[\'"]\s*\)\??\.style\.(\w+)'] + [r'\b' + re.escape(n) + r'\??\.style\.(\w+)' for n in names]
+    for pat in pats:
+        for prop in re.findall(pat, src): out.add('*' if prop in ('cssText', 'setProperty') else camel(prop))
+    if re.search(r'[\'"#]' + q + r'[\'"]', src) and not names and not out and re.search(r'querySelector(All)?\([^)]*#' + q, src): out.add('*')
+    return out
 
 # Code that FINDS an element by its inline style breaks the moment that style becomes a class
 # (2026-09-21: demo mode hid the manual accuracy form through `div[style*="margin-bottom:…"]`).
@@ -128,14 +169,15 @@ if by_style: sys.exit('index.html selects elements by inline style at line(s) %s
 TAG = re.compile(r'<([a-zA-Z][\w-]*)\b([^<>]*?)\sstyle="([^"\\]*)"([^<>]*?)(/?)>')
 stats = collections.Counter(); kept = collections.Counter(); why = collections.defaultdict(collections.Counter); used = collections.Counter()
 def convert(m):
-    name = BY_SET.get(norm(m.group(3)))
+    name = lookup(m.group(1).lower(), norm(m.group(3)))
     if not name: return m.group(0)
     ln = src.count('\n', 0, m.start())
     if LINES and not (LINES[0] - 1 <= ln <= LINES[1] - 1): return m.group(0)
     tag = m.group(1).lower(); rest = m.group(2) + m.group(4)
     def skip(reason): kept[name] += 1; why[reason][name] += 1; return m.group(0)
     if ln in fenced: return skip('email / landing')
-    if tag in SKIP_TAGS: return skip('button or field (step 4)')
+    if tag in SKIP_TAGS: return skip('svg')
+    if name == 'btn-sm' and 'btn' not in (re.search(r'class="([^"]*)"', rest) or [0, ''])[1].split(): return skip('btn-sm needs .btn')
     if '${' in rest and re.search(r'\$\{[^}]*\}\s*(?:style|class)|class="[^"]*\$\{', rest): return skip('class built at runtime')
     cm = re.search(r'\sclass="([^"]*)"', ' ' + rest)
     if cm and re.search(r"[^\w\s-]", cm.group(1)): return skip('class built at runtime')
@@ -143,8 +185,10 @@ def convert(m):
     classes = set(cm.group(1).split()) if cm else set()
     im = re.search(r'\sid="([^"]*)"', ' ' + rest); el_id = im.group(1) if im else None
     props = {d.split(':')[0] for d in norm(m.group(3))}
-    if el_id and (props & js_assigned or '$' in el_id): return skip('has an id and JS assigns this property')
-    r = rivals(tag, el_id, classes, props, ln)
+    if el_id:
+        jp = js_props_for(el_id) if '$' not in el_id else {'*'}
+        if '*' in jp or any(touches(p) & jp for p in props): return skip('JS assigns this property on #' + ('…' if '$' in el_id else 'id'))
+    r = rivals(tag, el_id, classes, props, ln, (0, 2) if name in SELECTOR else (0, 1))
     if r: return skip('a page rule could override the class: ' + r[0][:40])
     stats[name] += 1; used[name] += 1
     before, after = m.group(2), m.group(4)
@@ -156,7 +200,7 @@ def convert(m):
     return '<%s%s class="%s"%s%s>' % (m.group(1), before, name, after, m.group(5))
 out = TAG.sub(convert, src)
 print('converted: %d attributes' % sum(stats.values()))
-for k in NAMED:
+for k in sorted(set(stats) | set(kept)):
     if stats[k] or kept[k]: print('  .%-18s %4d converted  %4d stay inline' % (k, stats[k], kept[k]))
 print('why some stay:')
 for reason, c in sorted(why.items(), key=lambda x: -sum(x[1].values())): print('  %4d  %s' % (sum(c.values()), reason))
@@ -166,12 +210,12 @@ open(ROOT + 'index.html', 'w', encoding='utf-8').write(out)
 block = ds.split(MARK)[1] if MARK in ds else ''
 have = set(re.findall(r'^\.([\w-]+) \{', block, flags=re.M))
 in_use = {c for m in re.finditer(r'class="([^"]*)"', out) for c in m.group(1).split()}
-need = [k for k in NAMED if k in in_use and k not in have]
+need = [k for k in ALL_NAMED if set(k.split()) <= in_use and k.split()[-1] not in have and k not in EXISTING]
 if need:
     if MARK not in ds:
         ds = ds.rstrip('\n') + ('\n\n' + MARK + '\n   One class per DECISION ("muted body copy", "space below a block"), replacing inline style="…" copies of it.\n'
              '   A class weighs less than the inline style it replaces: scripts/design-system/name_styles.py only converts an\n'
              '   element when no other rule could override the class. Change a decision here and it changes everywhere. */\n')
-    ds = ds.rstrip('\n') + '\n' + ''.join('.%s { %s; }\n' % (k, NAMED[k].replace(':', ': ').replace(';', '; ')) for k in need)
+    ds = ds.rstrip('\n') + '\n' + ''.join('%s { %s; }\n' % (SELECTOR.get(k, '.' + k), ALL_NAMED[k].replace(':', ': ').replace(';', '; ')) for k in need)
     open(ROOT + 'design-system.css', 'w', encoding='utf-8').write(ds)
 print('applied; classes added to design-system.css: %s' % (', '.join(need) or 'none'))
