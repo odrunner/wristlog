@@ -71,10 +71,11 @@ BTN_SET = {norm(v): k for k, v in NAMED_BTN.items()}
 for bk, bv in NAMED_BTN.items():
     for lk in LAYOUT:
         if lk.startswith('stack'): BTN_SET[norm(bv) | norm(NAMED[lk])] = bk + ' ' + lk
-BTN_SET[norm(NAMED['btn-sm'] if 'btn-sm' in NAMED else 'font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3)')] = 'btn-sm'
+# Never map onto a class that ALREADY exists (`.btn-sm`): it carries other rules — on phones `.btn-sm` also lowers
+# min-height 44 -> 34 — so an "exact" match is not exact. Only classes this tool declares itself are safe.
 FIELD_SET = {norm(v): k for k, v in NAMED_FIELD.items()}
 ALL_NAMED = collections.OrderedDict(list(NAMED.items()) + list(NAMED_BTN.items()) + list(NAMED_FIELD.items()))
-EXISTING = {'btn-sm'}                                  # already declared among the components
+EXISTING = set()
 SKIP_TAGS = {'svg', 'path', 'option'}
 def lookup(tag, st):
     if tag == 'button': return BTN_SET.get(st)
@@ -177,7 +178,6 @@ def convert(m):
     def skip(reason): kept[name] += 1; why[reason][name] += 1; return m.group(0)
     if ln in fenced: return skip('email / landing')
     if tag in SKIP_TAGS: return skip('svg')
-    if name == 'btn-sm' and 'btn' not in (re.search(r'class="([^"]*)"', rest) or [0, ''])[1].split(): return skip('btn-sm needs .btn')
     if '${' in rest and re.search(r'\$\{[^}]*\}\s*(?:style|class)|class="[^"]*\$\{', rest): return skip('class built at runtime')
     cm = re.search(r'\sclass="([^"]*)"', ' ' + rest)
     if cm and re.search(r"[^\w\s-]", cm.group(1)): return skip('class built at runtime')

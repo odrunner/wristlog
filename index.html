@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.18';
+const APP_VERSION = '21.07.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -28848,7 +28848,7 @@ async function checkBatchWatchValues(ids) {
       if (statusEl) {
         statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
       }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveValueResult(${i})">Save</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
     }
@@ -29381,7 +29381,7 @@ async function enhanceAllWatches(scopedIds) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveEnhanceResult(${i})">Save</button>`;
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
@@ -29408,7 +29408,7 @@ async function enhanceAllWatches(scopedIds) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveEnhanceResult(${i})">Save</button>`;
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
               }
