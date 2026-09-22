@@ -12,8 +12,14 @@ FILES = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'pr
 
 ds = open(ROOT + 'design-system.css', encoding='utf-8').read()
 STEPS = {}                                    # px -> token, read from the stylesheet so the two can never disagree
-for name, val in re.findall(r'(--space-[\w-]+)\s*:\s*([\d.]+rem)\s*;', ds):
-    STEPS[round(float(val[:-3]) * 16, 3)] = name
+for name, val, unit in re.findall(r'(--space-[\w-]+)\s*:\s*([\d.]+)(rem|px)\s*;', ds):
+    STEPS[round(float(val) * (16 if unit == 'rem' else 1), 3)] = name
+TOL = float(sys.argv[sys.argv.index('--tol') + 1]) if '--tol' in sys.argv else 0.0     # 0 = exact only
+def step(x):
+    x = round(abs(x), 3)
+    if x in STEPS: return STEPS[x]
+    best = min(STEPS, key=lambda s: (abs(s - x), -s))
+    return STEPS[best] if abs(best - x) <= TOL + 1e-9 else None
 RX = re.compile(r'(?<![-\w])((?:padding|margin)(?:-(?:top|right|bottom|left))?|gap|row-gap|column-gap)(\s*:\s*)([^;"\'}<`]+)')
 def px(v):
     m = re.fullmatch(r'(-?)(\d*\.?\d+)(px|rem)', v)
@@ -38,9 +44,9 @@ for f in FILES:
             out = []
             for p in re.split(r'(\s+)', v):
                 x = px(p) if p.strip() else None
-                if x is not None and x != 0 and round(abs(x), 3) in STEPS:
-                    t = 'var(%s)' % STEPS[round(abs(x), 3)]
-                    out.append(t if x > 0 else 'calc(-1 * %s)' % t); moves['%s %s -> %s' % (m.group(1).split('-')[0], p, STEPS[round(abs(x), 3)])] += 1
+                if x is not None and x != 0 and step(x):
+                    t = 'var(%s)' % step(x)
+                    out.append(t if x > 0 else 'calc(-1 * %s)' % t); moves['%s %s -> %s' % (m.group(1).split('-')[0], p, step(x))] += 1
                 else:
                     if x is not None and x != 0: left['%s %s' % (m.group(1).split('-')[0], p)] += 1
                     out.append(p)

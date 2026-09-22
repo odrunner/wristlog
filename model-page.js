@@ -169,18 +169,18 @@ function renderModelPage(el, ctx, h) {
   const wr = st.wears || {};
   const strip = st.wear_strip || [];
   cells.push(`<div class="mp-cell"><div class="l">Wears / 90 days</div><div class="v">${wr.w90 || 0}</div>
-    <div style="display:grid;grid-template-columns:repeat(15,1fr);gap:1.5px;margin-top:var(--space-1-5);">${(strip.length ? strip : Array(15).fill(0)).map(n => `<div class="mp-tone-${n >= 2 ? 'gold' : n === 1 ? 'dim' : 'flat'}" style="aspect-ratio:1;" title="${n} wear${n === 1 ? '' : 's'}"></div>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(15,1fr);gap:var(--space-0-5);margin-top:var(--space-1-5);">${(strip.length ? strip : Array(15).fill(0)).map(n => `<div class="mp-tone-${n >= 2 ? 'gold' : n === 1 ? 'dim' : 'flat'}" style="aspect-ratio:1;" title="${n} wear${n === 1 ? '' : 's'}"></div>`).join('')}</div>
     <div class="f">by ${wr.wearers90 || 0} of ${owners} owners</div></div>`);
   if (st.cost_per_wear) {
     const c = st.cost_per_wear;
     const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
     cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold-text);">${cpwTxt}</div>
-      <div style="display:flex;align-items:center;gap:var(--space-1-5);height:16px;margin-top:var(--space-1-5);"><div style="flex:1;height:4px;border-radius:2px;background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:var(--fs-3xs);color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
+      <div style="display:flex;align-items:center;gap:var(--space-1-5);height:16px;margin-top:var(--space-1-5);"><div style="flex:1;height:4px;border-radius:var(--radius-hair);background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:var(--fs-3xs);color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
       <div class="f">per logged wear · ${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} with price + wears</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">${st.accuracy ? 'Owners' : 'Wears all-time'}</div><div class="v">${st.accuracy ? owners : (wr.all_time || 0)}</div><div class="f">${st.accuracy ? (st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate') : 'logged by members'}</div></div>`);
   }
-  const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">${cells.join('')}</div>`;
+  const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-px);background:var(--border);">${cells.join('')}</div>`;
 
   // ── Story block (lore above the fold): history + fact pull-quote ──
   const key = m.id || m.slug;
@@ -231,7 +231,7 @@ function renderModelPage(el, ctx, h) {
           <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
         ${ret.length ? `<div style="border-top:1px solid var(--border);margin-top:var(--space-3-5);padding-top:var(--space-3-5);">
           <div class="mp-hrow stack-2-5"><div class="mp-h" style="font-size:var(--fs-2xs);letter-spacing:var(--ls-tight);">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
-          <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:2px 2px 0 0;"></div>`).join('')}</div>
+          <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
           <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);font-size:var(--fs-3xs);color:var(--muted);">${ret.map(r => `<span style="flex:1;text-align:center;">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
         <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3-5);padding-top:var(--space-3);border-top:1px solid var(--border);">
           ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--on-gold);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}

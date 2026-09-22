@@ -61,11 +61,13 @@
   --space-5: 1.25rem; --space-6: 1.5rem; --space-7: 1.75rem; --space-8: 2rem;
   /* larger steps (2026-09-22): panel padding, empty states, page breathing room */
   --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
+  --space-px: 1px;             /* optical nudges: a border's width, an icon settling onto a baseline */
   /* Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from
      5-7px and 10px gaps; without these, snapping to the scale moved things by
      2px+ and it added up across a card. With them nothing under 16px moves
      more than 1px. Named like Tailwind's 0.5 / 1.5 / 2.5 / 3.5. */
   --space-0-5: .125rem; --space-1-5: .375rem; --space-2-5: .625rem; --space-3-5: .875rem;
+  --radius-hair: 2px;   /* bar tops, tiny chips */
   --radius-xs: 4px; --radius-sm: 6px; --radius-btn: 8px; --radius-lg: 16px; --radius-pill: 999px;
   /* A circle. Not the pill: 50% on a non-square box is an ellipse. */
   --radius-round: 50%;
@@ -88,13 +90,15 @@
   /* --lh-none is for icons, numerals and single-line badges, never running text. */
   --lh-none: 1; --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
   --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
+  --ls-snug: .02em;
   --ls-tight: .04em; --ls-eyebrow: .08em;
   --fw-heavy: 800;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   /* ── Motion ── */
-  --dur-fast: .15s; --dur-base: .2s; --dur-slow: .3s;
+  --dur-fast: .15s; --dur-base: .2s; --dur-slow: .3s; --dur-xslow: .5s;
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
 
   /* ── Elevation ── four levels, same light source: offset and blur double as
      a surface lifts. Pick by ROLE, never by eye:
@@ -107,12 +111,20 @@
   --shadow-2: 0 2px 12px rgba(0,0,0,.18);
   --shadow-3: 0 4px 16px rgba(0,0,0,.25);
   --shadow-4: 0 8px 32px rgba(0,0,0,.4);
+  /* effects rather than elevation */
+  --glow-success: 0 0 6px var(--success);                                       /* the server-status dot */
+  --shadow-ring-tag: 0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent);  /* ranking game: hover */
+  --shadow-ring-win: 0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent);    /* ranking game: winner */
+  --shadow-mask: 0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent);      /* dims all but the crop box */
+  --shadow-toast: 0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--badge-tier) 6%, transparent);
   /* Dimmed backdrop behind sheets, viewers and popovers. */
   --scrim: rgba(0,0,0,.55);
 
   /* ── Layers ── one name per stacking layer, lowest first. A new fixed or
      absolute surface picks one of these; it does not invent a number. */
   --z-fab: 90;
+  /* stacking inside one component: a badge over a photo, a menu over its card */
+  --z-raised: 1; --z-raised-2: 2; --z-raised-3: 3; --z-dropdown: 10; --z-card-menu: 20;
   --z-header: 100;
   --z-float: 200;
   --z-modal: 200;
@@ -230,6 +242,7 @@
    screen and mask the measured value for everything inside it. */
 :root {
   --header-h: 60px;
+  --nav-h: 64px;              /* the phone tab bar; fixed bars and bottom clearances sit on top of it */
 }
 
 /* ── Component tokens: promo cards ──
