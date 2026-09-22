@@ -1,6 +1,6 @@
 {
   "index.html": {
-    "color": 127,
+    "color": 103,
     "font-size": 26,
     "font-weight": 1,
     "font-family": 9,
@@ -13,7 +13,7 @@
     "box-shadow": 3,
     "transition": 2,
     "z-index": 0,
-    "js-style-assign": 8,
+    "js-style-assign": 6,
     "inline-style-attr": 1342
   },
   "p/index.html": {

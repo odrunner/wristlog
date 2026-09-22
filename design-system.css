@@ -116,6 +116,7 @@
   --shadow-ring-tag: 0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent);  /* ranking game: hover */
   --shadow-ring-win: 0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent);    /* ranking game: winner */
   --shadow-mask: 0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent);      /* dims all but the crop box */
+  --shadow-drag: 0 8px 32px var(--scrim);                                              /* a card being dragged */
   --shadow-toast: 0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--badge-tier) 6%, transparent);
   /* Dimmed backdrop behind sheets, viewers and popovers. */
   --scrim: rgba(0,0,0,.55);
@@ -158,10 +159,14 @@
   --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
   --demo-gold: #c9a84c; --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
+  --demo-paper: #f5f5f8; --demo-cta: #4f46e5;   /* light ink on the demo bar's dark button; the demo sign-up button */
   --status-good: #22c55e;
   --status-warn: #eab308;
   --status-bad: #ef4444;
   --status-expiring: #ef7942;    /* warranty running out; not worn for a while */
+  --streak-frozen-bg: #cfe8f5; --streak-frozen-ink: #0c4a6e;   /* a streak day covered by a freeze (ice) */
+  --chip-warn-bg: #fde68a; --chip-warn-ink: #7c2d12;           /* a warning chip (AI add-a-watch) */
+  --media-placeholder: #2a2a2a;                                 /* a video thumbnail before it loads */
   --verified: #4ea4f6;           /* the official-account tick */
   /* visibility-state semantic colors (one hue per state, all surfaces) */
   --vis-friends: #a78bfa;
@@ -173,6 +178,7 @@
   --tg-bg: #0a1a12;
   --tg-rate-line: #facc15;                          /* the live-rate dashed line on the scatter */
   --tg-card-bg: #060f0a; --tg-card-ink: #e8efd9;   /* the measurement share-card image */
+  --tg-error-bg: rgba(127,29,29,.3);                /* the Listen button after a failed start */
 
   /* ── Badges / achievements ── warm theme; dark variants below. */
   --badge-text: #3D2A14;

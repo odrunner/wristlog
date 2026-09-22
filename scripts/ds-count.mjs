@@ -87,7 +87,7 @@ export function isTokenised(v) {
 export function countHardcoded(src) {
   const text = withoutDeclarations(withoutEmailRanges(src));
   const out = {};
-  out['color'] = (text.match(HEX) || []).length + (text.match(RGB) || []).filter(v => !v.includes('var(')).length;
+  out['color'] = (text.match(HEX) || []).length + (text.match(RGB) || []).filter(v => !v.includes('var(') && !v.includes('${')).length;   // ${…}: built from data
   for (const [name, rx] of Object.entries(PROPS)) {
     let n = 0;
     for (const m of text.matchAll(rx)) {
