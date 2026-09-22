@@ -97,6 +97,7 @@ export const SHARED_LIGHT = {
   '--lh-tight': '1.2',
   '--lh-snug': '1.4',
   '--lh-compact': '1.3',
+  '--bp-xs': '375px', '--bp-sm': '420px', '--bp-md': '640px', '--bp-lg': '760px', '--bp-xl': '1060px',
   '--opacity-ghost': '.1',
   '--opacity-faint': '.3',
   '--opacity-dim': '.5',
@@ -376,6 +377,17 @@ const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 // --bg2, --bg-secondary and --tertiary were referenced for months with only a
 // fixed-colour fallback (a near-white skeleton bar in dark mode). Replaced with
 // real tokens 2026-09-20; nothing is exempt any more.
+
+// Media queries cannot read var(), so the breakpoint tokens are enforced here: every width any page uses in an
+// @media must be a named breakpoint (or md + 1, the first tablet pixel, for min-width).
+describe('breakpoints', () => {
+  const bp = ['--bp-xs', '--bp-sm', '--bp-md', '--bp-lg', '--bp-xl'].map(n => parseInt(blockFor(css, ':root, [data-theme="light"]').match(new RegExp(n + ':\\s*(\\d+)px'))[1]));
+  const allowed = new Set([...bp, bp[2] + 1]);
+  it.each(['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'privacy.html', 'terms.html', 'open.html', 'design-system.css', 'model-page.js'])('%s uses only named breakpoints', f => {
+    const widths = [...readFileSync(join(root, f), 'utf8').matchAll(/@media[^{]*?(?:min|max)-width:\s*(\d+)px/g)].map(m => +m[1]);
+    expect(widths.filter(w => !allowed.has(w))).toEqual([]);
+  });
+});
 
 describe('index.html', () => {
   // A watch with no photo shows an initials square. Its colour is the design-system placeholder, never the

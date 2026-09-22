@@ -80,6 +80,10 @@
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
   --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0;
   --apple-bg: var(--black); --apple-ink: var(--white);
+  /* Breakpoints. A media query cannot read a CSS variable, so these are the ONLY widths any @media may use
+     (tests/design-system-tokens.test.js enforces it). The variables are here to name them and for JS.
+       xs ≤375 tiny phones · sm ≤420 phones · md ≤640 / ≥641 phone vs tablet+ · lg ≤760 · xl ≤1060 */
+  --bp-xs: 375px; --bp-sm: 420px; --bp-md: 640px; --bp-lg: 760px; --bp-xl: 1060px;
   /* Opacity scale, by what the fading means. */
   --opacity-ghost: .1;   /* a watermark */
   --opacity-faint: .3;   /* disabled, not yet, empty */

@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=8bd966a6">
+  <link rel="stylesheet" href="/design-system.css?v=4b051981">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -326,7 +326,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .landing-feat-tag::before { content:''; display:block; width:10px; height:1px; background:var(--gold); }
     .landing-feat-title { font-size:var(--fs-xl); font-weight:var(--fw-semibold); line-height:var(--lh-tight); margin-bottom:var(--space-0-5); }
     .landing-feat-body { font-size:var(--fs-base); color:var(--muted); line-height:var(--lh-body); }
-    @media(min-width:600px) {
+    @media (min-width: 641px) {
       .landing-features { flex-direction:row; gap:0; }
       .landing-feature { display:block; flex:1; padding:var(--space-5) var(--space-4); border-bottom:none; border-right:1px solid var(--border); }
       .landing-feature:last-child { border-right:none; }
@@ -1571,7 +1571,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .track-grid    { grid-template-columns: 1fr; }
       .charts-2col   { grid-template-columns: 1fr; }
     }
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
       .watches-grid  { grid-template-columns: 1fr; }
     }
 
@@ -8256,7 +8256,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.07.00';
+const APP_VERSION = '22.07.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
