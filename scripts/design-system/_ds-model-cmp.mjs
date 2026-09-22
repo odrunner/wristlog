@@ -81,7 +81,7 @@ async function view(side, where, theme) {
     }), PROPS)).map(norm);
     // pictures only (after the dump): hide what floats over the page — achievement toasts, the app's bottom nav,
     // and the sticky action bar, which a full-page capture paints mid-page
-    const hide = await page.addStyleTag({ content: '.toast,.badge-toast,nav{display:none!important} .mp-actions{position:static!important}' });
+    const hide = await page.addStyleTag({ content: '.toast,.badge-toast,nav{display:none!important} .mp-actions,#model-page-content>div[style*="position:sticky"]{position:static!important}' });
     const shot = where === 'app' ? page.locator('#page-model') : page;
     await shot.screenshot({ path: `${OUT}/model-${where}-${tab}-${theme}-${side === 'old' ? 'before' : 'after'}.png`, ...(where === 'app' ? {} : { fullPage: true }) });
     await hide.evaluate(el => el.remove());
