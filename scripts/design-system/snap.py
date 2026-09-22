@@ -101,9 +101,11 @@ def process(line):
     return line
 
 from scope import SCOPES
-scope = sys.argv[1]
-lines = open(ROOT + 'index.html', encoding='utf-8').read().split('\n')
-idx = SCOPES[scope](lines)
+# snap.py --file p/index.html [--apply]   whole file is the scope (the small pages have no screens)
+FILE = sys.argv[sys.argv.index('--file') + 1] if '--file' in sys.argv else 'index.html'
+scope = 'file:' + FILE if FILE != 'index.html' else sys.argv[1]
+lines = open(ROOT + FILE, encoding='utf-8').read().split('\n')
+idx = set(range(len(lines))) if FILE != 'index.html' else SCOPES[scope](lines)
 changed = 0
 for i in sorted(idx):
     n = process(lines[i])
@@ -112,4 +114,4 @@ print('scope %s: %d lines in scope, %d changed, %d values moved' % (scope, len(i
 print('\nMOVED'); [print('%4d  %s' % (n, k)) for k, n in sorted(moves.items(), key=lambda kv: (kv[0].split(':')[0], -kv[1]))]
 print('\nLEFT ALONE (too far from any step, or deliberate)'); [print('%4d  %s' % (n, k)) for k, n in sorted(left.items())]
 if APPLY:
-    open(ROOT + 'index.html', 'w', encoding='utf-8').write('\n'.join(lines)); print('\napplied')
+    open(ROOT + FILE, 'w', encoding='utf-8').write('\n'.join(lines)); print('\napplied')
