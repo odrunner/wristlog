@@ -87,6 +87,9 @@
   --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem; --fs-md: .88rem;
   --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fs-icon: 1.75rem; --fs-aside: .85em; --fs-aside-sm: .75em;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
+  --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0; --google-hover: #f8f8f8;
+  --apple-bg: var(--black); --apple-ink: var(--white); --apple-hover: #1a1a1a;
   --opacity-dim: .5;                      /* a control greyed out for a moment while it works */
   /* --lh-none is for icons, numerals and single-line badges, never running text. */
   --lh-none: 1; --lh-tight: 1.2; --lh-compact: 1.3; --lh-snug: 1.4; --lh-body: 1.55; --lh-prose: 1.7;
@@ -117,6 +120,7 @@
   --shadow-ring-tag: 0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent);  /* ranking game: hover */
   --shadow-ring-win: 0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent);    /* ranking game: winner */
   --shadow-mask: 0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent);      /* dims all but the crop box */
+  --shadow-btn-hover: 0 1px 6px color-mix(in srgb, var(--black) 20%, transparent);
   --shadow-lift: 0 4px 16px color-mix(in srgb, var(--black) 10%, transparent);
   --shadow-drag: 0 8px 32px var(--scrim);                                              /* a card being dragged */
   --shadow-toast: 0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--badge-tier) 6%, transparent);
