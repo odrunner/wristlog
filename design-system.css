@@ -129,6 +129,11 @@
   /* ── Status ── the timegrapher's rate / amplitude traffic light. Distinct from
      --success / --warn / --danger today only because they were typed by hand;
      kept at their current values so declaring them changes nothing on screen. */
+  /* Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on
+     purpose — these sit on surfaces that do not follow the theme. */
+  --white: #fff;
+  --black: #000;
+  --tag-type: #818cf8;         /* the watch-type tag (indigo) */
   --status-good: #22c55e;
   --status-warn: #eab308;
   --status-bad: #ef4444;
