@@ -197,6 +197,7 @@ export const SHARED_LIGHT = {
   '--watch-default': 'var(--watch-gold)',
   '--uc-unspecified': '#7a7a95',
   '--uc-other': '#888',
+  '--chart-grid': 'rgba(128,128,128,.15)', '--chart-tick': '#7a8095', '--chart-series-2': 'var(--watch-indigo)',
   // Aliases of the tokens above. Declared 2026-08-08 after index.html was found
   // referencing them without ever declaring them. The indirection is deliberate:
   // it carries the dark values without a second declaration.

@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=00bc9618">
+  <link rel="stylesheet" href="/design-system.css?v=331f08dd">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -6304,6 +6304,10 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 // loaded. Defined first: code below may call rowToWatch() during boot.
 const _dsRoot = getComputedStyle(document.documentElement);   // live: reads follow the current theme
 function dsToken(name) { return _dsRoot.getPropertyValue(name).trim(); }
+// A length token as a pixel number, for APIs that take numbers (Chart.js). rem follows the root font size.
+function dsPx(name) { const v = dsToken(name); return parseFloat(v) * (v.endsWith('rem') ? parseFloat(_dsRoot.fontSize) : 1); }
+// Chart.js draws on canvas, so it never sees the page's font: give it the system's, once per chart.
+function dsChartDefaults() { if (!window.Chart) return; Chart.defaults.font.family = dsToken('--font-sans'); Chart.defaults.font.size = dsPx('--fs-sm'); }
 const DEFAULT_WATCH_COLOR = dsToken('--watch-default');
 // ── Boot timing ──────────────────────────────────────────────────────────────
 // Stamps the moments that make up a first load (see bootTimingPayload) and
@@ -8236,7 +8240,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.56';
+const APP_VERSION = '22.05.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26375,12 +26379,13 @@ function renderChUsecase(fl) {
   }
 
   // Donut chart (no built-in legend — legend is rendered manually below)
+  dsChartDefaults();
   chUsecase = new Chart(document.getElementById('ch-usecase'), {
     type: 'doughnut',
     data: {
       labels: keys.map(k => k[0].toUpperCase() + k.slice(1)),
       datasets: [{ data: keys.map(k => um[k]), backgroundColor: keys.map(k => UC_COL[k] || dsToken('--uc-other')),
-                   borderWidth: 2, borderColor: '#141419' }]
+                   borderWidth: 2, borderColor: dsToken('--surface') }]   // slices separated by the card's own colour
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
@@ -26480,8 +26485,8 @@ function renderChCollectionValue() {
   // Theme-aware gold (matches light/dark) + subtle fill; grid/ticks readable on both themes.
   const gold = dsToken('--gold');
   const goldFill = gold + '26';                  // --gold is a 6-digit hex in both themes; + alpha 15%
-  const gridC = 'rgba(128,128,128,.15)';
-  const tickC = '#7a8095';
+  const gridC = dsToken('--chart-grid');
+  const tickC = dsToken('--chart-tick');
 
   const datasets = [{
     label: 'Cost',
@@ -26500,7 +26505,7 @@ function renderChCollectionValue() {
     datasets.push({
       label: 'Market Value',
       data: mvPts,
-      borderColor: '#818cf8',
+      borderColor: dsToken('--chart-series-2'),
       borderWidth: 2,
       borderDash: [5, 4],
       pointRadius: 0,               // no dots on the market-value line
@@ -26511,6 +26516,7 @@ function renderChCollectionValue() {
   }
 
   const firstMs = costPts[0].x;
+  dsChartDefaults();
   chCollValue = new Chart(document.getElementById('ch-collvalue'), {
     type: 'line',
     data: { datasets },
@@ -26518,7 +26524,7 @@ function renderChCollectionValue() {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: hasMV, labels: { color: tickC, boxWidth: 12, padding: 10, font: { size: 11 } } },
+        legend: { display: hasMV, labels: { color: tickC, boxWidth: dsPx('--space-3'), padding: dsPx('--space-2-5'), font: { size: dsPx('--fs-xs') } } },
         tooltip: {
           callbacks: {
             title: items => items.length ? new Date(items[0].parsed.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
