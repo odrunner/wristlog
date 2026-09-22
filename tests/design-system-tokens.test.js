@@ -155,6 +155,7 @@ export const SHARED_LIGHT = {
   '--status-warn': '#eab308',
   '--status-bad': '#ef4444',
   '--status-expiring': '#ef7942', '--verified': '#4ea4f6',
+  '--danger-fill': '#b91c1c',
   '--streak-frozen-bg': '#cfe8f5', '--streak-frozen-ink': '#0c4a6e', '--chip-warn-bg': '#fde68a', '--chip-warn-ink': '#7c2d12', '--media-placeholder': '#2a2a2a',
   '--tg-ink': '#4ade80',
   '--tg-bg': '#0a1a12',

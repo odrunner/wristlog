@@ -164,6 +164,7 @@
   --status-warn: #eab308;
   --status-bad: #ef4444;
   --status-expiring: #ef7942;    /* warranty running out; not worn for a while */
+  --danger-fill: #b91c1c;         /* a solid destructive button (white text), the same in both themes */
   --streak-frozen-bg: #cfe8f5; --streak-frozen-ink: #0c4a6e;   /* a streak day covered by a freeze (ice) */
   --chip-warn-bg: #fde68a; --chip-warn-ink: #7c2d12;           /* a warning chip (AI add-a-watch) */
   --media-placeholder: #2a2a2a;                                 /* a video thumbnail before it loads */

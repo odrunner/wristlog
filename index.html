@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=6e8a3e78">
+  <link rel="stylesheet" href="/design-system.css?v=1bdf538c">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -517,7 +517,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-post-vis { position:absolute; top:4px; right:4px; font-size:var(--fs-3xs); font-weight:var(--fw-bold); padding:var(--space-0-5) var(--space-1-5); border-radius:var(--radius-sm); letter-spacing:var(--ls-tight); line-height:var(--lh-snug); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px color-mix(in srgb, var(--black) 50%, transparent); }
     .profile-post-vis.public { background:color-mix(in srgb, var(--tg-ink) 35%, transparent); color:var(--white); }
     .profile-post-vis.followers { background:color-mix(in srgb, var(--gold) 40%, transparent); color:var(--white); }
-    .profile-post-vis.friends { background:rgba(167,123,250,.4); color:var(--white); }
+    .profile-post-vis.friends { background:color-mix(in srgb, var(--vis-friends) 40%, transparent); color:var(--white); }
     .profile-post-vis.private { background:color-mix(in srgb, var(--danger) 40%, transparent); color:var(--white); }
     .showcase-priv-label.pub  { color:var(--success-text); }
     .showcase-priv-label.fri  { color:var(--gold-text); }
@@ -1175,7 +1175,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       opacity: .75;
     }
     .ins-indicator.insured   { color: var(--success); }
-    .ins-indicator.uninsured { color: #d4874e; }
+    .ins-indicator.uninsured { color: var(--status-expiring); }
 
     /* ── RECEIPTS ── */
     .receipt-list { display: flex; flex-direction: column; gap: var(--space-2-5); max-height: 360px; overflow-y: auto; }
@@ -1207,7 +1207,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       letter-spacing: var(--ls-tight); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border);
       position: sticky; top: 0; background: var(--surface); z-index: var(--z-raised);
     }
-    td { padding: var(--space-2-5) var(--space-3); border-bottom: 1px solid rgba(39,39,52,.6); }
+    td { padding: var(--space-2-5) var(--space-3); border-bottom: 1px solid var(--border); }
     tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: var(--surface2); }
 
@@ -1236,7 +1236,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
     }
     .chart-range-btn:hover { color: var(--text); border-color: var(--gold); }
-    .chart-range-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
+    .chart-range-btn.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
 
     /* Toast */
     .toast {
@@ -1417,7 +1417,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── COMPACT COLLECTION LIST VIEW ── */
     .coll-list { width:100%; border-collapse:collapse; font-size:var(--fs-base); }
     .coll-list th { text-align:left; color:var(--muted); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:var(--ls-tight); padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--border); white-space:nowrap; }
-    .coll-list td { padding:var(--space-2) var(--space-3); border-bottom:1px solid rgba(39,39,52,.6); vertical-align:middle; }
+    .coll-list td { padding:var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); vertical-align:middle; }
     .coll-list tbody tr:last-child td { border-bottom:none; }
     .coll-list tbody tr:hover td { background:var(--surface2); }
     .view-toggle { display:flex; gap:var(--space-1-5); }
@@ -1452,7 +1452,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-dow { text-align:center; font-size:var(--fs-2xs); font-weight:var(--fw-bold); text-transform:uppercase; color:var(--muted); padding-bottom:var(--space-1); }
     .streak-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:var(--fs-base); border-radius:var(--radius-btn); background:var(--surface2); color:var(--text); }
     .streak-cal-blank { background:transparent; }
-    .streak-cal-cell.logged { background:var(--gold); color:#1a1205; font-weight:var(--fw-bold); }
+    .streak-cal-cell.logged { background:var(--gold); color:var(--on-gold); font-weight:var(--fw-bold); }
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:.35; }
     .streak-cal-cell.frozen { background:var(--streak-frozen-bg); color:var(--streak-frozen-ink); font-weight:var(--fw-bold); }
@@ -1491,8 +1491,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-name { font-size:var(--fs-md); font-weight:var(--fw-semibold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pi-card-brand { font-size:var(--fs-sm); color:var(--muted); }
     .pi-card-conf { font-size:var(--fs-xs); font-weight:var(--fw-semibold); padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-sm); text-transform:capitalize; }
-    .pi-card-conf.high { background:rgba(52,211,153,.12); color:#34d399; }
-    .pi-card-conf.medium { background:rgba(251,191,36,.12); color:#fbbf24; }
+    .pi-card-conf.high { background:color-mix(in srgb, var(--status-good) 12%, transparent); color:var(--success-text); }
+    .pi-card-conf.medium { background:color-mix(in srgb, var(--status-warn) 12%, transparent); color:var(--warn); }
     .pi-card-conf.low { background:color-mix(in srgb, var(--status-bad) 12%, transparent); color:var(--danger-text); }
     .pi-card-actions { display:flex; gap:var(--space-1-5); flex-shrink:0; }
     .funfact-card{display:flex;gap:var(--space-2);align-items:flex-start;background:var(--badge-bg);border:.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2) var(--space-2-5);font-size:var(--fs-base);line-height:var(--lh-snug);color:var(--text);}
@@ -1551,7 +1551,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-dot-gray { width:6px; height:6px; border-radius:var(--radius-round); background:var(--muted); opacity:.5; }
 
     /* ── AI PRE-FILL BANNER ── */
-    .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:#1a1a2e; padding:var(--space-2) var(--space-3); border-radius:var(--radius-btn); margin-bottom:var(--space-3); font-size:var(--fs-base); line-height:var(--lh-snug); }
+    .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:var(--on-gold); padding:var(--space-2) var(--space-3); border-radius:var(--radius-btn); margin-bottom:var(--space-3); font-size:var(--fs-base); line-height:var(--lh-snug); }
     .ai-prefill-banner.hidden { display:none; }
 
     /* ── SNAP TO TRACK ── */
@@ -1560,7 +1560,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .snap-btn:disabled { opacity:.5; pointer-events:none; }
     .snap-match-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); margin-bottom:var(--space-2); display:flex; gap:var(--space-3); align-items:center; cursor:pointer; transition:border-color var(--dur-base); }
     .snap-match-card:hover { border-color:var(--gold); }
-    .watch-suggestion { margin-top:var(--space-2-5); padding:var(--space-2-5) var(--space-3); background:rgba(184,148,31,.08); border:1px solid rgba(184,148,31,.25); border-radius:var(--radius); display:flex; align-items:center; gap:var(--space-2-5); font-size:var(--fs-base); animation:fadeIn .3s; }
+    .watch-suggestion { margin-top:var(--space-2-5); padding:var(--space-2-5) var(--space-3); background:color-mix(in srgb, var(--gold) 8%, transparent); border:1px solid color-mix(in srgb, var(--gold) 25%, transparent); border-radius:var(--radius); display:flex; align-items:center; gap:var(--space-2-5); font-size:var(--fs-base); animation:fadeIn .3s; }
     .watch-suggestion button { font-size:var(--fs-sm); font-weight:var(--fw-semibold); padding:var(--space-1) var(--space-2-5); border-radius:var(--radius-sm); border:none; cursor:pointer; }
     .watch-suggestion .sug-yes { background:var(--gold); color:var(--black); }
     .watch-suggestion .sug-no { background:transparent; color:var(--muted); }
@@ -2334,7 +2334,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .vis-badge { display:inline-flex; align-items:center; gap:var(--space-1); font-size:var(--fs-xs);
       padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-pill); font-weight:var(--fw-semibold); margin: 0 var(--space-4) var(--space-2-5); }
     .vis-badge.followers { background:color-mix(in srgb, var(--gold) 15%, transparent); color:var(--gold-text); }
-    .vis-badge.friends { background:rgba(167,123,250,.15); color:var(--vis-friends); }
+    .vis-badge.friends { background:color-mix(in srgb, var(--vis-friends) 15%, transparent); color:var(--vis-friends); }
     .vis-badge.private { background:color-mix(in srgb, var(--danger) 12%, transparent); color:var(--danger-text); }
     /* Overlay variant — sits top-right inside the post photo so own posts keep
        the same card height as everyone else's */
@@ -2656,7 +2656,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-time { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-0-5); }
 
     /* ── WELCOME ONBOARDING ─────────────────────── */
-    #welcome-modal { background:rgba(245,245,248,.97); backdrop-filter:none; }
+    #welcome-modal { background:color-mix(in srgb, var(--bg) 97%, transparent); backdrop-filter:none; }
     .welcome-step.hidden { display:none; }
     .welcome-dot { width:7px; height:7px; border-radius:var(--radius-round); background:var(--border); transition:background var(--dur-base); }
     .welcome-dot.active { background:var(--gold); }
@@ -2724,7 +2724,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to content</a>
-<noscript><div style="padding:var(--space-12) var(--space-6);text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
+<noscript><div style="padding:var(--space-12) var(--space-6);text-align:center;font-family:system-ui,sans-serif;color:var(--muted);"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen" data-theme="light">
@@ -4724,11 +4724,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="quick">Quick (default)</option>
         <option value="accurate">Longer measurement (lower error bar, waits longer)</option>
       </select>
-          <input id="msr-tdm-input" type="number" step="0.01" min="0" placeholder="tickDetectMult (blank = default 0.3)" oninput="onTdmChange()" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);">
-      <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);">
-      <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:var(--fs-sm);cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
-          <button id="mic-sweep-btn" onclick="runMicSweep()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--vis-friends) 50%, transparent);background:#150a20;color:#c4b5fd;font-size:var(--fs-sm);cursor:pointer;">Mic Sweep (native knob · unattended)</button>
-          <button id="deep-test-btn" onclick="runDeepTest()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid rgba(52,211,153,.6);background:#06231a;color:#6ee7b7;font-size:var(--fs-sm);font-weight:var(--fw-semibold);cursor:pointer;">Deep Test (3–6 runs · median ± STD)</button>
+          <input id="msr-tdm-input" type="number" step="0.01" min="0" placeholder="tickDetectMult (blank = default 0.3)" oninput="onTdmChange()" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--verified) 40%, transparent);background:color-mix(in srgb, var(--verified) 10%, var(--black));color:var(--verified);font-size:var(--fs-sm);">
+      <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:var(--space-1-5);padding:var(--space-1-5);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--verified) 40%, transparent);background:color-mix(in srgb, var(--verified) 10%, var(--black));color:var(--verified);font-size:var(--fs-sm);">
+      <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--verified) 40%, transparent);background:color-mix(in srgb, var(--verified) 10%, var(--black));color:var(--verified);font-size:var(--fs-sm);cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
+          <button id="mic-sweep-btn" onclick="runMicSweep()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--vis-friends) 50%, transparent);background:color-mix(in srgb, var(--vis-friends) 10%, var(--black));color:var(--vis-friends);font-size:var(--fs-sm);cursor:pointer;">Mic Sweep (native knob · unattended)</button>
+          <button id="deep-test-btn" onclick="runDeepTest()" style="display:none;width:100%;margin-bottom:var(--space-3);padding:var(--space-2);border-radius:var(--radius-btn);border:1px solid color-mix(in srgb, var(--tg-ink) 60%, transparent);background:color-mix(in srgb, var(--tg-ink) 10%, var(--black));color:var(--tg-ink);font-size:var(--fs-sm);font-weight:var(--fw-semibold);cursor:pointer;">Deep Test (3–6 runs · median ± STD)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:var(--tg-bg);border-radius:var(--radius);overflow:hidden;margin-bottom:var(--space-3);">
         <!-- Chart with HUD overlay -->
@@ -5989,7 +5989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
-      <button id="da-final-btn" class="btn btn-block" style="margin-bottom:var(--space-2-5);background:#b91c1c;color:var(--white);border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button id="da-final-btn" class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger-fill);color:var(--white);border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
@@ -6131,7 +6131,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Onboarding nudge: shown only when the compose was auto-opened for a first-ever wear-log -->
-    <div id="tl-onboarding-line" style="display:none;margin:var(--space-0-5) 0 var(--space-2-5);padding:var(--space-2) var(--space-3);background:rgba(201,168,76,.14);border:1px solid rgba(201,168,76,.35);border-radius:var(--radius);font-size:var(--fs-base);color:var(--text);text-align:center;">Last step — log your wear and post it 👋</div>
+    <div id="tl-onboarding-line" style="display:none;margin:var(--space-0-5) 0 var(--space-2-5);padding:var(--space-2) var(--space-3);background:color-mix(in srgb, var(--gold-lt) 14%, transparent);border:1px solid color-mix(in srgb, var(--gold-lt) 35%, transparent);border-radius:var(--radius);font-size:var(--fs-base);color:var(--text);text-align:center;">Last step — log your wear and post it 👋</div>
 
     <!-- Date + worn notice -->
     <div class="tl-field">
@@ -8253,7 +8253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.47';
+const APP_VERSION = '22.05.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16697,7 +16697,7 @@ function renderNpWatchDisplay() {
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
-    el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
+    el.innerHTML = `<div class="watch-suggestion" style="background:color-mix(in srgb, var(--success) 8%, transparent);border-color:color-mix(in srgb, var(--success) 25%, transparent);">
       ${thumb}
       <div style="flex:1;min-width:0;font-size:var(--fs-base);"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
       <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:var(--fs-xs);">Change</button>
@@ -19168,7 +19168,7 @@ function renderDevFlags() {
       <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
         <input type="checkbox" ${on ? 'checked' : ''} data-flag="${escAttr(key)}" onchange="setFeatureFlag(this.dataset.flag,this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
         <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:var(--radius);transition:background var(--dur-base);"></span>
-        <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:var(--radius-round);transition:left var(--dur-base);box-shadow:var(--shadow-1);"></span>
+        <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:var(--white);border-radius:var(--radius-round);transition:left var(--dur-base);box-shadow:var(--shadow-1);"></span>
       </label>
     </div>`;
   }).join('');
@@ -19349,7 +19349,7 @@ function fmtExperimentMetric(ev, arm) {
 }
 
 let _adminExps = [];
-const EXP_STATUS_COLOR = { running: 'var(--gold)', won: '#2e9e5b', killed: '#c0392b', archived: 'var(--muted)', draft: 'var(--muted)' };
+const EXP_STATUS_COLOR = { running: 'var(--gold)', won: 'var(--success-text)', killed: 'var(--danger-text)', archived: 'var(--muted)', draft: 'var(--muted)' };
 async function loadAdminExperiments() {
   const el = document.getElementById('admin-experiments-list');
   if (!el) return;
@@ -20147,7 +20147,7 @@ async function openAdminUserDetail(userId) {
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const isNewWatch = w => w.created_at && new Date(w.created_at).getTime() >= dayAgo;
     const watchListHtml = watches.length > 0
-      ? `<div style="margin-top:var(--space-2);">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? '#16a34a' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:var(--space-0-5) 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
+      ? `<div style="margin-top:var(--space-2);">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? 'var(--status-good)' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:var(--space-0-5) 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
       : '<div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-1) 0;">No watches</div>';
 
     document.getElementById('admin-user-modal-title').textContent = name;
@@ -20906,7 +20906,7 @@ async function loadExploreModels(reset) {
     <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
-        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:var(--watch-default);color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:var(--watch-default);color:var(--on-gold);">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
         <div class="grow-clip">
           <div class="watch-card-name">${escHtml(m.name)}</div>
           <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
@@ -25236,7 +25236,7 @@ function valueGainHTML(paid, market) {
   const diff = market - paid;
   const pct = Math.round((diff / paid) * 100);
   const sign = diff >= 0 ? '+' : '−';
-  const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
+  const color = diff >= 0 ? 'var(--success)' : 'var(--danger-text)';
   return `<div style="margin-top:var(--space-1-5);"><div class="caption-xs">Gain vs paid</div><div style="font-size:var(--fs-base);font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
 }
 function renderValueSection() {
@@ -25257,7 +25257,7 @@ function renderValueSection() {
       sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span style="color:var(--badge-accent);font-weight:var(--fw-medium);">· new price ${fmtMoney(pending)}</span>` : `<span style="color:var(--badge-accent);font-weight:var(--fw-medium);">new price ${fmtMoney(pending)}</span>`;
     } else if (savedPrice && paid) {
       const diff = savedPrice - paid;
-      const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
+      const color = diff >= 0 ? 'var(--success)' : 'var(--danger-text)';
       const sign = diff >= 0 ? '+' : '−';
       sum.innerHTML = `${fmtMoney(savedPrice)} · <span style="color:${color};">${sign}${fmtMoney(Math.abs(diff))} (${sign}${Math.abs(Math.round((diff/paid)*100))}%)</span>`;
     } else if (savedPrice) {
@@ -25302,7 +25302,7 @@ function renderValueSection() {
       </div>`;
     } else {
       // State B — different price
-      const deltaColor = delta >= 0 ? 'var(--success)' : '#A32D2D';
+      const deltaColor = delta >= 0 ? 'var(--success)' : 'var(--danger-text)';
       html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);margin-top:var(--space-2-5);">
         <div class="row-between">
           <div style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--badge-deep);">New Market Price</div>
@@ -26321,7 +26321,7 @@ function renderStatsRow(fl) {
   const hasMarket = marketVal > 0 && pricePaid > 0;
   const pctDelta = hasMarket ? ((marketVal - pricePaid) / pricePaid * 100) : 0;
   const pctSign = pctDelta >= 0 ? '+' : '';
-  const pctColor = pctDelta >= 0 ? '#2a9d5c' : '#d64040';
+  const pctColor = pctDelta >= 0 ? 'var(--success-text)' : 'var(--danger-text)';
 
   let valHtml = '';
   if (pricePaid) {
@@ -27716,7 +27716,7 @@ function viewReceipt(watchId, receiptId) {
   } else {
     const img = win.document.createElement('img');
     img.src = r.data; img.style.cssText = 'max-width:100%;max-height:100vh;object-fit:contain';
-    Object.assign(win.document.body.style, { margin: '0', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' });
+    Object.assign(win.document.body.style, { margin: '0', background: dsColor('--black'), display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' });
     win.document.body.appendChild(img);
   }
 }
@@ -28936,7 +28936,7 @@ async function saveValueResult(idx) {
     r._saved = true;
     markDirty('watches', w.id);
     save();
-    if (saveBtn) { saveBtn.textContent = 'Saved ✓'; saveBtn.style.color = '#2a9d5c'; }
+    if (saveBtn) { saveBtn.textContent = 'Saved ✓'; saveBtn.style.color = 'var(--success-text)'; }
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
     const allValDone = _valueCheckResults.every(vr => !vr._value || vr._saved);
     if (allValDone) setTimeout(() => closeValueCheck(), 600);
@@ -32457,7 +32457,7 @@ function _deepRender(text, color) {
   if (!host) return;
   let el = document.getElementById('deep-test-readout');
   if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:monospace;font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);'; host.insertAdjacentElement('afterend', el); }
-  el.textContent = text; el.style.color = color || '#6ee7b7';
+  el.textContent = text; el.style.color = color || 'var(--tg-ink)';
 }
 async function runDeepTest() {
   const btn = document.getElementById('deep-test-btn');
@@ -32484,7 +32484,7 @@ async function runDeepTest() {
     for (let run = 0; run < maxRuns && _deepTestActive; run++) {
       if (_msrListening) { stopMsrListen('deep_reset'); await sleep(RESET); }
       if (!_deepTestActive) break;
-      _deepRender(`Run ${run + 1}/${maxRuns} measuring… (${pooledRates.length} clean chunks so far)`, '#9aa');
+      _deepRender(`Run ${run + 1}/${maxRuns} measuring… (${pooledRates.length} clean chunks so far)`, 'var(--muted)');
       toggleMsrListen();
       await sleep(runMs);
       if (_msrListening) stopMsrListen('deep');
@@ -32499,7 +32499,7 @@ async function runDeepTest() {
       if (typeof _msrLastBe !== 'undefined' && _msrLastBe != null) runBeats.push(_msrLastBe);
       const agg = medianStd(pooledRates);
       const so = agg.median != null ? `${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std}` : '—';
-      _deepRender(`Run ${run + 1}/${maxRuns} · ${pooledRates.length} chunks · ${so} s/day`, '#9aa');
+      _deepRender(`Run ${run + 1}/${maxRuns} · ${pooledRates.length} chunks · ${so} s/day`, 'var(--muted)');
       const earlyStd = _q2Num('dt_early_std', 0);
       if (earlyStd > 0 && run + 1 >= minRuns && agg.n >= 6 && agg.std != null && agg.std <= earlyStd) break;
       await sleep(GAP);
@@ -32510,9 +32510,9 @@ async function runDeepTest() {
   }
   const agg = medianStd(pooledRates);
   const beMed = medianStd(runBeats).median;
-  if (agg.median == null) { _deepRender('Deep Test: no clean chunks — try repositioning', '#fbbf24'); toast('Deep Test: no clean data'); return; }
+  if (agg.median == null) { _deepRender('Deep Test: no clean chunks — try repositioning', 'var(--status-warn)'); toast('Deep Test: no clean data'); return; }
   const good = agg.std != null && agg.std <= 2 && agg.n >= 4;
-  _deepRender(`Deep Test: ${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std} s/day · ${agg.n} chunks` + (beMed != null ? ` · BE ${beMed}ms` : ''), good ? '#34d399' : '#fbbf24');
+  _deepRender(`Deep Test: ${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std} s/day · ${agg.n} chunks` + (beMed != null ? ` · BE ${beMed}ms` : ''), good ? 'var(--status-good)' : 'var(--status-warn)');
   if (currentUser) {
     measureInsert('timegrapher_results', {
       user_id: currentUser.id, watch_id: watchId, rate: agg.median, rate_std: agg.std,
@@ -32769,7 +32769,7 @@ async function toggleTgListen() {
         lbl.textContent = 'Confidence: ' + (acConf * 100).toFixed(0) + '%';
       } else {
         lbl.textContent = envN < envCap * 0.3 ? 'Accumulating...' : 'Analyzing...';
-        bar.style.background = '#3b82f6';
+        bar.style.background = 'var(--verified)';
       }
       const output = e.outputBuffer.getChannelData(0);
       for (let i = 0; i < output.length; i++) output[i] = 0;
@@ -34280,7 +34280,7 @@ function _q2RenderReadout(nativeRateNow, s, params) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'msr-q2-readout';
-    el.style.cssText = 'font-family:monospace;font-size:var(--fs-xs);color:#9aa;padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);';
+    el.style.cssText = 'font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--muted);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);';
     host.insertAdjacentElement('afterend', el);
   }
   const nat = (nativeRateNow != null) ? nativeRateNow : _msrLastRate;
