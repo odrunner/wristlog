@@ -169,6 +169,8 @@
      like the screen of a bench timegrapher, so not overridden in dark. */
   --tg-ink: #4ade80;
   --tg-bg: #0a1a12;
+  --tg-rate-line: #facc15;                          /* the live-rate dashed line on the scatter */
+  --tg-card-bg: #060f0a; --tg-card-ink: #e8efd9;   /* the measurement share-card image */
 
   /* ── Badges / achievements ── warm theme; dark variants below. */
   --badge-text: #3D2A14;

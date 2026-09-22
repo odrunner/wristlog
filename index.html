@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=331f08dd">
+  <link rel="stylesheet" href="/design-system.css?v=14679d6f">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -6307,6 +6307,18 @@ function dsToken(name) { return _dsRoot.getPropertyValue(name).trim(); }
 // A length token as a pixel number, for APIs that take numbers (Chart.js). rem follows the root font size.
 function dsPx(name) { const v = dsToken(name); return parseFloat(v) * (v.endsWith('rem') ? parseFloat(_dsRoot.fontSize) : 1); }
 // Chart.js draws on canvas, so it never sees the page's font: give it the system's, once per chart.
+// Canvas colours, as canvas needs them (hex, or rgba for an alpha). Read ONCE and remembered: the Measure
+// screen draws every animation frame, and reading computed style mid-frame can force a style recalculation.
+// The tokens used on canvas are the same in both themes, so a remembered value never goes stale.
+const _dsCanvas = new Map();
+function dsCanvas(name, alpha = 1) {
+  const k = name + '@' + alpha;
+  if (!_dsCanvas.has(k)) {
+    const h = dsToken(name).slice(1), x = parseInt(h.length === 3 ? h.replace(/./g, c => c + c) : h, 16);
+    _dsCanvas.set(k, alpha === 1 ? '#' + h : `rgba(${x >> 16 & 255},${x >> 8 & 255},${x & 255},${alpha})`);
+  }
+  return _dsCanvas.get(k);
+}
 function dsChartDefaults() { if (!window.Chart) return; Chart.defaults.font.family = dsToken('--font-sans'); Chart.defaults.font.size = dsPx('--fs-sm'); }
 const DEFAULT_WATCH_COLOR = dsToken('--watch-default');
 // ── Boot timing ──────────────────────────────────────────────────────────────
@@ -8240,7 +8252,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.32';
+const APP_VERSION = '22.05.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -34374,13 +34386,13 @@ function drawBeatScopeCore(ctx, o) {
   ctx.font = (8.5 * s) + 'px -apple-system, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   for (const [mk, label] of [[Math.round(n / 4), 'TICK'], [tock, 'TOCK']]) {
     const x = px(mk);
-    ctx.strokeStyle = 'rgba(74,222,128,.2)'; ctx.lineWidth = 1 * s;
+    ctx.strokeStyle = dsCanvas('--tg-ink', .2); ctx.lineWidth = 1 * s;
     ctx.beginPath(); ctx.moveTo(x, y0 + top); ctx.lineTo(x, y0 + top + wh); ctx.stroke();
-    ctx.fillStyle = 'rgba(74,222,128,.55)';
+    ctx.fillStyle = dsCanvas('--tg-ink', .55);
     ctx.fillText(label, Math.max(x0 + 14 * s, Math.min(x0 + w - 14 * s, x)), y0 + 7 * s);
   }
   // Waveform (envelope drawn up from the baseline)
-  ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.2 * s; ctx.beginPath();
+  ctx.strokeStyle = dsCanvas('--tg-ink'); ctx.lineWidth = 1.2 * s; ctx.beginPath();
   for (let i = 0; i < n; i++) {
     const x = px(i);
     const y = y0 + top + wh - ((rot[i] - lo) / span) * (wh - 2 * s);
@@ -34389,9 +34401,9 @@ function drawBeatScopeCore(ctx, o) {
   ctx.stroke();
   // Millisecond x-axis: one full beat cycle = 7200/bph seconds
   const totalMs = 7200000 / (o.bph || 21600);
-  ctx.strokeStyle = 'rgba(74,222,128,.15)'; ctx.beginPath();
+  ctx.strokeStyle = dsCanvas('--tg-ink', .15); ctx.beginPath();
   ctx.moveTo(x0, y0 + top + wh + 1 * s); ctx.lineTo(x0 + w, y0 + top + wh + 1 * s); ctx.stroke();
-  ctx.fillStyle = 'rgba(74,222,128,.35)';
+  ctx.fillStyle = dsCanvas('--tg-ink', .35);
   for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
     const x = Math.max(x0 + 10 * s, Math.min(x0 + w - 12 * s, x0 + frac * w));
     ctx.fillText(Math.round(frac * totalMs) + '', x, y0 + h - 2 * s);
@@ -34470,7 +34482,7 @@ function drawMsrScatterCore(ctx, o) {
       }
     }
   }
-  if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
+  if (rateData.length < 1) { ctx.fillStyle = dsCanvas('--tg-bg'); ctx.fillRect(0, 0, w, h); return; }
 
   // Y range in s/day: auto-center on data, minimum ±5 s/day
   let dMin = Infinity, dMax = -Infinity;
@@ -34485,19 +34497,19 @@ function drawMsrScatterCore(ctx, o) {
   function yPos(v) { return pad.t + (1 - (v - yMin) / yRange) * ph; }
 
   // Background fill (dark green CRT look)
-  ctx.fillStyle = '#0a1a12';
+  ctx.fillStyle = dsCanvas('--tg-bg');
   ctx.fillRect(0, 0, w, h);
 
   // Zero line — phosphor green
   const yZero = yPos(0);
   if (yZero > pad.t && yZero < h - pad.b) {
-    ctx.strokeStyle = 'rgba(34,197,94,0.25)';
+    ctx.strokeStyle = dsCanvas('--status-good', 0.25);
     ctx.lineWidth = 1 * dpr;
     ctx.beginPath(); ctx.moveTo(pad.l, yZero); ctx.lineTo(w - pad.r, yZero); ctx.stroke();
   }
 
   // Horizontal grid lines
-  ctx.strokeStyle = 'rgba(34,197,94,0.08)';
+  ctx.strokeStyle = dsCanvas('--status-good', 0.08);
   ctx.lineWidth = 1 * dpr;
   const yTicks = 4;
   for (let i = 0; i <= yTicks; i++) {
@@ -34507,7 +34519,7 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Vertical grid
-  ctx.strokeStyle = 'rgba(34,197,94,0.08)';
+  ctx.strokeStyle = dsCanvas('--status-good', 0.08);
   const tStep = tRange > 120 ? 30 : tRange > 60 ? 15 : 10;
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
@@ -34515,8 +34527,8 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Draw tick dots — phosphor green glow
-  ctx.fillStyle = '#4ade80';
-  ctx.shadowColor = '#22c55e';
+  ctx.fillStyle = dsCanvas('--tg-ink');
+  ctx.shadowColor = dsCanvas('--status-good');
   ctx.shadowBlur = 3 * dpr;
   const dotR = Math.max(1.5, 2.0 * dpr);
   for (const pt of rateData) {
@@ -34541,7 +34553,7 @@ function drawMsrScatterCore(ctx, o) {
     if (modeY > pad.t && modeY < h - pad.b) {
       ctx.save();
       ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(250,204,21,0.5)';
+      ctx.strokeStyle = dsCanvas('--tg-rate-line', 0.5);
       ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath();
       ctx.moveTo(pad.l, modeY);
@@ -34553,7 +34565,7 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Y-axis labels (right side, in s/day) — dim green
-  ctx.fillStyle = 'rgba(74,222,128,0.6)';
+  ctx.fillStyle = dsCanvas('--tg-ink', 0.6);
   ctx.font = (9 * dpr) + 'px monospace';
   ctx.textAlign = 'left';
   for (let i = 0; i <= yTicks; i++) {
@@ -34667,11 +34679,11 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   const ctx = canvas.getContext('2d');
 
   // Dark matte background
-  ctx.fillStyle = '#060f0a';
+  ctx.fillStyle = dsCanvas('--tg-card-bg');
   ctx.fillRect(0, 0, W, H);
 
   // Watch name — above the panel
-  ctx.fillStyle = '#e8efd9';
+  ctx.fillStyle = dsCanvas('--tg-card-ink');
   ctx.font = '600 44px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -34688,18 +34700,18 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   ctx.restore();
   // Panel border
   _roundRectPath(ctx, panelX, panelY, panelW, panelH, R);
-  ctx.strokeStyle = 'rgba(74,222,128,0.45)';
+  ctx.strokeStyle = dsCanvas('--tg-ink', 0.45);
   ctx.lineWidth = 2.5;
   ctx.stroke();
 
   // Result — below the panel
   const res = msrCardResultText({ rate, beatError, bph });
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#4ade80';
+  ctx.fillStyle = dsCanvas('--tg-ink');
   ctx.font = '700 72px -apple-system, system-ui, sans-serif';
   ctx.fillText(res.rate, panelX + 4, rateY);
   if (sub) {
-    ctx.fillStyle = 'rgba(232,239,217,0.65)';
+    ctx.fillStyle = dsCanvas('--tg-card-ink', 0.65);
     ctx.font = '500 34px -apple-system, system-ui, sans-serif';
     ctx.fillText(sub, panelX + 6, subY);
   }
@@ -34714,7 +34726,7 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
     ctx.restore();
     // Strip border
     _roundRectPath(ctx, panelX, scopeY, panelW, scopeH, R);
-    ctx.strokeStyle = 'rgba(74,222,128,0.45)';
+    ctx.strokeStyle = dsCanvas('--tg-ink', 0.45);
     ctx.lineWidth = 2.5;
     ctx.stroke();
     // Amplitude readout — below the strip, colored by health
@@ -34730,7 +34742,7 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   // WRotate wordmark — rides the bottom result line, bottom-right
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(74,222,128,0.55)';
+  ctx.fillStyle = dsCanvas('--tg-ink', 0.55);
   ctx.font = '700 34px -apple-system, system-ui, sans-serif';
   ctx.fillText('WRotate', panelX + panelW, wordmarkY);
 

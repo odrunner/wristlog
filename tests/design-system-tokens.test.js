@@ -154,6 +154,7 @@ export const SHARED_LIGHT = {
   '--status-bad': '#ef4444',
   '--tg-ink': '#4ade80',
   '--tg-bg': '#0a1a12',
+  '--tg-rate-line': '#facc15', '--tg-card-bg': '#060f0a', '--tg-card-ink': '#e8efd9',
   // Moved out of index.html 2026-09-20 — values unchanged.
   '--vis-friends': '#a78bfa',
   '--warn': '#d9a441',
