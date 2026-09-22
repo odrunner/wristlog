@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.44';
+const APP_VERSION = '21.17.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9088,7 +9088,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ? `<div class="profile-avatar-cam" onclick="uploadProfilePic()" title="Change photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`
     : '';
   const removeAvatarBtn = (isOwn && profile.avatar_url)
-    ? `<button class="btn btn-ghost" onclick="removeProfilePic()" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);margin-top:var(--space-1);">Remove photo</button>`
+    ? `<button class="btn btn-ghost btn-xs" onclick="removeProfilePic()" style="margin-top:var(--space-1);">Remove photo</button>`
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
@@ -9796,7 +9796,7 @@ function renderBlockedUsersList() {
     el.innerHTML = data.map(p => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-1-5) 0;border-bottom:1px solid var(--border);">
         <span style="font-size:var(--fs-base);">${escHtml(p.display_name || p.username || 'User')}</span>
-        <button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" onclick="unblockUser('${p.id}')">Unblock</button>
+        <button class="btn btn-ghost btn-xs" onclick="unblockUser('${p.id}')">Unblock</button>
       </div>`).join('');
   }).catch(e => { el.innerHTML = '<div class="note">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
 }
@@ -11448,7 +11448,7 @@ function renderNotificationPanel() {
   if (btn) {
     const hasUnread = userNotifs.some(n => !n.is_read);
     btn.innerHTML = hasUnread
-      ? `<button class="btn btn-ghost" style="font-size:var(--fs-sm);padding:var(--space-1) var(--space-2);" onclick="markAllNotifsRead()">Mark all read</button>`
+      ? `<button class="btn btn-ghost btn-xs" onclick="markAllNotifsRead()">Mark all read</button>`
       : '';
   }
   if (!userNotifs.length) {
