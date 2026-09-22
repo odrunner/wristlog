@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.37';
+const APP_VERSION = '21.18.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16251,7 +16251,7 @@ function deletePostFromFeed() {
   if (!btn || btn.dataset.confirm) return;
   btn.dataset.confirm = '1';
   btn.innerHTML = 'Sure? Tap again to delete';
-  btn.style.fontWeight = '600';
+  btn.style.fontWeight = 'var(--fw-semibold)';
   setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete post'; btn.style.fontWeight = ''; } }, 3000);
 }
 
@@ -33023,8 +33023,8 @@ window._tgNativeCallback = function(data) {
             ? 'Could not lock ticks \u00b7 try repositioning or check BPH'
             : 'No signal detected \u00b7 try placing watch on mic';
           statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
-          statusText.style.fontSize = '.7rem';
-          statusText.style.fontWeight = '600';
+          statusText.style.fontSize = 'var(--fs-xs)';
+          statusText.style.fontWeight = 'var(--fw-semibold)';
         }
         const idleOv2 = document.getElementById('msr-idle-overlay');
         if (idleOv2) idleOv2.style.display = 'none';
@@ -33050,8 +33050,8 @@ window._tgNativeCallback = function(data) {
         if (statusText) {
           statusText.textContent = 'Signal too weak · rest the watch on the bottom-edge mic in a quiet spot, then Retry';
           statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
-          statusText.style.fontSize = '.7rem';
-          statusText.style.fontWeight = '600';
+          statusText.style.fontSize = 'var(--fs-xs)';
+          statusText.style.fontWeight = 'var(--fw-semibold)';
         }
         const idleOvW = document.getElementById('msr-idle-overlay');
         if (idleOvW) idleOvW.style.display = 'none';
@@ -33295,8 +33295,8 @@ window._tgNativeCallback = function(data) {
             const sign = r >= 0 ? '+' : '';
             statusText.innerHTML = sign + r.toFixed(1) + ' s/day <span style="color:color-mix(in srgb, var(--status-warn) 60%, transparent);font-size:var(--fs-2xs);font-weight:var(--fw-normal);">· lower confidence · retry for better accuracy</span>';
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 80%, transparent)';
-            statusText.style.fontSize = '.75rem';
-            statusText.style.fontWeight = '600';
+            statusText.style.fontSize = 'var(--fs-sm)';
+            statusText.style.fontWeight = 'var(--fw-semibold)';
             const idleOv2 = document.getElementById('msr-idle-overlay');
             if (idleOv2) idleOv2.style.display = 'none';
             const _retryLabel2 = document.getElementById('msr-btn-label');
@@ -33306,8 +33306,8 @@ window._tgNativeCallback = function(data) {
             const sign = r >= 0 ? '+' : '';
             statusText.textContent = sign + r.toFixed(1) + ' s/day \u00b7 low confidence \u00b7 retry recommended';
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
-            statusText.style.fontSize = '.7rem';
-            statusText.style.fontWeight = '600';
+            statusText.style.fontSize = 'var(--fs-xs)';
+            statusText.style.fontWeight = 'var(--fw-semibold)';
             const idleOv2 = document.getElementById('msr-idle-overlay');
             if (idleOv2) idleOv2.style.display = 'none';
             const _retryLabel2 = document.getElementById('msr-btn-label');
@@ -33315,7 +33315,7 @@ window._tgNativeCallback = function(data) {
           } else {
             statusText.textContent = 'No ticks detected \u00b7 move closer and retry';
             statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
-            statusText.style.fontSize = '.7rem';
+            statusText.style.fontSize = 'var(--fs-xs)';
             statusText.style.fontWeight = '';
             const _retryLabel3 = document.getElementById('msr-btn-label');
             if (_retryLabel3) _retryLabel3.textContent = 'Retry';
@@ -35284,8 +35284,8 @@ function stopMsrListen(reason) {
     // Show result in status bar
     statusText.textContent = sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
     statusText.style.color = 'var(--tg-ink)';
-    statusText.style.fontSize = '.75rem';
-    statusText.style.fontWeight = '600';
+    statusText.style.fontSize = 'var(--fs-sm)';
+    statusText.style.fontWeight = 'var(--fw-semibold)';
     // Hide idle overlay so result stays visible on chart
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';

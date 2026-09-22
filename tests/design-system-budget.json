@@ -13,7 +13,7 @@
     "box-shadow": 8,
     "transition": 8,
     "z-index": 13,
-    "js-style-assign": 20,
+    "js-style-assign": 8,
     "inline-style-attr": 1375
   },
   "p/index.html": {
