@@ -366,6 +366,8 @@ describe('email HTML builders in index.html', () => {
 describe.each([
   ['p/index.html'],
   ['profile/index.html'],
+  ['privacy.html'],
+  ['terms.html'],
 ])('%s', (relPath) => {
   const src = readFileSync(join(root, relPath), 'utf8');
 

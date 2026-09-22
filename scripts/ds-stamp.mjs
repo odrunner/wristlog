@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-export const STAMPED = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'sw.js'];
+export const STAMPED = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'privacy.html', 'terms.html', 'sw.js'];
 export const dsHash = () => createHash('sha256').update(readFileSync(join(root, 'design-system.css'))).digest('hex').slice(0, 8);
 // Only real URLs: a quote before the path keeps prose like "live in /design-system.css." untouched.
 const URL_RE = /(["'])\/design-system\.css(?:\?v=[0-9a-f]*)?\1/g;
