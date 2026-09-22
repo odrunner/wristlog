@@ -374,6 +374,13 @@ const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 // real tokens 2026-09-20; nothing is exempt any more.
 
 describe('index.html', () => {
+  // A watch with no photo shows an initials square. Its colour is the design-system placeholder, never the
+  // watch's saved colour: nobody picks that colour (no picker is on any screen), so painting it made the
+  // placeholder something a token could not change. The saved value is data only (weather recommendation).
+  it('paints the no-photo watch square from the design system, not the saved colour', () => {
+    const reads = indexHtml.split('\n').filter(l => /\bw\??\.color\s*\|\|\s*(DEFAULT_WATCH_COLOR|'var)/.test(l) && !/data-(watch|wish)-color=/.test(l));
+    expect(reads).toEqual([]);
+  });
   it('links design-system.css before its inline style block', () => {
     const link = indexHtml.indexOf(DS_LINK);
     const style = indexHtml.indexOf('<style>');

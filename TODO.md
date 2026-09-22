@@ -5,6 +5,8 @@
 
 
 ## Up Next
+**Daily recommendation: stop using the watch's saved colour as a weather signal (parked 2026-09-22).** `computeWatchRec` (index.html, `WARM`/`COOL`/`DARK` sets) scores a watch "Warm tone for sunny skies" / "Cool tone suits today's weather" from `watches.color`. Nobody chooses that colour — the picker is on no screen: a hand-added watch is always saved gold (`PALETTE[0]`), a photo-added one gets the AI's guess or slate. So the weather reason rests on how the watch was added, not on the watch (real users 2026-09-22: 747 gold, 489 slate of 1,512). Since 2026-09-22 the colour is no longer shown anywhere (the no-photo square is always the design-system `--watch-default`), so this is its last reader. Options: drop colour from the weather score, or base it on something real (dial colour from the AI identification / the model record). Once nothing reads it, the saved `color`, the dead picker (`buildSwatches`/`pickColor`/`selColor`) and the `data-watch-color` plumbing can go too.
+
 **Sold status for watches (from the model-page work, 2026-08-29).** `watches.sold_at` (date, nullable) + "Mark as sold" in the watch modal (with undo). Collection: sold watches greyed and grouped at the bottom (or a Sold filter chip); excluded from Today's Pick, reminders, collection value and the ranking game; wear history stays. Model page: "Still owned: 20 of 22"; sold examples leave the wear-share / cost-per-wear population but stay in ownership-by-era. Public profile/showcase hides sold by default. Scope agreed 2026-08-29; not started.
 
 **Profile privacy — stop anonymous scraping of the user table (audit S1). DEFERRED 2026-08-13, needs doing properly.**
