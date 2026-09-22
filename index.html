@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=88d1c7b4">
+  <link rel="stylesheet" href="/design-system.css?v=643b31df">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -2815,7 +2815,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:var(--size-140);padding:var(--space-6);">
     <div class="modal-title row-between">
       <span>Update Market Prices</span>
-      <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:var(--space-1) var(--space-2);font-size:var(--fs-base);">Close</button>
+      <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:var(--space-1) var(--space-2);">Close</button>
     </div>
     <div id="update-prices-status" style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-3);">Loading...</div>
     <div id="update-prices-body" style="max-height:65vh;overflow-y:auto;overflow-x:hidden;"></div>
@@ -3304,7 +3304,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:var(--space-3);display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="modal-title" style="font-size:var(--fs-xl);">Find people to follow</div>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-6);">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary btn-block" style="margin-bottom:var(--space-2-5);display:inline-flex;justify-content:center;gap:var(--space-1-5);" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
+      <button class="btn btn-primary btn-block" style="margin-bottom:var(--space-2-5);justify-content:center;" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       <button class="btn btn-ghost btn-block" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
@@ -3468,8 +3468,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="reminder-banner-body">
       <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
       <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);flex-wrap:wrap;">
-        <button class="btn btn-primary" id="logagain-yes" style="min-height:var(--size-9);padding:var(--space-1) var(--space-3-5);font-size:var(--fs-base);">Log it</button>
-        <button class="btn" id="logagain-other" style="min-height:var(--size-9);padding:var(--space-1) var(--space-3-5);font-size:var(--fs-base);" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+        <button class="btn btn-primary" id="logagain-yes" style="min-height:var(--size-9);padding:var(--space-1) var(--space-3-5);">Log it</button>
+        <button class="btn" id="logagain-other" style="min-height:var(--size-9);padding:var(--space-1) var(--space-3-5);" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
@@ -3556,10 +3556,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:var(--space-2);margin-left:auto;">
-        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
-        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;gap:var(--space-1-5);" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
-        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;gap:var(--space-1-5);" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
+        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
+        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
+        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
@@ -3603,7 +3603,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-clubs" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
       <h1 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);">Clubs</h1>
-      <button class="btn btn-primary" style="font-size:var(--fs-base);padding:var(--space-1-5) var(--space-3-5);" onclick="openCreateClub()">+ Create</button>
+      <button class="btn btn-primary" style="padding:var(--space-1-5) var(--space-3-5);" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
   </div>
@@ -4048,9 +4048,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="help-wrap">
 
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-8);">
-        <button class="btn btn-ghost btn-grow" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
-        <button class="btn btn-ghost btn-grow" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
-        <button class="btn btn-primary btn-grow" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;gap:var(--space-1-5);justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        <button class="btn btn-ghost btn-grow" onclick="openWhatsNew()" style="white-space:nowrap;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost btn-grow" onclick="shareApp()" style="white-space:nowrap;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+        <button class="btn btn-primary btn-grow" onclick="openFeedback()" style="white-space:nowrap;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -5379,7 +5379,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div class="modal-section-body collapsed" id="sec-straps">
         <div id="strap-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:var(--space-2)">+ Add Strap</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:var(--space-2);">+ Add Strap</button>
         <div id="add-strap-row" class="add-strap-row hidden">
           <input type="text" id="strap-name-input" aria-label="Strap name" placeholder="Name (e.g. Black Rubber)" maxlength="60">
           <input type="text" id="strap-mat-input" aria-label="Strap material" placeholder="Material (optional)" maxlength="40">
@@ -5398,7 +5398,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div class="modal-section-body collapsed" id="sec-receipts">
         <div id="edit-receipts-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:var(--space-2)">+ Upload Receipt</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:var(--space-2);">+ Upload Receipt</button>
       </div>
     </div>
 
@@ -5518,7 +5518,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         Press <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:var(--space-px) var(--space-1-5);font-size:var(--fs-sm);">⌘V</kbd> / <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:var(--space-px) var(--space-1-5);font-size:var(--fs-sm);">Ctrl+V</kbd> to paste<br>
         or drag &amp; drop an image here
       </div>
-      <button class="btn btn-ghost" style="font-size:var(--fs-base);" onclick="document.getElementById('photo-file-input').click()">Browse files…</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('photo-file-input').click()">Browse files…</button>
       <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="handlePhotoFileInput(this)">
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:var(--space-2-5);color:var(--muted);" onclick="closePhotoPasteModal()">Cancel</button>
@@ -5980,7 +5980,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
-      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:var(--white);border:none;padding:var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:var(--white);padding:var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
@@ -5989,7 +5989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin:var(--space-2) 0 var(--space-5);">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
-      <button id="da-final-btn" class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger-fill);color:var(--white);border:none;padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button id="da-final-btn" class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger-fill);color:var(--white);padding:var(--space-2-5);font-weight:var(--fw-bold);" onclick="deleteAccount()">Permanently Delete Everything</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
@@ -6014,7 +6014,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-title text-danger" id="delete-club-modal-title">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:var(--fw-bold);margin:var(--space-1) 0 var(--space-3);"></p>
       <p style="color:var(--muted);font-size:var(--fs-md);line-height:var(--lh-body);margin-bottom:var(--space-5);">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
-      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:var(--white);border:none;padding:var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
+      <button class="btn btn-block" style="margin-bottom:var(--space-2-5);background:var(--danger);color:var(--white);padding:var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -8255,7 +8255,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.07.29';
+const APP_VERSION = '22.07.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10445,9 +10445,9 @@ async function renderClubDetail(clubId) {
       </div>
 
       <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;border-top:1px solid var(--border);padding-top:var(--space-3-5);">
-        <button class="btn btn-primary" style="font-size:var(--fs-base);" onclick="saveClubEdit('${clubId}')">Save</button>
-        <button class="btn btn-ghost"   style="font-size:var(--fs-base);" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
-        <button class="btn btn-danger"  style="font-size:var(--fs-base);margin-left:auto;" data-cid="${escAttr(clubId)}" data-name="${escAttr(club.name)}" onclick="openDeleteClubModal(this.dataset.cid, this.dataset.name)">Delete Club</button>
+        <button class="btn btn-primary" onclick="saveClubEdit('${clubId}')">Save</button>
+        <button class="btn btn-ghost"  onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
+        <button class="btn btn-danger" style="margin-left:auto;" data-cid="${escAttr(clubId)}" data-name="${escAttr(club.name)}" onclick="openDeleteClubModal(this.dataset.cid, this.dataset.name)">Delete Club</button>
       </div>
     </div>` : '';
 
@@ -14884,7 +14884,7 @@ function renderFeed() {
         <div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">⚠</div>
         <div style="font-weight:var(--fw-semibold);margin-bottom:var(--space-1-5);color:var(--text);">Couldn't load your feed</div>
         <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Check your connection and try again.</div>
-        <button class="btn btn-primary" onclick="loadFeed()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);">↻ Retry</button>
+        <button class="btn btn-primary" onclick="loadFeed()">↻ Retry</button>
       </div>`;
     return;
   }
@@ -14900,7 +14900,7 @@ function renderFeed() {
             ? 'Follow other watch enthusiasts to see their daily wears here.'
             : 'Check back later — or follow more people!'}
         </div>
-        <button class="btn btn-primary" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:var(--space-1-5);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
+        <button class="btn btn-primary" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
       </div>`;
     // The empty feed is the highest-value slot placement — a user following
     // nobody otherwise hits a dead end here. promoInjectPositions() already
@@ -14963,7 +14963,7 @@ function showFeedLoadMoreButton() {
   const s = document.getElementById('feed-load-sentinel');
   if (!s) return;
   if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
-  s.innerHTML = '<button class="btn btn-ghost" style="font-size:var(--fs-base);padding:var(--space-2) var(--space-4);" onclick="loadMoreFeed()">Load more</button>';
+  s.innerHTML = '<button class="btn btn-ghost" style="padding:var(--space-2) var(--space-4);" onclick="loadMoreFeed()">Load more</button>';
 }
 
 // ── Floating "Post" button ────────────────────────────────────────────────
@@ -21787,7 +21787,7 @@ function renderBroadcastDrafts() {
   el.innerHTML = '<div class="eyebrow eyebrow-muted stack-1">Saved Drafts <span style="text-transform:none;font-weight:var(--fw-normal);">— order here sets which sends first</span></div>' +
     drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:var(--space-1-5);padding:var(--space-1-5) var(--space-2);background:var(--surface);border-radius:var(--radius-sm);margin-bottom:var(--space-1);font-size:var(--fs-base);">
       <span style="color:var(--muted);font-size:var(--fs-sm);width:var(--size-4);text-align:right;flex:0 0 auto;">${i + 1}</span>
-      <button class="btn btn-ghost btn-grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:var(--space-0-5) var(--space-1);font-size:var(--fs-base);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-ghost btn-grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:var(--space-0-5) var(--space-1);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
       <span style="color:var(--muted);font-size:var(--fs-sm);white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
@@ -24455,7 +24455,7 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div style="background:var(--badge-bg);border-radius:var(--radius-btn);padding:var(--space-2-5) var(--space-3);">
-      <button type="button" class="btn btn-primary btn-block" onclick="enhanceSingleWatch()" style="background:var(--badge-accent);color:var(--white);font-size:var(--fs-sm);font-weight:var(--fw-medium);padding:var(--space-2-5);border-radius:var(--radius-btn);">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="enhanceSingleWatch()" style="background:var(--badge-accent);color:var(--white);font-size:var(--fs-sm);font-weight:var(--fw-medium);padding:var(--space-2-5);">⭐ Enhance with AI</button>
     </div>`;
     return;
   }

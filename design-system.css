@@ -434,7 +434,7 @@
   .btn-label-full { display: none; }
   /* Modals: centered on mobile with side margins */ .overlay { align-items: center; padding: var(--space-4); overflow-x: hidden; }
   .modal-actions { flex-wrap: wrap; gap: var(--space-2); }
-  /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 34: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: var(--size-11); }
+  /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 32: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: var(--size-11); }
   .btn-sm { min-height: var(--size-8); padding: var(--space-1-5) var(--space-3); }
 }
 
