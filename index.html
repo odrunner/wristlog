@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=14679d6f">
+  <link rel="stylesheet" href="/design-system.css?v=1ddb1f2b">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1303,7 +1303,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: inline-flex; align-items: center; gap: var(--space-1);
     }
     .warranty-active   { color: var(--success); opacity: .8; }
-    .warranty-expiring { color: #ef7942; }
+    .warranty-expiring { color: var(--status-expiring); }
     .warranty-expired  { color: var(--muted); opacity: .5; }
 
     /* ── NAV ICONS / LABEL ── */
@@ -6307,17 +6307,18 @@ function dsToken(name) { return _dsRoot.getPropertyValue(name).trim(); }
 // A length token as a pixel number, for APIs that take numbers (Chart.js). rem follows the root font size.
 function dsPx(name) { const v = dsToken(name); return parseFloat(v) * (v.endsWith('rem') ? parseFloat(_dsRoot.fontSize) : 1); }
 // Chart.js draws on canvas, so it never sees the page's font: give it the system's, once per chart.
-// Canvas colours, as canvas needs them (hex, or rgba for an alpha). Read ONCE and remembered: the Measure
+// A colour token as a plain value (hex, or rgba for an alpha), for canvas and for colours code computes or
+// stores. Read ONCE and remembered: the Measure
 // screen draws every animation frame, and reading computed style mid-frame can force a style recalculation.
-// The tokens used on canvas are the same in both themes, so a remembered value never goes stale.
-const _dsCanvas = new Map();
-function dsCanvas(name, alpha = 1) {
+// Only use it for tokens that are the same in both themes, so a remembered value never goes stale.
+const _dsColors = new Map();
+function dsColor(name, alpha = 1) {
   const k = name + '@' + alpha;
-  if (!_dsCanvas.has(k)) {
+  if (!_dsColors.has(k)) {
     const h = dsToken(name).slice(1), x = parseInt(h.length === 3 ? h.replace(/./g, c => c + c) : h, 16);
-    _dsCanvas.set(k, alpha === 1 ? '#' + h : `rgba(${x >> 16 & 255},${x >> 8 & 255},${x & 255},${alpha})`);
+    _dsColors.set(k, alpha === 1 ? '#' + h : `rgba(${x >> 16 & 255},${x >> 8 & 255},${x & 255},${alpha})`);
   }
-  return _dsCanvas.get(k);
+  return _dsColors.get(k);
 }
 function dsChartDefaults() { if (!window.Chart) return; Chart.defaults.font.family = dsToken('--font-sans'); Chart.defaults.font.size = dsPx('--fs-sm'); }
 const DEFAULT_WATCH_COLOR = dsToken('--watch-default');
@@ -6658,7 +6659,7 @@ const BADGE_REGISTRY = [
   { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden',
     flavor: 'Moonphase aligned with the real thing.',
     unlock: 'Log wear on a moonphase watch during a full moon.',
-    glyph: '<circle cx="52" cy="50" r="16" fill="var(--badge-ink)"/><circle cx="44" cy="50" r="16" fill="#FEFCF6"/>',
+    glyph: '<circle cx="52" cy="50" r="16" fill="var(--badge-ink)"/><circle cx="44" cy="50" r="16" fill="var(--badge-disc)"/>',
     isHidden: true },
   { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden',
     flavor: 'A wear on your birthday. Cheers.',
@@ -6699,13 +6700,13 @@ function badgeMedallionSvg(badge, size, earned) {
   if (earned) {
     return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="48" fill="${c.bezel}"/>
-      <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="${c.stroke}" stroke-width="0.4"/>
+      <circle cx="50" cy="50" r="44" fill="var(--badge-disc)" stroke="${c.stroke}" stroke-width="0.4"/>
       ${badge.glyph}
     </svg>`;
   }
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="48" fill="#C9C2A8"/>
-    <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="#A8A28C" stroke-width="0.4"/>
+    <circle cx="50" cy="50" r="48" fill="var(--badge-locked)"/>
+    <circle cx="50" cy="50" r="44" fill="var(--badge-disc)" stroke="var(--badge-locked-ink)" stroke-width="0.4"/>
     <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="var(--badge-ink)" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="var(--badge-ink)" stroke-width="2" fill="none"/></g>
   </svg>`;
 }
@@ -7496,7 +7497,7 @@ function badgeWallProfileSection() {
 
 function officialBadgeHtml(profile) {
   if (!profile?.is_official) return '';
-  return ' <span class="official-badge" title="Official account"><svg viewBox="0 0 24 24" fill="#4ea4f6" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#4ea4f6"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  return ' <span class="official-badge" title="Official account"><svg viewBox="0 0 24 24" fill="var(--verified)" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="var(--verified)"/><path d="M9 12l2 2 4-4" stroke="var(--white)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 }
 
 // ── UTM / visit tracking ──────────────────────────────────────────────────
@@ -8252,7 +8253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.34';
+const APP_VERSION = '22.05.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11732,12 +11733,12 @@ const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_cas
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 function initialsTextColor(bg) {
-  if (!bg || typeof bg !== 'string') return '#000';
+  if (!bg || typeof bg !== 'string') return dsColor('--black');
   let h = bg.trim().replace(/^#/, '');
   if (h.length === 3) h = h.split('').map(c => c + c).join('');
-  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '#000';
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return dsColor('--black');
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? dsColor('--black') : dsColor('--white');
 }
 // Pin the active featured post to the top of the feed (admin spotlight).
 // Pure: removes any existing copy of featuredId, then prepends the pin marked __featured.
@@ -17973,7 +17974,7 @@ function applyTheme(t) {
     document.documentElement.removeAttribute('data-theme');
   }
   const mc = document.querySelector('meta[name="theme-color"]');
-  if (mc) mc.content = resolved === 'light' ? '#f5f5f8' : '#0b0b10';
+  if (mc) mc.content = dsToken('--bg');           // the theme attribute is already set above
   updateThemeBtn(t);
 }
 function setTheme(t) {
@@ -22938,7 +22939,7 @@ async function loadCampaigns() {
 
   const cardHtml = (c) => {
     const sends = countMap[c.id] || 0;
-    const statusColor = c.is_active ? '#22c55e' : '#ef4444';
+    const statusColor = c.is_active ? 'var(--status-good)' : 'var(--status-bad)';
     const statusLabel = c.is_active ? 'Active' : 'Paused';
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
@@ -24247,7 +24248,7 @@ function renderCollectionList(visible, today) {
       : `<div class="avatar" style="width:28px;height:28px;font-size:var(--fs-2xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     let lastWornCell = na;
     if (lastDays !== null) {
-      const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? '#ef7942' : 'var(--danger)';
+      const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? 'var(--status-expiring)' : 'var(--danger)';
       lastWornCell = `<span style="color:${col};font-size:var(--fs-base)">${lastDays === 0 ? 'Today' : lastDays+'d ago'}</span>`;
     }
     return `<tr style="cursor:pointer" onclick="openEditWatch('${w.id}')">
@@ -26194,7 +26195,7 @@ function renderNeglectedStrip() {
   el.innerHTML = list.map(({ w, days, neverWorn }) => `
     <button data-wid="${escAttr(w.id)}" onclick="openTrackModal(this.dataset.wid); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
       style="flex:0 0 auto;display:flex;align-items:center;gap:var(--space-1-5);max-width:230px;padding:var(--space-1-5) var(--space-2-5) var(--space-1-5) var(--space-1-5);border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-pill);cursor:pointer;font-family:inherit;color:var(--text);min-height:36px;">
-      <span style="width:24px;height:24px;border-radius:var(--radius-round);background:${escAttr(w.color || '#94a3b8')};flex-shrink:0;display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}</span>
+      <span style="width:24px;height:24px;border-radius:var(--radius-round);background:${escAttr(w.color || 'var(--watch-slate)')};flex-shrink:0;display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}</span>
       <span style="font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
       <span style="font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;">${neverWorn ? 'never' : days + 'd'}</span>
     </button>`).join('');
@@ -28281,7 +28282,7 @@ async function af2RunDetectAndIdentify(base64) {
     _af2TheaterSub: 'Analyzing your photo',
     boundingBox: bbox,
     brand: null, model: null, reference: '', dialText: '',
-    estimatedColor: '#94a3b8', confidence: null,
+    estimatedColor: dsColor('--watch-slate'), confidence: null,
     yearRange: '', movementType: '', caliber: '',
     caseMaterial: '', caseDiameter: '',
   }));
@@ -28335,7 +28336,7 @@ async function af2RunDetectAndIdentify(base64) {
           Object.assign(w, {
             brand: id.brand || 'Unknown', model: id.model || 'Unknown',
             reference: id.reference || '', dialText: id.dialText || '',
-            estimatedColor: id.estimatedColor || '#94a3b8',
+            estimatedColor: id.estimatedColor || dsColor('--watch-slate'),
             confidence: id.confidence || 'medium', productUrl: id.productUrl || '',
             yearRange: id.yearRange || '', movementType: id.movementType || '',
             caliber: id.caliber || '', caseMaterial: id.caseMaterial || '',
@@ -28460,7 +28461,7 @@ async function af2Confirm(idx) {
     const watchData = {
       id: newId, createdAt: new Date().toISOString(), brand: w.brand || '', name: w.model || '',
       ref: w.reference || '', movement: w.caliber || w.movementType || '',
-      color: w.estimatedColor || '#94a3b8',
+      color: w.estimatedColor || dsColor('--watch-slate'),
       ...(imageUrl ? { image: imageUrl } : {}),
     };
     watches.push(watchData);
@@ -30380,7 +30381,7 @@ function wlTileImgFallback(img) {
   const div = document.createElement('div');
   div.className = 'wl-tile-avatar';
   div.style.background = img.dataset.color || DEFAULT_WATCH_COLOR;
-  div.style.color = img.dataset.textColor || '#000';
+  div.style.color = img.dataset.textColor || dsColor('--black');
   div.textContent = img.dataset.initials || '';
   img.replaceWith(div);
 }
@@ -33476,7 +33477,7 @@ async function loadTgHistory() {
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
     const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
     const noteStr = r.notes ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-0-5);font-style:italic;">${escHtml(r.notes)}</div>` : '';
-    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : 'var(--danger)') : 'var(--muted)';
+    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? 'var(--status-good)' : Math.abs(r.rate) <= 15 ? 'var(--status-warn)' : 'var(--danger)') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
     const isoDate = d.toISOString().slice(0, 10);
     return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);font-size:var(--fs-base);">
@@ -34331,12 +34332,12 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
   } else {
     bars = 4;
   }
-  const dimColor = 'rgba(74,222,128,.15)';
+  const dimColor = 'color-mix(in srgb, var(--tg-ink) 15%, transparent)';
   const colors = [
-    'rgba(239,68,68,.8)',   // 1 bar: red
-    'rgba(234,179,8,.8)',   // 2 bars: yellow
-    'rgba(74,222,128,.7)',  // 3 bars: green
-    '#4ade80'               // 4 bars: bright green
+    'color-mix(in srgb, var(--status-bad) 80%, transparent)',    // 1 bar: red
+    'color-mix(in srgb, var(--status-warn) 80%, transparent)',   // 2 bars: yellow
+    'color-mix(in srgb, var(--tg-ink) 70%, transparent)',        // 3 bars: green
+    'var(--tg-ink)'                                              // 4 bars: bright green
   ];
   const barColor = bars > 0 ? colors[bars - 1] : dimColor;
   for (let i = 1; i <= 4; i++) {
@@ -34386,13 +34387,13 @@ function drawBeatScopeCore(ctx, o) {
   ctx.font = (8.5 * s) + 'px -apple-system, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   for (const [mk, label] of [[Math.round(n / 4), 'TICK'], [tock, 'TOCK']]) {
     const x = px(mk);
-    ctx.strokeStyle = dsCanvas('--tg-ink', .2); ctx.lineWidth = 1 * s;
+    ctx.strokeStyle = dsColor('--tg-ink', .2); ctx.lineWidth = 1 * s;
     ctx.beginPath(); ctx.moveTo(x, y0 + top); ctx.lineTo(x, y0 + top + wh); ctx.stroke();
-    ctx.fillStyle = dsCanvas('--tg-ink', .55);
+    ctx.fillStyle = dsColor('--tg-ink', .55);
     ctx.fillText(label, Math.max(x0 + 14 * s, Math.min(x0 + w - 14 * s, x)), y0 + 7 * s);
   }
   // Waveform (envelope drawn up from the baseline)
-  ctx.strokeStyle = dsCanvas('--tg-ink'); ctx.lineWidth = 1.2 * s; ctx.beginPath();
+  ctx.strokeStyle = dsColor('--tg-ink'); ctx.lineWidth = 1.2 * s; ctx.beginPath();
   for (let i = 0; i < n; i++) {
     const x = px(i);
     const y = y0 + top + wh - ((rot[i] - lo) / span) * (wh - 2 * s);
@@ -34401,9 +34402,9 @@ function drawBeatScopeCore(ctx, o) {
   ctx.stroke();
   // Millisecond x-axis: one full beat cycle = 7200/bph seconds
   const totalMs = 7200000 / (o.bph || 21600);
-  ctx.strokeStyle = dsCanvas('--tg-ink', .15); ctx.beginPath();
+  ctx.strokeStyle = dsColor('--tg-ink', .15); ctx.beginPath();
   ctx.moveTo(x0, y0 + top + wh + 1 * s); ctx.lineTo(x0 + w, y0 + top + wh + 1 * s); ctx.stroke();
-  ctx.fillStyle = dsCanvas('--tg-ink', .35);
+  ctx.fillStyle = dsColor('--tg-ink', .35);
   for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
     const x = Math.max(x0 + 10 * s, Math.min(x0 + w - 12 * s, x0 + frac * w));
     ctx.fillText(Math.round(frac * totalMs) + '', x, y0 + h - 2 * s);
@@ -34482,7 +34483,7 @@ function drawMsrScatterCore(ctx, o) {
       }
     }
   }
-  if (rateData.length < 1) { ctx.fillStyle = dsCanvas('--tg-bg'); ctx.fillRect(0, 0, w, h); return; }
+  if (rateData.length < 1) { ctx.fillStyle = dsColor('--tg-bg'); ctx.fillRect(0, 0, w, h); return; }
 
   // Y range in s/day: auto-center on data, minimum ±5 s/day
   let dMin = Infinity, dMax = -Infinity;
@@ -34497,19 +34498,19 @@ function drawMsrScatterCore(ctx, o) {
   function yPos(v) { return pad.t + (1 - (v - yMin) / yRange) * ph; }
 
   // Background fill (dark green CRT look)
-  ctx.fillStyle = dsCanvas('--tg-bg');
+  ctx.fillStyle = dsColor('--tg-bg');
   ctx.fillRect(0, 0, w, h);
 
   // Zero line — phosphor green
   const yZero = yPos(0);
   if (yZero > pad.t && yZero < h - pad.b) {
-    ctx.strokeStyle = dsCanvas('--status-good', 0.25);
+    ctx.strokeStyle = dsColor('--status-good', 0.25);
     ctx.lineWidth = 1 * dpr;
     ctx.beginPath(); ctx.moveTo(pad.l, yZero); ctx.lineTo(w - pad.r, yZero); ctx.stroke();
   }
 
   // Horizontal grid lines
-  ctx.strokeStyle = dsCanvas('--status-good', 0.08);
+  ctx.strokeStyle = dsColor('--status-good', 0.08);
   ctx.lineWidth = 1 * dpr;
   const yTicks = 4;
   for (let i = 0; i <= yTicks; i++) {
@@ -34519,7 +34520,7 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Vertical grid
-  ctx.strokeStyle = dsCanvas('--status-good', 0.08);
+  ctx.strokeStyle = dsColor('--status-good', 0.08);
   const tStep = tRange > 120 ? 30 : tRange > 60 ? 15 : 10;
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
@@ -34527,8 +34528,8 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Draw tick dots — phosphor green glow
-  ctx.fillStyle = dsCanvas('--tg-ink');
-  ctx.shadowColor = dsCanvas('--status-good');
+  ctx.fillStyle = dsColor('--tg-ink');
+  ctx.shadowColor = dsColor('--status-good');
   ctx.shadowBlur = 3 * dpr;
   const dotR = Math.max(1.5, 2.0 * dpr);
   for (const pt of rateData) {
@@ -34553,7 +34554,7 @@ function drawMsrScatterCore(ctx, o) {
     if (modeY > pad.t && modeY < h - pad.b) {
       ctx.save();
       ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = dsCanvas('--tg-rate-line', 0.5);
+      ctx.strokeStyle = dsColor('--tg-rate-line', 0.5);
       ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath();
       ctx.moveTo(pad.l, modeY);
@@ -34565,7 +34566,7 @@ function drawMsrScatterCore(ctx, o) {
   }
 
   // Y-axis labels (right side, in s/day) — dim green
-  ctx.fillStyle = dsCanvas('--tg-ink', 0.6);
+  ctx.fillStyle = dsColor('--tg-ink', 0.6);
   ctx.font = (9 * dpr) + 'px monospace';
   ctx.textAlign = 'left';
   for (let i = 0; i <= yTicks; i++) {
@@ -34622,7 +34623,7 @@ function msrCardAmpText(amp) {
   const a = Number(amp);
   if (amp == null || amp === '' || !isFinite(a)) return null;
   const deg = Math.round(a);
-  const color = a >= 250 ? '#4ade80' : (a >= 200 ? '#eab308' : '#ef4444');
+  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--status-bad'));
   return { text: 'Amplitude ' + deg + '°', color };
 }
 
@@ -34679,11 +34680,11 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   const ctx = canvas.getContext('2d');
 
   // Dark matte background
-  ctx.fillStyle = dsCanvas('--tg-card-bg');
+  ctx.fillStyle = dsColor('--tg-card-bg');
   ctx.fillRect(0, 0, W, H);
 
   // Watch name — above the panel
-  ctx.fillStyle = dsCanvas('--tg-card-ink');
+  ctx.fillStyle = dsColor('--tg-card-ink');
   ctx.font = '600 44px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -34700,18 +34701,18 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   ctx.restore();
   // Panel border
   _roundRectPath(ctx, panelX, panelY, panelW, panelH, R);
-  ctx.strokeStyle = dsCanvas('--tg-ink', 0.45);
+  ctx.strokeStyle = dsColor('--tg-ink', 0.45);
   ctx.lineWidth = 2.5;
   ctx.stroke();
 
   // Result — below the panel
   const res = msrCardResultText({ rate, beatError, bph });
   ctx.textAlign = 'left';
-  ctx.fillStyle = dsCanvas('--tg-ink');
+  ctx.fillStyle = dsColor('--tg-ink');
   ctx.font = '700 72px -apple-system, system-ui, sans-serif';
   ctx.fillText(res.rate, panelX + 4, rateY);
   if (sub) {
-    ctx.fillStyle = dsCanvas('--tg-card-ink', 0.65);
+    ctx.fillStyle = dsColor('--tg-card-ink', 0.65);
     ctx.font = '500 34px -apple-system, system-ui, sans-serif';
     ctx.fillText(sub, panelX + 6, subY);
   }
@@ -34726,7 +34727,7 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
     ctx.restore();
     // Strip border
     _roundRectPath(ctx, panelX, scopeY, panelW, scopeH, R);
-    ctx.strokeStyle = dsCanvas('--tg-ink', 0.45);
+    ctx.strokeStyle = dsColor('--tg-ink', 0.45);
     ctx.lineWidth = 2.5;
     ctx.stroke();
     // Amplitude readout — below the strip, colored by health
@@ -34742,7 +34743,7 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   // WRotate wordmark — rides the bottom result line, bottom-right
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = dsCanvas('--tg-ink', 0.55);
+  ctx.fillStyle = dsColor('--tg-ink', 0.55);
   ctx.font = '700 34px -apple-system, system-ui, sans-serif';
   ctx.fillText('WRotate', panelX + panelW, wordmarkY);
 

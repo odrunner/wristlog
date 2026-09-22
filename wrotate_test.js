@@ -683,6 +683,9 @@ export function watchToRow(w, userId, eloRatings = {}) {
 
 // The browser reads this from design-system.css (--watch-default) via dsToken(); tests have no stylesheet.
 const DEFAULT_WATCH_COLOR = '#c9a84c';
+// dsColor() reads a colour token from design-system.css in the browser; these are its exact values there.
+const _DS_COLORS = { '--black': '#000', '--white': '#fff', '--tg-ink': '#4ade80', '--status-warn': '#eab308', '--status-bad': '#ef4444' };
+const dsColor = (name) => _DS_COLORS[name];
 
 export function rowToWatch(r) {
   return {
@@ -2921,7 +2924,7 @@ export function msrCardAmpText(amp) {
   const a = Number(amp);
   if (amp == null || amp === '' || !isFinite(a)) return null;
   const deg = Math.round(a);
-  const color = a >= 250 ? '#4ade80' : (a >= 200 ? '#eab308' : '#ef4444');
+  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--status-bad'));
   return { text: 'Amplitude ' + deg + '°', color };
 }
 
@@ -3384,12 +3387,12 @@ export function carryFeedEnrichment({ prevItems, prevLikes, prevComments, prevCo
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 export function initialsTextColor(bg) {
-  if (!bg || typeof bg !== 'string') return '#000';
+  if (!bg || typeof bg !== 'string') return dsColor('--black');
   let h = bg.trim().replace(/^#/, '');
   if (h.length === 3) h = h.split('').map(c => c + c).join('');
-  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '#000';
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return dsColor('--black');
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? dsColor('--black') : dsColor('--white');
 }
 
 // Ids the finished write actually covered — those whose version still matches
