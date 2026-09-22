@@ -33,6 +33,11 @@ describe('countHardcoded', () => {
     expect(countHardcoded("el.style.cssText = 'opacity:.4;'").opacity).toBe(1);
   });
 
+  it('counts px/rem sizes and positions not read from a token; %, em and 0 are not figures', () => {
+    const c = countHardcoded('.a { width: 32px; } .b { max-width: var(--size-120); } .c { top: calc(-1 * var(--size-1)); } .d { width: 100%; height: 1.75em; left: 0; } .e { right: calc(50vw - 235px); }');
+    expect(c.size).toBe(2);
+  });
+
   it('skips only the listed exceptions: first-paint colour, favicon data URL, Google logo colours', () => {
     expect(countHardcoded('<meta name="theme-color" content="#f5f5f8">').color).toBe(0);
     expect(countHardcoded('const svg = `<svg><rect fill="#0b0b10"/><circle fill="#c9a84c"/></svg>`;').color).toBe(0);

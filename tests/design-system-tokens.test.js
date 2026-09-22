@@ -97,6 +97,7 @@ export const SHARED_LIGHT = {
   '--lh-tight': '1.2',
   '--lh-snug': '1.4',
   '--lh-compact': '1.3',
+  '--size-px': '1px', '--size-0-5': '2px', '--size-1': '4px', '--size-1-5': '6px', '--size-2': '8px', '--size-2-5': '10px', '--size-3': '12px', '--size-3-5': '14px', '--size-4': '16px', '--size-5': '20px', '--size-6': '24px', '--size-7': '28px', '--size-8': '32px', '--size-9': '36px', '--size-10': '40px', '--size-11': '44px', '--size-12': '48px', '--size-14': '56px', '--size-16': '64px', '--size-18': '72px', '--size-20': '80px', '--size-24': '96px', '--size-30': '120px', '--size-35': '140px', '--size-40': '160px', '--size-45': '180px', '--size-50': '200px', '--size-55': '220px', '--size-60': '240px', '--size-65': '260px', '--size-70': '280px', '--size-75': '300px', '--size-80': '320px', '--size-85': '340px', '--size-90': '360px', '--size-95': '380px', '--size-100': '400px', '--size-105': '420px', '--size-110': '440px', '--size-115': '460px', '--size-120': '480px', '--size-125': '500px', '--size-130': '520px', '--size-140': '560px', '--size-170': '680px', '--size-180': '720px', '--size-215': '860px', '--size-290': '1160px', '--size-max': '9999px',
   '--bp-xs': '375px', '--bp-sm': '420px', '--bp-md': '640px', '--bp-lg': '760px', '--bp-xl': '1060px',
   '--opacity-ghost': '.1',
   '--opacity-faint': '.3',

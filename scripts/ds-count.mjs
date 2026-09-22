@@ -36,6 +36,8 @@ export const EXEMPT = [
   [/<meta name="theme-color" content="#[0-9a-fA-F]{3,8}">/g, 'first-paint colour: shown before design-system.css loads; applyTheme then sets it from --bg'],
   [/const svg = `<svg[\s\S]*?<\/svg>`;/g, 'favicon: drawn as a data-URL image, which cannot read CSS variables'],
   [/fill="#(?:4285F4|34A853|FBBC05|EA4335)"/g, "Google's \"G\" logo: brand artwork, must not be recoloured"],
+  [/\.wl-select-box:checked::after \{[^}]*\}/g, 'the tick in a selected checkbox: a hand-drawn glyph (a rotated L), its coordinates are drawing, not sizes'],
+  [/@media[^{]*/g, 'breakpoints: enforced as a named list by tests/design-system-tokens.test.js (media queries cannot read var())'],
 ];
 export function withoutExempt(src) {
   for (const [rx] of EXEMPT) src = src.replace(rx, '');
@@ -117,6 +119,14 @@ export function countHardcoded(src) {
     }
     out[name] = n;
   }
+  // Sizes and positions: any px/rem length not read from a token (%, em, vw… are relative, not figures).
+  let size = 0;
+  for (const m of text.matchAll(/(?<![-\w])(?:(?:min-|max-)?(?:width|height)|flex-basis|inset|top|right|bottom|left)\s*:\s*([^;"'}<`]+)/g)) {
+    const v = m[1];
+    if (v.includes('${')) continue;
+    if (/(?<![\w.-])\d*\.?\d+(px|rem)\b/.test(v.replace(/var\([^()]*\)/g, '').replace(/(?<![\w.])0(px|rem)?\b/g, ''))) size++;
+  }
+  out['size'] = size;
   let js = 0;
   for (const m of text.matchAll(JS_STYLE)) {
     const v = m[2].trim().toLowerCase();
@@ -140,6 +150,12 @@ export function isDesignStyle(attr) {
   });
 }
 
+// Comments inside a page's <style> blocks are prose too. Only there: elsewhere in a page "/*" can be part of
+// a CSP meta tag or a URL and would open a bogus comment.
+export function withoutStyleComments(src) {
+  return src.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/g, (_, a, css, b) => a + css.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' ')) + b);
+}
+
 export function countAll() {
   const out = {};
   for (const p of PAGES) {
@@ -147,6 +163,7 @@ export function countAll() {
     // A stylesheet's comments quote hex values in prose ("#9a7628 measures 4.20…"); they are not uses.
     // Only for .css: in the HTML pages a CSP meta tag contains "/*" and would open a bogus comment.
     if (p.endsWith('.css')) src = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    else src = withoutStyleComments(src);
     out[p] = countHardcoded(src);
   }
   return out;

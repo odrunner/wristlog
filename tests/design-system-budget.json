@@ -14,6 +14,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 1342
   },
@@ -32,6 +33,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 3
   },
@@ -50,6 +52,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 2
   },
@@ -68,6 +71,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -86,6 +90,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -104,6 +109,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 3
   },
@@ -122,6 +128,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -140,6 +147,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 88
   },
@@ -158,6 +166,7 @@
     "transition": 0,
     "z-index": 0,
     "opacity": 0,
+    "size": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   }

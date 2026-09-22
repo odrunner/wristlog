@@ -80,6 +80,14 @@
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
   --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0;
   --apple-bg: var(--black); --apple-ink: var(--white);
+  /* Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so
+     boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. */
+  --size-px: 1px; --size-0-5: 2px; --size-1: 4px; --size-1-5: 6px; --size-2: 8px; --size-2-5: 10px; --size-3: 12px; --size-3-5: 14px; --size-4: 16px; --size-5: 20px;
+  --size-6: 24px; --size-7: 28px; --size-8: 32px; --size-9: 36px; --size-10: 40px; --size-11: 44px; --size-12: 48px; --size-14: 56px; --size-16: 64px; --size-18: 72px;
+  --size-20: 80px; --size-24: 96px; --size-30: 120px; --size-35: 140px; --size-40: 160px; --size-45: 180px; --size-50: 200px; --size-55: 220px; --size-60: 240px; --size-65: 260px;
+  --size-70: 280px; --size-75: 300px; --size-80: 320px; --size-85: 340px; --size-90: 360px; --size-95: 380px; --size-100: 400px; --size-105: 420px; --size-110: 440px; --size-115: 460px;
+  --size-120: 480px; --size-125: 500px; --size-130: 520px; --size-140: 560px; --size-170: 680px; --size-180: 720px; --size-215: 860px; --size-290: 1160px;
+  --size-max: 9999px;
   /* Breakpoints. A media query cannot read a CSS variable, so these are the ONLY widths any @media may use
      (tests/design-system-tokens.test.js enforces it). The variables are here to name them and for JS.
        xs ≤375 tiny phones · sm ≤420 phones · md ≤640 / ≥641 phone vs tablet+ · lg ≤760 · xl ≤1060 */
@@ -316,7 +324,7 @@
 .hidden { display: none !important; }
 .eyebrow { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
 .eyebrow-muted { color: var(--muted); }
-.modal-close { position: absolute; top: .5rem; right: .75rem; background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); line-height: var(--lh-none); cursor: pointer; opacity: var(--opacity-soft); transition: opacity var(--dur-fast), color var(--dur-fast); }
+.modal-close { position: absolute; top: var(--size-2); right: var(--size-3); background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); line-height: var(--lh-none); cursor: pointer; opacity: var(--opacity-soft); transition: opacity var(--dur-fast), color var(--dur-fast); }
 .modal-close:hover { opacity: 1; color: var(--text); }
 .pill { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); }
 .pill-muted { color: var(--muted); background: var(--surface2); }
@@ -406,7 +414,7 @@
 .overlay.hidden { display: none; }
 .modal-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-6); }
 .modal-actions { display: flex; gap: var(--space-2-5); margin-top: var(--space-6); }
-.table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; }
+.table-wrap { overflow-x: auto; max-height: var(--size-80); overflow-y: auto; }
 .empty {
       text-align: center; padding: var(--space-10) var(--space-4); color: var(--muted);
     }
@@ -426,8 +434,8 @@
   .btn-label-full { display: none; }
   /* Modals: centered on mobile with side margins */ .overlay { align-items: center; padding: var(--space-4); overflow-x: hidden; }
   .modal-actions { flex-wrap: wrap; gap: var(--space-2); }
-  /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 34: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: 44px; }
-  .btn-sm { min-height: 34px; padding: var(--space-1-5) var(--space-3); }
+  /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 34: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: var(--size-11); }
+  .btn-sm { min-height: var(--size-8); padding: var(--space-1-5) var(--space-3); }
 }
 
 /* ══ Text styles and layout helpers ══

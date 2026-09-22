@@ -132,14 +132,14 @@ function renderModelPage(el, ctx, h) {
   const captionBits = [sp.type ? sp.type.replace(/ watch$/i, '') : '', sp.size, sp.water_resistance,
     (st.specs_agg || {}).movement_type ? st.specs_agg.movement_type.v : '',
     (o.era_min && o.era_max && o.era_min !== o.era_max) ? `${o.era_min}–${o.era_max}` : ''].filter(Boolean);
-  const hero = `<div style="position:relative;height:180px;background:var(--surface2);overflow:hidden;">
+  const hero = `<div style="position:relative;height:var(--size-45);background:var(--surface2);overflow:hidden;">
     ${heroImg ? `<img ${heroSrcAttrs(heroImg)} alt="" fetchpriority="high" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
     <div style="position:absolute;inset:0;background:linear-gradient(to right, color-mix(in srgb, var(--black) 90%, transparent) 0%, color-mix(in srgb, var(--black) 35%, transparent) 55%, color-mix(in srgb, var(--black) 10%, transparent) 100%);pointer-events:none;"></div>
-    <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;font-size:var(--fs-sm);color:color-mix(in srgb, var(--white) 85%, transparent);">
+    <div style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);display:flex;justify-content:space-between;font-size:var(--fs-sm);color:color-mix(in srgb, var(--white) 85%, transparent);">
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="back">‹ Back</span>
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="share">Share</span>
     </div>
-    <div style="position:absolute;left:18px;bottom:14px;right:16px;pointer-events:none;">
+    <div style="position:absolute;left:var(--size-4);bottom:var(--size-3-5);right:var(--size-4);pointer-events:none;">
       <div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
       <div style="font-size:var(--fs-3xl);font-weight:var(--fw-semibold);letter-spacing:var(--ls-display);color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
       <div style="font-size:var(--fs-xs);color:color-mix(in srgb, var(--white) 70%, transparent);">${escHtml(captionBits.join(' · '))}</div>
@@ -161,7 +161,7 @@ function renderModelPage(el, ctx, h) {
     const v = st.value, trend = valueTrendSummary(v.series), path = sparklinePath(v.series, 120, 16, 1);
     cells.push(`<div class="mp-cell"><div class="l">Median value</div>
       <div class="v">$${Number(v.median_now).toLocaleString()}</div>
-      <div style="height:16px;margin-top:var(--space-1-5);position:relative;overflow:hidden;">${path ? `<svg data-tile-spark width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="none" style="display:block;"><title>${escHtml((v.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title><path d="${path} L118,16 L2,16 Z" fill="var(--gold-dim)" stroke="none"/><path d="${path}" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>` : `<div style="position:absolute;inset:0;background:linear-gradient(to top, var(--gold-dim), transparent);"></div>`}</div>
+      <div style="height:var(--size-4);margin-top:var(--space-1-5);position:relative;overflow:hidden;">${path ? `<svg data-tile-spark width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="none" style="display:block;"><title>${escHtml((v.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title><path d="${path} L118,16 L2,16 Z" fill="var(--gold-dim)" stroke="none"/><path d="${path}" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>` : `<div style="position:absolute;inset:0;background:linear-gradient(to top, var(--gold-dim), transparent);"></div>`}</div>
       <div class="f" style="color:${trend && trend.direction === 'down' ? 'var(--danger)' : trend ? 'var(--success)' : 'var(--muted)'};">${trend ? escHtml(trend.text) + ' · ' : ''}${v.n_contributors} valuations</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">Wishlisted</div><div class="v">${st.wishlisted || 0}</div><div class="f">members want one</div></div>`);
@@ -175,7 +175,7 @@ function renderModelPage(el, ctx, h) {
     const c = st.cost_per_wear;
     const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
     cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold-text);">${cpwTxt}</div>
-      <div style="display:flex;align-items:center;gap:var(--space-1-5);height:16px;margin-top:var(--space-1-5);"><div style="flex:1;height:4px;border-radius:var(--radius-hair);background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:var(--fs-3xs);color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
+      <div style="display:flex;align-items:center;gap:var(--space-1-5);height:var(--size-4);margin-top:var(--space-1-5);"><div style="flex:1;height:var(--size-1);border-radius:var(--radius-hair);background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:var(--fs-3xs);color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
       <div class="f">per logged wear · ${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} with price + wears</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">${st.accuracy ? 'Owners' : 'Wears all-time'}</div><div class="v">${st.accuracy ? owners : (wr.all_time || 0)}</div><div class="f">${st.accuracy ? (st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate') : 'logged by members'}</div></div>`);
@@ -226,12 +226,12 @@ function renderModelPage(el, ctx, h) {
         <div class="mp-big"><span style="font-size:var(--fs-4xl);font-weight:var(--fw-semibold);line-height:var(--lh-none);">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
         <div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--muted);margin-top:var(--space-2-5);">Owners give it <span style="color:var(--text);font-weight:var(--fw-medium);">${w.share}%</span> of their logged wears, against <span style="color:var(--text);font-weight:var(--fw-medium);">${w.fair}%</span> if they rotated their collections evenly.</div>
         <div style="display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-3-5) 0 var(--space-1);">${rows.map(([label, val, me]) => `<div style="display:flex;align-items:center;gap:var(--space-2);">
-          <span style="width:78px;flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
-          <div style="flex:1;height:9px;background:var(--surface2);border-radius:var(--radius-pill);overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
-          <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
+          <span style="width:var(--size-20);flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
+          <div style="flex:1;height:var(--size-2);background:var(--surface2);border-radius:var(--radius-pill);overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
+          <span style="width:var(--size-7);flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
         ${ret.length ? `<div style="border-top:1px solid var(--border);margin-top:var(--space-3-5);padding-top:var(--space-3-5);">
           <div class="mp-hrow stack-2-5"><div class="mp-h" style="font-size:var(--fs-2xs);letter-spacing:var(--ls-tight);">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
-          <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
+          <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:var(--size-10);">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
           <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);font-size:var(--fs-3xs);color:var(--muted);">${ret.map(r => `<span style="flex:1;text-align:center;">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
         <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3-5);padding-top:var(--space-3);border-top:1px solid var(--border);">
           ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--black);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
@@ -266,7 +266,7 @@ function renderModelPage(el, ctx, h) {
     const parts = [];
     if (refRows.length) parts.push(`<div><div class="mp-h stack-2-5">Reference spec</div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:0 var(--space-3);font-size:var(--fs-sm);">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${l}</span><span style="color:var(--text);padding:var(--space-2) 0;text-align:right;${bt}">${escHtml(v)}</span>`; }).join('')}</div></div>`);
-    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div style="display:flex;gap:var(--space-2-5);font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-top:1px solid var(--border);"><span style="min-width:70px;color:var(--text);">${escHtml(r.reference || '')}</span><span style="min-width:84px;color:var(--muted);">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
+    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div style="display:flex;gap:var(--space-2-5);font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-top:1px solid var(--border);"><span style="min-width:var(--size-18);color:var(--text);">${escHtml(r.reference || '')}</span><span style="min-width:var(--size-20);color:var(--muted);">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
     if (cals.length) parts.push(sect(`<div class="mp-h stack-1-5">Calibers by era</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${cals.map(c => `<span style="font-size:var(--fs-xs);border:1px solid var(--border);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">${escHtml(c.caliber || '')}${c.years ? ` <span class="text-muted">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
     if (mv.length) parts.push(sect(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2-5);"><span class="mp-h" style="color:var(--gold-text);">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
         <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0 var(--space-3);font-size:var(--fs-sm);align-items:center;">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${label}</span><span style="color:var(--text);padding:var(--space-2) 0;${bt}">${escHtml(agg[k].v)}</span><span style="color:var(--muted);font-size:var(--fs-2xs);padding:var(--space-2) 0;${bt}">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
@@ -303,7 +303,7 @@ function renderModelPage(el, ctx, h) {
   </div>` : '';
 
   el.innerHTML = hero + band + grid + tabBar +
-    `<div id="mp-panel" role="tabpanel" style="padding:var(--space-4) var(--space-4) var(--space-2);display:flex;flex-direction:column;gap:var(--space-5);min-height:420px;">${panel}${more}${reqEdit}</div>` + actions;
+    `<div id="mp-panel" role="tabpanel" style="padding:var(--space-4) var(--space-4) var(--space-2);display:flex;flex-direction:column;gap:var(--space-5);min-height:var(--size-105);">${panel}${more}${reqEdit}</div>` + actions;
   if (!el._mpBound) {
     el._mpBound = true;
     el.addEventListener('click', e => {
@@ -357,7 +357,7 @@ function renderModelPage(el, ctx, h) {
 
   const CSS = `
     /* Reference (model) page — 2a design, 390px */
-    #page-model { max-width: 480px; margin: 0 auto; padding: 0; }
+    #page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
     .mp-tone-gold { background: var(--gold); } .mp-tone-dim { background: var(--gold-dim); } .mp-tone-flat { background: var(--surface2); }
     .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:var(--fw-normal); border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
     .mp-tab:hover { background: var(--surface2); }
@@ -383,7 +383,7 @@ function renderModelPage(el, ctx, h) {
     .mp-act-primary { font-weight:var(--fw-semibold); color:var(--black); background:var(--gold); border:0; }
     .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
     .mp-act-ghost:disabled { color:var(--muted); }
-    .mp-fact-nav { flex:none; width:36px; min-height:44px; display:flex; align-items:center; justify-content:center; background:none; border:0; color:var(--gold-text); font-size:var(--fs-xl); cursor:pointer; font-family:inherit; }
+    .mp-fact-nav { flex:none; width:var(--size-9); min-height:var(--size-11); display:flex; align-items:center; justify-content:center; background:none; border:0; color:var(--gold-text); font-size:var(--fs-xl); cursor:pointer; font-family:inherit; }
     .mp-hrow { display:flex; justify-content:space-between; align-items:baseline; }
     .mp-big { display:flex; align-items:baseline; gap:var(--space-2); }
     .mp-stack { display:flex; flex-direction:column; gap:var(--space-5); }

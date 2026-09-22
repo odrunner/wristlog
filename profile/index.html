@@ -25,7 +25,7 @@
       } catch(e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=4b051981">
+  <link rel="stylesheet" href="/design-system.css?v=88d1c7b4">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -62,7 +62,7 @@
     .btn-open-app:hover { opacity: var(--opacity-hover); color: var(--white); }
 
     /* ── Layout ── */
-    .page-wrap { max-width: 680px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-16); }
+    .page-wrap { max-width: var(--size-170); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-16); }
 
     /* ── Profile hero ── */
     .profile-hero {
@@ -70,7 +70,7 @@
       text-align: center; padding: var(--space-8) 0 var(--space-6); gap: var(--space-2-5);
     }
     .avatar {
-      width: 84px; height: 84px; border-radius: var(--radius-round);
+      width: var(--size-20); height: var(--size-20); border-radius: var(--radius-round);
       background: var(--gold); color: var(--black);
       font-size: var(--fs-3xl); font-weight: var(--fw-bold);
       display: flex; align-items: center; justify-content: center;
@@ -85,7 +85,7 @@
       padding: var(--space-0-5) var(--space-1-5); border-radius: var(--radius-xs); text-transform: uppercase;
       vertical-align: middle; margin-left: var(--space-1);
     }
-    .bio-text { font-size: var(--fs-md); color: var(--muted); max-width: 400px; line-height: var(--lh-body); }
+    .bio-text { font-size: var(--fs-md); color: var(--muted); max-width: var(--size-100); line-height: var(--lh-body); }
 
     /* ── Stats bar ── */
     .stats-bar {
@@ -158,9 +158,9 @@
     .state-wrap { text-align: center; padding: var(--space-16) var(--space-4); }
     .state-icon { font-size: var(--fs-4xl); margin-bottom: var(--space-3); }
     .state-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-1-5); }
-    .state-sub { font-size: var(--fs-md); color: var(--muted); max-width: 320px; margin: 0 auto; line-height: var(--lh-body); }
+    .state-sub { font-size: var(--fs-md); color: var(--muted); max-width: var(--size-80); margin: 0 auto; line-height: var(--lh-body); }
     .spinner {
-      width: 36px; height: 36px; border: 3px solid var(--border);
+      width: var(--size-9); height: var(--size-9); border: 3px solid var(--border);
       border-top-color: var(--gold); border-radius: var(--radius-round);
       animation: spin .7s linear infinite; margin: 0 auto var(--space-4);
     }
