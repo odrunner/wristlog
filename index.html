@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=75797b3b">
+  <link rel="stylesheet" href="/design-system.css?v=84251979">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -406,7 +406,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        (.promo-band) can cancel exactly that much with a negative margin
        instead of hardcoding a value that drifts when this padding changes.
        Kept in sync in the mobile override below. */
-    main { max-width: 1160px; margin: 0 auto; padding: 1.75rem var(--space-5); --page-gutter: var(--space-5); }
+    main { max-width: 1160px; margin: 0 auto; padding: var(--space-7) var(--space-5); --page-gutter: var(--space-5); }
     .page { display: none; }
     .page.active { display: block; }
 
@@ -445,7 +445,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .toggle-switch input { opacity:0; width:0; height:0; }
 
     /* ── PROFILE PAGE ── */
-    .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 var(--space-5); gap:var(--space-2); }
+    .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:var(--space-7) 0 var(--space-5); gap:var(--space-2); }
     .profile-avatar-lg { position:relative; width:72px; height:72px; border-radius:var(--radius-round); background:var(--gold); color:var(--black); font-size:var(--fs-3xl); font-weight:var(--fw-bold); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
     .profile-avatar-lg img { width:100%; height:100%; object-fit:cover; }
     .profile-avatar-cam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--black) 45%, transparent); opacity:0; transition:opacity var(--dur-fast); cursor:pointer; border-radius:var(--radius-round); font-size:var(--fs-xl); color:var(--white); }
@@ -1098,7 +1098,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 1.75rem;
+      padding: var(--space-7);
       width: 100%;
       max-width: 460px;
       max-height: 92vh;
@@ -1107,7 +1107,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     #watch-modal > .modal > .modal-actions,
-    #wishlist-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:-1.75rem; margin-right:-1.75rem; margin-bottom:-1.75rem; margin-top:var(--space-4); padding:var(--space-4) 1.75rem; background:var(--surface); border-top:1px solid var(--border); z-index:1; }
+    #wishlist-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:calc(-1 * var(--space-7)); margin-right:calc(-1 * var(--space-7)); margin-bottom:calc(-1 * var(--space-7)); margin-top:var(--space-4); padding:var(--space-4) var(--space-7); background:var(--surface); border-top:1px solid var(--border); z-index:1; }
 
     /* ── STATS PAGE ── */
     .stats-row {
@@ -1374,7 +1374,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-folder-name { font-weight: var(--fw-bold); font-size: var(--fs-lg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-folder-count { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: .1rem var(--space-2); flex-shrink: 0; }
     .wl-folder-thumbs { display: flex; flex-shrink: 0; margin-left: auto; }
-    .wl-folder-thumb, .wl-folder-thumb-avatar { width: 34px; height: 34px; border-radius: var(--radius-btn); border: 2px solid var(--surface); margin-left: -10px; flex-shrink: 0; }
+    .wl-folder-thumb, .wl-folder-thumb-avatar { width: 34px; height: 34px; border-radius: var(--radius-btn); border: 2px solid var(--surface); margin-left: calc(-1 * var(--space-2-5)); flex-shrink: 0; }
     .wl-folder-thumb { object-fit: cover; }
     .wl-folder-thumb-avatar { display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); font-size: var(--fs-3xs); color: var(--black); }
     .wl-folder-thumbs > :first-child { margin-left: 0; }
@@ -1458,7 +1458,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.frozen { background:#cfe8f5; color:#0c4a6e; font-weight:var(--fw-bold); }
     .streak-cal-cell.rest { background:var(--surface2); color:var(--muted); position:relative; }
     .streak-cal-cell.rest::after { content:''; position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:var(--radius-round); background:var(--muted); opacity:.6; }
-    .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:-.5rem 0 var(--space-3); }
+    .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:calc(-1 * var(--space-2)) 0 var(--space-3); }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
     #streak-calendar-modal { align-items: flex-start; }
     #streak-calendar-modal .modal { margin-top: calc(env(safe-area-inset-top, 0px) + 64px); }
@@ -2698,7 +2698,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: var(--fs-xs); color: var(--muted);
       text-transform: uppercase; letter-spacing: var(--ls-tight);
     }
-    .profile-stat-btn    { cursor: pointer; border-radius: var(--radius-btn); padding: var(--space-1) var(--space-1-5); margin: -.25rem -.4rem; transition: background var(--dur-fast); }
+    .profile-stat-btn    { cursor: pointer; border-radius: var(--radius-btn); padding: var(--space-1) var(--space-1-5); margin: calc(-1 * var(--space-1)) -.4rem; transition: background var(--dur-fast); }
     .profile-stat-btn:hover { background: var(--surface2); }
     .profile-stat-btn:hover .profile-stat-value { color: var(--gold-text); }
     .profile-bio-edit {
@@ -2727,7 +2727,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to content</a>
-<noscript><div style="padding:3rem var(--space-6);text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
+<noscript><div style="padding:var(--space-12) var(--space-6);text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen" data-theme="light">
@@ -3135,7 +3135,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
-  <div class="modal" style="max-width:360px;text-align:center;padding:var(--space-8) 1.75rem;">
+  <div class="modal" style="max-width:360px;text-align:center;padding:var(--space-8) var(--space-7);">
     <div class="eyebrow stack-5">Anniversary</div>
     <div id="anniversary-watch-img" class="stack-5"></div>
     <div id="anniversary-modal-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);line-height:var(--lh-body);margin-bottom:var(--space-1-5);"></div>
@@ -3162,7 +3162,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Push benefit card (2.6 provisional → prominent). Shown once, at the next wear log or kept
      reading while notifications still deliver quietly; Turn on spends the one-shot OS dialog. -->
 <div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
-  <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) 1.75rem;">
+  <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) var(--space-7);">
     <div class="eyebrow stack-4">Reminders</div>
     <div id="push-ask-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-2);">Get the 5pm nudge on your lock screen</div>
     <div style="font-size:var(--fs-base);color:var(--muted);line-height:var(--lh-body);margin-bottom:var(--space-6);">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
@@ -3173,7 +3173,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 <div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
-  <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) 1.75rem;position:relative;">
+  <div class="modal" style="max-width:340px;text-align:center;padding:var(--space-8) var(--space-7);position:relative;">
     <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" class="btn-plain" style="display:none;position:absolute;top:.6rem;right:.6rem;font-size:var(--fs-2xl);line-height:var(--lh-none);padding:var(--space-1) var(--space-2);">&times;</button>
     <!-- Step 1: Enjoying WRotate? -->
     <div id="review-step-ask">
@@ -3212,7 +3212,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ MEASURE HELP MODAL ════ -->
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
-  <div class="modal" style="max-width:380px;padding:var(--space-8) 1.75rem;">
+  <div class="modal" style="max-width:380px;padding:var(--space-8) var(--space-7);">
     <div class="eyebrow stack-5">How to Measure</div>
     <div id="msr-help-title" style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--text);margin-bottom:var(--space-5);">Measure Your Watch's Accuracy</div>
     <div style="display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-6);">
@@ -3245,7 +3245,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="followers-modal-title">Followers</div>
-    <div id="followers-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
+    <div id="followers-list" style="max-height:55vh;overflow-y:auto;margin:0 calc(-1 * var(--space-1));"></div>
     <div class="modal-actions" style="margin-top:var(--space-4);">
       <button class="btn btn-ghost" onclick="closeFollowersModal()">Close</button>
     </div>
@@ -3255,7 +3255,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="following-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="following-modal-title">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="following-modal-title">Following</div>
-    <div id="following-modal-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
+    <div id="following-modal-list" style="max-height:55vh;overflow-y:auto;margin:0 calc(-1 * var(--space-1));"></div>
     <div class="modal-actions" style="margin-top:var(--space-4);">
       <button class="btn btn-ghost" onclick="closeFollowingModal()">Close</button>
     </div>
@@ -3492,7 +3492,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-track" class="page">
     <div class="enhance-nudge-slot"></div>
     <div id="rec-container"></div>
-    <div id="neglected-strip" style="display:none;margin:-.5rem 0 var(--space-5);">
+    <div id="neglected-strip" style="display:none;margin:calc(-1 * var(--space-2)) 0 var(--space-5);">
       <div style="font-size:var(--fs-xs);font-weight:var(--fw-semibold);letter-spacing:var(--ls-tight);text-transform:uppercase;color:var(--muted);margin-bottom:var(--space-1-5);">Not worn in a while</div>
       <div id="neglected-chips" style="display:flex;gap:var(--space-2);overflow-x:auto;padding-bottom:var(--space-1);-webkit-overflow-scrolling:touch;"></div>
     </div>
@@ -3577,14 +3577,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:var(--space-1-5) var(--space-3);">← Back</button>
     </div>
     <div id="profile-page-content">
-      <div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>
+      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>
     </div>
   </div>
 
   <!-- ════ CLUBS PAGE ════ -->
   <div id="page-model" class="page">
     <div id="model-page-content">
-      <div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>
+      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>
     </div>
   </div>
 
@@ -3600,7 +3600,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="explore-more-wrap" style="text-align:center;margin-top:var(--space-4);display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
-    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:2.5rem 0;font-size:var(--fs-base);">No models match that search.</div>
+    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:var(--space-10) 0;font-size:var(--fs-base);">No models match that search.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -3616,7 +3616,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:var(--space-1-5) var(--space-3);">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
-      <div style="text-align:center;padding:3rem;color:var(--muted);">Loading&#8230;</div>
+      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading&#8230;</div>
     </div>
   </div>
 
@@ -5072,7 +5072,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="card stack-5">
       <div class="section-title">Wears by Use Case</div>
-      <div style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
+      <div style="display:flex;gap:var(--space-10);align-items:center;flex-wrap:wrap;">
         <div style="position:relative;width:220px;height:220px;flex-shrink:0;">
           <canvas id="ch-usecase"></canvas>
           <div id="ch-usecase-empty" class="chart-empty" style="display:none;">No data yet</div>
@@ -5512,7 +5512,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:320px;">
     <div class="modal-title" id="photo-paste-modal-title">Add Photo</div>
     <div id="photo-drop-zone"
-         style="border:2px dashed var(--border);border-radius:var(--radius);padding:1.75rem var(--space-4) var(--space-5);text-align:center;transition:border-color var(--dur-fast);"
+         style="border:2px dashed var(--border);border-radius:var(--radius);padding:var(--space-7) var(--space-4) var(--space-5);text-align:center;transition:border-color var(--dur-fast);"
          ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
          ondragleave="this.style.borderColor='var(--border)'"
          ondrop="handlePhotoDrop(event)">
@@ -6084,7 +6084,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="admin-user-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title row" id="admin-user-modal-title">User Detail</div>
-    <div id="admin-user-modal-body" style="max-height:70vh;overflow-y:auto;margin:0 -.25rem;padding:0 var(--space-1);">
+    <div id="admin-user-modal-body" style="max-height:70vh;overflow-y:auto;margin:0 calc(-1 * var(--space-1));padding:0 var(--space-1);">
       <div class="note-md">Loading…</div>
     </div>
     <div class="modal-actions" style="margin-top:var(--space-4);">
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.20.47';
+const APP_VERSION = '21.21.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8808,7 +8808,7 @@ async function loadAndRenderProfile(userId) {
     return;
   }
 
-  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
   const isOwn = userId === currentUser?.id;
 
   // email_prefs is only ever rendered on your OWN profile (the notification
@@ -8824,11 +8824,11 @@ async function loadAndRenderProfile(userId) {
   // Audit REL-N4: only claim the account is gone when the server actually said
   // "no row" (PGRST116). A timeout or network error is not evidence of deletion.
   if (!profile && profileErr && profileErr.code !== 'PGRST116') {
-    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Could not load this profile — check your connection and try again.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Could not load this profile — check your connection and try again.</div>';
     return;
   }
   if (!profile) {
-    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">This account no longer exists.</div>';
     return;
   }
 
@@ -8947,7 +8947,7 @@ async function loadAndRenderProfile(userId) {
     _pr = await withTimeout(Promise.all(_pp), 12000);
   } catch (e) {
     console.error('[WristLog] Profile load failed:', e);
-    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
+    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
     return;
   }
 
@@ -10261,7 +10261,7 @@ function goBackFromClub() {
 async function renderClubDetail(clubId) {
   const el = document.getElementById('club-detail-content');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
 
   // Use cached myClubs data first (avoids RLS cross-table policy issues for private clubs).
   // Fall back to a direct DB query for public clubs the user hasn't joined yet.
@@ -10271,7 +10271,7 @@ async function renderClubDetail(clubId) {
     if (error) console.error('[Clubs] fetch error:', error);
     club = data;
   }
-  if (!club) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Club not found.</div>'; return; }
+  if (!club) { el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Club not found.</div>'; return; }
 
   // ── Stage 1: members + posts in parallel ─────────────────────────────
   const [{ data: memberRows }, { data: clubPosts }] = await withTimeout(Promise.all([
@@ -14857,7 +14857,7 @@ function renderFeed() {
 
   if (feedError && feedItems.length === 0) {
     el.innerHTML = `
-      <div style="text-align:center;padding:2.5rem var(--space-4);">
+      <div style="text-align:center;padding:var(--space-10) var(--space-4);">
         <div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">⚠</div>
         <div style="font-weight:var(--fw-semibold);margin-bottom:var(--space-1-5);color:var(--text);">Couldn't load your feed</div>
         <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Check your connection and try again.</div>
@@ -24820,7 +24820,7 @@ async function loadModelOwnersRow(w) {
     row.textContent = "You're the only one on WRotate with this one — rare bird.";
   } else {
     const stack = vis.slice(0, 3).map(o =>
-      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:var(--fs-2xs);display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:var(--radius-round);object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
+      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:var(--fs-2xs);display:inline-flex;align-items:center;justify-content:center;margin-right:calc(-1 * var(--space-1-5));border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:var(--radius-round);object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
     const era = data.era_min && data.era_max && data.era_min !== data.era_max
       ? ` <span class="text-muted">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
     row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
@@ -24871,7 +24871,7 @@ let _mpCtx = null; // last render inputs, for tab switches without refetch
 
 async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
-  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
   const [mRes, oRes, sRes] = await Promise.all([
     db.from('watch_models').select('id,brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
@@ -24879,7 +24879,7 @@ async function loadAndRenderModel(modelId, owners) {
   ]);
   if (modelPageId !== modelId) return;
   const m = mRes.data;
-  if (!m) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Model not found.</div>'; return; }
+  if (!m) { el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Model not found.</div>'; return; }
   let facts = [];
   if (m.facts_key) {
     const { data } = await db.from('watch_facts').select('fact,position').eq('model_key', m.facts_key).order('position').limit(6);
@@ -36080,7 +36080,7 @@ setTimeout(() => {
     _feedLoadStartedAt = 0;
     loadFeed();
   } else {
-    fl.innerHTML = '<div style="text-align:center;padding:2.5rem var(--space-4);">' +
+    fl.innerHTML = '<div style="text-align:center;padding:var(--space-10) var(--space-4);">' +
       '<div style="font-size:var(--fs-3xl);margin-bottom:var(--space-2);">\u26A0</div>' +
       '<div style="font-weight:var(--fw-semibold);margin-bottom:var(--space-1-5);color:var(--text);">Taking too long to load</div>' +
       '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);">Try refreshing the page.</div>' +

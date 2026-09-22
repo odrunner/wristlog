@@ -77,6 +77,8 @@ function withoutDeclarations(src) {
 // shorthand still counts, so the budget cannot be gamed by partial edits.
 export function isTokenised(v) {
   if (!v.includes('var(')) return false;
+  // calc(-1 * var(--space-2)) is a token pointing the other way (a margin that cancels a padding), not a figure
+  v = v.replace(/calc\(\s*-1\s*\*\s*(var\([^()]*\))\s*\)/g, '$1');
   const rest = v.replace(/var\([^()]*\)/g, '').replace(/(?<![\d.])0(?![\d.])/g, '');
   return !/\d/.test(rest);
 }

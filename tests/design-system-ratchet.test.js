@@ -67,6 +67,13 @@ describe('countHardcoded', () => {
 
   // Phase 4 step 5: behaviour and data are not design decisions. `display:none` is state JS toggles;
   // `width:${pct}%` is a value from the data. Neither would change in a redesign, so neither counts.
+  it('treats a negated token as tokenised, but not a negated figure', () => {
+    expect(isTokenised('calc(-1 * var(--space-7))')).toBe(true);
+    expect(isTokenised('calc(-1 * var(--space-2)) var(--space-4)')).toBe(true);
+    expect(isTokenised('calc(-1 * 28px)')).toBe(false);
+    expect(isTokenised('calc(-2 * var(--space-2))')).toBe(false);          // a multiplier other than -1 is a figure
+  });
+
   it('does not count behaviour-only or data-driven inline styles', () => {
     expect(isDesignStyle('display:none')).toBe(false);
     expect(isDesignStyle('display:none;position:absolute;top:0')).toBe(false);

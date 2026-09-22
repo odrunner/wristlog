@@ -58,7 +58,9 @@
   /* Spacing is in rem, like every font size here, so it follows the reader's
      text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. */
   --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
-  --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
+  --space-5: 1.25rem; --space-6: 1.5rem; --space-7: 1.75rem; --space-8: 2rem;
+  /* larger steps (2026-09-22): panel padding, empty states, page breathing room */
+  --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
   /* Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from
      5-7px and 10px gaps; without these, snapping to the scale moved things by
      2px+ and it added up across a card. With them nothing under 16px moves
@@ -364,7 +366,7 @@
 .modal-actions { display: flex; gap: var(--space-2-5); margin-top: var(--space-6); }
 .table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; }
 .empty {
-      text-align: center; padding: 2.5rem var(--space-4); color: var(--muted);
+      text-align: center; padding: var(--space-10) var(--space-4); color: var(--muted);
     }
 .empty-icon { font-size: var(--fs-4xl); opacity: .3; margin-bottom: var(--space-3); }
 .empty-text { font-size: var(--fs-lg); margin-bottom: var(--space-1); }
