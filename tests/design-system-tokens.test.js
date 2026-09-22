@@ -275,6 +275,7 @@ export const SHARED_OTHER = [
   '--promo-gold', '--promo-gold-deep', '--promo-gold-bright', '--promo-gold-light',
   '--promo-parchment', '--promo-line', '--promo-sand', '--promo-band-body',
   '--promo-ink', '--promo-ink-2', '--promo-quiet', '--promo-cta-fg', '--promo-mono', '--promo-paper',
+  '--promo-radius', '--promo-radius-shot', '--promo-fs-heading', '--promo-fs-hero', '--promo-fs-prompt', '--promo-fs-flat', '--promo-fs-delta', '--promo-fs-fallback', '--promo-fs-streak', '--promo-fs-mark', '--promo-ls-eyebrow', '--promo-ls-label', '--promo-ls-year', '--promo-ls-tight', '--promo-ls-tight-2', '--promo-ls-tight-3', '--promo-ls-tight-4', '--promo-ls-mark', '--promo-lh-eyebrow', '--promo-lh-eyebrow-sm', '--promo-edge',
 ];
 const owned = t => t in SHARED_LIGHT || SHARED_OTHER.includes(t);
 

@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=c26245e5">
+  <link rel="stylesheet" href="/design-system.css?v=4cc1090b">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1978,7 +1978,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-card.promo-tag {
       background: var(--surface);
       border: 1.5px solid var(--promo-line);
-      border-radius: 14px;                 /* user posts are 16px+ */
+      border-radius: var(--promo-radius);                 /* user posts are 16px+ */
       box-shadow: none;                    /* the shadow is a post's cue */
     }
     .promo-tag-strip {
@@ -1999,8 +1999,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-tag-eyebrow {
       font-family: var(--promo-mono);
-      font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 18px;
-      letter-spacing: .16em; text-transform: uppercase;
+      font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: var(--promo-lh-eyebrow);
+      letter-spacing: var(--promo-ls-eyebrow); text-transform: uppercase;
       color: var(--promo-gold);
     }
     /* The notches must read as a bite out of the card edge, centred on the
@@ -2022,7 +2022,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Gap owns the spacing in both variants, so the classic .promo-heading
        margin is zeroed rather than doubling up with it. */
     .promo-tag .promo-heading {
-      font-size: var(--fs-2xl); font-weight: var(--fw-heavy); letter-spacing: -.01em;
+      font-size: var(--fs-2xl); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight);
       color: var(--text); margin: 0;
     }
     .promo-tag .promo-body {
@@ -2043,12 +2043,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* tag · nudge — one line, inline CTA. Strip is 8 + 12 + 8 = 28px here, so
        the notch centre moves to 21px. */
     .promo-tag--nudge .promo-tag-strip { padding: var(--space-2) var(--space-4); }
-    .promo-tag--nudge .promo-tag-eyebrow { font-size: var(--fs-2xs); line-height: 12px; }
+    .promo-tag--nudge .promo-tag-eyebrow { font-size: var(--fs-2xs); line-height: var(--promo-lh-eyebrow-sm); }
     .promo-tag--nudge .promo-tag-notch { top: 21px; }
     .promo-tag--nudge .promo-tag-body {
       flex-direction: row; align-items: center; gap: var(--space-3-5); padding: var(--space-3-5) var(--space-4);
     }
-    .promo-tag--nudge .promo-heading { font-size: 16px; font-weight: var(--fw-bold); }
+    .promo-tag--nudge .promo-heading { font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); }
     .promo-tag--nudge .promo-body { font-size: var(--fs-base); }
     .promo-tag--nudge .promo-cta {
       padding: var(--space-2-5) var(--space-4); border-radius: var(--radius-btn); flex-shrink: 0;
@@ -2080,16 +2080,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-band-mark {
       position: absolute; right: -14px; bottom: -30px;
-      font-size: 96px; font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: -.05em;
+      font-size: var(--promo-fs-mark); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--promo-ls-mark);
       color: var(--white); opacity: .09; pointer-events: none; user-select: none;
     }
     .promo-band-eyebrow {
       font-family: var(--promo-mono);
-      font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: .18em;
+      font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--promo-ls-label);
       text-transform: uppercase; color: var(--promo-sand);
     }
     .promo-band--prompt .promo-heading {
-      font-size: 23px; font-weight: var(--fw-heavy); letter-spacing: -.015em;
+      font-size: var(--promo-fs-prompt); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-2);
       line-height: var(--lh-tight); color: var(--white); margin: 0;
     }
     .promo-band--prompt .promo-body {
@@ -2114,11 +2114,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        hairlines to keep an edge. Inset shadow rather than a border: a border
        would change the bar's height and shift the layout between themes. */
     [data-theme="dark"] .promo-band--nudge {
-      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent);
+      box-shadow: var(--promo-edge);
     }
     .promo-band--nudge .promo-band-eyebrow { font-size: var(--fs-2xs); color: var(--promo-gold-light); }
     .promo-band--nudge .promo-heading {
-      font-size: 16px; font-weight: var(--fw-bold); color: var(--promo-paper); margin: 0;
+      font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); color: var(--promo-paper); margin: 0;
     }
     .promo-band--nudge .promo-body { font-size: var(--fs-base); color: var(--promo-ink-2); }
     .promo-band--nudge .promo-cta {
@@ -2136,7 +2136,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-card.promo-recap {
       background: var(--surface);
       border: 1.5px solid var(--promo-line);
-      border-radius: 14px;
+      border-radius: var(--promo-radius);
       overflow: hidden;
       box-shadow: none;
     }
@@ -2148,7 +2148,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-eyebrow {
       font-family: var(--promo-mono); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
-      letter-spacing: .16em; text-transform: uppercase; color: var(--promo-gold);
+      letter-spacing: var(--promo-ls-eyebrow); text-transform: uppercase; color: var(--promo-gold);
     }
     .promo-recap-period { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--promo-gold-deep); }
 
@@ -2171,18 +2171,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-slide-lbl {
       font-family: var(--promo-mono); font-size: var(--fs-2xs); font-weight: var(--fw-semibold);
-      letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+      letter-spacing: var(--promo-ls-label); text-transform: uppercase; color: var(--muted);
     }
 
     /* Cover: the month name is the hero, so it gets the size the numbers would
        normally take. line-height 1 keeps month and year as one block. */
     .promo-recap-month {
-      font-size: var(--fs-4xl); font-weight: var(--fw-heavy); letter-spacing: -.02em; line-height: var(--lh-none);
+      font-size: var(--fs-4xl); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-3); line-height: var(--lh-none);
       color: var(--promo-gold-deep);
     }
     .promo-recap-year {
       font-family: var(--promo-mono); font-size: var(--fs-lg); font-weight: var(--fw-semibold);
-      letter-spacing: .22em; color: var(--muted); margin-top: -2px;
+      letter-spacing: var(--promo-ls-year); color: var(--muted); margin-top: calc(-1 * var(--space-0-5));
     }
     .promo-recap-cover-line {
       font-size: var(--fs-lg); font-weight: var(--fw-semibold); color: var(--text); margin-top: var(--space-1-5);
@@ -2195,11 +2195,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-weight: var(--fw-bold);
     }
     .promo-recap-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .promo-recap-thumb--hero   { width: 96px; height: 96px; font-size: 1.5rem; }
+    .promo-recap-thumb--hero   { width: 96px; height: 96px; font-size: var(--promo-fs-flat); }
     .promo-recap-thumb--podium { width: 54px; height: 54px; font-size: var(--fs-base); }
 
-    .promo-recap-hero-name { font-size: 19px; font-weight: var(--fw-heavy); letter-spacing: -.01em; color: var(--text); }
-    .promo-recap-hero-sub  { font-size: var(--fs-base); color: var(--muted); margin-top: -4px; }
+    .promo-recap-hero-name { font-size: var(--promo-fs-hero); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight); color: var(--text); }
+    .promo-recap-hero-sub  { font-size: var(--fs-base); color: var(--muted); margin-top: calc(-1 * var(--space-1)); }
 
     .promo-recap-podium {
       display: flex; align-items: flex-start; justify-content: center;
@@ -2226,24 +2226,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        the colour stays in the house palette. */
     .promo-recap-trend { display: flex; align-items: baseline; gap: var(--space-2); }
     .promo-recap-delta {
-      font-size: 30px; font-weight: var(--fw-heavy); letter-spacing: -.02em;
+      font-size: var(--promo-fs-delta); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-3);
       color: var(--promo-gold-deep);
     }
-    .promo-recap-flat { font-size: 24px; font-weight: var(--fw-heavy); color: var(--promo-gold-deep); }
+    .promo-recap-flat { font-size: var(--promo-fs-flat); font-weight: var(--fw-heavy); color: var(--promo-gold-deep); }
     .promo-recap-trend-sub { font-size: var(--fs-md); color: var(--muted); }
 
     /* Top post: the photo is the point, so it gets a rectangle rather than the
        circular treatment the watch thumbnails use. */
     .promo-recap-shot {
       position: relative;
-      width: 148px; height: 148px; border-radius: 12px; overflow: hidden;
+      width: 148px; height: 148px; border-radius: var(--promo-radius-shot); overflow: hidden;
       background: var(--surface2); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     /* Sits behind the photo, so a 404 or a hidden broken image leaves the
        watch's initials rather than an empty rectangle. */
     .promo-recap-shot-fallback {
-      font-size: 2rem; font-weight: var(--fw-bold); color: var(--muted);
+      font-size: var(--promo-fs-fallback); font-weight: var(--fw-bold); color: var(--muted);
     }
     .promo-recap-shot img {
       position: absolute; inset: 0;
@@ -2251,7 +2251,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     .promo-recap-streak {
-      font-size: 52px; font-weight: var(--fw-heavy); letter-spacing: -.03em; line-height: var(--lh-none);
+      font-size: var(--promo-fs-streak); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-4); line-height: var(--lh-none);
       color: var(--promo-gold-deep);
     }
 
@@ -8254,7 +8254,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.56';
+const APP_VERSION = '22.06.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

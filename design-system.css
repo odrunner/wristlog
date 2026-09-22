@@ -293,6 +293,29 @@
   --promo-ink-2: #A9A196;
   --promo-quiet: #6B6478;
   --promo-cta-fg: #fff;
+  /* the promo family's own editorial scale — deliberately not the app's (display sizes, wide eyebrow
+     tracking, tightened headings, a 14px corner vs a post's 16px) */
+  --promo-radius: 14px;
+  --promo-radius-shot: 12px;
+  --promo-fs-heading: 16px;
+  --promo-fs-hero: 19px;
+  --promo-fs-prompt: 23px;
+  --promo-fs-flat: 24px;
+  --promo-fs-delta: 30px;
+  --promo-fs-fallback: 2rem;
+  --promo-fs-streak: 52px;
+  --promo-fs-mark: 96px;
+  --promo-ls-eyebrow: .16em;
+  --promo-ls-label: .18em;
+  --promo-ls-year: .22em;
+  --promo-ls-tight: -.01em;
+  --promo-ls-tight-2: -.015em;
+  --promo-ls-tight-3: -.02em;
+  --promo-ls-tight-4: -.03em;
+  --promo-ls-mark: -.05em;
+  --promo-lh-eyebrow: 18px;
+  --promo-lh-eyebrow-sm: 12px;
+  --promo-edge: inset 0 1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent);
   --promo-mono: var(--font-mono);
 }
 /* The tag and the recap deck are painted on the app surface, so a fixed white
