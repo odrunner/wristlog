@@ -9618,6 +9618,7 @@ function _fallbackCopyText(text, msg = 'Link copied!') {
 }
 
 async function uploadProfilePic() {
+  if (demoGuard()) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const input = document.createElement('input');
   input.type = 'file';
