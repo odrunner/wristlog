@@ -140,8 +140,8 @@ function renderModelPage(el, ctx, h) {
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="share">Share</span>
     </div>
     <div style="position:absolute;left:18px;bottom:14px;right:16px;pointer-events:none;">
-      <div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
-      <div style="font-size:var(--fs-3xl);font-weight:var(--fw-semibold);letter-spacing:-.01em;color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
+      <div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
+      <div style="font-size:var(--fs-3xl);font-weight:var(--fw-semibold);letter-spacing:var(--ls-display);color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
       <div style="font-size:var(--fs-xs);color:color-mix(in srgb, var(--white) 70%, transparent);">${escHtml(captionBits.join(' · '))}</div>
     </div>
   </div>${m.hero_image && m.hero_credit ? `<div style="font-size:var(--fs-3xs);color:var(--muted);text-align:right;padding:var(--space-1) var(--space-2-5) 0;background:var(--bg);">${escHtml(m.hero_credit)}</div>` : ''}`;
@@ -223,7 +223,7 @@ function renderModelPage(el, ctx, h) {
       const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
       parts.push(`<div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);border-radius:var(--radius);padding:var(--space-4) var(--space-4) var(--space-4);">
         <div class="mp-hrow stack-3"><div class="mp-h" style="color:var(--gold-text);">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
-        <div class="mp-big"><span style="font-size:38px;font-weight:var(--fw-semibold);line-height:.95;">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
+        <div class="mp-big"><span style="font-size:var(--fs-4xl);font-weight:var(--fw-semibold);line-height:var(--lh-none);">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
         <div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--muted);margin-top:var(--space-2-5);">Owners give it <span style="color:var(--text);font-weight:var(--fw-medium);">${w.share}%</span> of their logged wears, against <span style="color:var(--text);font-weight:var(--fw-medium);">${w.fair}%</span> if they rotated their collections evenly.</div>
         <div style="display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-3-5) 0 var(--space-1);">${rows.map(([label, val, me]) => `<div style="display:flex;align-items:center;gap:var(--space-2);">
           <span style="width:78px;flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
@@ -278,7 +278,7 @@ function renderModelPage(el, ctx, h) {
     if (st.wishlisted) cards.push(['Wishlisted', `${st.wishlisted} member${st.wishlisted === 1 ? '' : 's'}`]);
     if (wr.all_time) cards.push(['Wears logged', Number(wr.all_time).toLocaleString()]);
     panel = `<div class="mp-stack">
-      <div class="mp-big"><span style="font-size:34px;font-weight:var(--fw-semibold);line-height:var(--lh-none);">${owners}</span><span class="caption">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
+      <div class="mp-big"><span style="font-size:var(--fs-display);font-weight:var(--fw-semibold);line-height:var(--lh-none);">${owners}</span><span class="caption">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
       ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span class="mp-meta">year of example</span><span class="mp-badge">Exclusive</span>`) +
         mpBars(era, 56, 4, '2px 2px 0 0') + `<div style="display:flex;gap:var(--space-1);margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span style="flex:1;text-align:center;">${l}</span>`).join('')}</div>`) : ''}
       <div style="border-top:1px solid var(--border);padding-top:var(--space-4);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2-5);">${cards.map(([l, v]) => `<div class="mp-card" style="padding:var(--space-3) var(--space-3);"><div class="l">${l}</div><div class="v" style="font-size:var(--fs-xl);">${escHtml(v)}</div></div>`).join('')}</div>
