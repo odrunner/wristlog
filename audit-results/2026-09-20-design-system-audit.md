@@ -82,3 +82,32 @@ Counts exclude the email-HTML ranges. What remains outside colour is deliberate:
 **Shipped after the snap, all 2026-09-20:** zero-change tokens for circles / 4px / 16px corners / line-height 1 / tight tracking / input text (`7732d67`); approved decisions pass — corners by role, headings to nearest step, tracking, tiny text (`888de01`); four-level elevation ramp + `--ring` (`b10637f`); tooling kept in `scripts/design-system/` with the seven fences (`7157123`).
 
 **Still open:** phase 4 component classes (the step that makes the design changeable in one place, and removes many colour literals on the way); 531 colour literals (not blindly swappable: theme colours would start following the theme); phase 5 small pages (p, profile, privacy, terms). Unverified on a real device: the Measure screen mid-measurement (`83d31f5`).
+
+## Final status — 2026-09-21 (all live, cache v1234)
+
+| | 2026-09-20 start | 2026-09-21 end |
+|---|---|---|
+| Hardcoded font sizes, `index.html` | 1,217 | 27 |
+| Inline `style=` design decisions | 2,053 | 1,375 (behaviour-only and data-driven attributes no longer count) |
+| Colour literals (design; data, email, landing, canvas, SVG excluded) | 531 | 303 |
+| JS `el.style` design assignments | 62 | 8 |
+| Pages on the design system | 1 (tokens only) | 6: index, p/, profile/, w/, privacy, terms |
+| Shared components in `design-system.css` | 0 | 63 rules + 27 named text/layout/button classes |
+
+Done in order: phase 0 ratchet · 1 tokens · 2 lossless swap · 3 snap per screen (reviewed) · shadows ramp ·
+4 component classes (redundancy, component move, named styles, button/field variants, ratchet semantics) ·
+colours (lossless hex, alpha → `color-mix`, 13 named tokens) · 5 small pages + legal pages · JS assignments.
+
+What remains and why: ~90 one-use colour literals (a divider tint, a hover wash…) — naming each would be a
+rename with one use; the ratchet (`tests/design-system-budget.json`) only goes down, so they get a token the
+day someone touches them. 8 JS one-offs (disabled opacity, saved-green, confidence-bar blue, listen-error red).
+Fenced on purpose: email HTML, the landing screen, canvas, promo cards, `.funfact-row`, `body` font-size.
+
+Incidents: the component move was reverted after ~3 min live (2026-09-20) — the service worker paired the new
+page with a cached old stylesheet; fixed by loading the stylesheet by content hash (`scripts/ds-stamp.mjs`).
+Three Save buttons were 10px shorter on phones for ~4 min (2026-09-21) — an "exact" match onto an existing
+class that carried a mobile min-height; the naming tool now only maps onto classes it declares itself.
+
+Tooling (all in `scripts/design-system/`, README there): `compare.sh` static · landing · screen · modals · force ·
+live · shadows · skew · pages; `snap.py`, `snap2.py`, `move_components.py`, `name_styles.py`, `swap_colours.py`,
+`ds-redundant.mjs`; `scripts/ds-count.mjs` (ratchet) and `scripts/ds-stamp.mjs` (run after every stylesheet edit).
