@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=82a26031">
+  <link rel="stylesheet" href="/design-system.css?v=89bd733f">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1189,7 +1189,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .receipt-name { font-size: var(--fs-base); font-weight: var(--fw-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .receipt-date { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-0-5); }
     .receipt-actions { display: flex; gap: var(--space-1-5); flex-shrink: 0; }
-    .receipts-empty { text-align: center; color: var(--muted); padding: var(--space-8) 0; font-size: var(--fs-md); }
     .rank-num {
       width: 24px; height: 24px; border-radius: var(--radius-round); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -2655,7 +2654,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-unread { background:var(--gold-dim); }
     .notif-body { font-size:var(--fs-base); line-height:var(--lh-snug); }
     .notif-time { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-0-5); }
-    .notif-empty { padding:var(--space-6) var(--space-4); text-align:center; color:var(--muted); font-size:var(--fs-base); }
 
     /* ── WELCOME ONBOARDING ─────────────────────── */
     #welcome-modal { background:rgba(245,245,248,.97); backdrop-filter:none; }
@@ -2667,8 +2665,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .del-acct-step.hidden { display:none; }
 
     /* ── FEED EMPTY STATE ──────────────────────── */
-    .feed-empty-state  { text-align: center; padding: 3.5rem var(--space-6); color: var(--muted); }
-    .feed-empty-icon   { font-size: 3rem; margin-bottom: var(--space-3); }
 
     /* ── DISCOVER / USER CARDS ─────────────────── */
     /* Suggested follows (A/B follow_suggest) */
@@ -3578,14 +3574,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:var(--space-1-5) var(--space-3);">← Back</button>
     </div>
     <div id="profile-page-content">
-      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>
+      <div class="empty">Loading…</div>
     </div>
   </div>
 
   <!-- ════ CLUBS PAGE ════ -->
   <div id="page-model" class="page">
     <div id="model-page-content">
-      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>
+      <div class="empty">Loading…</div>
     </div>
   </div>
 
@@ -3601,7 +3597,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="explore-more-wrap" style="text-align:center;margin-top:var(--space-4);display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
-    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:var(--space-10) 0;font-size:var(--fs-base);">No models match that search.</div>
+    <div id="explore-empty" class="empty" style="display:none;">No models match that search.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -3617,7 +3613,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:var(--space-1-5) var(--space-3);">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
-      <div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading&#8230;</div>
+      <div class="empty">Loading&#8230;</div>
     </div>
   </div>
 
@@ -3753,7 +3749,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="draft-form-row">
           <label>Feed Preview</label>
           <div class="official-feed-preview" id="official-feed-preview">
-            <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Add an image or caption to see preview</div>
+            <div class="empty empty-compact">Add an image or caption to see preview</div>
           </div>
         </div>
 
@@ -3817,7 +3813,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="draft-form-row">
           <label id="broadcast-preview-label">Email Preview</label>
           <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" style="background:#f4f4f4;border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;">
-            <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Start typing to see preview</div>
+            <div class="empty empty-compact">Start typing to see preview</div>
           </div>
         </div>
 
@@ -3884,7 +3880,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost btn-xs" onclick="createCampaign()">+ New campaign</button>
       </div>
       <div id="campaigns-list" class="stack-4">
-        <div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Loading campaigns...</div>
+        <div class="empty empty-compact">Loading campaigns...</div>
       </div>
     </div>
 
@@ -8233,7 +8229,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.28';
+const APP_VERSION = '21.21.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8809,7 +8805,7 @@ async function loadAndRenderProfile(userId) {
     return;
   }
 
-  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div class="empty">Loading…</div>';
   const isOwn = userId === currentUser?.id;
 
   // email_prefs is only ever rendered on your OWN profile (the notification
@@ -8825,11 +8821,11 @@ async function loadAndRenderProfile(userId) {
   // Audit REL-N4: only claim the account is gone when the server actually said
   // "no row" (PGRST116). A timeout or network error is not evidence of deletion.
   if (!profile && profileErr && profileErr.code !== 'PGRST116') {
-    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Could not load this profile — check your connection and try again.</div>';
+    el.innerHTML = '<div class="empty">Could not load this profile — check your connection and try again.</div>';
     return;
   }
   if (!profile) {
-    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">This account no longer exists.</div>';
+    el.innerHTML = '<div class="empty">This account no longer exists.</div>';
     return;
   }
 
@@ -8948,7 +8944,7 @@ async function loadAndRenderProfile(userId) {
     _pr = await withTimeout(Promise.all(_pp), 12000);
   } catch (e) {
     console.error('[WristLog] Profile load failed:', e);
-    el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
+    el.innerHTML = '<div class="empty">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
     return;
   }
 
@@ -10262,7 +10258,7 @@ function goBackFromClub() {
 async function renderClubDetail(clubId) {
   const el = document.getElementById('club-detail-content');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div class="empty">Loading…</div>';
 
   // Use cached myClubs data first (avoids RLS cross-table policy issues for private clubs).
   // Fall back to a direct DB query for public clubs the user hasn't joined yet.
@@ -10272,7 +10268,7 @@ async function renderClubDetail(clubId) {
     if (error) console.error('[Clubs] fetch error:', error);
     club = data;
   }
-  if (!club) { el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Club not found.</div>'; return; }
+  if (!club) { el.innerHTML = '<div class="empty">Club not found.</div>'; return; }
 
   // ── Stage 1: members + posts in parallel ─────────────────────────────
   const [{ data: memberRows }, { data: clubPosts }] = await withTimeout(Promise.all([
@@ -10446,7 +10442,7 @@ async function renderClubDetail(clubId) {
     <div class="club-member-row">${membersHtml || '<span class="note">No members yet.</span>'}</div>
     <div class="club-section-label">Club Posts</div>
     <div id="club-feed-list" style="max-width:470px;margin:0 auto;">
-      ${clubFeedHtml || '<div style="text-align:center;padding:var(--space-8);color:var(--muted);font-size:var(--fs-base);">No posts in this club yet.</div>'}
+      ${clubFeedHtml || '<div class="empty">No posts in this club yet.</div>'}
     </div>`;
 
 }
@@ -10830,19 +10826,19 @@ async function openFollowersModal(userId) {
   const modal = document.getElementById('followers-modal');
   const list  = document.getElementById('followers-list');
   modal.classList.remove('hidden');
-  list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Loading…</div>';
+  list.innerHTML = '<div class="empty">Loading…</div>';
 
   const { data: rows, error: rowsErr } = await db.from('follows')
     .select('follower_id')
     .eq('following_id', userId);
   // Audit REL-N4: an error is not an empty follower list
   if (rowsErr) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Could not load followers — try again.</div>';
+    list.innerHTML = '<div class="empty">Could not load followers — try again.</div>';
     return;
   }
   const ids = (rows || []).map(r => r.follower_id);
   if (!ids.length) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">No followers yet.</div>';
+    list.innerHTML = '<div class="empty">No followers yet.</div>';
     return;
   }
 
@@ -10903,7 +10899,7 @@ async function removeFollower(userId, btn) {
   const list = document.getElementById('followers-list');
   btn?.closest('.user-card')?.remove();
   if (list && !list.querySelector('.user-card')) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">No followers yet.</div>';
+    list.innerHTML = '<div class="empty">No followers yet.</div>';
   }
   // Keep the Followers stat on the profile header honest without a reload.
   const stat = document.querySelector('#page-profile .profile-stat-btn[onclick*="openFollowersModal"] .profile-stat-value');
@@ -10920,7 +10916,7 @@ async function openFollowingModalFor(userId) {
   const list  = document.getElementById('following-modal-list');
   document.querySelector('#following-modal .modal-title').textContent = 'Following';
   modal.classList.remove('hidden');
-  list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Loading…</div>';
+  list.innerHTML = '<div class="empty">Loading…</div>';
 
   // For own profile use local set; for others query DB
   let ids;
@@ -10934,7 +10930,7 @@ async function openFollowingModalFor(userId) {
   }
 
   if (!ids.length) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Not following anyone yet.</div>';
+    list.innerHTML = '<div class="empty">Not following anyone yet.</div>';
     return;
   }
 
@@ -10975,7 +10971,7 @@ function openCloseFriendsModal() {
       }</div>` : '';
 
   if (!activeFriends.length && !pendingNote) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">No close friends yet — visit a mutual follow\'s profile to add them.</div>';
+    list.innerHTML = '<div class="empty">No close friends yet — visit a mutual follow\'s profile to add them.</div>';
     return;
   }
 
@@ -11454,7 +11450,7 @@ function renderNotificationPanel() {
       : '';
   }
   if (!userNotifs.length) {
-    el.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+    el.innerHTML = '<div class="empty empty-compact">No notifications yet</div>';
     return;
   }
   el.innerHTML = userNotifs.map(n => {
@@ -14868,12 +14864,12 @@ function renderFeed() {
   }
   if (feedItems.length === 0) {
     el.innerHTML = `
-      <div class="feed-empty-state">
-        <div class="feed-empty-icon"></div>
-        <div style="font-weight:var(--fw-bold);margin-bottom:var(--space-2);color:var(--text);">
+      <div class="empty feed-empty-state">
+        <div class="empty-icon"></div>
+        <div class="empty-text">
           ${following.size === 0 ? "You're not following anyone yet" : "Nothing new yet"}
         </div>
-        <div style="font-size:var(--fs-base);margin-bottom:var(--space-5);">
+        <div class="empty-sub stack-5">
           ${following.size === 0
             ? 'Follow other watch enthusiasts to see their daily wears here.'
             : 'Check back later — or follow more people!'}
@@ -17094,16 +17090,16 @@ async function showLikers(logId) {
   const list  = document.getElementById('following-modal-list');
   document.querySelector('#following-modal .modal-title').textContent = 'Liked by';
   modal.classList.remove('hidden');
-  list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Loading…</div>';
+  list.innerHTML = '<div class="empty">Loading…</div>';
   const { data: rows, error: rowsErr } = await db.from('likes').select('user_id').eq('log_id', logId);
   // Audit REL-N4: an error is not an empty like list
   if (rowsErr) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">Could not load likes — try again.</div>';
+    list.innerHTML = '<div class="empty">Could not load likes — try again.</div>';
     return;
   }
   const ids = (rows || []).map(r => r.user_id);
   if (!ids.length) {
-    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);color:var(--muted);">No likes yet.</div>';
+    list.innerHTML = '<div class="empty">No likes yet.</div>';
     return;
   }
   const { data: profiles } = await db.from('profiles')
@@ -20099,7 +20095,7 @@ async function openAdminUserDetail(userId) {
   window._adminDetailUserId = userId;
   const modal = document.getElementById('admin-user-modal');
   const body = document.getElementById('admin-user-modal-body');
-  body.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-md);text-align:center;padding:var(--space-8) 0;">Loading…</div>';
+  body.innerHTML = '<div class="empty">Loading…</div>';
   modal.classList.remove('hidden');
 
   try {
@@ -20880,10 +20876,10 @@ function exploreSearchInput() {
 async function loadExploreModels(reset) {
   if (reset) _exploreOffset = 0;
   const grid = document.getElementById('explore-grid');
-  if (reset) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:var(--space-8) 0;font-size:var(--fs-base);">Loading…</div>';
+  if (reset) grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Loading…</div>';
   const { data, error } = await db.rpc('browse_watch_models', {
     p_q: _exploreQ || null, p_brand: _exploreBrand, p_limit: EXPLORE_PAGE_SIZE, p_offset: _exploreOffset });
-  if (error) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:var(--space-8) 0;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
+  if (error) { grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
   const rows = data || [];
   const cards = rows.map(m => `
     <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
@@ -21046,7 +21042,7 @@ function updateOfficialPreview() {
   const hasImage = hasFile || imageUrl;
 
   if (!hasImage && !caption) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Add an image or caption to see preview</div>';
+    el.innerHTML = '<div class="empty empty-compact">Add an image or caption to see preview</div>';
     return;
   }
 
@@ -21611,7 +21607,7 @@ function updateBroadcastPreview() {
   const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
   if (!subject && !body) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Start typing to see preview</div>';
+    el.innerHTML = '<div class="empty empty-compact">Start typing to see preview</div>';
     return;
   }
   const html = buildBroadcastHtml();
@@ -22985,7 +22981,7 @@ async function loadCampaigns() {
 
   container.innerHTML = drips.length
     ? drips.map(cardHtml).join('')
-    : '<div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">No campaigns yet</div>';
+    : '<div class="empty empty-compact">No campaigns yet</div>';
 
   drips.forEach(c => updateCampaignPreview(c.id));
 }
@@ -22996,7 +22992,7 @@ function updateCampaignPreview(id) {
   const subject = fillCampaignSubject(document.getElementById('camp-subject-' + id)?.value?.trim() || '');
   const body = fillCampaignBody(document.getElementById('camp-body-' + id)?.value?.trim() || '');
   if (!subject && !body) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-base);text-align:center;padding:var(--space-4);">Start typing to see preview</div>';
+    el.innerHTML = '<div class="empty empty-compact">Start typing to see preview</div>';
     return;
   }
   const html = buildCampaignEmailHtml(subject, body, document.getElementById('camp-name-' + id)?.value?.trim() || '');
@@ -24872,7 +24868,7 @@ let _mpCtx = null; // last render inputs, for tab switches without refetch
 
 async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
-  el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Loading…</div>';
+  el.innerHTML = '<div class="empty">Loading…</div>';
   const [mRes, oRes, sRes] = await Promise.all([
     db.from('watch_models').select('id,brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
@@ -24880,7 +24876,7 @@ async function loadAndRenderModel(modelId, owners) {
   ]);
   if (modelPageId !== modelId) return;
   const m = mRes.data;
-  if (!m) { el.innerHTML = '<div style="text-align:center;padding:var(--space-12);color:var(--muted);">Model not found.</div>'; return; }
+  if (!m) { el.innerHTML = '<div class="empty">Model not found.</div>'; return; }
   let facts = [];
   if (m.facts_key) {
     const { data } = await db.from('watch_facts').select('fact,position').eq('model_key', m.facts_key).order('position').limit(6);
@@ -27588,7 +27584,7 @@ function renderReceiptsList(w) {
   const receipts = w.receipts || [];
   const el = document.getElementById('receipts-list');
   if (!receipts.length) {
-    el.innerHTML = `<div class="receipts-empty">No receipts yet. Upload a receipt or document.</div>`;
+    el.innerHTML = `<div class="empty">No receipts yet. Upload a receipt or document.</div>`;
     return;
   }
   el.innerHTML = `<div class="receipt-list">${receipts.map(r => {
