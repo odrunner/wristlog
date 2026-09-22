@@ -11,9 +11,11 @@ for (const side of ['old', 'new']) for (const width of [390, 1280]) {
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, wishlist: WL });
   if (side === 'old') { await page.route(/localhost:3000\/(\?.*)?$/, r => r.fulfill({ body: readFileSync(OLD + '/index.html'), contentType: 'text/html' })); await page.route('**/design-system.css*', r => r.fulfill({ body: readFileSync(OLD + '/design-system.css'), contentType: 'text/css' })); }
   await injectSession(page); await page.goto('/'); await waitForAppBoot(page); await page.waitForTimeout(1200);
+  // color-mix() computes to color(srgb r g b / a); an rgba literal computes to rgba(). Same pixels, different spelling.
+  const norm = s => s.replace(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/g, (_, r, g, b2, a) => `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b2 * 255)}, ${a ?? 1})`);
   const grab = (label) => page.evaluate(([props, label]) => { document.querySelectorAll('.toast,.badge-toast').forEach(t => t.remove());
     return [...document.querySelectorAll('body *')].filter(e => !['SCRIPT', 'STYLE', 'OPTION'].includes(e.tagName)).map(e => { const cs = getComputedStyle(e);
-      return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') + '§' + props.map(k => cs.getPropertyValue(k)).join('|'); }); }, [PROPS, label]);
+      return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') + '§' + props.map(k => cs.getPropertyValue(k)).join('|'); }); }, [PROPS, label]).then(rows => rows.map(norm));
   for (const pg of ['feed', 'track', 'collection', 'wishlist', 'stats']) { await navigateTo(page, pg); await page.waitForTimeout(700); dump[`${side}:${width}:${pg}`] = await grab(pg); }
   await page.evaluate(() => { if (typeof viewMyProfile === 'function') viewMyProfile(); }); await page.waitForTimeout(1200); dump[`${side}:${width}:profile`] = await grab('profile');
   await ctx.close(); }

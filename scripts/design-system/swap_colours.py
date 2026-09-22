@@ -19,14 +19,27 @@ la = next(i for i, l in enumerate(lines) if 'id="auth-screen"' in l); lb = next(
 fenced |= set(range(la, lb)) | scope._css(lines, re.compile(r'#auth-screen|[.#]landing|[.#]auth-|\.btn-google|\.btn-apple'))
 a = src.index('<style>'); b = src.index('</style>')
 HEX = re.compile(r'(?<![&\w])#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b')
+# --alpha: rgba(r,g,b,a) whose r,g,b equal a shared token -> color-mix(in srgb, var(--tok) A%, transparent).
+# Renders identically (the mix of an opaque colour with transparent in sRGB is that colour at alpha A).
+RGB_TOK = {'255,255,255': '--white', '0,0,0': '--black', '129,140,248': '--tag-type', '76,175,125': '--success', '224,85,85': '--danger',
+           '74,222,128': '--tg-ink', '34,197,94': '--status-good', '234,179,8': '--status-warn', '239,68,68': '--status-bad', '167,139,250': '--vis-friends'}
+RGBA = re.compile(r'rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(0?\.\d+|1|0)\s*\)')
+ALPHA = '--alpha' in sys.argv
+def pct(a):
+    v = float(a) * 100; return ('%g' % v)
 def context(pos, line):
     if a < pos < b: return 'css'
     # inside a style="…" / style=\"…\" attribute value on this line?
     ls = pos - len(line) if False else None
     return None
 out = []; last = 0; n = {}; skipped = {}
-for m in HEX.finditer(src):
-    v = m.group(0).lower(); tok = MAP.get(v)
+def repl_for(m):
+    if ALPHA:
+        base = ','.join(m.group(1, 2, 3)); tok = RGB_TOK.get(base)
+        return tok, 'color-mix(in srgb, var(%s) %s%%, transparent)' % (tok, pct(m.group(4))) if tok else None
+    tok = MAP.get(m.group(0).lower()); return tok, ('var(%s)' % tok if tok else None)
+for m in (RGBA if ALPHA else HEX).finditer(src):
+    v = m.group(0).lower(); tok, rep = repl_for(m)
     if not tok: continue
     ln = src.count('\n', 0, m.start()); line = lines[ln]; col = m.start() - (src.rfind('\n', 0, m.start()) + 1)
     before = line[:col]
@@ -42,9 +55,9 @@ for m in HEX.finditer(src):
     elif ctx == 'js-style' and re.search(r'\|\|\s*[\'"]$', before): reason = 'data fallback (|| literal)'
     if reason: skipped.setdefault(reason, {}).setdefault(v, 0); skipped[reason][v] += 1; continue
     n.setdefault((ctx, v), 0); n[(ctx, v)] += 1
-    out.append(src[last:m.start()] + 'var(%s)' % tok); last = m.end()
+    out.append(src[last:m.start()] + rep); last = m.end()
 out.append(src[last:]); new = ''.join(out)
 print('swaps: %d' % sum(n.values()))
-for (ctx, v), c in sorted(n.items(), key=lambda x: -x[1]): print('  %4d %-9s %s -> var(%s)' % (c, ctx, v, MAP[v]))
+for (ctx, v), c in sorted(n.items(), key=lambda x: -x[1]): print('  %4d %-9s %s' % (c, ctx, v))
 print('left alone:'); [print('  %-45s %s' % (r, ' '.join('%s×%d' % kv for kv in sorted(d.items(), key=lambda x: -x[1])))) for r, d in skipped.items()]
 if APPLY: open(ROOT + 'index.html', 'w', encoding='utf-8').write(new); print('applied')
