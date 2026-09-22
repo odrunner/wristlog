@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.50';
+const APP_VERSION = '21.19.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9618,6 +9618,7 @@ function _fallbackCopyText(text, msg = 'Link copied!') {
 }
 
 async function uploadProfilePic() {
+  if (demoGuard()) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const input = document.createElement('input');
   input.type = 'file';
