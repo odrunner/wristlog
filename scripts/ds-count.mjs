@@ -68,6 +68,7 @@ const PROPS = {
   'box-shadow': /box-shadow\s*:\s*([^;"'}<]+)/g,
   'transition': /(?<![-\w])transition\s*:\s*([^;"'}<]+)/g,
   'z-index': /z-index\s*:\s*([^;"'}<]+)/g,
+  'opacity': /(?<![-\w])opacity\s*:\s*([^;"'}<`]+)/g,
 };
 
 // 3/6/8-digit hex not preceded by '&' (HTML entity) or a word char (URL
@@ -109,6 +110,7 @@ export function countHardcoded(src) {
       const v = m[1].trim().replace(/\s*!important$/, '').toLowerCase();
       // empty: a JS object literal quotes its values (margin: '0', transition: 'none') and the pattern stops at the quote
       if (!v || v.includes('${') || NEUTRAL.has(v)) continue;
+      if (name === 'opacity' && v === '1') continue;                // fully shown: a state, not a design value
       if (isTokenised(v)) continue;
       if (/^ds(px|token|color)\(/.test(v)) continue;                 // read from design-system.css at runtime
       n++;

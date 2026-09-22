@@ -28,6 +28,11 @@ describe('design-system ratchet', () => {
 });
 
 describe('countHardcoded', () => {
+  it('counts opacity literals; 0, 1 and tokens are not design values', () => {
+    expect(countHardcoded('.a { opacity: .6; } .b { opacity: 0; } .c { opacity: 1; } .d { opacity: var(--opacity-soft); }').opacity).toBe(1);
+    expect(countHardcoded("el.style.cssText = 'opacity:.4;'").opacity).toBe(1);
+  });
+
   it('skips only the listed exceptions: first-paint colour, favicon data URL, Google logo colours', () => {
     expect(countHardcoded('<meta name="theme-color" content="#f5f5f8">').color).toBe(0);
     expect(countHardcoded('const svg = `<svg><rect fill="#0b0b10"/><circle fill="#c9a84c"/></svg>`;').color).toBe(0);

@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=7de13383">
+  <link rel="stylesheet" href="/design-system.css?v=8bd966a6">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -290,7 +290,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       margin-left: auto; padding: 0 var(--space-1);
       flex-shrink: 0;  /* sign-out is never pushed off */
     }
-    .app-ver { font-size: var(--fs-2xs); color: var(--muted); opacity: .5; letter-spacing: var(--ls-tight); white-space: nowrap; user-select: none; }
+    .app-ver { font-size: var(--fs-2xs); color: var(--muted); opacity: var(--opacity-dim); letter-spacing: var(--ls-tight); white-space: nowrap; user-select: none; }
 
     /* ── AUTH / LANDING SCREEN ── */
     /* The element carries data-theme="light", so design-system.css supplies
@@ -430,7 +430,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     input:focus, textarea:focus, select:focus { border-color: var(--gold); }
     input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); cursor: pointer; }
-    ::placeholder { color: var(--muted); opacity: .5; }
+    ::placeholder { color: var(--muted); opacity: var(--opacity-dim); }
     input[type=date].empty-date { color: var(--muted); }
     textarea { resize: vertical; min-height: 64px; }
 
@@ -465,7 +465,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       color: var(--text); padding: var(--space-1-5) 0 var(--space-0-5); }
     .streak-line .streak-count { font-variant-numeric: tabular-nums; }
     .streak-flame { line-height: var(--lh-none); display: inline-flex; align-items: center; }
-    .streak-flame-dim { opacity: .5; }
+    .streak-flame-dim { opacity: var(--opacity-dim); }
     .streak-flame-svg { width: 1em; height: 1em; fill: color-mix(in srgb, var(--gold) 30%, transparent); stroke: var(--gold); transition: fill var(--dur-fast), stroke var(--dur-fast); }
     .streak-chip:hover .streak-flame-svg { fill: color-mix(in srgb, var(--gold) 62%, transparent); stroke: var(--gold-lt); }
     .streak-chip.streak-chip-atrisk .streak-flame-svg { fill: color-mix(in srgb, var(--watch-gold) 30%, transparent); stroke: var(--watch-gold); }
@@ -501,7 +501,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .showcase-card[data-priv="followers"]    { border-color: var(--gold); }
     .showcase-card[data-priv="private"]      { border-color: var(--danger); }
     .showcase-card.priv-own { cursor:pointer; }
-    .showcase-card.priv-own:hover { opacity:.78; }
+    .showcase-card.priv-own:hover { opacity:var(--opacity-soft); }
     .showcase-card-img    { width:48px; height:48px; border-radius:var(--radius-btn); object-fit:cover; flex-shrink:0; }
     .showcase-card-avatar { width:48px; height:48px; border-radius:var(--radius-btn); display:flex; align-items:center; justify-content:center; font-weight:var(--fw-heavy); font-size:var(--fs-base); color:var(--black); flex-shrink:0; }
     .showcase-brand { font-size:var(--fs-3xs); color:var(--muted); line-height:var(--lh-snug); word-break:break-word; }
@@ -531,7 +531,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
       flex-shrink:0; transition:opacity var(--dur-fast);
     }
-    .friend-icon-btn:active { opacity:.7; }
+    .friend-icon-btn:active { opacity:var(--opacity-soft); }
     .friend-icon-btn.fi-none    { color:var(--muted);  border-color:var(--border); }
     .friend-icon-btn.fi-pending { color:var(--gold-text);   border-color:var(--gold); }
     .friend-icon-btn.fi-friends { color:var(--vis-friends);       border-color:var(--vis-friends); }
@@ -683,7 +683,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .ptr-indicator.refreshing .ptr-spinner { animation: spin .6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes msr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes msr-blink { 0%,100%{opacity:1} 50%{opacity:var(--opacity-faint)} }
 
     /* ── BRAND SELECT ── */
     .brand-ac-wrap { position: relative; }
@@ -742,7 +742,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tl-field { margin-bottom: var(--space-3); }
     .tl-row   { display: flex; gap: var(--space-3); }
     .tl-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--muted); margin-bottom: var(--space-1-5); }
-    .tl-opt   { font-weight: var(--fw-normal); text-transform: none; letter-spacing: 0; color: var(--muted); opacity: .7; }
+    .tl-opt   { font-weight: var(--fw-normal); text-transform: none; letter-spacing: 0; color: var(--muted); opacity: var(--opacity-soft); }
     .tl-worn-notice { margin-top: var(--space-1-5); font-size: var(--fs-sm); color: var(--success-text); min-height: 1em; }
     .tl-photo { aspect-ratio: unset; height: 80px; }
     .tl-photo .log-photo-placeholder { font-size: var(--fs-base); }
@@ -878,7 +878,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--surface2);
       transition: opacity var(--dur-base);
     }
-    .watch-card-img.loading { opacity: .4; }
+    .watch-card-img.loading { opacity: var(--opacity-dim); }
     .card-edit-btn {
       position: absolute; top: .5rem; right: .5rem;
       width: 28px; height: 28px; border-radius: var(--radius-round);
@@ -974,7 +974,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: var(--fs-base); line-height: var(--lh-none); pointer-events: none; }
     .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: var(--fs-xl); user-select: none; z-index: var(--z-raised-2); touch-action: none; line-height: var(--lh-none); }
     .rank-drag-handle:hover { color: var(--muted); }
-    .watch-card.dragging  { opacity: .4; }
+    .watch-card.dragging  { opacity: var(--opacity-dim); }
     .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: var(--ring); }
 
     /* ── COLLECTION RANKING GAME ── */
@@ -989,7 +989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .game-card:hover  { border-color: var(--tag-type); transform: scale(1.03); box-shadow: var(--shadow-ring-tag); }
     .game-card:active { transform: scale(.97); }
     .game-card.winner { border-color: var(--success); box-shadow: var(--shadow-ring-win); }
-    .game-card.loser  { opacity: .38; }
+    .game-card.loser  { opacity: var(--opacity-faint); }
     .game-card-img    { width: 68px; height: 68px; border-radius: var(--radius-round); object-fit: cover; }
     .game-card-brand  { font-size: var(--fs-xs); color: var(--muted); }
     .game-card-name   { font-size: var(--fs-md); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
@@ -1004,8 +1004,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── ADMIN PAGE ── */
     .fb-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4) var(--space-4); margin-bottom:var(--space-3); transition: border-color var(--dur-base); }
-    .fb-card.status-resolved { opacity:.55; }
-    .fb-card.status-ignored  { opacity:.4; }
+    .fb-card.status-resolved { opacity:var(--opacity-dim); }
+    .fb-card.status-ignored  { opacity:var(--opacity-dim); }
     .fb-card-header { display:flex; align-items:center; gap:var(--space-2-5); margin-bottom:var(--space-1-5); flex-wrap:wrap; }
     .fb-type-badge { font-size:var(--fs-xs); font-weight:var(--fw-bold); text-transform:uppercase; letter-spacing:var(--ls-tight); padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-pill); flex-shrink:0; }
     .fb-type-badge.bug     { background:color-mix(in srgb, var(--danger) 15%, transparent); color:var(--danger-text); }
@@ -1060,7 +1060,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .strap-row:hover .strap-edit-btn { opacity: 1; }
     @media (hover: none) {
       .card-edit-btn, .card-photo-btn, .card-edit-btn-noimg { opacity: 1; }
-      .profile-avatar-cam { opacity: .7; }
+      .profile-avatar-cam { opacity: var(--opacity-soft); }
       .strap-edit-btn { opacity: 1; }
     }
     .strap-name.clickable  { cursor: pointer; }
@@ -1172,7 +1172,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .ins-indicator {
       font-size: var(--fs-xs); margin-top: var(--space-0-5);
       display: inline-flex; align-items: center; gap: var(--space-1);
-      opacity: .75;
+      opacity: var(--opacity-soft);
     }
     .ins-indicator.insured   { color: var(--success); }
     .ins-indicator.uninsured { color: var(--status-expiring); }
@@ -1274,10 +1274,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: background var(--dur-fast);
     }
     .badge-wall-card:active { background:var(--gold-dim); }
-    .badge-wall-card.locked { opacity: .6; }
+    .badge-wall-card.locked { opacity: var(--opacity-soft); }
     .badge-wall-name { font-size: var(--fs-sm); color: var(--badge-text); margin-top: var(--space-1-5); line-height: var(--lh-tight); }
-    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--badge-close);opacity:.75; font-family: var(--font-mono); margin-top: var(--space-0-5); }
-    .badge-wall-date { font-size: var(--fs-3xs); color:var(--badge-close);opacity:.6; margin-top: var(--space-0-5); }
+    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--badge-close);opacity:var(--opacity-soft); font-family: var(--font-mono); margin-top: var(--space-0-5); }
+    .badge-wall-date { font-size: var(--fs-3xs); color:var(--badge-close);opacity:var(--opacity-soft); margin-top: var(--space-0-5); }
     .badge-cat-chip {
       display: inline-block; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2);
       border-radius: var(--radius-sm); letter-spacing: var(--ls-tight); text-transform: uppercase;
@@ -1295,16 +1295,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       flex-wrap: wrap;
     }
     .bp-item-yes { color: var(--success); }
-    .bp-item-no  { color: var(--muted); opacity: .5; }
+    .bp-item-no  { color: var(--muted); opacity: var(--opacity-dim); }
 
     /* ── WARRANTY BADGE ── */
     .warranty-badge {
       font-size: var(--fs-xs); margin-top: var(--space-0-5);
       display: inline-flex; align-items: center; gap: var(--space-1);
     }
-    .warranty-active   { color: var(--success); opacity: .8; }
+    .warranty-active   { color: var(--success); opacity: var(--opacity-hover); }
     .warranty-expiring { color: var(--status-expiring); }
-    .warranty-expired  { color: var(--muted); opacity: .5; }
+    .warranty-expired  { color: var(--muted); opacity: var(--opacity-dim); }
 
     /* ── NAV ICONS / LABEL ── */
     nav button { display: flex; align-items: center; gap: var(--space-1-5); }
@@ -1324,11 +1324,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .wl-card:hover { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
     .wl-card.drag-over { border-color: var(--gold); background: var(--gold-dim); }
-    .wl-card.dragging  { opacity: .4; }
+    .wl-card.dragging  { opacity: var(--opacity-dim); }
     /* Gallery tiles reorder the same way; the ⠿ handle sits over the photo's
        top-left corner (like the Collection ranking handle) for touch drags. */
     .wl-tile.drag-over { border-color: var(--gold) !important; background: var(--gold-dim); }
-    .wl-tile.dragging  { opacity: .4; }
+    .wl-tile.dragging  { opacity: var(--opacity-dim); }
     .wl-tile-handle { position: absolute; top: .45rem; left: .5rem; z-index: var(--z-raised-2); padding: var(--space-0-5) var(--space-1); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); touch-action: none; line-height: var(--lh-none); }
     .wl-card-img    { width: 72px; height: 72px; border-radius: var(--radius-btn); object-fit: cover; flex-shrink: 0; }
     .wl-card-avatar { width: 72px; height: 72px; border-radius: var(--radius-btn); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-heavy); color: var(--black); flex-shrink: 0; font-size: var(--fs-xl); }
@@ -1454,10 +1454,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-blank { background:transparent; }
     .streak-cal-cell.logged { background:var(--gold); color:var(--black); font-weight:var(--fw-bold); }
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
-    .streak-cal-cell.future { opacity:.35; }
+    .streak-cal-cell.future { opacity:var(--opacity-faint); }
     .streak-cal-cell.frozen { background:var(--streak-frozen-bg); color:var(--streak-frozen-ink); font-weight:var(--fw-bold); }
     .streak-cal-cell.rest { background:var(--surface2); color:var(--muted); position:relative; }
-    .streak-cal-cell.rest::after { content:''; position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:var(--radius-round); background:var(--muted); opacity:.6; }
+    .streak-cal-cell.rest::after { content:''; position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:var(--radius-round); background:var(--muted); opacity:var(--opacity-soft); }
     .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:calc(-1 * var(--space-2)) 0 var(--space-3); }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
     #streak-calendar-modal { align-items: flex-start; }
@@ -1522,7 +1522,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── ADD FLOW V2 ── */
     .af2-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-3-5); margin-bottom:var(--space-2); display:flex; gap:var(--space-3); align-items:center; transition:opacity var(--dur-slow); }
-    .af2-row.af2-skipped { opacity:.5; }
+    .af2-row.af2-skipped { opacity:var(--opacity-dim); }
     .af2-avatar { width:40px; height:40px; border-radius:var(--radius-btn); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:var(--fs-md); font-weight:var(--fw-medium); color:var(--white); position:relative; }
     .af2-avatar-gray { background:var(--surface2); color:var(--muted); }
     .af2-avatar-gold { background:var(--badge-accent); }
@@ -1548,7 +1548,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-warn-chip { display:inline-block; background:var(--chip-warn-bg); color:var(--chip-warn-ink); font-size:var(--fs-2xs); font-weight:var(--fw-medium); padding:var(--space-0-5) var(--space-1-5); border-radius:var(--radius-xs); margin-top:var(--space-1); }
     .af2-strikethrough { text-decoration:line-through; }
     .af2-view-link { background:none; border:none; color:var(--badge-accent); font-size:var(--fs-xs); cursor:pointer; font-family:inherit; padding:0; }
-    .af2-dot-gray { width:6px; height:6px; border-radius:var(--radius-round); background:var(--muted); opacity:.5; }
+    .af2-dot-gray { width:6px; height:6px; border-radius:var(--radius-round); background:var(--muted); opacity:var(--opacity-dim); }
 
     /* ── AI PRE-FILL BANNER ── */
     .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:var(--black); padding:var(--space-2) var(--space-3); border-radius:var(--radius-btn); margin-bottom:var(--space-3); font-size:var(--fs-base); line-height:var(--lh-snug); }
@@ -1557,7 +1557,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── SNAP TO TRACK ── */
     .snap-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:var(--space-2-5); padding:var(--space-3-5) var(--space-4); border:2px dashed var(--border); border-radius:var(--radius); background:transparent; color:var(--muted); font-size:var(--fs-base); font-weight:var(--fw-medium); cursor:pointer; transition:border-color var(--dur-base), color var(--dur-base); }
     .snap-btn:hover, .snap-btn:active { border-color:var(--gold); color:var(--gold-text); }
-    .snap-btn:disabled { opacity:.5; pointer-events:none; }
+    .snap-btn:disabled { opacity:var(--opacity-dim); pointer-events:none; }
     .snap-match-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); margin-bottom:var(--space-2); display:flex; gap:var(--space-3); align-items:center; cursor:pointer; transition:border-color var(--dur-base); }
     .snap-match-card:hover { border-color:var(--gold); }
     .watch-suggestion { margin-top:var(--space-2-5); padding:var(--space-2-5) var(--space-3); background:color-mix(in srgb, var(--gold) 8%, transparent); border:1px solid color-mix(in srgb, var(--gold) 25%, transparent); border-radius:var(--radius); display:flex; align-items:center; gap:var(--space-2-5); font-size:var(--fs-base); animation:fadeIn .3s; }
@@ -1755,7 +1755,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-photo--accuracy img { height: auto; object-fit: contain; }
     .feed-card-thumbnails { display: flex; gap: var(--space-0-5); padding: var(--space-0-5); background: var(--surface2); }
     .feed-card-thumb { flex: 1; aspect-ratio: 1; overflow: hidden; cursor: pointer; position: relative; max-width: 80px; }
-    .feed-card-thumb img, .feed-card-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .7; transition: opacity var(--dur-base); }
+    .feed-card-thumb img, .feed-card-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; opacity: var(--opacity-soft); transition: opacity var(--dur-base); }
     .feed-card-thumb.active img, .feed-card-thumb.active video { opacity: 1; }
     .feed-card-thumb:hover img, .feed-card-thumb:hover video { opacity: 1; }
     .feed-card-photo-count { position: absolute; top: 8px; right: 8px; background: color-mix(in srgb, var(--black) 60%, transparent); color: var(--white); font-size: var(--fs-xs); padding: var(--space-0-5) var(--space-1-5); border-radius: var(--radius); pointer-events: none; }
@@ -1768,7 +1768,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumb-add { width: 60px; height: 60px; border-radius: var(--radius-sm); border: 2px dashed var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: var(--muted); font-size: var(--fs-2xl); background: none; }
     .np-thumb-add:hover { border-color: var(--gold); color: var(--gold); }
     .np-photo-counter { font-size: var(--fs-sm); color: var(--muted); padding: var(--space-0-5) 0; }
-    .np-thumb.dragging { opacity: .5; }
+    .np-thumb.dragging { opacity: var(--opacity-dim); }
     .np-thumb.drag-over { border-color: var(--gold); }
     .img-viewer-overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--black) 95%, transparent); z-index: var(--z-popover); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--dur-base); }
     .img-viewer-overlay.visible { opacity: 1; }
@@ -2081,7 +2081,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-band-mark {
       position: absolute; right: -14px; bottom: -30px;
       font-size: var(--promo-fs-mark); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--promo-ls-mark);
-      color: var(--white); opacity: .09; pointer-events: none; user-select: none;
+      color: var(--white); opacity: var(--opacity-ghost); pointer-events: none; user-select: none;
     }
     .promo-band-eyebrow {
       font-family: var(--promo-mono);
@@ -2527,7 +2527,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .club-badge {
       display: inline-flex; align-items: center; gap: var(--space-1);
       font-size: var(--fs-sm); color: var(--gold-text); cursor: pointer;
-      margin: var(--space-1) var(--space-4) var(--space-0-5); opacity: .85;
+      margin: var(--space-1) var(--space-4) var(--space-0-5); opacity: var(--opacity-hover);
     }
     .club-badge:hover { opacity: 1; }
     .club-card {
@@ -2631,7 +2631,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     #theme-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
     #theme-btn:hover { box-shadow:var(--ring); color:var(--text); }
-    #admin-nav-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted); opacity:.55; padding:0; margin-left:var(--space-0-5); align-self:center;
+    #admin-nav-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted); opacity:var(--opacity-dim); padding:0; margin-left:var(--space-0-5); align-self:center;
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), opacity var(--dur-fast), color var(--dur-fast); }
     #admin-nav-btn:hover { box-shadow:var(--ring); opacity:1; color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:var(--radius-btn);
@@ -4665,7 +4665,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- No-watches callout (shown when collection is empty) -->
     <div id="measure-no-watches" style="display:none;text-align:center;padding:var(--space-8) var(--space-4);">
-      <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:var(--space-4);opacity:.5;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+      <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:var(--space-4);opacity:var(--opacity-dim);"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
       <div style="font-size:var(--fs-lg);font-weight:var(--fw-semibold);margin-bottom:var(--space-2);">Add a watch first</div>
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-5);line-height:var(--lh-body);">To measure accuracy, you need at least one watch in your collection. Add your first watch to get started.</div>
       <button class="btn btn-primary" onclick="nav(document.querySelector('[data-page=collection]'));openAddWatch()">+ Add Your First Watch</button>
@@ -6277,7 +6277,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:340px;background:var(--badge-bg);border-color:var(--badge-border);text-align:center;">
     <div class="modal-title" id="badge-reveal-title" style="justify-content:center;color:var(--badge-text);">🎉 <span id="badge-reveal-count"></span></div>
     <div id="badge-reveal-medallions" style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;justify-content:center;margin:var(--space-3) 0 var(--space-1-5);"></div>
-    <div id="badge-reveal-names" style="font-size:var(--fs-base);color:var(--badge-text);opacity:.7;margin-bottom:var(--space-4);line-height:var(--lh-body);"></div>
+    <div id="badge-reveal-names" style="font-size:var(--fs-base);color:var(--badge-text);opacity:var(--opacity-soft);margin-bottom:var(--space-4);line-height:var(--lh-body);"></div>
     <div style="display:flex;gap:var(--space-2);">
       <button class="btn btn-primary btn-grow" onclick="badgeRevealSeeThem()">See them</button>
       <button class="btn btn-ghost btn-grow" style="color:var(--muted);" onclick="closeBadgeReveal()">Dismiss</button>
@@ -6845,9 +6845,9 @@ function openBadgeWall() {
   const content = `
     <div style="text-align:center;margin-bottom:var(--space-5);">
       <div style="font-size:var(--fs-lg);font-weight:var(--fw-semibold);color:var(--badge-text);">Achievements</div>
-      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.6;margin-top:var(--space-1);">${earnedCount} of ${totalVisible} earned</div>
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:var(--opacity-soft);margin-top:var(--space-1);">${earnedCount} of ${totalVisible} earned</div>
     </div>
-    ${earnedCards ? '<div style="margin-bottom:var(--space-2-5);font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;text-transform:uppercase;letter-spacing:var(--ls-eyebrow);">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
+    ${earnedCards ? '<div style="margin-bottom:var(--space-2-5);font-size:var(--fs-sm);color:var(--badge-text);opacity:var(--opacity-dim);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
     ${lockedHtml}`;
 
   document.getElementById('badge-wall-content').innerHTML = content;
@@ -6945,11 +6945,11 @@ function openBadgeDetail(ref) {
     <div style="text-align:center;">
       ${badgeMedallionSvg(b, 240, earned)}
       <div style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);color:var(--badge-text);margin-top:var(--space-3);">${escHtml(b.name)}</div>
-      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;font-family:var(--font-mono);margin-top:var(--space-1);">${badgeRefLabel(b.ref)}</div>
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:var(--opacity-dim);font-family:var(--font-mono);margin-top:var(--space-1);">${badgeRefLabel(b.ref)}</div>
       <div style="margin-top:var(--space-1-5);">${catChip}</div>
-      ${earned ? `<div style="font-size:var(--fs-base);color:var(--badge-text);opacity:.8;margin-top:var(--space-2-5);font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
-      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.6;margin-top:var(--space-2);">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
-      ${earned ? `<div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.5;margin-top:var(--space-1);">Earned ${dateStr}</div>` : ''}
+      ${earned ? `<div style="font-size:var(--fs-base);color:var(--badge-text);opacity:var(--opacity-hover);margin-top:var(--space-2-5);font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:var(--opacity-soft);margin-top:var(--space-2);">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
+      ${earned ? `<div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:var(--opacity-dim);margin-top:var(--space-1);">Earned ${dateStr}</div>` : ''}
     </div>`;
   document.getElementById('badge-detail-modal').classList.remove('hidden');
 }
@@ -8256,7 +8256,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.06.58';
+const APP_VERSION = '22.07.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15010,13 +15010,13 @@ function renderFeedCard(item) {
 
   // ── Moderation status rendering ──
   if (item.moderation_status === 'flagged' && isMe) {
-    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.6;text-align:center;padding:var(--space-6) var(--space-4);">
+    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:var(--opacity-soft);text-align:center;padding:var(--space-6) var(--space-4);">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" style="margin-bottom:var(--space-1-5);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
       <div style="font-size:var(--fs-md);color:var(--muted);line-height:var(--lh-body);">Your post has been flagged and is under review.</div>
     </div>`;
   }
   if (item.moderation_status === 'removed' && isMe) {
-    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.5;text-align:center;padding:var(--space-6) var(--space-4);">
+    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:var(--opacity-dim);text-align:center;padding:var(--space-6) var(--space-4);">
       <div style="font-size:var(--fs-md);color:var(--danger-text);line-height:var(--lh-body);">This post was removed for violating our Terms of Use.</div>
     </div>`;
   }
@@ -15167,10 +15167,10 @@ function renderFeedCard(item) {
       const cIsMe = c.user_id === currentUser?.id;
       // Moderation status for comments
       if (c.moderation_status === 'flagged' && cIsMe) {
-        return `<div class="comment-item" style="opacity:.6;"><div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-1) 0;">Your comment has been flagged and is under review.</div></div>`;
+        return `<div class="comment-item" style="opacity:var(--opacity-soft);"><div style="font-size:var(--fs-sm);color:var(--muted);padding:var(--space-1) 0;">Your comment has been flagged and is under review.</div></div>`;
       }
       if (c.moderation_status === 'removed' && cIsMe) {
-        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:var(--fs-sm);color:var(--danger-text);padding:var(--space-1) 0;">This comment was removed for violating our Terms of Use.</div></div>`;
+        return `<div class="comment-item" style="opacity:var(--opacity-dim);"><div style="font-size:var(--fs-sm);color:var(--danger-text);padding:var(--space-1) 0;">This comment was removed for violating our Terms of Use.</div></div>`;
       }
       if (c.moderation_status && !cIsMe) return ''; // hide flagged/removed from others
       // Filter blocked user comments
@@ -18861,7 +18861,7 @@ async function showBroadcastBatchMetrics(label, btn) {
   const machine = Math.max(0, (Number(m.opened) || 0) - human);
   gate.innerHTML = `
     <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">
-      batch of ${sent}: ${m.delivered || 0} delivered · ${human} opened (${pct(human)}%)${machine ? `<span style="opacity:.55;"> +${machine} prefetch</span>` : ''}
+      batch of ${sent}: ${m.delivered || 0} delivered · ${human} opened (${pct(human)}%)${machine ? `<span style="opacity:var(--opacity-dim);"> +${machine} prefetch</span>` : ''}
       · <span style="${warn ? 'color:var(--gold-text);' : ''}">${m.unsubscribed || 0} unsubscribed</span>
       · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--danger);">${m.complained} spam complaints</span>` : ''}
     </div>
@@ -20571,7 +20571,7 @@ function renderEmailEngagement(data) {
           ${queued ? `<span class="text-gold">Queued: ${queued}</span>` : ''}
           ${held ? `<span class="text-gold">Held for review: ${held}</span>` : ''}
           <span>Delivered: ${s.delivered}${dodDelta(s.delivered24)}</span>
-          <span>Opened: ${s.openedHuman} (${pct(s.openedHuman, base)})${dodDelta(s.openedHuman24)}${prefetch(s.opened, s.openedHuman) ? `<span style="opacity:.55;"> +${prefetch(s.opened, s.openedHuman)} prefetch</span>` : ''}</span>
+          <span>Opened: ${s.openedHuman} (${pct(s.openedHuman, base)})${dodDelta(s.openedHuman24)}${prefetch(s.opened, s.openedHuman) ? `<span style="opacity:var(--opacity-dim);"> +${prefetch(s.opened, s.openedHuman)} prefetch</span>` : ''}</span>
           <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})${dodDelta(s.clicked24)}</span>
         </div>
       </div>`;
@@ -20591,7 +20591,7 @@ function renderEmailEngagement(data) {
     // and hiding them would make a live broadcast look like it reached nobody —
     // but dimmed and labelled so the list can't be misread as 15 real readers.
     const icon = e.event_type === 'clicked' ? '🔗' : e.machine ? '⟳' : '👁';
-    const dim = e.machine ? 'opacity:.5;' : '';
+    const dim = e.machine ? 'opacity:var(--opacity-dim);' : '';
     return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span style="color:var(--muted);font-size:var(--fs-xs);margin-left:var(--space-1-5);">prefetch</span>' : ''}</span><span class="caption-xs">${ago}</span></div>`;
   }).join('');
 
@@ -23816,7 +23816,7 @@ async function openUpdatePrices() {
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
-        <td style="padding:var(--space-2) var(--space-1);vertical-align:top;overflow:hidden;"><div style="font-weight:var(--fw-semibold);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:var(--fs-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div style="font-size:var(--fs-2xs);color:var(--muted);opacity:.55;">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
+        <td style="padding:var(--space-2) var(--space-1);vertical-align:top;overflow:hidden;"><div style="font-weight:var(--fw-semibold);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:var(--fs-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div style="font-size:var(--fs-2xs);color:var(--muted);opacity:var(--opacity-dim);">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
         <td style="padding:var(--space-2) var(--space-1);text-align:right;vertical-align:top;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
         <td id="upr-val-${w.id}" style="padding:var(--space-2) var(--space-1);text-align:right;vertical-align:top;color:var(--muted);white-space:nowrap;">...</td>
         <td id="upr-chk-${w.id}" style="padding:var(--space-2) var(--space-1);text-align:center;vertical-align:top;"></td>
@@ -24187,7 +24187,7 @@ function renderCollection(force) {
       </div>`;
     }).join('') + `<div class="watch-card watch-card-add" onclick="openPhotoIdentify()" title="Add from photo">
       <div class="watch-card-add-inner">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:var(--opacity-dim)"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         <div class="watch-card-add-label">Add Watch</div>
       </div>
     </div>`;
@@ -25692,9 +25692,9 @@ function renderYearInReview() {
     <div class="yir-header">
       <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:var(--space-1);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Year in Review</div>
       <div class="yir-year-nav">
-        <button class="yir-year-btn" onclick="yirNav(-1)" aria-label="Previous year" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
+        <button class="yir-year-btn" onclick="yirNav(-1)" aria-label="Previous year" ${canPrev?'':'disabled style="opacity:var(--opacity-faint)"'}>‹</button>
         <span class="yir-year-label">${yirYear}</span>
-        <button class="yir-year-btn" onclick="yirNav(1)" aria-label="Next year"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
+        <button class="yir-year-btn" onclick="yirNav(1)" aria-label="Next year"  ${canNext?'':'disabled style="opacity:var(--opacity-faint)"'}>›</button>
       </div>
     </div>`;
 
@@ -25770,9 +25770,9 @@ function renderMonthlyReview() {
   const hdr = `<div class="yir-header">
     <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:var(--space-1);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Review</div>
     <div class="yir-year-nav">
-      <button class="yir-year-btn" onclick="monthRevNav(-1)" aria-label="Previous month" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
+      <button class="yir-year-btn" onclick="monthRevNav(-1)" aria-label="Previous month" ${canPrev?'':'disabled style="opacity:var(--opacity-faint)"'}>‹</button>
       <span class="yir-year-label" style="min-width:7.5rem;font-size:var(--fs-base)">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
-      <button class="yir-year-btn" onclick="monthRevNav(1)" aria-label="Next month"  ${canNext?'':'disabled style="opacity:.3"'}>›</button>
+      <button class="yir-year-btn" onclick="monthRevNav(1)" aria-label="Next month"  ${canNext?'':'disabled style="opacity:var(--opacity-faint)"'}>›</button>
     </div>
   </div>`;
   if (!mLogs.length) {
@@ -25851,7 +25851,7 @@ function renderDowReport(fl) {
         ? (w.image
             ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;" onerror="this.style.display='none'">`
             : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`)
-        : `<div style="font-size:var(--fs-lg);opacity:.2;">○</div>`;
+        : `<div style="font-size:var(--fs-lg);opacity:var(--opacity-faint);">○</div>`;
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
         <div class="dow-watch-thumb">${thumb}</div>
@@ -26260,7 +26260,7 @@ function renderWearLeaderboard(fl) {
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div class="avatar" style="width:32px;height:32px;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     const share = r.pct == null ? '—' : r.pct + '%';
-    const dim = r.wears === 0 ? 'opacity:.55;' : '';
+    const dim = r.wears === 0 ? 'opacity:var(--opacity-dim);' : '';
     // Name on its own line, stats beneath: the single-line layout truncated 4 of
     // 6 names at 390px ("Audemars Piguet R…"), which defeats the card's purpose.
     return `<div class="wlb-row" data-wid="${escAttr(w.id)}" role="button" tabindex="0"

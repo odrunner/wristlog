@@ -80,7 +80,12 @@
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
   --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0;
   --apple-bg: var(--black); --apple-ink: var(--white);
-  --opacity-dim: .5;                      /* a control greyed out for a moment while it works */
+  /* Opacity scale, by what the fading means. */
+  --opacity-ghost: .1;   /* a watermark */
+  --opacity-faint: .3;   /* disabled, not yet, empty */
+  --opacity-dim: .5;     /* set aside: dragging, skipped, inactive rows */
+  --opacity-soft: .7;    /* secondary: quieter text and icons, locked */
+  --opacity-hover: .85;  /* pressed / hovered */
   /* --lh-none is for icons, numerals and single-line badges, never running text. */
   --lh-none: 1; --lh-tight: 1.2; --lh-compact: 1.3; --lh-snug: 1.4; --lh-body: 1.55; --lh-prose: 1.7;
   --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
@@ -307,7 +312,7 @@
 .hidden { display: none !important; }
 .eyebrow { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
 .eyebrow-muted { color: var(--muted); }
-.modal-close { position: absolute; top: .5rem; right: .75rem; background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); line-height: var(--lh-none); cursor: pointer; opacity: .6; transition: opacity var(--dur-fast), color var(--dur-fast); }
+.modal-close { position: absolute; top: .5rem; right: .75rem; background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); line-height: var(--lh-none); cursor: pointer; opacity: var(--opacity-soft); transition: opacity var(--dur-fast), color var(--dur-fast); }
 .modal-close:hover { opacity: 1; color: var(--text); }
 .pill { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); }
 .pill-muted { color: var(--muted); background: var(--surface2); }
@@ -344,7 +349,7 @@
     }
 .btn-primary { background: var(--gold); color: var(--black); }
 .btn-primary:hover { background: var(--gold-lt); }
-.btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+.btn-primary:disabled { opacity: var(--opacity-faint); cursor: not-allowed; }
 .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-ghost:hover { border-color: var(--gold); color: var(--gold-text); }
 .btn-label-short { display: none; }
@@ -367,7 +372,7 @@
     }
 .chip:hover { border-color: var(--gold); color: var(--text); }
 .chip.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold-text); }
-.btn-loading { opacity: .6; cursor: not-allowed; }
+.btn-loading { opacity: var(--opacity-soft); cursor: not-allowed; }
 .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); font-weight: var(--fw-medium); padding: var(--space-1) var(--space-2-5); border-radius: var(--radius-pill); cursor: pointer; transition: all var(--dur-fast); font-family: inherit; }
 .tag-pill:hover        { border-color: var(--badge-border); color: var(--badge-accent); }
 .tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: var(--fw-semibold); }
@@ -401,9 +406,9 @@
 .empty {
       text-align: center; padding: var(--space-10) var(--space-4); color: var(--muted);
     }
-.empty-icon { font-size: var(--fs-4xl); opacity: .3; margin-bottom: var(--space-3); }
+.empty-icon { font-size: var(--fs-4xl); opacity: var(--opacity-faint); margin-bottom: var(--space-3); }
 .empty-text { font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text); margin-bottom: var(--space-1); }
-.empty-sub  { font-size: var(--fs-base); opacity: .7; }
+.empty-sub  { font-size: var(--fs-base); opacity: var(--opacity-soft); }
 /* the same empty state inside a small pane — a dropdown, an admin preview */
 .empty-compact { padding: var(--space-6) var(--space-4); font-size: var(--fs-base); }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3-5); }

@@ -13,6 +13,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 1342
   },
@@ -30,6 +31,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 3
   },
@@ -47,6 +49,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 2
   },
@@ -64,6 +67,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -81,6 +85,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -98,6 +103,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 3
   },
@@ -115,6 +121,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   },
@@ -132,6 +139,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 88
   },
@@ -149,6 +157,7 @@
     "box-shadow": 0,
     "transition": 0,
     "z-index": 0,
+    "opacity": 0,
     "js-style-assign": 0,
     "inline-style-attr": 0
   }
