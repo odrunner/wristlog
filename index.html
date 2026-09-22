@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=4cc1090b">
+  <link rel="stylesheet" href="/design-system.css?v=ebc52da5">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -471,7 +471,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-chip.streak-chip-atrisk .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 30%, transparent); stroke: var(--warn); }
     .streak-chip.streak-chip-atrisk:hover .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 60%, transparent); stroke: var(--warn); }
     .freeze-svg { width: 1em; height: 1em; vertical-align: -.12em; }
-    .streak-cue, .streak-best { color: var(--muted); font-weight: var(--fw-medium); font-size: .82em; }
+    .streak-cue, .streak-best { color: var(--muted); font-weight: var(--fw-medium); font-size: var(--fs-aside); }
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
     .prof-section { margin-top:0; }
@@ -862,7 +862,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .watch-card-add:hover { border-color: var(--gold); background: var(--gold-dim); }
     .watch-card-add-inner { display:flex; flex-direction:column; align-items:center; gap:var(--space-2); color:var(--muted); pointer-events:none; }
     .watch-card-add:hover .watch-card-add-inner { color: var(--gold-text); }
-    .watch-card-add-plus { font-size: 2rem; line-height: var(--lh-none); font-weight: var(--fw-light); }
+    .watch-card-add-plus { font-size: var(--fs-display); line-height: var(--lh-none); font-weight: var(--fw-light); }
     .watch-card-add-label { font-size: var(--fs-sm); letter-spacing: var(--ls-tight); }
     .watch-card-img-wrap {
       position: relative;
@@ -1028,7 +1028,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── HELP PAGE ── */
     .help-wrap { max-width: 720px; margin: 0 auto; }
-    .help-section { margin-bottom: 2.25rem; }
+    .help-section { margin-bottom: var(--space-9); }
     .help-section-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); margin-bottom: var(--space-3-5); display: flex; align-items: center; gap: var(--space-2); }
     .help-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-2-5); }
     .help-step { display: flex; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
@@ -1118,7 +1118,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       margin-bottom: var(--space-6);
     }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4) var(--space-5); }
-    .stat-val  { font-size: 1.9rem; font-weight: var(--fw-heavy); color: var(--gold-text); line-height: var(--lh-none); }
+    .stat-val  { font-size: var(--fs-display); font-weight: var(--fw-heavy); color: var(--gold-text); line-height: var(--lh-none); }
     .stat-lbl  { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1-5); text-transform: uppercase; letter-spacing: var(--ls-tight); }
     .stat-sub  { font-size: var(--fs-base); font-weight: var(--fw-semibold); margin-top: var(--space-1); }
 
@@ -1276,7 +1276,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .badge-wall-card:active { background:var(--gold-dim); }
     .badge-wall-card.locked { opacity: .6; }
     .badge-wall-name { font-size: var(--fs-sm); color: var(--badge-text); margin-top: var(--space-1-5); line-height: var(--lh-tight); }
-    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--badge-close);opacity:.75; font-family: monospace; margin-top: var(--space-0-5); }
+    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--badge-close);opacity:.75; font-family: var(--font-mono); margin-top: var(--space-0-5); }
     .badge-wall-date { font-size: var(--fs-3xs); color:var(--badge-close);opacity:.6; margin-top: var(--space-0-5); }
     .badge-cat-chip {
       display: inline-block; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2);
@@ -1461,7 +1461,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:calc(-1 * var(--space-2)) 0 var(--space-3); }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
     #streak-calendar-modal { align-items: flex-start; }
-    #streak-calendar-modal .modal { margin-top: calc(env(safe-area-inset-top, 0px) + 64px); }
+    #streak-calendar-modal .modal { margin-top: calc(env(safe-area-inset-top, 0px) + var(--space-16)); }
     .dow-cell { background:var(--surface2); border-radius:var(--radius-btn); padding:var(--space-2-5) var(--space-1-5); text-align:center; border:1px solid transparent; min-width:0; overflow:hidden; }
     .dow-cell.today-col { border-color:var(--gold); }
     .dow-day-name { font-size:var(--fs-2xs); font-weight:var(--fw-bold); text-transform:uppercase; letter-spacing:var(--ls-tight); color:var(--muted); }
@@ -1790,7 +1790,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumb-video-placeholder { width: 100%; height: 100%; background: var(--media-placeholder); display: flex; align-items: center; justify-content: center; }
     .np-thumb-spinner { width: 18px; height: 18px; border: 2px solid color-mix(in srgb, var(--white) 20%, transparent); border-top-color: color-mix(in srgb, var(--white) 85%, transparent); border-radius: var(--radius-round); animation: np-thumb-spin .8s linear infinite; }
     @keyframes np-thumb-spin { to { transform: rotate(360deg); } }
-    .feed-video-tap-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: var(--radius-round); background: color-mix(in srgb, var(--black) 60%, transparent); color: var(--white); border: none; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: var(--z-raised-2); }
+    .feed-video-tap-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: var(--radius-round); background: color-mix(in srgb, var(--black) 60%, transparent); color: var(--white); border: none; font-size: var(--fs-icon); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: var(--z-raised-2); }
     .img-viewer-overlay video { max-width: 100%; max-height: 85vh; object-fit: contain; }
 
     /* Compact "is wearing" header row (no-photo wear logs) */
@@ -2677,7 +2677,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .follow-sugg-tile { flex: 0 0 132px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-1-5); padding: var(--space-3) var(--space-2) var(--space-2-5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); }
     .follow-sugg-tile .feed-user-avatar { width: 48px; height: 48px; font-size: var(--fs-lg); cursor: pointer; }
     .follow-sugg-name { font-size: var(--fs-base); font-weight: var(--fw-semibold); color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-    .follow-sugg-reason { font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; min-height: 1.75em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .follow-sugg-reason { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-compact); min-height: 1.75em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .follow-sugg-tile .follow-btn { margin-top: var(--space-0-5); }
     .user-card-reason { font-size: var(--fs-xs); color: var(--gold-text); }
     .user-card {
@@ -2725,7 +2725,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to content</a>
-<noscript><div style="padding:var(--space-12) var(--space-6);text-align:center;font-family:system-ui,sans-serif;color:var(--muted);"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
+<noscript><div style="padding:var(--space-12) var(--space-6);text-align:center;font-family:var(--font-sans);color:var(--muted);"><p style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen" data-theme="light">
@@ -6943,7 +6943,7 @@ function openBadgeDetail(ref) {
     <div style="text-align:center;">
       ${badgeMedallionSvg(b, 240, earned)}
       <div style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);color:var(--badge-text);margin-top:var(--space-3);">${escHtml(b.name)}</div>
-      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;font-family:monospace;margin-top:var(--space-1);">${badgeRefLabel(b.ref)}</div>
+      <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.55;font-family:var(--font-mono);margin-top:var(--space-1);">${badgeRefLabel(b.ref)}</div>
       <div style="margin-top:var(--space-1-5);">${catChip}</div>
       ${earned ? `<div style="font-size:var(--fs-base);color:var(--badge-text);opacity:.8;margin-top:var(--space-2-5);font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
       <div style="font-size:var(--fs-sm);color:var(--badge-text);opacity:.6;margin-top:var(--space-2);">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
@@ -8254,7 +8254,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.06.00';
+const APP_VERSION = '22.06.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19164,7 +19164,7 @@ function renderDevFlags() {
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:var(--fs-base);font-weight:var(--fw-medium);">${escHtml(cfg.label)}</div>
-        <div style="font-size:var(--fs-sm);color:var(--muted);font-family:monospace;">${escHtml(key)}</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted);font-family:var(--font-mono);">${escHtml(key)}</div>
       </div>
       <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
         <input type="checkbox" ${on ? 'checked' : ''} data-flag="${escAttr(key)}" onchange="setFeatureFlag(this.dataset.flag,this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
@@ -19184,7 +19184,7 @@ function renderDevExperiments() {
     const forced = safeLS.get('exp_force_' + k) || '';
     const opt = (v, label) => `<option value="${v}" ${forced === v ? 'selected' : ''}>${label}</option>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2-5) 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:var(--fs-base);font-family:monospace;">${escHtml(k)}</div>
+      <div><div style="font-size:var(--fs-base);font-family:var(--font-mono);">${escHtml(k)}</div>
            <div class="caption">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
       <select data-key="${escAttr(k)}" onchange="setExperimentOverride(this.dataset.key, this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
     </div>`;
@@ -19377,7 +19377,7 @@ async function loadAdminExperiments() {
   const archivedHtml = archived.length ? `<div style="margin-top:var(--space-1);">
         <button class="btn btn-ghost btn-sm" style="color:var(--muted);" onclick="adminExpToggleArchived()">${archived.length} archived</button>
         <div id="adm-exp-archived" style="display:none;padding:var(--space-1) var(--space-1-5) 0;color:var(--muted);font-size:var(--fs-sm);">
-          ${archived.map(x => `<div style="padding:var(--space-0-5) 0;">${escHtml(x.name)} <span style="font-family:monospace;font-size:var(--fs-xs);">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
+          ${archived.map(x => `<div style="padding:var(--space-0-5) 0;">${escHtml(x.name)} <span style="font-family:var(--font-mono);font-size:var(--fs-xs);">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
         </div></div>` : '';
   // Stacked cards (not a table) so it fits a phone: identity → metrics grid → verdict → actions row.
   const cell = (label, val) => `<div><div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${label}</div><div>${val}</div></div>`;
@@ -19406,7 +19406,7 @@ async function loadAdminExperiments() {
       return `<div class="adm-exp-card" style="border:0.5px solid var(--border);border-radius:var(--radius);padding:var(--space-3) var(--space-3);margin-bottom:var(--space-3);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-2-5);flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-weight:var(--fw-medium);">${escHtml(x.name)}</div>
-            <div style="color:var(--muted);font-family:monospace;font-size:var(--fs-xs);word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
+            <div style="color:var(--muted);font-family:var(--font-mono);font-size:var(--fs-xs);word-break:break-all;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
           <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span class="text-muted">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span class="text-muted">· knob trial, judged Sundays</span>` : ''}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2) var(--space-2-5);margin:var(--space-2-5) 0;">
@@ -23578,8 +23578,8 @@ function pickWatch(winnerId, loserId) {
 function skipMatch() {
   clearGameTimer();
   // Brief visual feedback
-  document.getElementById('game-card-a').style.opacity = '.5';
-  document.getElementById('game-card-b').style.opacity = '.5';
+  document.getElementById('game-card-a').style.opacity = 'var(--opacity-dim)';
+  document.getElementById('game-card-b').style.opacity = 'var(--opacity-dim)';
   setTimeout(() => {
     document.getElementById('game-card-a').style.opacity = '';
     document.getElementById('game-card-b').style.opacity = '';
@@ -26327,7 +26327,7 @@ function renderStatsRow(fl) {
   let valHtml = '';
   if (pricePaid) {
     if (hasMarket) {
-      valHtml = `<table style="border-collapse:collapse;margin:0 auto;"><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Paid</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Market</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(marketVal)}</td><td style="padding:0 0 0 var(--space-1);white-space:nowrap;"><span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
+      valHtml = `<table style="border-collapse:collapse;margin:0 auto;"><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Paid</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td style="text-align:right;padding:0 var(--space-1) 0 0;white-space:nowrap;">Market</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(marketVal)}</td><td style="padding:0 0 0 var(--space-1);white-space:nowrap;"><span style="color:${pctColor};font-size:var(--fs-aside);">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
     } else {
       valHtml = `<div class="stat-sub" style="white-space:nowrap;">${fmtMoney(pricePaid)}</div>`;
     }
@@ -26645,7 +26645,7 @@ function renderCollectionReport(fl) {
     const dCls = delta != null ? (delta >= 0 ? 'pvm-gain' : 'pvm-loss') : '';
     const sign = (delta != null && delta >= 0) ? '+' : '';
     return `<tr class="rank-tr">
-      <td class="rank-td">${escHtml(w.brand)} ${escHtml(w.name)}${w.ref ? ` <span style="color:var(--muted);font-size:.75em">(${escHtml(w.ref)})</span>` : ''}</td>
+      <td class="rank-td">${escHtml(w.brand)} ${escHtml(w.name)}${w.ref ? ` <span style="color:var(--muted);font-size:var(--fs-aside-sm)">(${escHtml(w.ref)})</span>` : ''}</td>
       <td class="rank-td" style="text-align:right;color:var(--muted);white-space:nowrap">${fmtMonYear(pdate) || na}</td>
       <td class="rank-td" style="text-align:right">${cnt}</td>
       <td class="rank-td" style="text-align:right;color:var(--muted)">${cpw  != null ? fmtMoney(Math.round(cpw)) : na}</td>
@@ -29349,7 +29349,7 @@ async function enhanceAllWatches(scopedIds) {
   }).join('');
 
   const btn = document.getElementById('coll-enhance-all-btn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  if (btn) { btn.disabled = true; btn.style.opacity = 'var(--opacity-dim)'; }
   let totalWithUpdates = 0;
   try {
     for (let i = 0; i < target.length; i++) {
@@ -32457,7 +32457,7 @@ function _deepRender(text, color) {
   const host = document.getElementById('msr-scatter-plot')?.parentElement;
   if (!host) return;
   let el = document.getElementById('deep-test-readout');
-  if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:monospace;font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);'; host.insertAdjacentElement('afterend', el); }
+  if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:var(--font-mono);font-size:var(--fs-sm);padding:var(--space-1) var(--space-1-5);line-height:var(--lh-snug);'; host.insertAdjacentElement('afterend', el); }
   el.textContent = text; el.style.color = color || 'var(--tg-ink)';
 }
 async function runDeepTest() {
@@ -35850,7 +35850,7 @@ function initLandingCarousel() {
   if (!slides.length || !captionEl) return;
   const captions = ['Snap to track — log today\'s wear in seconds','Your collection — value, cost per wear','Stats at a glance — wears, value, rotation'];
   let cur = 0, timer;
-  function goTo(i) { slides[cur].classList.remove('active'); dots[cur].classList.remove('active'); cur = i; slides[cur].classList.add('active'); dots[cur].classList.add('active'); captionEl.style.opacity='0'; setTimeout(()=>{ captionEl.textContent=captions[cur]; captionEl.style.opacity='1'; },200); }
+  function goTo(i) { slides[cur].classList.remove('active'); dots[cur].classList.remove('active'); cur = i; slides[cur].classList.add('active'); dots[cur].classList.add('active'); captionEl.style.opacity='0'; setTimeout(()=>{ captionEl.textContent=captions[cur]; captionEl.style.opacity=''; },200); }
   function next() { goTo((cur+1)%slides.length); }
   function startTimer() { timer=setInterval(next,3500); }
   function resetTimer() { clearInterval(timer); startTimer(); }
