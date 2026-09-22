@@ -225,7 +225,7 @@ describe('Machine vs human opens', () => {
   it('marks prefetch rows in the recent opens list instead of hiding them', () => {
     // Filtering them out would make a live broadcast read as zero engagement.
     expect(html).toContain("e.machine ? '⟳' : '👁'");
-    expect(html).toContain("const dim = e.machine ? 'opacity:.5;' : '';");
+    expect(html).toContain("const dim = e.machine ? 'opacity:var(--opacity-dim);' : '';");
   });
 
   it('zero-initialises the new fields on every campaign accumulator', () => {
