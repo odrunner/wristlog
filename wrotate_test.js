@@ -3237,6 +3237,28 @@ export function experimentSpeedHtml(key, arms) {
           <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:var(--space-1-5);">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
+// Admin → Experiments: live sample-size progress for a running knob trial. The
+// Sunday job (scripts/accuracy_loop.py) is the only judge, so between Sundays the
+// card had no numbers and looked broken. `arms` comes from
+// admin_knob_trial_progress(): per assigned arm, users / sessions / converged since
+// assignment, shown against the judge's too_early floor (KNOB_TRIAL_MIN, mirrors
+// MIN_USERS_PER_ARM / MIN_CONV_PER_ARM). Counts only — no outcome read mid-week.
+export const KNOB_TRIAL_MIN = { users: 15, converged: 60 };
+export function knobTrialProgressHtml(arms) {
+  if (!arms || typeof arms !== 'object') return '';
+  const num = v => (v == null || v === '' || !isFinite(Number(v))) ? 0 : Number(v);
+  const prog = (v, min) => `${v}<span class="text-muted"> / ${min}</span>${v >= min ? ' ✓' : ''}`;
+  const row = (label, a) => `<div class="adm-panel-row"><div>${label}</div><div>${prog(num(a && a.users), KNOB_TRIAL_MIN.users)}</div><div>${prog(num(a && a.converged), KNOB_TRIAL_MIN.converged)}</div><div>${num(a && a.sessions)}</div></div>`;
+  const head = t => `<div class="adm-panel-head">${t}</div>`;
+  return `<div class="adm-panel adm-exp-progress">
+          <div class="adm-panel-grid">
+            ${head('Progress')}${head('Users')}${head('Converged')}${head('Sessions')}
+            ${row('Control', arms.control)}
+            ${row('Treatment', arms.treatment)}
+          </div>
+          <div class="caption-xs adm-panel-note">Live, provisional: measurements since each user joined an arm, against the minimum the Sunday judge needs per arm. Sunday re-counts from session logs, so its numbers can differ slightly.</div>
+        </div>`;
+}
 
 // ── Social cache ─────────────────────────────────────────────────────────────
 // "Remember who you follow on the device." The feed's first stage needs the ids
@@ -3881,6 +3903,8 @@ export function experimentSortRank(status) {
 export function fmtExperimentMetric(ev, arm) {
   const a = ev && ev[arm];
   if (!a) return '—';
+  // Knob trials (scripts/accuracy_loop.py) store wrong-of-converged counts, not a mean.
+  if (a.wrong_conv != null) return a.conv ? `${a.wrong_conv}/${a.conv} wrong (${(100 * a.wrong_conv / a.conv).toFixed(1)}%)` : '—';
   if (ev.metric_kind === 'rate') return `${a.converted}/${a.users} (${(Number(a.mean) * 100).toFixed(1)}%)`;
   return `${Number(a.mean).toFixed(2)} (n=${a.users})`;
 }

@@ -47,7 +47,7 @@ const VERBATIM = [
   'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome', 'applyCommentLikes',
   'feedSortDate', 'compareFeedLogs', 'feedCaughtUpIndex', 'feedMaxCreatedAt',
   'feedCacheKey', 'serializeFeedCache', 'parseFeedCache', 'carryFeedEnrichment', 'bootTimingPayload', 'earlyFeedUsable', 'firstLoadCardHtml',
-  'socialCacheKey', 'serializeSocialCache', 'parseSocialCache', 'socialSignature', 'shouldRefreshOnBackground', 'feedPageToState', 'feedRpcHintKey', 'experimentSpeedHtml',
+  'socialCacheKey', 'serializeSocialCache', 'parseSocialCache', 'socialSignature', 'shouldRefreshOnBackground', 'feedPageToState', 'feedRpcHintKey', 'experimentSpeedHtml', 'knobTrialProgressHtml',
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'deferredPushAskMode', 'followSuggestReason', 'followSuggestVisible',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',
@@ -68,7 +68,7 @@ const ADAPTED = [
   // Same shape; tests/card-images.test.js pins the CARD_* values.
   'CARD_FOLDERS', 'CARD_MAX', 'CARD_QUALITY', 'CARD_SUFFIX',
   // Array literal — tests/experiment-speed.test.js pins both copies.
-  'SPEED_EXPERIMENTS',
+  'SPEED_EXPERIMENTS', 'KNOB_TRIAL_MIN',
   // Array literal / plain string, not a {...} body — extractBody can't read
   // them, so the byte-identical check can't run. tests/campaign-groups.test.js
   // asserts the two copies match instead.

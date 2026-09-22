@@ -422,3 +422,9 @@
 .btn-ghost-gold, .btn-ghost-gold:hover { border-color: var(--gold); color: var(--gold-text); }
 .btn-ghost-muted, .btn-ghost-muted:hover { border-color: var(--border); color: var(--muted); }
 .btn-ghost-danger, .btn-ghost-danger:hover { border-color: var(--danger); color: var(--danger-text); }
+/* admin: a small stats panel inside an experiment card (Admin → Experiments knob-trial progress) */
+.adm-panel { margin: 0 0 var(--space-2-5); padding: var(--space-2) var(--space-2-5); border: 0.5px solid var(--border); border-radius: var(--radius-btn); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.adm-panel-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-1) var(--space-2-5); align-items: baseline; }
+.adm-panel-head { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); }
+.adm-panel-note { margin-top: var(--space-1-5); }
+.adm-panel-row { display: contents; }

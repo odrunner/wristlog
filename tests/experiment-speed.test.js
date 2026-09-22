@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { experimentSpeedHtml, SPEED_EXPERIMENTS } from '../wrotate_test.js';
+import { experimentSpeedHtml, SPEED_EXPERIMENTS, knobTrialProgressHtml, KNOB_TRIAL_MIN, fmtExperimentMetric } from '../wrotate_test.js';
 
 const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'index.html'), 'utf8');
 const arm = (extra = {}) => ({ loads: 9, users: 4, first_live_p50: 2392, first_live_p90: 2974, enriched_p50: 2392, enriched_p90: 3097, error_pct: 0, ...extra });
@@ -47,5 +47,44 @@ describe('experimentSpeedHtml', () => {
   });
   it('accepts numeric strings', () => {
     expect(experimentSpeedHtml('feed_rpc', { control: arm({ loads: '5', first_live_p50: '1500', first_live_p90: '3000' }), treatment: arm() })).toContain('1.5s <span class="text-muted">/ 3.0s</span>');
+  });
+});
+
+describe('knobTrialProgressHtml', () => {
+  it('mirrors the judge floor and is wired into the knob-trial card', () => {
+    expect(KNOB_TRIAL_MIN).toEqual({ users: 15, converged: 60 });
+    expect(html).toContain('const KNOB_TRIAL_MIN = { users: 15, converged: 60 };');
+    const loop = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'accuracy_loop.py'), 'utf8');
+    expect(loop).toContain('MIN_CONV_PER_ARM = 60');
+    expect(loop).toContain('MIN_USERS_PER_ARM = 15');
+    expect(html).toContain("db.rpc('admin_knob_trial_progress')");
+    expect(html).toContain("x.owner === 'weekly_review' && x.status === 'running' ? knobTrialProgressHtml(_knobProg[x.key] || {}) : ''");
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'wrotate_test.js'), 'utf8');
+    expect(html).toContain(src.match(/export (function knobTrialProgressHtml[\s\S]*?\n\})/)[1]);
+  });
+  it('shows users and converged against the floor, ticking a met floor', () => {
+    const out = knobTrialProgressHtml({ control: { users: 8, sessions: 34, converged: 23 }, treatment: { users: 15, sessions: 123, converged: 61 } });
+    expect(out).toContain('<div>Control</div><div>8<span class="text-muted"> / 15</span></div><div>23<span class="text-muted"> / 60</span></div><div>34</div>');
+    expect(out).toContain('<div>Treatment</div><div>15<span class="text-muted"> / 15</span> ✓</div><div>61<span class="text-muted"> / 60</span> ✓</div><div>123</div>');
+    expect(out).toContain('provisional');
+  });
+  it('shows zeros for a missing arm or bad numbers, never NaN', () => {
+    const out = knobTrialProgressHtml({ treatment: { users: '3', sessions: null, converged: 'x' } });
+    expect(out).toContain('<div>Control</div><div>0<span class="text-muted"> / 15</span></div><div>0<span class="text-muted"> / 60</span></div><div>0</div>');
+    expect(out).toContain('<div>Treatment</div><div>3<span');
+    expect(out).not.toContain('NaN');
+    expect(knobTrialProgressHtml({})).toContain('<div>Control</div>');
+  });
+  it('renders nothing without data', () => {
+    expect(knobTrialProgressHtml(null)).toBe('');
+    expect(knobTrialProgressHtml('x')).toBe('');
+  });
+});
+
+describe('fmtExperimentMetric on a knob-trial eval', () => {
+  it('shows wrong-of-converged instead of NaN', () => {
+    const ev = { control: { conv: 720, n: 1165, users: 55, wrong_conv: 164 }, treatment: { conv: 0, wrong_conv: 0, users: 1 } };
+    expect(fmtExperimentMetric(ev, 'control')).toBe('164/720 wrong (22.8%)');
+    expect(fmtExperimentMetric(ev, 'treatment')).toBe('—');
   });
 });
