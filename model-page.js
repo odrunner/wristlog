@@ -234,7 +234,7 @@ function renderModelPage(el, ctx, h) {
           <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
           <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);font-size:var(--fs-3xs);color:var(--muted);">${ret.map(r => `<span style="flex:1;text-align:center;">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
         <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3-5);padding-top:var(--space-3);border-top:1px solid var(--border);">
-          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--on-gold);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
+          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--black);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
           <span style="font-size:var(--fs-xs);color:var(--muted);">of ${Number(w.n_models).toLocaleString()} models · ${Number(w.wears).toLocaleString()} wears from ${w.n_owners} collections</span></div>
       </div>`);
     }
@@ -380,7 +380,7 @@ function renderModelPage(el, ctx, h) {
     .mp-act { flex:1; text-align:center; font-size:var(--fs-base); border-radius:var(--radius-btn); padding:var(--space-3); cursor:pointer; font-family:inherit; }
     /* page components — each decision once, values are tokens (2026-09-22) */
     .mp-actions { position:sticky; bottom:0; display:flex; gap:var(--space-2); padding:var(--space-3) var(--space-4) var(--space-5); border-top:1px solid var(--border); background:var(--bg); }
-    .mp-act-primary { font-weight:var(--fw-semibold); color:var(--on-gold); background:var(--gold); border:0; }
+    .mp-act-primary { font-weight:var(--fw-semibold); color:var(--black); background:var(--gold); border:0; }
     .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
     .mp-act-ghost:disabled { color:var(--muted); }
     .mp-fact-nav { flex:none; width:36px; min-height:44px; display:flex; align-items:center; justify-content:center; background:none; border:0; color:var(--gold-text); font-size:var(--fs-xl); cursor:pointer; font-family:inherit; }

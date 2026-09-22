@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=ff1c42dc">
+  <link rel="stylesheet" href="/design-system.css?v=7de13383">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -346,7 +346,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: var(--fs-lg); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
       transition: box-shadow var(--dur-fast), background var(--dur-fast);
     }
-    .btn-google:hover { box-shadow: var(--shadow-btn-hover); background: var(--google-hover); }
+    .btn-google:hover { box-shadow: var(--shadow-btn-hover); background: var(--paper); }
     .btn-apple {
       display: flex; align-items: center; justify-content: center; gap: var(--space-3);
       width: 100%; padding: var(--space-3-5) var(--space-4); margin-bottom: var(--space-3);
@@ -354,7 +354,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: var(--fs-lg); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
       transition: box-shadow var(--dur-fast), background var(--dur-fast);
     }
-    .btn-apple:hover { box-shadow: var(--shadow-btn-hover); background: var(--apple-hover); }
+    .btn-apple:hover { box-shadow: var(--shadow-btn-hover); background: var(--demo-ink); }
     .auth-error { background: color-mix(in srgb, var(--danger) 12%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); color: var(--danger-text); font-size: var(--fs-base); padding: var(--space-2-5) var(--space-3-5); border-radius: var(--radius-btn); margin-bottom: var(--space-4); display: none; }
     .auth-divider { text-align: center; color: var(--muted); font-size: var(--fs-sm); margin: var(--space-5) 0; line-height: var(--lh-body); }
 
@@ -468,8 +468,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-flame-dim { opacity: .5; }
     .streak-flame-svg { width: 1em; height: 1em; fill: color-mix(in srgb, var(--gold) 30%, transparent); stroke: var(--gold); transition: fill var(--dur-fast), stroke var(--dur-fast); }
     .streak-chip:hover .streak-flame-svg { fill: color-mix(in srgb, var(--gold) 62%, transparent); stroke: var(--gold-lt); }
-    .streak-chip.streak-chip-atrisk .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 30%, transparent); stroke: var(--warn); }
-    .streak-chip.streak-chip-atrisk:hover .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 60%, transparent); stroke: var(--warn); }
+    .streak-chip.streak-chip-atrisk .streak-flame-svg { fill: color-mix(in srgb, var(--watch-gold) 30%, transparent); stroke: var(--watch-gold); }
+    .streak-chip.streak-chip-atrisk:hover .streak-flame-svg { fill: color-mix(in srgb, var(--watch-gold) 60%, transparent); stroke: var(--watch-gold); }
     .freeze-svg { width: 1em; height: 1em; vertical-align: -.12em; }
     .streak-cue, .streak-best { color: var(--muted); font-weight: var(--fw-medium); font-size: var(--fs-aside); }
 
@@ -995,7 +995,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .game-card-name   { font-size: var(--fs-md); font-weight: var(--fw-bold); line-height: var(--lh-tight); }
     .game-vs-lbl      { font-size: var(--fs-lg); font-weight: var(--fw-heavy); color: var(--muted); flex-shrink: 0; letter-spacing: var(--ls-tight); }
     .game-timer-wrap  { width: 100%; height: 5px; background: var(--border); border-radius: var(--radius-xs); overflow: hidden; margin-top: var(--space-4); }
-    .game-timer-bar   { height: 100%; width: 100%; background: linear-gradient(90deg,var(--tag-type),var(--game-accent)); border-radius: var(--radius-xs); }
+    .game-timer-bar   { height: 100%; width: 100%; background: linear-gradient(90deg,var(--tag-type),var(--vis-friends)); border-radius: var(--radius-xs); }
     .game-result-list { width: 100%; max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-2); }
     .game-result-item { display: flex; align-items: center; gap: var(--space-3); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2-5) var(--space-3-5); }
     .game-rank-num    { font-size: var(--fs-xl); font-weight: var(--fw-heavy); min-width: 2rem; text-align: center; }
@@ -1236,7 +1236,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
     }
     .chart-range-btn:hover { color: var(--text); border-color: var(--gold); }
-    .chart-range-btn.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+    .chart-range-btn.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
 
     /* Toast */
     .toast {
@@ -1255,7 +1255,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Badge toast */
     .badge-toast {
       position: fixed; bottom: 1.75rem; left: 50%; transform: translate(-50%, 80px);
-      background: var(--badge-bg2); border:1px solid var(--badge-border);
+      background: var(--badge-bg); border:1px solid var(--badge-border);
       border-radius: var(--radius-lg); padding: var(--space-3) var(--space-5);
       font-size: var(--fs-base); z-index: var(--z-toast-top);
       box-shadow: var(--shadow-toast);
@@ -1452,7 +1452,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-dow { text-align:center; font-size:var(--fs-2xs); font-weight:var(--fw-bold); text-transform:uppercase; color:var(--muted); padding-bottom:var(--space-1); }
     .streak-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:var(--fs-base); border-radius:var(--radius-btn); background:var(--surface2); color:var(--text); }
     .streak-cal-blank { background:transparent; }
-    .streak-cal-cell.logged { background:var(--gold); color:var(--on-gold); font-weight:var(--fw-bold); }
+    .streak-cal-cell.logged { background:var(--gold); color:var(--black); font-weight:var(--fw-bold); }
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:.35; }
     .streak-cal-cell.frozen { background:var(--streak-frozen-bg); color:var(--streak-frozen-ink); font-weight:var(--fw-bold); }
@@ -1492,7 +1492,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-brand { font-size:var(--fs-sm); color:var(--muted); }
     .pi-card-conf { font-size:var(--fs-xs); font-weight:var(--fw-semibold); padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-sm); text-transform:capitalize; }
     .pi-card-conf.high { background:color-mix(in srgb, var(--status-good) 12%, transparent); color:var(--success-text); }
-    .pi-card-conf.medium { background:color-mix(in srgb, var(--status-warn) 12%, transparent); color:var(--warn); }
+    .pi-card-conf.medium { background:color-mix(in srgb, var(--status-warn) 12%, transparent); color:var(--watch-gold); }
     .pi-card-conf.low { background:color-mix(in srgb, var(--status-bad) 12%, transparent); color:var(--danger-text); }
     .pi-card-actions { display:flex; gap:var(--space-1-5); flex-shrink:0; }
     .funfact-card{display:flex;gap:var(--space-2);align-items:flex-start;background:var(--badge-bg);border:.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2) var(--space-2-5);font-size:var(--fs-base);line-height:var(--lh-snug);color:var(--text);}
@@ -1551,7 +1551,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-dot-gray { width:6px; height:6px; border-radius:var(--radius-round); background:var(--muted); opacity:.5; }
 
     /* ── AI PRE-FILL BANNER ── */
-    .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:var(--on-gold); padding:var(--space-2) var(--space-3); border-radius:var(--radius-btn); margin-bottom:var(--space-3); font-size:var(--fs-base); line-height:var(--lh-snug); }
+    .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:var(--black); padding:var(--space-2) var(--space-3); border-radius:var(--radius-btn); margin-bottom:var(--space-3); font-size:var(--fs-base); line-height:var(--lh-snug); }
     .ai-prefill-banner.hidden { display:none; }
 
     /* ── SNAP TO TRACK ── */
@@ -1751,7 +1751,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     /* Accuracy share cards are compact graphics, not photos — render at natural
        height (no fixed 4:5 slot, no crop) so there's no blank padding. */
-    .feed-card-photo--accuracy { aspect-ratio: auto; max-height: none; background: var(--tg-card-bg); }
+    .feed-card-photo--accuracy { aspect-ratio: auto; max-height: none; background: var(--tg-bg); }
     .feed-card-photo--accuracy img { height: auto; object-fit: contain; }
     .feed-card-thumbnails { display: flex; gap: var(--space-0-5); padding: var(--space-0-5); background: var(--surface2); }
     .feed-card-thumb { flex: 1; aspect-ratio: 1; overflow: hidden; cursor: pointer; position: relative; max-width: 80px; }
@@ -1787,7 +1787,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-thumb-video-badge { position: absolute; bottom: 4px; right: 4px; width: 14px; height: 14px; background: color-mix(in srgb, var(--black) 60%, transparent); border-radius: var(--radius-round); display: flex; align-items: center; justify-content: center; color: var(--white); font-size: var(--fs-3xs); pointer-events: none; }
     .feed-card-photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .feed-vid-mute { position: absolute; bottom: 10px; right: 10px; width: 32px; height: 32px; border-radius: var(--radius-round); background: var(--scrim); color: var(--white); border: none; font-size: var(--fs-lg); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: var(--z-raised-3); }
-    .np-thumb-video-placeholder { width: 100%; height: 100%; background: var(--media-placeholder); display: flex; align-items: center; justify-content: center; }
+    .np-thumb-video-placeholder { width: 100%; height: 100%; background: var(--demo-ink); display: flex; align-items: center; justify-content: center; }
     .np-thumb-spinner { width: 18px; height: 18px; border: 2px solid color-mix(in srgb, var(--white) 20%, transparent); border-top-color: color-mix(in srgb, var(--white) 85%, transparent); border-radius: var(--radius-round); animation: np-thumb-spin .8s linear infinite; }
     @keyframes np-thumb-spin { to { transform: rotate(360deg); } }
     .feed-video-tap-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: var(--radius-round); background: color-mix(in srgb, var(--black) 60%, transparent); color: var(--white); border: none; font-size: var(--fs-icon); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: var(--z-raised-2); }
@@ -1989,19 +1989,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-tag-dot {
       width: 18px; height: 18px; border-radius: var(--radius-round);
-      border: 2px solid var(--promo-gold);
+      border: 2px solid var(--gold-text);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; box-sizing: border-box;
     }
     .promo-tag-dot::after {
       content: ''; width: 4px; height: 4px; border-radius: var(--radius-round);
-      background: var(--promo-gold);
+      background: var(--gold-text);
     }
     .promo-tag-eyebrow {
       font-family: var(--promo-mono);
       font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: var(--promo-lh-eyebrow);
       letter-spacing: var(--promo-ls-eyebrow); text-transform: uppercase;
-      color: var(--promo-gold);
+      color: var(--gold-text);
     }
     /* The notches must read as a bite out of the card edge, centred on the
        perforation. Strip height is 11 + 18 + 11 = 40px (the eyebrow's
@@ -2026,7 +2026,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       color: var(--text); margin: 0;
     }
     .promo-tag .promo-body {
-      font-size: var(--fs-lg); line-height: var(--lh-body); color: var(--promo-quiet);
+      font-size: var(--fs-lg); line-height: var(--lh-body); color: var(--muted);
       text-wrap: pretty;
     }
     .promo-tag .promo-cta, .promo-band .promo-cta {
@@ -2035,7 +2035,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-tag--prompt .promo-cta {
       width: 100%; display: block; padding: var(--space-3-5); border-radius: var(--radius);
-      background: var(--promo-gold); color: var(--promo-cta-fg);
+      background: var(--gold-text); color: var(--promo-cta-fg);
       font-size: var(--fs-lg); font-weight: var(--fw-heavy);
     }
     .promo-tag--prompt .promo-cta:hover { background: var(--promo-gold-deep); }
@@ -2052,7 +2052,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-tag--nudge .promo-body { font-size: var(--fs-base); }
     .promo-tag--nudge .promo-cta {
       padding: var(--space-2-5) var(--space-4); border-radius: var(--radius-btn); flex-shrink: 0;
-      background: var(--promo-gold); color: var(--promo-cta-fg);
+      background: var(--gold-text); color: var(--promo-cta-fg);
       font-size: var(--fs-md); font-weight: var(--fw-bold);
     }
     .promo-tag--nudge .promo-cta:hover { background: var(--promo-gold-deep); }
@@ -2070,7 +2070,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        static content, so every content row is lifted above it. */
     .promo-band > *:not(.promo-band-mark):not(.promo-band-rule) { position: relative; }
     .promo-band--prompt {
-      background: linear-gradient(160deg, var(--promo-gold-bright) 0%, var(--promo-gold-deep) 100%);
+      background: linear-gradient(160deg, var(--demo-gold-deep) 0%, var(--promo-gold-deep) 100%);
       padding: var(--space-6) var(--space-5) var(--space-5);
       display: flex; flex-direction: column; gap: var(--space-3-5);
     }
@@ -2086,7 +2086,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-band-eyebrow {
       font-family: var(--promo-mono);
       font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--promo-ls-label);
-      text-transform: uppercase; color: var(--promo-sand);
+      text-transform: uppercase; color: var(--sand);
     }
     .promo-band--prompt .promo-heading {
       font-size: var(--promo-fs-prompt); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-2);
@@ -2101,12 +2101,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       align-self: flex-start; background: var(--white); color: var(--promo-gold-deep);
       font-size: var(--fs-lg); font-weight: var(--fw-heavy); padding: var(--space-3) var(--space-6); border-radius: var(--radius-pill);
     }
-    .promo-band--prompt .promo-cta:hover { background: var(--promo-sand); }
+    .promo-band--prompt .promo-cta:hover { background: var(--sand); }
 
     /* band · nudge — the family's compact form: a solid ink bar that stacks
        directly under a band prompt. No gradient, no watermark. */
     .promo-band--nudge {
-      background: var(--promo-ink);
+      background: var(--demo-ink);
       padding: var(--space-4) var(--space-5);
       display: flex; align-items: center; gap: var(--space-3-5);
     }
@@ -2116,17 +2116,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     [data-theme="dark"] .promo-band--nudge {
       box-shadow: var(--promo-edge);
     }
-    .promo-band--nudge .promo-band-eyebrow { font-size: var(--fs-2xs); color: var(--promo-gold-light); }
+    .promo-band--nudge .promo-band-eyebrow { font-size: var(--fs-2xs); color: var(--watch-gold); }
     .promo-band--nudge .promo-heading {
-      font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); color: var(--promo-paper); margin: 0;
+      font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); color: var(--cream); margin: 0;
     }
-    .promo-band--nudge .promo-body { font-size: var(--fs-base); color: var(--promo-ink-2); }
+    .promo-band--nudge .promo-body { font-size: var(--fs-base); color: var(--badge-locked-ink); }
     .promo-band--nudge .promo-cta {
-      flex-shrink: 0; background: transparent; border: 1px solid var(--promo-gold-light);
-      color: var(--promo-gold-light); border-radius: var(--radius-pill); padding: var(--space-2-5) var(--space-4);
+      flex-shrink: 0; background: transparent; border: 1px solid var(--watch-gold);
+      color: var(--watch-gold); border-radius: var(--radius-pill); padding: var(--space-2-5) var(--space-4);
       font-size: var(--fs-md); font-weight: var(--fw-bold);
     }
-    .promo-band--nudge .promo-cta:hover { background: var(--promo-gold-light); color: var(--promo-ink); }
+    .promo-band--nudge .promo-cta:hover { background: var(--watch-gold); color: var(--demo-ink); }
 
     /* ── Month in review (promo_slots.variant = 'recap') ──────────────────
        Spec: docs/superpowers/specs/2026-08-07-month-in-review-promo-design.md
@@ -2148,7 +2148,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-eyebrow {
       font-family: var(--promo-mono); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
-      letter-spacing: var(--promo-ls-eyebrow); text-transform: uppercase; color: var(--promo-gold);
+      letter-spacing: var(--promo-ls-eyebrow); text-transform: uppercase; color: var(--gold-text);
     }
     .promo-recap-period { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--promo-gold-deep); }
 
@@ -2162,7 +2162,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       scrollbar-width: none;
     }
     .promo-recap-track::-webkit-scrollbar { display: none; }
-    .promo-recap-track:focus-visible { outline: 2px solid var(--promo-gold); outline-offset: -2px; }
+    .promo-recap-track:focus-visible { outline: 2px solid var(--gold-text); outline-offset: -2px; }
     .promo-recap-slide {
       flex: 0 0 100%; min-width: 100%; scroll-snap-align: center;
       box-sizing: border-box; padding: var(--space-6) var(--space-5) var(--space-5);
@@ -2211,7 +2211,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-rank {
       font-family: var(--promo-mono); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
-      color: var(--promo-gold);
+      color: var(--gold-text);
     }
     /* One line, ellipsised: a long model name must not make one tile twice the
        height of its neighbours. */
@@ -2269,7 +2269,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       width: 6px; height: 6px; border-radius: var(--radius-round);
       background: var(--promo-line); transition: background var(--dur-fast), transform var(--dur-fast);
     }
-    .promo-recap-dot.is-on { background: var(--promo-gold); transform: scale(1.25); }
+    .promo-recap-dot.is-on { background: var(--gold-text); transform: scale(1.25); }
 
     .promo-recap-foot { padding: 0 var(--space-5) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
     .promo-recap-share { display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
@@ -2290,12 +2290,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
     }
     .promo-recap-vote-btn:hover {
-      color: var(--promo-gold); border-color: var(--promo-gold);
-      background: color-mix(in srgb, var(--promo-gold) 8%, transparent);
+      color: var(--gold-text); border-color: var(--gold-text);
+      background: color-mix(in srgb, var(--gold-text) 8%, transparent);
     }
     .promo-recap-vote--done { font-size: var(--fs-sm); color: var(--muted); font-style: italic; }
     .promo-recap .promo-cta {
-      width: 100%; margin: 0; background: var(--promo-gold); color: var(--promo-cta-fg);
+      width: 100%; margin: 0; background: var(--gold-text); color: var(--promo-cta-fg);
       border: none; border-radius: var(--radius); padding: var(--space-3-5);
       font-size: var(--fs-lg); font-weight: var(--fw-heavy); cursor: pointer;
     }
@@ -2604,7 +2604,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        never two Post buttons on screen. --header-h is measured in JS so it
        clears the sticky header at every breakpoint (and the iOS safe area). */
     #feed-post-fab { position:fixed; top:calc(var(--header-h) + .6rem); right:1rem; z-index:var(--z-fab);
-      width:46px; height:46px; border-radius:var(--radius-round); background:var(--gold); color:var(--on-gold);
+      width:46px; height:46px; border-radius:var(--radius-round); background:var(--gold); color:var(--black);
       border:none; cursor:pointer; display:none; align-items:center; justify-content:center;
       box-shadow:var(--shadow-3); transition:background var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
     #feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
@@ -2627,7 +2627,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-chip { display:inline-flex; align-items:center; gap:var(--space-1); height:34px; padding:0 var(--space-1-5); font-size:var(--fs-base); font-weight:var(--fw-semibold); color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:var(--lh-none); transition:box-shadow var(--dur-fast), color var(--dur-fast); }
     .streak-chip:hover { box-shadow:var(--ring); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
-    .streak-chip.streak-chip-atrisk { color:var(--warn); }
+    .streak-chip.streak-chip-atrisk { color:var(--watch-gold); }
     #theme-btn { width:34px; height:34px; border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
     #theme-btn:hover { box-shadow:var(--ring); color:var(--text); }
@@ -3458,7 +3458,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,var(--demo-gold) 0%,var(--demo-gold-mid) 50%,var(--demo-gold-deep) 100%);color:var(--demo-ink);padding:var(--space-2-5) var(--space-5);margin:calc(-1 * var(--space-3)) var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-base);font-weight:var(--fw-semibold);border-radius:var(--radius);box-shadow:var(--shadow-2);">
     <span class="grow-clip">Demo Mode — read-only preview of Alex Rivera's collection</span>
     <div style="display:flex;gap:var(--space-2);align-items:center;flex-shrink:0;">
-      <button onclick="exitDemoMode()" style="background:var(--demo-ink);color:var(--demo-paper);border:none;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
+      <button onclick="exitDemoMode()" style="background:var(--demo-ink);color:var(--paper);border:none;border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;font-weight:var(--fw-semibold);white-space:nowrap;">Sign Up Free</button>
       <button onclick="exitDemoMode()" style="background:color-mix(in srgb, var(--demo-ink) 10%, transparent);border:1px solid color-mix(in srgb, var(--demo-ink) 30%, transparent);color:var(--demo-ink);border-radius:var(--radius-btn);padding:var(--space-1-5) var(--space-3);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;white-space:nowrap;">Exit</button>
     </div>
   </div>
@@ -3813,7 +3813,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Preview -->
         <div class="draft-form-row">
           <label id="broadcast-preview-label">Email Preview</label>
-          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" style="background:var(--email-canvas);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;">
+          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" style="background:var(--paper);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;">
             <div class="empty empty-compact">Start typing to see preview</div>
           </div>
         </div>
@@ -6271,10 +6271,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:var(--z-modal-top);"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:var(--z-modal-top);"><div class="modal" style="max-width:360px;background:var(--badge-bg);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
 <div id="badge-reveal-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="badge-reveal-title">
-  <div class="modal" style="max-width:340px;background:var(--badge-bg2);border-color:var(--badge-border);text-align:center;">
+  <div class="modal" style="max-width:340px;background:var(--badge-bg);border-color:var(--badge-border);text-align:center;">
     <div class="modal-title" id="badge-reveal-title" style="justify-content:center;color:var(--badge-text);">🎉 <span id="badge-reveal-count"></span></div>
     <div id="badge-reveal-medallions" style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;justify-content:center;margin:var(--space-3) 0 var(--space-1-5);"></div>
     <div id="badge-reveal-names" style="font-size:var(--fs-base);color:var(--badge-text);opacity:.7;margin-bottom:var(--space-4);line-height:var(--lh-body);"></div>
@@ -6494,7 +6494,7 @@ let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
 const BADGE_COLORS = {
   onboarding:  { bezel: 'var(--badge-onboarding)', stroke: 'var(--badge-onboarding-ink)', chipBg: 'var(--badge-onboarding-bg)', chipText: 'var(--badge-onboarding-ink)' },
-  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: 'var(--badge-collection-bg)', chipText: 'var(--badge-close)' },
+  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: 'var(--sand)', chipText: 'var(--badge-close)' },
   connoisseur: { bezel: 'var(--badge-connoisseur)', stroke: 'var(--badge-connoisseur-ink)', chipBg: 'var(--badge-connoisseur-bg)', chipText: 'var(--badge-connoisseur-ink)' },
   timegrapher: { bezel: 'var(--badge-timegrapher)', stroke: 'var(--badge-timegrapher-ink)', chipBg: 'var(--badge-timegrapher-bg)', chipText: 'var(--badge-timegrapher-ink)' },
   habit:       { bezel: 'var(--badge-habit)', stroke: 'var(--badge-habit-ink)', chipBg: 'var(--badge-habit-bg)', chipText: 'var(--badge-habit-ink)' },
@@ -6660,7 +6660,7 @@ const BADGE_REGISTRY = [
   { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden',
     flavor: 'Moonphase aligned with the real thing.',
     unlock: 'Log wear on a moonphase watch during a full moon.',
-    glyph: '<circle cx="52" cy="50" r="16" fill="var(--badge-ink)"/><circle cx="44" cy="50" r="16" fill="var(--badge-disc)"/>',
+    glyph: '<circle cx="52" cy="50" r="16" fill="var(--badge-ink)"/><circle cx="44" cy="50" r="16" fill="var(--cream)"/>',
     isHidden: true },
   { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden',
     flavor: 'A wear on your birthday. Cheers.',
@@ -6701,13 +6701,13 @@ function badgeMedallionSvg(badge, size, earned) {
   if (earned) {
     return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="48" fill="${c.bezel}"/>
-      <circle cx="50" cy="50" r="44" fill="var(--badge-disc)" stroke="${c.stroke}" stroke-width="0.4"/>
+      <circle cx="50" cy="50" r="44" fill="var(--cream)" stroke="${c.stroke}" stroke-width="0.4"/>
       ${badge.glyph}
     </svg>`;
   }
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="48" fill="var(--badge-locked)"/>
-    <circle cx="50" cy="50" r="44" fill="var(--badge-disc)" stroke="var(--badge-locked-ink)" stroke-width="0.4"/>
+    <circle cx="50" cy="50" r="44" fill="var(--cream)" stroke="var(--badge-locked-ink)" stroke-width="0.4"/>
     <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="var(--badge-ink)" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="var(--badge-ink)" stroke-width="2" fill="none"/></g>
   </svg>`;
 }
@@ -8254,7 +8254,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.06.21';
+const APP_VERSION = '22.06.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20343,7 +20343,7 @@ function renderEmailHealth(data) {
   // Only a breached or near-breached figure gets tinted; healthy numbers use the
   // same gold as every other admin stat, so the card reads as normal until it isn't.
   const tone = (v, warnAt, badAt) => v >= badAt ? 'var(--danger)'
-    : v >= warnAt ? 'var(--warn)' : 'var(--gold)';
+    : v >= warnAt ? 'var(--watch-gold)' : 'var(--gold)';
   const row = (label, value, limit, color, last) =>
     `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-base);padding:var(--space-1-5) 0;${last ? '' : 'border-bottom:1px solid var(--border);'}">`
     + `<span>${label}</span>`
@@ -20907,7 +20907,7 @@ async function loadExploreModels(reset) {
     <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
-        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:var(--watch-default);color:var(--on-gold);">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:var(--watch-default);color:var(--black);">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
         <div class="grow-clip">
           <div class="watch-card-name">${escHtml(m.name)}</div>
           <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
@@ -22991,7 +22991,7 @@ async function loadCampaigns() {
       <div id="camp-status-${c.id}" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);" aria-live="polite"></div>
       <div class="draft-form-row" style="margin-top:var(--space-2-5);">
         <label>Email Preview</label>
-        <div id="camp-preview-${c.id}" style="background:var(--email-canvas);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;"></div>
+        <div id="camp-preview-${c.id}" style="background:var(--paper);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;"></div>
       </div>
     </div>`;
   };
@@ -26500,7 +26500,7 @@ function renderChCollectionValue() {
   const gold = dsToken('--gold');
   const goldFill = gold + '26';                  // --gold is a 6-digit hex in both themes; + alpha 15%
   const gridC = dsToken('--chart-grid');
-  const tickC = dsToken('--chart-tick');
+  const tickC = dsToken('--uc-unspecified');
 
   const datasets = [{
     label: 'Cost',
@@ -33467,7 +33467,7 @@ async function loadTgHistory() {
   if (_isDemoMode) {
     listEl.innerHTML = `<div style="text-align:center;padding:var(--space-4) 0;">
       <div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:var(--space-2);">Sign up to track your watch accuracy.</div>
-      <button onclick="showDemoSignupModal()" style="padding:var(--space-2) var(--space-5);border-radius:var(--radius-btn);border:none;background:var(--demo-cta);color:var(--white);font-size:var(--fs-base);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;">Sign up free</button>
+      <button onclick="showDemoSignupModal()" style="padding:var(--space-2) var(--space-5);border-radius:var(--radius-btn);border:none;background:var(--gold);color:var(--white);font-size:var(--fs-base);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;">Sign up free</button>
     </div>`;
     return;
   }
@@ -34555,7 +34555,7 @@ function drawMsrScatterCore(ctx, o) {
     if (modeY > pad.t && modeY < h - pad.b) {
       ctx.save();
       ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = dsColor('--tg-rate-line', 0.5);
+      ctx.strokeStyle = dsColor('--status-warn', 0.5);
       ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath();
       ctx.moveTo(pad.l, modeY);
@@ -34681,7 +34681,7 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph, wave, ampli
   const ctx = canvas.getContext('2d');
 
   // Dark matte background
-  ctx.fillStyle = dsColor('--tg-card-bg');
+  ctx.fillStyle = dsColor('--tg-bg');
   ctx.fillRect(0, 0, W, H);
 
   // Watch name — above the panel

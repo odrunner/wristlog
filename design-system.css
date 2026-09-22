@@ -78,8 +78,8 @@
   --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fs-icon: 1.75rem; --fs-aside: .85em; --fs-aside-sm: .75em;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
-  --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0; --google-hover: #f8f8f8;
-  --apple-bg: var(--black); --apple-ink: var(--white); --apple-hover: #1a1a1a;
+  --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0;
+  --apple-bg: var(--black); --apple-ink: var(--white);
   --opacity-dim: .5;                      /* a control greyed out for a moment while it works */
   /* --lh-none is for icons, numerals and single-line badges, never running text. */
   --lh-none: 1; --lh-tight: 1.2; --lh-compact: 1.3; --lh-snug: 1.4; --lh-body: 1.55; --lh-prose: 1.7;
@@ -138,24 +138,22 @@
   --z-top: 10000;
 
   /* ── Status ── the timegrapher's rate / amplitude traffic light. Distinct from
-     --success / --warn / --danger today only because they were typed by hand;
+     --success / --danger today only because they were typed by hand;
      kept at their current values so declaring them changes nothing on screen. */
   /* Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on
      purpose — these sit on surfaces that do not follow the theme. */
   --white: #fff;
   --black: #000;
-  --on-gold: #0a0a0e;           /* ink on a gold fill: primary button, Post button, gold pills */
   --tag-type: var(--watch-indigo);         /* the watch-type tag (indigo) */
   --tag-strap: var(--watch-slate);        /* strap tag (slate) */
   --tag-weather: var(--watch-sky);      /* weather recommendation tag (sky) */
   --rating: #f59e0b;           /* feedback "rating" badge (amber) */
-  --game-accent: #c084fc;      /* ranking-game timer bar, gradient end */
   --medal-silver: #b0b0b0; --medal-bronze: #cd7f32;      /* rank 2 / 3 (rank 1 is --gold) */
   /* visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger */
   --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
+  --paper: #f5f5f8; --cream: #FEFCF6; --sand: #F0E2B4;   /* fixed off-white, cream, sand: demo, promo, badges, admin previews */
   --demo-gold: var(--watch-gold); --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
-  --demo-paper: #f5f5f8; --demo-cta: #4f46e5;   /* light ink on the demo bar's dark button; the demo sign-up button */
   --status-good: #22c55e;
   --status-warn: #eab308;
   --status-bad: #ef4444;
@@ -163,26 +161,21 @@
   --danger-fill: #b91c1c;         /* a solid destructive button (white text), the same in both themes */
   --streak-frozen-bg: #cfe8f5; --streak-frozen-ink: #0c4a6e;   /* a streak day covered by a freeze (ice) */
   --chip-warn-bg: #fde68a; --chip-warn-ink: #7c2d12;           /* a warning chip (AI add-a-watch) */
-  --media-placeholder: #2a2a2a;                                 /* a video thumbnail before it loads */
-  --email-canvas: #f4f4f4;       /* admin: the grey an email client shows behind a mail (email HTML itself keeps literals) */
   --verified: #4ea4f6;           /* the official-account tick */
   /* visibility-state semantic colors (one hue per state, all surfaces) */
   --vis-friends: #a78bfa;
-  --warn: #d9a441;
 
   /* ── Timegrapher instrument ── a fixed green-on-black readout in BOTH themes,
      like the screen of a bench timegrapher, so not overridden in dark. */
   --tg-ink: #4ade80;
   --tg-bg: #0a1a12;
-  --tg-rate-line: #facc15;                          /* the live-rate dashed line on the scatter */
-  --tg-card-bg: #060f0a; --tg-card-ink: #e8efd9;   /* the measurement share-card image */
+  --tg-card-ink: #e8efd9;   /* the measurement share-card image */
   --tg-error-bg: rgba(127,29,29,.3);                /* the Listen button after a failed start */
 
   /* ── Badges / achievements ── warm theme; dark variants below. */
   --badge-text: #3D2A14;
   --badge-accent: #854F0B;
   --badge-bg: #FAEEDA;
-  --badge-bg2: #FBF6E8;
   --badge-border: #BA7517;
   --badge-close: #6B5618;
   --badge-tier: #B8952A;
@@ -192,13 +185,12 @@
   --badge-ink: #3D2A14;
   /* badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background.
      Collection uses the badge gold above; the rest are fixed hues, the same in both themes. */
-  --badge-onboarding: #7A8B5C;  --badge-onboarding-ink: #4F5C3A;  --badge-onboarding-bg: #E8EFD9;
-  --badge-connoisseur: #6B3D52; --badge-connoisseur-ink: #3F2230; --badge-connoisseur-bg: #ECDAE3;
-  --badge-timegrapher: #4A6B7D; --badge-timegrapher-ink: #2C434F; --badge-timegrapher-bg: #DCE6EC;
-  --badge-habit: #B5663F;       --badge-habit-ink: #6B3A1F;       --badge-habit-bg: #F0DCCE;
-  --badge-hidden: #7A7A6A;      --badge-hidden-ink: #4A4A3E;      --badge-hidden-bg: #E8E6DD;
-  --badge-collection-bg: #F0E4BD;
-  --badge-disc: #FEFCF6; --badge-locked: #C9C2A8; --badge-locked-ink: #A8A28C;   /* medallion face; a locked badge */
+  --badge-onboarding: #7A8B5C;  --badge-onboarding-ink: color-mix(in srgb, var(--badge-onboarding) 58%, black);  --badge-onboarding-bg: color-mix(in srgb, var(--badge-onboarding) 20%, white);
+  --badge-connoisseur: #6B3D52; --badge-connoisseur-ink: color-mix(in srgb, var(--badge-connoisseur) 58%, black); --badge-connoisseur-bg: color-mix(in srgb, var(--badge-connoisseur) 20%, white);
+  --badge-timegrapher: #4A6B7D; --badge-timegrapher-ink: color-mix(in srgb, var(--badge-timegrapher) 58%, black); --badge-timegrapher-bg: color-mix(in srgb, var(--badge-timegrapher) 20%, white);
+  --badge-habit: #B5663F;       --badge-habit-ink: color-mix(in srgb, var(--badge-habit) 58%, black);       --badge-habit-bg: color-mix(in srgb, var(--badge-habit) 20%, white);
+  --badge-hidden: #7A7A6A;      --badge-hidden-ink: color-mix(in srgb, var(--badge-hidden) 58%, black);      --badge-hidden-bg: color-mix(in srgb, var(--badge-hidden) 20%, white);
+  --badge-locked: #C9C2A8; --badge-locked-ink: #A8A28C;   /* medallion face; a locked badge */
   /* watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as
      plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. */
   --watch-gold: #c9a84c; --watch-green: #4caf7d; --watch-indigo: #818cf8; --watch-orange: #ef7942;
@@ -207,7 +199,7 @@
   --watch-default: var(--watch-gold);
   --uc-unspecified: #7a7a95; --uc-other: #888;   /* use-case chart: no use case / an unknown one */
   /* charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. */
-  --chart-grid: rgba(128,128,128,.15); --chart-tick: #7a8095; --chart-series-2: var(--watch-indigo);
+  --chart-grid: rgba(128,128,128,.15); --chart-series-2: var(--watch-indigo);
 }
 
 [data-theme="dark"] {
@@ -239,7 +231,6 @@
   --badge-text: #e7d9bd;
   --badge-accent: #dbbe72;
   --badge-bg: #221a0e;
-  --badge-bg2: #1c160d;
   --badge-border: rgba(219,190,114,.35);
   --badge-close: #c9a84c;
   --badge-tier: #dbbe72;
@@ -266,17 +257,10 @@
    The mock specifies IBM Plex Mono for the brand eyebrow; this app loads no web
    fonts, so --promo-mono is the platform mono face. */
 .promo-tag, .promo-band, .promo-recap {
-  --promo-gold: #8A6D1B;
   --promo-gold-deep: #6E5514;
-  --promo-gold-bright: #9A7B22;
-  --promo-gold-light: #C8A33A; --promo-paper: #FBFAF7;
   --promo-parchment: #F3EFE1;
   --promo-line: #D9C48A;
-  --promo-sand: #F0E2B4;
   --promo-band-body: #EEE3C6;
-  --promo-ink: #1B1712;
-  --promo-ink-2: #A9A196;
-  --promo-quiet: #6B6478;
   --promo-cta-fg: #fff;
   /* the promo family's own editorial scale — deliberately not the app's (display sizes, wide eyebrow
      tracking, tightened headings, a 14px corner vs a post's 16px) */
@@ -300,7 +284,7 @@
   --promo-ls-mark: -.05em;
   --promo-lh-eyebrow: 18px;
   --promo-lh-eyebrow-sm: 12px;
-  --promo-edge: inset 0 1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent);
+  --promo-edge: inset 0 1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent);
   --promo-mono: var(--font-mono);
 }
 /* The tag and the recap deck are painted on the app surface, so a fixed white
@@ -308,12 +292,10 @@
    alone. Gold flips to the theme's lighter gold (#8A6D1B on dark fails
    contrast), which means the CTA's fill is light and its label becomes ink. */
 [data-theme="dark"] .promo-tag, [data-theme="dark"] .promo-recap {
-  --promo-gold: #C9A84C;
   --promo-gold-deep: #DBBE72;
   --promo-parchment: #1D1A12;
   --promo-line: rgba(201,168,76,.34);
-  --promo-quiet: var(--muted);
-  --promo-cta-fg: #1B1712;
+  --promo-cta-fg: var(--demo-ink);
 }
 
 /* ══ Components ══
@@ -360,7 +342,7 @@
       align-items: center;
       gap: var(--space-1-5);
     }
-.btn-primary { background: var(--gold); color: var(--on-gold); }
+.btn-primary { background: var(--gold); color: var(--black); }
 .btn-primary:hover { background: var(--gold-lt); }
 .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
 .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
