@@ -7,7 +7,8 @@ import { mockSupabase, injectSession, waitForAppBoot } from './helpers.js';
 const OLD = process.argv[2], OUT = process.argv[3]; mkdirSync(OUT, { recursive: true });
 const PROPS = ['display', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-transform', 'text-align', 'color', 'background-color',
   'border-top-color', 'border-bottom-color', 'border-top-width', 'border-bottom-width', 'border-top-left-radius', 'padding-top', 'padding-right',
-  'padding-bottom', 'padding-left', 'margin-top', 'margin-bottom', 'row-gap', 'column-gap', 'align-items', 'justify-content', 'flex-grow', 'opacity'];
+  'padding-bottom', 'padding-left', 'margin-top', 'margin-bottom', 'row-gap', 'column-gap', 'align-items', 'justify-content', 'flex-grow', 'opacity',
+  'position', 'top', 'bottom', 'cursor', 'font-family', 'flex-shrink', 'flex-basis', 'min-height', 'min-width', 'width', 'border-left-color', 'border-left-width', 'flex-direction'];
 const norm = s => s.replace(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/g, (_, r, g, b2, a) => `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b2 * 255)}, ${a ?? 1})`);
 
 const MODEL_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
@@ -38,6 +39,7 @@ const STATS = {
   related: [{ id: 'aaaaaaaa-0000-0000-0000-000000000009', brand: 'Rolex', name: 'Submariner Date', slug: 'rolex-submariner-date', owners: 11 }],
   mine: [{ id: 'watch-001', brand: 'Rolex', name: 'Submariner', ref: '124060', last_rate: -1.2 }],
 };
+if (process.env.WISHED) STATS.wishlisted_by_me = true;          // shows the disabled '♥ On your wishlist' button
 const json = (r, d) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(d) });
 
 const b = await chromium.launch();
@@ -77,8 +79,12 @@ async function view(side, where, theme) {
       return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : '')
         + '§' + props.map(k => cs.getPropertyValue(k)).join('|') + '§' + Math.round(r.width) + 'x' + Math.round(r.height);
     }), PROPS)).map(norm);
+    // pictures only (after the dump): hide what floats over the page — achievement toasts, the app's bottom nav,
+    // and the sticky action bar, which a full-page capture paints mid-page
+    const hide = await page.addStyleTag({ content: '.toast,.badge-toast,nav{display:none!important} .mp-actions{position:static!important}' });
     const shot = where === 'app' ? page.locator('#page-model') : page;
     await shot.screenshot({ path: `${OUT}/model-${where}-${tab}-${theme}-${side === 'old' ? 'before' : 'after'}.png`, ...(where === 'app' ? {} : { fullPage: true }) });
+    await hide.evaluate(el => el.remove());
   }
   await ctx.close(); return out;
 }

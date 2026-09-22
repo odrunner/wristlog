@@ -440,3 +440,42 @@ describe('sw.js', () => {
     expect(Number(match[1])).toBeGreaterThan(1043);
   });
 });
+
+// open.html is the redirect stub email CTAs point at (/open). It has no <style> block, only inline styles.
+describe('open.html', () => {
+  const src = readFileSync(join(root, 'open.html'), 'utf8');
+
+  // An inline script waits for every stylesheet linked BEFORE it. Linked first, a slow design-system.css
+  // would hold the redirect back; linked after, the redirect runs straight away (measured 2026-09-22).
+  it('links design-system.css after the redirect script, never before it', () => {
+    const link = src.indexOf(DS_LINK), redirect = src.indexOf('window.location.replace(');
+    expect(link).toBeGreaterThan(-1);
+    expect(redirect).toBeGreaterThan(-1);
+    expect(link).toBeGreaterThan(redirect);
+  });
+
+  it('still forwards the query string (campaign parameters reach the app only through here)', () => {
+    expect(src).toContain("window.location.replace('https://wrotate.com/' + (window.location.search || ''))");
+  });
+
+  it('uses the dark palette, links only design-system.css, and references only owned tokens', () => {
+    expect(src).toContain('<html lang="en" data-theme="dark">');
+    expect([...new Set(stylesheetHrefs(src))]).toEqual([DS_URL]);
+    expect([...declaredIn(src)]).toEqual([]);
+    expect([...referencedIn(src)].filter(t => !owned(t))).toEqual([]);
+  });
+});
+
+// model-page.js draws the model page in the app (#page-model) and at w/. It injects its own <style>, so it
+// is the one renderer whose design lives in JavaScript — held to the same rules as the pages.
+describe('model-page.js', () => {
+  const src = readFileSync(join(root, 'model-page.js'), 'utf8');
+
+  it('references only tokens that design-system.css owns', () => {
+    expect([...referencedIn(src)].filter(t => !owned(t))).toEqual([]);
+  });
+
+  it('declares no custom properties of its own', () => {
+    expect([...declaredIn(src)]).toEqual([]);
+  });
+});

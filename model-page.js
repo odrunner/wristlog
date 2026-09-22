@@ -140,8 +140,8 @@ function renderModelPage(el, ctx, h) {
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="share">Share</span>
     </div>
     <div style="position:absolute;left:18px;bottom:14px;right:16px;pointer-events:none;">
-      <div style="font-size:var(--fs-2xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
-      <div style="font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.01em;color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
+      <div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
+      <div style="font-size:var(--fs-3xl);font-weight:var(--fw-semibold);letter-spacing:-.01em;color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
       <div style="font-size:var(--fs-xs);color:color-mix(in srgb, var(--white) 70%, transparent);">${escHtml(captionBits.join(' · '))}</div>
     </div>
   </div>${m.hero_image && m.hero_credit ? `<div style="font-size:var(--fs-3xs);color:var(--muted);text-align:right;padding:var(--space-1) var(--space-2-5) 0;background:var(--bg);">${escHtml(m.hero_credit)}</div>` : ''}`;
@@ -151,7 +151,7 @@ function renderModelPage(el, ctx, h) {
   if (st.accuracy) {
     const a = st.accuracy;
     cells.push(`<div class="mp-cell"><div class="l">Median rate</div>
-      <div class="v">${escHtml(minus(nz(a.med_rate)))}<span style="font-size:var(--fs-xs);color:var(--muted);font-weight:400;"> s/d</span></div>
+      <div class="v">${escHtml(minus(nz(a.med_rate)))}<span style="font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-normal);"> s/d</span></div>
       <div style="margin-top:var(--space-1-5);">${mpBars(a.hist || [], 16, 2, '0')}</div>
       <div class="f">${a.n_sessions} measurements · ${a.n_measurers} members</div></div>`);
   } else {
@@ -191,16 +191,16 @@ function renderModelPage(el, ctx, h) {
   let band = '';
   if (storyText || fi >= 0) {
     band = `<div id="mp-story" style="padding:var(--space-4) var(--space-4) var(--space-3-5);border-bottom:1px solid var(--border);background:var(--bg);">
-      ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2);"><div class="mp-h" style="color:var(--gold-text);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
+      ${storyText ? `<div class="mp-hrow stack-2"><div class="mp-h" style="color:var(--gold-text);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
         <div id="mp-history" style="font-size:var(--fs-md);line-height:var(--lh-body);color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
-        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:var(--space-0-5);padding:var(--space-1-5) 0;font-size:var(--fs-sm);font-weight:600;color:var(--gold-text);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
+        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:var(--space-0-5);padding:var(--space-1-5) 0;font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--gold-text);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
       ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:var(--space-1);">
-        ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold-text);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">‹</button>` : ''}
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" class="mp-fact-nav">‹</button>` : ''}
         <div style="flex:1;min-width:0;padding:var(--space-1) 0 var(--space-1) var(--space-3);border-left:2px solid var(--gold);">
-          <div id="mp-fact-kicker" style="font-size:var(--fs-2xs);font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold-text);margin-bottom:var(--space-1);">Fun fact · ${fi + 1} of ${facts.length}</div>
+          <div id="mp-fact-kicker" style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold-text);margin-bottom:var(--space-1);">Fun fact · ${fi + 1} of ${facts.length}</div>
           <div id="mp-fact-body" style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
         </div>
-        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold-text);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">›</button>` : ''}
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" class="mp-fact-nav">›</button>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -210,7 +210,7 @@ function renderModelPage(el, ctx, h) {
     `<button class="mp-tab" role="tab" id="mp-tab-${k}" aria-selected="${tab === k}" aria-controls="mp-panel" data-mp="tab" data-tab="${k}">${label}</button>`).join('')}</div>`;
 
   // ── Panels ──
-  const H = (t, right = '') => `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2-5);"><div class="mp-h">${t}</div>${right ? `<div style="display:flex;align-items:center;gap:var(--space-1-5);">${right}</div>` : ''}</div>`;
+  const H = (t, right = '') => `<div class="mp-hrow stack-2-5"><div class="mp-h">${t}</div>${right ? `<div class="row-tight">${right}</div>` : ''}</div>`;
   const sect = (inner, first) => `<div style="${first ? '' : 'border-top:1px solid var(--border);padding-top:var(--space-4);'}">${inner}</div>`;
   let panel = '';
   if (tab === 'data') {
@@ -222,41 +222,41 @@ function renderModelPage(el, ctx, h) {
       const ret = w.retention || [];
       const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
       parts.push(`<div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);border-radius:var(--radius);padding:var(--space-4) var(--space-4) var(--space-4);">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-3);"><div class="mp-h" style="color:var(--gold-text);">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
-        <div style="display:flex;align-items:baseline;gap:var(--space-2);"><span style="font-size:38px;font-weight:600;line-height:.95;">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
-        <div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--muted);margin-top:var(--space-2-5);">Owners give it <span style="color:var(--text);font-weight:500;">${w.share}%</span> of their logged wears, against <span style="color:var(--text);font-weight:500;">${w.fair}%</span> if they rotated their collections evenly.</div>
+        <div class="mp-hrow stack-3"><div class="mp-h" style="color:var(--gold-text);">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
+        <div class="mp-big"><span style="font-size:38px;font-weight:var(--fw-semibold);line-height:.95;">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
+        <div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--muted);margin-top:var(--space-2-5);">Owners give it <span style="color:var(--text);font-weight:var(--fw-medium);">${w.share}%</span> of their logged wears, against <span style="color:var(--text);font-weight:var(--fw-medium);">${w.fair}%</span> if they rotated their collections evenly.</div>
         <div style="display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-3-5) 0 var(--space-1);">${rows.map(([label, val, me]) => `<div style="display:flex;align-items:center;gap:var(--space-2);">
           <span style="width:78px;flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
           <div style="flex:1;height:9px;background:var(--surface2);border-radius:var(--radius-pill);overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
-          <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:600;color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
+          <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
         ${ret.length ? `<div style="border-top:1px solid var(--border);margin-top:var(--space-3-5);padding-top:var(--space-3-5);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2-5);"><div class="mp-h" style="font-size:var(--fs-2xs);letter-spacing:var(--ls-tight);">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
+          <div class="mp-hrow stack-2-5"><div class="mp-h" style="font-size:var(--fs-2xs);letter-spacing:var(--ls-tight);">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
           <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:2px 2px 0 0;"></div>`).join('')}</div>
           <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);font-size:var(--fs-3xs);color:var(--muted);">${ret.map(r => `<span style="flex:1;text-align:center;">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
         <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3-5);padding-top:var(--space-3);border-top:1px solid var(--border);">
-          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:600;color:var(--on-gold);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
+          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--on-gold);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
           <span style="font-size:var(--fs-xs);color:var(--muted);">of ${Number(w.n_models).toLocaleString()} models · ${Number(w.wears).toLocaleString()} wears from ${w.n_owners} collections</span></div>
       </div>`);
     }
     if (st.accuracy) {
       const a = st.accuracy;
-      parts.push(sect(H('Rate distribution', `<span style="font-size:var(--fs-2xs);color:var(--muted);">s/day · ${a.n_sessions} readings</span><span class="mp-badge">Exclusive</span>`) +
+      parts.push(sect(H('Rate distribution', `<span class="mp-meta">s/day · ${a.n_sessions} readings</span><span class="mp-badge">Exclusive</span>`) +
         `<div style="padding-bottom:var(--space-1-5);border-bottom:1px solid var(--border);">${mpBars(a.hist || [], 70, 2, '0')}</div>
-        <div style="display:flex;justify-content:space-between;margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);"><span>${minus(String(a.hist_min))}</span><span style="color:var(--gold-text);">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);"><span>${minus(String(a.hist_min))}</span><span class="text-gold">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
         <div style="display:flex;gap:var(--space-2-5);margin-top:var(--space-3);">
-          ${a.med_amp ? `<div class="mp-card" style="flex:1;"><div class="l">Amplitude</div><div class="v">${a.med_amp}°</div></div>` : ''}
-          <div class="mp-card" style="flex:1;"><div class="l">Drift</div><div class="v">±${a.med_abs_rate} s/d</div></div>
-          <div class="mp-card" style="flex:1;"><div class="l">Members</div><div class="v">${a.n_measurers}</div></div>
+          ${a.med_amp ? `<div class="mp-card grow"><div class="l">Amplitude</div><div class="v">${a.med_amp}°</div></div>` : ''}
+          <div class="mp-card grow"><div class="l">Drift</div><div class="v">±${a.med_abs_rate} s/d</div></div>
+          <div class="mp-card grow"><div class="l">Members</div><div class="v">${a.n_measurers}</div></div>
         </div>`, !parts.length));
     }
     const wk = st.wear_weeks || [];
     if (wk.some(n => n > 0)) {
       const total = wk.reduce((x, y) => x + (Number(y) || 0), 0);
       const peak = wk.indexOf(Math.max(...wk));
-      parts.push(sect(H('Wear pattern', `<span style="font-size:var(--fs-2xs);color:var(--muted);">12 weeks</span><span class="mp-badge">Exclusive</span>`) +
+      parts.push(sect(H('Wear pattern', `<span class="mp-meta">12 weeks</span><span class="mp-badge">Exclusive</span>`) +
         mpBars(wk, 44, 3, '2px') + `<div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1-5);">${total} wears over 12 weeks · busiest ${peak >= 10 ? 'in the last fortnight' : `${11 - peak} week${11 - peak === 1 ? '' : 's'} ago`}.</div>`, !parts.length));
     }
-    panel = `<div style="display:flex;flex-direction:column;gap:var(--space-5);">${parts.join('')}</div>`;
+    panel = `<div class="mp-stack">${parts.join('')}</div>`;
   } else if (tab === 'specs') {
     const agg = st.specs_agg || {};
     const labels = [['caliber', 'Caliber'], ['case_diameter', 'Case ⌀'], ['case_material', 'Material'], ['movement_type', 'Movement'], ['year_range', 'Produced'], ['water_resistance', 'Water res.']];
@@ -264,22 +264,22 @@ function renderModelPage(el, ctx, h) {
     const refRows = [['Type', sp.type], ['Size', sp.size], ['Water resistance', sp.water_resistance], ['Movement', sp.movement], ['Materials', sp.materials]].filter(r => r[1]);
     const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
     const parts = [];
-    if (refRows.length) parts.push(`<div><div class="mp-h" style="margin-bottom:var(--space-2-5);">Reference spec</div>
+    if (refRows.length) parts.push(`<div><div class="mp-h stack-2-5">Reference spec</div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:0 var(--space-3);font-size:var(--fs-sm);">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${l}</span><span style="color:var(--text);padding:var(--space-2) 0;text-align:right;${bt}">${escHtml(v)}</span>`; }).join('')}</div></div>`);
-    if (refs.length) parts.push(sect(`<div class="mp-h" style="margin-bottom:var(--space-1-5);">References by era</div>${refs.map(r => `<div style="display:flex;gap:var(--space-2-5);font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-top:1px solid var(--border);"><span style="min-width:70px;color:var(--text);">${escHtml(r.reference || '')}</span><span style="min-width:84px;color:var(--muted);">${escHtml(r.years || '')}</span><span style="color:var(--muted);">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
-    if (cals.length) parts.push(sect(`<div class="mp-h" style="margin-bottom:var(--space-1-5);">Calibers by era</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${cals.map(c => `<span style="font-size:var(--fs-xs);border:1px solid var(--border);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">${escHtml(c.caliber || '')}${c.years ? ` <span style="color:var(--muted);">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
+    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div style="display:flex;gap:var(--space-2-5);font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-top:1px solid var(--border);"><span style="min-width:70px;color:var(--text);">${escHtml(r.reference || '')}</span><span style="min-width:84px;color:var(--muted);">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
+    if (cals.length) parts.push(sect(`<div class="mp-h stack-1-5">Calibers by era</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${cals.map(c => `<span style="font-size:var(--fs-xs);border:1px solid var(--border);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">${escHtml(c.caliber || '')}${c.years ? ` <span class="text-muted">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
     if (mv.length) parts.push(sect(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2-5);"><span class="mp-h" style="color:var(--gold-text);">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
         <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0 var(--space-3);font-size:var(--fs-sm);align-items:center;">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${label}</span><span style="color:var(--text);padding:var(--space-2) 0;${bt}">${escHtml(agg[k].v)}</span><span style="color:var(--muted);font-size:var(--fs-2xs);padding:var(--space-2) 0;${bt}">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
-    panel = parts.length ? `<div style="display:flex;flex-direction:column;gap:var(--space-4);">${parts.join('')}</div>` : `<div style="font-size:var(--fs-sm);color:var(--muted);">No specs on file yet.</div>`;
+    panel = parts.length ? `<div style="display:flex;flex-direction:column;gap:var(--space-4);">${parts.join('')}</div>` : `<div class="caption">No specs on file yet.</div>`;
   } else {
     const era = st.era || [0, 0, 0, 0, 0, 0];
     const cards = [];
     if (st.tenure) cards.push(['Median tenure', `${st.tenure.years} yrs`]);
     if (st.wishlisted) cards.push(['Wishlisted', `${st.wishlisted} member${st.wishlisted === 1 ? '' : 's'}`]);
     if (wr.all_time) cards.push(['Wears logged', Number(wr.all_time).toLocaleString()]);
-    panel = `<div style="display:flex;flex-direction:column;gap:var(--space-5);">
-      <div style="display:flex;align-items:baseline;gap:var(--space-2);"><span style="font-size:34px;font-weight:600;line-height:var(--lh-none);">${owners}</span><span style="font-size:var(--fs-sm);color:var(--muted);">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
-      ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span style="font-size:var(--fs-2xs);color:var(--muted);">year of example</span><span class="mp-badge">Exclusive</span>`) +
+    panel = `<div class="mp-stack">
+      <div class="mp-big"><span style="font-size:34px;font-weight:var(--fw-semibold);line-height:var(--lh-none);">${owners}</span><span class="caption">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
+      ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span class="mp-meta">year of example</span><span class="mp-badge">Exclusive</span>`) +
         mpBars(era, 56, 4, '2px 2px 0 0') + `<div style="display:flex;gap:var(--space-1);margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span style="flex:1;text-align:center;">${l}</span>`).join('')}</div>`) : ''}
       <div style="border-top:1px solid var(--border);padding-top:var(--space-4);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2-5);">${cards.map(([l, v]) => `<div class="mp-card" style="padding:var(--space-3) var(--space-3);"><div class="l">${l}</div><div class="v" style="font-size:var(--fs-xl);">${escHtml(v)}</div></div>`).join('')}</div>
     </div>`;
@@ -287,19 +287,19 @@ function renderModelPage(el, ctx, h) {
 
   // ── More from brand ──
   const rel = (st.related || []).slice(0, 4);
-  const more = `<div style="border-top:1px solid var(--border);padding-top:var(--space-4);padding-bottom:var(--space-5);"><div class="mp-h" style="margin-bottom:var(--space-2-5);">More from ${escHtml(m.brand)}</div>
-    <div style="display:flex;flex-direction:column;">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span style="color:var(--text);">${escHtml(r.name)}</span><span style="color:var(--muted);font-size:var(--fs-xs);">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
-      ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span style="color:var(--gold-text);">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span style="color:var(--muted);font-size:var(--fs-xs);">›</span></div>`}</div></div>`;
+  const more = `<div style="border-top:1px solid var(--border);padding-top:var(--space-4);padding-bottom:var(--space-5);"><div class="mp-h stack-2-5">More from ${escHtml(m.brand)}</div>
+    <div style="display:flex;flex-direction:column;">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span style="color:var(--text);">${escHtml(r.name)}</span><span class="caption-xs">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
+      ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span class="text-gold">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span class="caption-xs">›</span></div>`}</div></div>`;
 
   // ── Request an edit + action bar ──
   const reqEdit = publicMode ? '' : `<div style="border-top:1px solid var(--border);padding:var(--space-3-5) 0 var(--space-5);display:flex;justify-content:center;"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span style="font-size:var(--fs-xs);">✎</span><span>Request an edit</span></button></div>`;
   const wl = st.wishlisted_by_me;
-  const actions = publicMode ? `<div style="position:sticky;bottom:0;display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4) var(--space-5);border-top:1px solid var(--border);background:var(--bg);">
-    <button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div style="position:sticky;bottom:0;display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4) var(--space-5);border-top:1px solid var(--border);background:var(--bg);">
-    ${isOwner ? `<button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="watch" data-id="${escAttr(mine[0].id)}">Open your ${escHtml(m.name)}${mine.length > 1 ? ` (${mine.length})` : ''}</button>`
-              : `<button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="collect">Add to collection</button>`}
-    ${wl ? `<button class="mp-act" style="color:var(--muted);background:transparent;border:1px solid var(--border);" disabled>♥ On your wishlist</button>`
-         : `<button class="mp-act" style="color:var(--text);background:transparent;border:1px solid var(--border);" data-mp="wish">♡ Add to wishlist</button>`}
+  const actions = publicMode ? `<div class="mp-actions">
+    <button class="mp-act mp-act-primary" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div class="mp-actions">
+    ${isOwner ? `<button class="mp-act mp-act-primary" data-mp="watch" data-id="${escAttr(mine[0].id)}">Open your ${escHtml(m.name)}${mine.length > 1 ? ` (${mine.length})` : ''}</button>`
+              : `<button class="mp-act mp-act-primary" data-mp="collect">Add to collection</button>`}
+    ${wl ? `<button class="mp-act mp-act-ghost" disabled>♥ On your wishlist</button>`
+         : `<button class="mp-act mp-act-ghost" data-mp="wish">♡ Add to wishlist</button>`}
   </div>` : '';
 
   el.innerHTML = hero + band + grid + tabBar +
@@ -359,25 +359,35 @@ function renderModelPage(el, ctx, h) {
     /* Reference (model) page — 2a design, 390px */
     #page-model { max-width: 480px; margin: 0 auto; padding: 0; }
     .mp-tone-gold { background: var(--gold); } .mp-tone-dim { background: var(--gold-dim); } .mp-tone-flat { background: var(--surface2); }
-    .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:400; border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
+    .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:var(--fw-normal); border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
     .mp-tab:hover { background: var(--hover); }
-    .mp-tab[aria-selected="true"] { color:var(--gold-text); font-weight:600; border-bottom-color:var(--gold); }
-    .mp-badge { font-size:var(--fs-3xs); font-weight:600; letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold-text); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
-    .mp-h { font-size:var(--fs-2xs); font-weight:600; letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
+    .mp-tab[aria-selected="true"] { color:var(--gold-text); font-weight:var(--fw-semibold); border-bottom-color:var(--gold); }
+    .mp-badge { font-size:var(--fs-3xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold-text); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
+    .mp-h { font-size:var(--fs-2xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
     .mp-cell { background:var(--surface); padding:var(--space-3-5) var(--space-3-5); }
     .mp-cell .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
-    .mp-cell .v { font-size:var(--fs-3xl); font-weight:600; color:var(--text); margin:var(--space-1) 0 var(--space-0-5); }
+    .mp-cell .v { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--text); margin:var(--space-1) 0 var(--space-0-5); }
     .mp-cell .f { font-size:var(--fs-2xs); color:var(--muted); margin-top:var(--space-1-5); }
     .mp-quote button:hover { background: var(--hover); border-radius: var(--radius-sm); }
     .mp-row { display:flex; justify-content:space-between; align-items:center; padding:var(--space-2-5) 0; border-bottom:1px solid var(--border); font-size:var(--fs-sm); cursor:pointer; }
     .mp-row:hover { background: var(--hover); }
     .mp-row:last-child { border-bottom:0; }
-    .mp-pill { display:inline-flex; align-items:center; gap:var(--space-1-5); font-size:var(--fs-xs); font-weight:500; color:var(--muted); border:1px solid var(--border); border-radius:var(--radius-pill); padding:var(--space-1-5) var(--space-3); cursor:pointer; background:none; font-family:inherit; }
+    .mp-pill { display:inline-flex; align-items:center; gap:var(--space-1-5); font-size:var(--fs-xs); font-weight:var(--fw-medium); color:var(--muted); border:1px solid var(--border); border-radius:var(--radius-pill); padding:var(--space-1-5) var(--space-3); cursor:pointer; background:none; font-family:inherit; }
     .mp-pill:hover { color:var(--gold-text); border-color:var(--gold); }
     .mp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:var(--space-2-5) var(--space-3); }
     .mp-card .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); }
-    .mp-card .v { font-size:var(--fs-lg); font-weight:600; color:var(--text); margin-top:var(--space-1); }
+    .mp-card .v { font-size:var(--fs-lg); font-weight:var(--fw-semibold); color:var(--text); margin-top:var(--space-1); }
     .mp-act { flex:1; text-align:center; font-size:var(--fs-base); border-radius:var(--radius-btn); padding:var(--space-3); cursor:pointer; font-family:inherit; }
+    /* page components — each decision once, values are tokens (2026-09-22) */
+    .mp-actions { position:sticky; bottom:0; display:flex; gap:var(--space-2); padding:var(--space-3) var(--space-4) var(--space-5); border-top:1px solid var(--border); background:var(--bg); }
+    .mp-act-primary { font-weight:var(--fw-semibold); color:var(--on-gold); background:var(--gold); border:0; }
+    .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
+    .mp-act-ghost:disabled { color:var(--muted); }
+    .mp-fact-nav { flex:none; width:36px; min-height:44px; display:flex; align-items:center; justify-content:center; background:none; border:0; color:var(--gold-text); font-size:var(--fs-xl); cursor:pointer; font-family:inherit; }
+    .mp-hrow { display:flex; justify-content:space-between; align-items:baseline; }
+    .mp-big { display:flex; align-items:baseline; gap:var(--space-2); }
+    .mp-stack { display:flex; flex-direction:column; gap:var(--space-5); }
+    .mp-meta { font-size:var(--fs-2xs); color:var(--muted); }
   `;
   function injectStyles() {
     if (document.getElementById('wr-model-page-css')) return;

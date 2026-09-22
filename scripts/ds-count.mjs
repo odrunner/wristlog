@@ -15,7 +15,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUDGET_PATH = join(root, 'tests', 'design-system-budget.json');
 // design-system.css is counted too: its token DECLARATIONS are stripped (see withoutDeclarations), so what is
 // left is the component rules — a literal value there is as much a hardcoded value as one in a page.
-export const PAGES = ['index.html', 'p/index.html', 'profile/index.html', 'privacy.html', 'terms.html', 'design-system.css'];
+export const PAGES = ['index.html', 'p/index.html', 'profile/index.html', 'privacy.html', 'terms.html', 'open.html', 'w/index.html', 'model-page.js', 'design-system.css'];
 
 // HTML built in index.html that is SENT AS EMAIL (admin Broadcast / Campaign).
 // Mail clients have no CSS custom properties and never load design-system.css,
