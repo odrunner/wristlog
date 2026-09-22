@@ -121,6 +121,7 @@ export const SHARED_LIGHT = {
   '--z-top': '10000',
   '--white': '#fff',
   '--black': '#000',
+  '--on-gold': '#0a0a0e',
   '--tag-type': '#818cf8',
   '--medal-silver': '#b0b0b0',
   '--medal-bronze': '#cd7f32',

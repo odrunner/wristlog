@@ -133,6 +133,7 @@
      purpose — these sit on surfaces that do not follow the theme. */
   --white: #fff;
   --black: #000;
+  --on-gold: #0a0a0e;           /* ink on a gold fill: primary button, Post button, gold pills */
   --tag-type: #818cf8;         /* the watch-type tag (indigo) */
   --tag-strap: #94a3b8;        /* strap tag (slate) */
   --tag-weather: #38bdf8;      /* weather recommendation tag (sky) */
@@ -306,7 +307,7 @@
       align-items: center;
       gap: var(--space-1-5);
     }
-.btn-primary { background: var(--gold); color: #0a0a0e; }
+.btn-primary { background: var(--gold); color: var(--on-gold); }
 .btn-primary:hover { background: var(--gold-lt); }
 .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
 .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }

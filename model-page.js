@@ -134,15 +134,15 @@ function renderModelPage(el, ctx, h) {
     (o.era_min && o.era_max && o.era_min !== o.era_max) ? `${o.era_min}–${o.era_max}` : ''].filter(Boolean);
   const hero = `<div style="position:relative;height:180px;background:var(--surface2);overflow:hidden;">
     ${heroImg ? `<img ${heroSrcAttrs(heroImg)} alt="" fetchpriority="high" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
-    <div style="position:absolute;inset:0;background:linear-gradient(to right, rgba(8,8,12,.9) 0%, rgba(8,8,12,.35) 55%, rgba(8,8,12,.1) 100%);pointer-events:none;"></div>
-    <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;font-size:var(--fs-sm);color:rgba(255,255,255,.85);">
+    <div style="position:absolute;inset:0;background:linear-gradient(to right, color-mix(in srgb, var(--black) 90%, transparent) 0%, color-mix(in srgb, var(--black) 35%, transparent) 55%, color-mix(in srgb, var(--black) 10%, transparent) 100%);pointer-events:none;"></div>
+    <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;font-size:var(--fs-sm);color:color-mix(in srgb, var(--white) 85%, transparent);">
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="back">‹ Back</span>
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="share">Share</span>
     </div>
     <div style="position:absolute;left:18px;bottom:14px;right:16px;pointer-events:none;">
       <div style="font-size:var(--fs-2xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
-      <div style="font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.01em;color:#fff;margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
-      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.7);">${escHtml(captionBits.join(' · '))}</div>
+      <div style="font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.01em;color:var(--white);margin:var(--space-1) 0 var(--space-1-5);line-height:var(--lh-tight);">${escHtml(m.name)}</div>
+      <div style="font-size:var(--fs-xs);color:color-mix(in srgb, var(--white) 70%, transparent);">${escHtml(captionBits.join(' · '))}</div>
     </div>
   </div>${m.hero_image && m.hero_credit ? `<div style="font-size:var(--fs-3xs);color:var(--muted);text-align:right;padding:var(--space-1) var(--space-2-5) 0;background:var(--bg);">${escHtml(m.hero_credit)}</div>` : ''}`;
 
@@ -174,7 +174,7 @@ function renderModelPage(el, ctx, h) {
   if (st.cost_per_wear) {
     const c = st.cost_per_wear;
     const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
-    cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold);">${cpwTxt}</div>
+    cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold-text);">${cpwTxt}</div>
       <div style="display:flex;align-items:center;gap:var(--space-1-5);height:16px;margin-top:var(--space-1-5);"><div style="flex:1;height:4px;border-radius:2px;background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:var(--fs-3xs);color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
       <div class="f">per logged wear · ${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} with price + wears</div></div>`);
   } else {
@@ -191,16 +191,16 @@ function renderModelPage(el, ctx, h) {
   let band = '';
   if (storyText || fi >= 0) {
     band = `<div id="mp-story" style="padding:var(--space-4) var(--space-4) var(--space-3-5);border-bottom:1px solid var(--border);background:var(--bg);">
-      ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2);"><div class="mp-h" style="color:var(--gold);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
+      ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2);"><div class="mp-h" style="color:var(--gold-text);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
         <div id="mp-history" style="font-size:var(--fs-md);line-height:var(--lh-body);color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
-        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:var(--space-0-5);padding:var(--space-1-5) 0;font-size:var(--fs-sm);font-weight:600;color:var(--gold-lt);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
+        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:var(--space-0-5);padding:var(--space-1-5) 0;font-size:var(--fs-sm);font-weight:600;color:var(--gold-text);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
       ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:var(--space-1);">
-        ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">‹</button>` : ''}
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold-text);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">‹</button>` : ''}
         <div style="flex:1;min-width:0;padding:var(--space-1) 0 var(--space-1) var(--space-3);border-left:2px solid var(--gold);">
-          <div id="mp-fact-kicker" style="font-size:var(--fs-2xs);font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:var(--space-1);">Fun fact · ${fi + 1} of ${facts.length}</div>
+          <div id="mp-fact-kicker" style="font-size:var(--fs-2xs);font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold-text);margin-bottom:var(--space-1);">Fun fact · ${fi + 1} of ${facts.length}</div>
           <div id="mp-fact-body" style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
         </div>
-        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">›</button>` : ''}
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold-text);font-size:var(--fs-xl);cursor:pointer;font-family:inherit;">›</button>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -222,19 +222,19 @@ function renderModelPage(el, ctx, h) {
       const ret = w.retention || [];
       const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
       parts.push(`<div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);border-radius:var(--radius);padding:var(--space-4) var(--space-4) var(--space-4);">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-3);"><div class="mp-h" style="color:var(--gold);">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-3);"><div class="mp-h" style="color:var(--gold-text);">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
         <div style="display:flex;align-items:baseline;gap:var(--space-2);"><span style="font-size:38px;font-weight:600;line-height:.95;">${Number(w.index).toFixed(1)}×</span><span style="font-size:var(--fs-sm);line-height:var(--lh-snug);color:var(--muted);">its fair share of<br>owners' wrist time</span></div>
         <div style="font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--muted);margin-top:var(--space-2-5);">Owners give it <span style="color:var(--text);font-weight:500;">${w.share}%</span> of their logged wears, against <span style="color:var(--text);font-weight:500;">${w.fair}%</span> if they rotated their collections evenly.</div>
         <div style="display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-3-5) 0 var(--space-1);">${rows.map(([label, val, me]) => `<div style="display:flex;align-items:center;gap:var(--space-2);">
           <span style="width:78px;flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
           <div style="flex:1;height:9px;background:var(--surface2);border-radius:var(--radius-pill);overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
-          <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:600;color:var(--gold);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
+          <span style="width:26px;flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:600;color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
         ${ret.length ? `<div style="border-top:1px solid var(--border);margin-top:var(--space-3-5);padding-top:var(--space-3-5);">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2-5);"><div class="mp-h" style="font-size:var(--fs-2xs);letter-spacing:var(--ls-tight);">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
           <div style="display:flex;align-items:flex-end;gap:var(--space-1-5);height:40px;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:2px 2px 0 0;"></div>`).join('')}</div>
           <div style="display:flex;gap:var(--space-1-5);margin-top:var(--space-1-5);font-size:var(--fs-3xs);color:var(--muted);">${ret.map(r => `<span style="flex:1;text-align:center;">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
         <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3-5);padding-top:var(--space-3);border-top:1px solid var(--border);">
-          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:600;color:#08080c;background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
+          ${w.pct_rank != null ? `<span style="font-size:var(--fs-2xs);font-weight:600;color:var(--on-gold);background:var(--gold);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
           <span style="font-size:var(--fs-xs);color:var(--muted);">of ${Number(w.n_models).toLocaleString()} models · ${Number(w.wears).toLocaleString()} wears from ${w.n_owners} collections</span></div>
       </div>`);
     }
@@ -242,7 +242,7 @@ function renderModelPage(el, ctx, h) {
       const a = st.accuracy;
       parts.push(sect(H('Rate distribution', `<span style="font-size:var(--fs-2xs);color:var(--muted);">s/day · ${a.n_sessions} readings</span><span class="mp-badge">Exclusive</span>`) +
         `<div style="padding-bottom:var(--space-1-5);border-bottom:1px solid var(--border);">${mpBars(a.hist || [], 70, 2, '0')}</div>
-        <div style="display:flex;justify-content:space-between;margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);"><span>${minus(String(a.hist_min))}</span><span style="color:var(--gold);">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:var(--space-1-5);font-size:var(--fs-2xs);color:var(--muted);"><span>${minus(String(a.hist_min))}</span><span style="color:var(--gold-text);">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
         <div style="display:flex;gap:var(--space-2-5);margin-top:var(--space-3);">
           ${a.med_amp ? `<div class="mp-card" style="flex:1;"><div class="l">Amplitude</div><div class="v">${a.med_amp}°</div></div>` : ''}
           <div class="mp-card" style="flex:1;"><div class="l">Drift</div><div class="v">±${a.med_abs_rate} s/d</div></div>
@@ -268,7 +268,7 @@ function renderModelPage(el, ctx, h) {
         <div style="display:grid;grid-template-columns:auto 1fr;gap:0 var(--space-3);font-size:var(--fs-sm);">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${l}</span><span style="color:var(--text);padding:var(--space-2) 0;text-align:right;${bt}">${escHtml(v)}</span>`; }).join('')}</div></div>`);
     if (refs.length) parts.push(sect(`<div class="mp-h" style="margin-bottom:var(--space-1-5);">References by era</div>${refs.map(r => `<div style="display:flex;gap:var(--space-2-5);font-size:var(--fs-sm);padding:var(--space-1-5) 0;border-top:1px solid var(--border);"><span style="min-width:70px;color:var(--text);">${escHtml(r.reference || '')}</span><span style="min-width:84px;color:var(--muted);">${escHtml(r.years || '')}</span><span style="color:var(--muted);">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
     if (cals.length) parts.push(sect(`<div class="mp-h" style="margin-bottom:var(--space-1-5);">Calibers by era</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-1-5);">${cals.map(c => `<span style="font-size:var(--fs-xs);border:1px solid var(--border);border-radius:var(--radius-pill);padding:var(--space-1) var(--space-2-5);">${escHtml(c.caliber || '')}${c.years ? ` <span style="color:var(--muted);">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
-    if (mv.length) parts.push(sect(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2-5);"><span class="mp-h" style="color:var(--gold);">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
+    if (mv.length) parts.push(sect(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2-5);"><span class="mp-h" style="color:var(--gold-text);">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
         <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0 var(--space-3);font-size:var(--fs-sm);align-items:center;">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${label}</span><span style="color:var(--text);padding:var(--space-2) 0;${bt}">${escHtml(agg[k].v)}</span><span style="color:var(--muted);font-size:var(--fs-2xs);padding:var(--space-2) 0;${bt}">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
     panel = parts.length ? `<div style="display:flex;flex-direction:column;gap:var(--space-4);">${parts.join('')}</div>` : `<div style="font-size:var(--fs-sm);color:var(--muted);">No specs on file yet.</div>`;
   } else {
@@ -289,15 +289,15 @@ function renderModelPage(el, ctx, h) {
   const rel = (st.related || []).slice(0, 4);
   const more = `<div style="border-top:1px solid var(--border);padding-top:var(--space-4);padding-bottom:var(--space-5);"><div class="mp-h" style="margin-bottom:var(--space-2-5);">More from ${escHtml(m.brand)}</div>
     <div style="display:flex;flex-direction:column;">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span style="color:var(--text);">${escHtml(r.name)}</span><span style="color:var(--muted);font-size:var(--fs-xs);">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
-      ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span style="color:var(--gold-lt);">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span style="color:var(--muted);font-size:var(--fs-xs);">›</span></div>`}</div></div>`;
+      ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span style="color:var(--gold-text);">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span style="color:var(--muted);font-size:var(--fs-xs);">›</span></div>`}</div></div>`;
 
   // ── Request an edit + action bar ──
   const reqEdit = publicMode ? '' : `<div style="border-top:1px solid var(--border);padding:var(--space-3-5) 0 var(--space-5);display:flex;justify-content:center;"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span style="font-size:var(--fs-xs);">✎</span><span>Request an edit</span></button></div>`;
   const wl = st.wishlisted_by_me;
   const actions = publicMode ? `<div style="position:sticky;bottom:0;display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4) var(--space-5);border-top:1px solid var(--border);background:var(--bg);">
-    <button class="mp-act" style="font-weight:600;color:#08080c;background:var(--gold);border:0;" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div style="position:sticky;bottom:0;display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4) var(--space-5);border-top:1px solid var(--border);background:var(--bg);">
-    ${isOwner ? `<button class="mp-act" style="font-weight:600;color:#08080c;background:var(--gold);border:0;" data-mp="watch" data-id="${escAttr(mine[0].id)}">Open your ${escHtml(m.name)}${mine.length > 1 ? ` (${mine.length})` : ''}</button>`
-              : `<button class="mp-act" style="font-weight:600;color:#08080c;background:var(--gold);border:0;" data-mp="collect">Add to collection</button>`}
+    <button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div style="position:sticky;bottom:0;display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4) var(--space-5);border-top:1px solid var(--border);background:var(--bg);">
+    ${isOwner ? `<button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="watch" data-id="${escAttr(mine[0].id)}">Open your ${escHtml(m.name)}${mine.length > 1 ? ` (${mine.length})` : ''}</button>`
+              : `<button class="mp-act" style="font-weight:600;color:var(--on-gold);background:var(--gold);border:0;" data-mp="collect">Add to collection</button>`}
     ${wl ? `<button class="mp-act" style="color:var(--muted);background:transparent;border:1px solid var(--border);" disabled>♥ On your wishlist</button>`
          : `<button class="mp-act" style="color:var(--text);background:transparent;border:1px solid var(--border);" data-mp="wish">♡ Add to wishlist</button>`}
   </div>` : '';
@@ -361,8 +361,8 @@ function renderModelPage(el, ctx, h) {
     .mp-tone-gold { background: var(--gold); } .mp-tone-dim { background: var(--gold-dim); } .mp-tone-flat { background: var(--surface2); }
     .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:400; border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
     .mp-tab:hover { background: var(--hover); }
-    .mp-tab[aria-selected="true"] { color:var(--gold); font-weight:600; border-bottom-color:var(--gold); }
-    .mp-badge { font-size:var(--fs-3xs); font-weight:600; letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
+    .mp-tab[aria-selected="true"] { color:var(--gold-text); font-weight:600; border-bottom-color:var(--gold); }
+    .mp-badge { font-size:var(--fs-3xs); font-weight:600; letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold-text); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
     .mp-h { font-size:var(--fs-2xs); font-weight:600; letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
     .mp-cell { background:var(--surface); padding:var(--space-3-5) var(--space-3-5); }
     .mp-cell .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
@@ -373,7 +373,7 @@ function renderModelPage(el, ctx, h) {
     .mp-row:hover { background: var(--hover); }
     .mp-row:last-child { border-bottom:0; }
     .mp-pill { display:inline-flex; align-items:center; gap:var(--space-1-5); font-size:var(--fs-xs); font-weight:500; color:var(--muted); border:1px solid var(--border); border-radius:var(--radius-pill); padding:var(--space-1-5) var(--space-3); cursor:pointer; background:none; font-family:inherit; }
-    .mp-pill:hover { color:var(--gold); border-color:var(--gold); }
+    .mp-pill:hover { color:var(--gold-text); border-color:var(--gold); }
     .mp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:var(--space-2-5) var(--space-3); }
     .mp-card .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); }
     .mp-card .v { font-size:var(--fs-lg); font-weight:600; color:var(--text); margin-top:var(--space-1); }

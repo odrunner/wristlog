@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=cfd4f02a">
+  <link rel="stylesheet" href="/design-system.css?v=75797b3b">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -2603,7 +2603,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        never two Post buttons on screen. --header-h is measured in JS so it
        clears the sticky header at every breakpoint (and the iOS safe area). */
     #feed-post-fab { position:fixed; top:calc(var(--header-h, 60px) + .6rem); right:1rem; z-index:var(--z-fab);
-      width:46px; height:46px; border-radius:var(--radius-round); background:var(--gold); color:#0a0a0e;
+      width:46px; height:46px; border-radius:var(--radius-round); background:var(--gold); color:var(--on-gold);
       border:none; cursor:pointer; display:none; align-items:center; justify-content:center;
       box-shadow:var(--shadow-3); transition:background var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
     #feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
@@ -8232,7 +8232,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.20.30';
+const APP_VERSION = '21.20.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
