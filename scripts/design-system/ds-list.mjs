@@ -1,12 +1,13 @@
 // Lists every hardcoded value ds-count.mjs counts, with its line, so the remaining work is a list, not a number.
 //   node scripts/design-system/ds-list.mjs [page] [category]
 import { readFileSync } from 'fs';
-import { PAGES, countHardcoded, withoutEmailRanges } from '../ds-count.mjs';
+import { PAGES, EXEMPT, countHardcoded, withoutEmailRanges } from '../ds-count.mjs';
 const [only, cat] = process.argv.slice(2);
 for (const p of PAGES) {
   if (only && p !== only) continue;
   let src = readFileSync(new URL('../../' + p, import.meta.url), 'utf8');
   if (p.endsWith('.css')) src = src.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
+  for (const [rx] of EXEMPT) src = src.replace(rx, m => m.replace(/[^\n]/g, ' '));   // blanked, line numbers kept
   const kept = withoutEmailRanges(src);
   const lines = src.split('\n'), keptSet = new Set(kept.split('\n'));
   lines.forEach((l, i) => {

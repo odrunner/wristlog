@@ -28,6 +28,14 @@ describe('design-system ratchet', () => {
 });
 
 describe('countHardcoded', () => {
+  it('skips only the listed exceptions: first-paint colour, favicon data URL, Google logo colours', () => {
+    expect(countHardcoded('<meta name="theme-color" content="#f5f5f8">').color).toBe(0);
+    expect(countHardcoded('const svg = `<svg><rect fill="#0b0b10"/><circle fill="#c9a84c"/></svg>`;').color).toBe(0);
+    expect(countHardcoded('<path fill="#4285F4"/><path fill="#34A853"/><path fill="#FBBC05"/><path fill="#EA4335"/>').color).toBe(0);
+    // anything else next to them still counts
+    expect(countHardcoded('<path fill="#4285F5"/><meta name="description" content="#f5f5f8"> <rect fill="#0b0b10"/>').color).toBe(3);
+  });
+
   it('counts literals and skips tokens, neutrals and template holes', () => {
     const c = countHardcoded(`<style>
       .a { color: #fff; background: rgba(0,0,0,.5); font-size: .8rem; padding: 0; margin: 0 auto; }

@@ -29,6 +29,19 @@ export const EMAIL_RANGES = [
   ['function buildCampaignEmailHtml', 'async function createCampaign'],
 ];
 
+// Literal values that are right on purpose. Each is removed before counting, with its reason, so the counter
+// reads 0 when the design system owns everything it can. Add to this list only with a reason that holds
+// forever (a brand's own artwork, something that must work before any CSS has loaded).
+export const EXEMPT = [
+  [/<meta name="theme-color" content="#[0-9a-fA-F]{3,8}">/g, 'first-paint colour: shown before design-system.css loads; applyTheme then sets it from --bg'],
+  [/const svg = `<svg[\s\S]*?<\/svg>`;/g, 'favicon: drawn as a data-URL image, which cannot read CSS variables'],
+  [/fill="#(?:4285F4|34A853|FBBC05|EA4335)"/g, "Google's \"G\" logo: brand artwork, must not be recoloured"],
+];
+export function withoutExempt(src) {
+  for (const [rx] of EXEMPT) src = src.replace(rx, '');
+  return src;
+}
+
 export function withoutEmailRanges(src) {
   for (const [from, to] of EMAIL_RANGES) {
     const a = src.indexOf('\n' + from);
@@ -87,7 +100,7 @@ export function isTokenised(v) {
 }
 
 export function countHardcoded(src) {
-  const text = withoutDeclarations(withoutEmailRanges(src));
+  const text = withoutDeclarations(withoutEmailRanges(withoutExempt(src)));
   const out = {};
   out['color'] = (text.match(HEX) || []).length + (text.match(RGB) || []).filter(v => !v.includes('var(') && !v.includes('${')).length;   // ${…}: built from data
   for (const [name, rx] of Object.entries(PROPS)) {
