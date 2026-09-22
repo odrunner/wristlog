@@ -681,12 +681,15 @@ export function watchToRow(w, userId, eloRatings = {}) {
   };
 }
 
+// The browser reads this from design-system.css (--watch-default) via dsToken(); tests have no stylesheet.
+const DEFAULT_WATCH_COLOR = '#c9a84c';
+
 export function rowToWatch(r) {
   return {
     id: r.id, createdAt: r.created_at || null, brand: r.brand || '', name: r.name || '', ref: r.ref || '',
     movement: r.movement || '',
     price: r.price || null, purchaseDate: r.purchase_date || null,
-    color: r.color || '#c9a84c',
+    color: r.color || DEFAULT_WATCH_COLOR,
     image: r.image ? r.image.replace(/^http:\/\//i, 'https://') : null,
     url: r.url || null,
     tags: r.tags || [], straps: r.straps || [], owner: r.owner || null,
@@ -754,7 +757,7 @@ export function rowToWish(r) {
   return {
     id: r.id, brand: r.brand || '', name: r.name || '', ref: r.ref || '',
     price: r.price || null, url: r.url || null, image: r.image || null,
-    notes: r.notes || null, color: r.color || '#c9a84c', tags: r.tags || [],
+    notes: r.notes || null, color: r.color || DEFAULT_WATCH_COLOR, tags: r.tags || [],
     marketPrice: r.market_price || null, marketPriceDate: r.market_price_date || null,
     marketPriceSrc: r.market_price_src || null, watchChartsUrl: r.watch_charts_url || null,
     wishPrivacy: r.wish_privacy || null,
@@ -1024,7 +1027,7 @@ export function buildSaveWatchData({ formData, editingId, watches, todayFn = tod
     price: formData.price || 0,
     purchaseDate: formData.purchaseDate || '',
     url: formData.url || '',
-    color: formData.color || '#c9a84c',
+    color: formData.color || DEFAULT_WATCH_COLOR,
     insurance: formData.insurance || null,
     insuredValue: formData.insurance === 'insured' ? (formData.insuredValue || null) : null,
     insuranceNotes: formData.insurance === 'not_insured' ? (formData.insuranceNotes || '') : '',

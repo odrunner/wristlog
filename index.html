@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=2c8ee7db">
+  <link rel="stylesheet" href="/design-system.css?v=00bc9618">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -6298,6 +6298,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+// ── Design-system values for code that cannot write var(--…) ───────────────────
+// Canvas, Chart.js, and colours that are SAVED (a watch's colour) need the value itself. It lives only
+// in design-system.css; this reads it. The stylesheet is linked in <head>, before this script, so it has
+// loaded. Defined first: code below may call rowToWatch() during boot.
+const _dsRoot = getComputedStyle(document.documentElement);   // live: reads follow the current theme
+function dsToken(name) { return _dsRoot.getPropertyValue(name).trim(); }
+const DEFAULT_WATCH_COLOR = dsToken('--watch-default');
 // ── Boot timing ──────────────────────────────────────────────────────────────
 // Stamps the moments that make up a first load (see bootTimingPayload) and
 // sends ONE `boot_timing` event per page load: after the feed's Phase-2 render,
@@ -7867,7 +7874,7 @@ function rowToWatch(r) {
     id: r.id, createdAt: r.created_at||null, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
     movement: r.movement||'',
     price: r.price||null, purchaseDate: r.purchase_date||null,
-    color: r.color||'#c9a84c',
+    color: r.color||DEFAULT_WATCH_COLOR,
     // Upgrade plain http:// image URLs to https:// (imported backups sometimes
     // stored raw URLs instead of base64; mixed-content warning on HTTPS pages)
     image: r.image ? r.image.replace(/^http:\/\//i, 'https://') : null,
@@ -7936,7 +7943,7 @@ function rowToWish(r) {
   return {
     id: r.id, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
     price: r.price||null, url: r.url||null, image: r.image||null,
-    notes: r.notes||null, color: r.color||'#c9a84c', tags: r.tags||[],
+    notes: r.notes||null, color: r.color||DEFAULT_WATCH_COLOR, tags: r.tags||[],
     marketPrice: r.market_price||null, marketPriceDate: r.market_price_date||null,
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
     wishPrivacy: r.wish_privacy||null,
@@ -8229,7 +8236,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.50';
+const APP_VERSION = '21.21.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9006,7 +9013,7 @@ function profilePostCellHTML(l, isOwn) {
     // profile requested ~80 full-size images at once and Storage answered 429.
     inner = `<img ${thumbSrcAttrs(w.image)} alt="" loading="lazy" onerror="this.style.display='none'">`;
   } else {
-    const bg = w?.color || '#c9a84c';
+    const bg = w?.color || DEFAULT_WATCH_COLOR;
     inner = `<div class="pp-fallback" style="background:${escHtml(bg)};color:${initialsTextColor(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
   }
   const vis = l.visibility || 'public';
@@ -9280,7 +9287,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       const priv  = w.watch_privacy ?? null; // null = Default
       const thumb = w.image
         ? `<img ${thumbSrcAttrs(w.image)} class="showcase-card-img" alt="" onerror="this.style.display='none'">`
-        : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')};color:${initialsTextColor(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
+        : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color || DEFAULT_WATCH_COLOR)}">${initials(w.brand||'', w.name||'')}</div>`;
       const privLabel = (() => {
         if (isOwn) {
           const cls = priv === null ? 'inh' : priv === 'public' ? 'pub' : (priv === 'followers' || priv === 'friends_only') ? 'fri' : priv === 'friends' ? 'frd' : 'priv';
@@ -9315,7 +9322,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-color="${escHtml(w.color||DEFAULT_WATCH_COLOR)}"
            data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
@@ -9353,7 +9360,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
         const thumb = w.image
           ? `<img ${thumbSrcAttrs(w.image)} class="showcase-card-img" alt="" onerror="this.style.display='none'">`
-          : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
+          : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand||'', w.name||'')}</div>`;
         const wp = w.wish_privacy || null;
         const privLabel = (() => {
           if (isOwn) {
@@ -9387,7 +9394,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
              data-wish-ref="${escHtml(w.ref||'')}"
              data-wish-url="${escHtml(w.url||'')}"
              data-wish-image="${escHtml(w.image||'')}"
-             data-wish-color="${escHtml(w.color||'#c9a84c')}"`;
+             data-wish-color="${escHtml(w.color||DEFAULT_WATCH_COLOR)}"`;
         const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'followers' ? ' wl-fri' : wp === 'friends' ? ' wl-frd' : wp === 'private' ? ' wl-priv' : '') : '';
         return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
@@ -13673,7 +13680,7 @@ function recapThumb(w, cls) {
   if (w.image) {
     return `<div class="promo-recap-thumb ${cls}"><img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" onerror="this.style.display='none'"></div>`;
   }
-  const bg = w.color || '#c9a84c';
+  const bg = w.color || DEFAULT_WATCH_COLOR;
   return `<div class="promo-recap-thumb ${cls} promo-recap-thumb--initials" style="background:${escAttr(bg)};color:${escAttr(initialsTextColor(bg))}">${escHtml(initials(w.brand || '', w.name || ''))}</div>`;
 }
 
@@ -15105,7 +15112,7 @@ function renderFeedCard(item) {
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-color="${escHtml(w.color||DEFAULT_WATCH_COLOR)}"
            data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
@@ -15206,7 +15213,7 @@ function renderFeedCard(item) {
   if (compactWear) {
     const wThumb = w.image
       ? `<img class="feed-wearing-watch-thumb" ${thumbSrcAttrs(w.image)} alt="${escAttr(((w.brand||'') + ' ' + (w.name||'')).trim())}" onerror="this.style.display='none'">`
-      : `<div class="feed-wearing-watch-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand||'',w.name||'')}</div>`;
+      : `<div class="feed-wearing-watch-avatar" style="background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand||'',w.name||'')}</div>`;
     const wLabel = [w.brand, w.name].filter(Boolean).join(' ');
     headerBody = `
       <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">
@@ -15220,7 +15227,7 @@ function renderFeedCard(item) {
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-color="${escHtml(w.color||DEFAULT_WATCH_COLOR)}"
            data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
@@ -15989,7 +15996,7 @@ function renderEpWatchDisplay() {
     const w = effectiveWatch;
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     display.innerHTML = `<div class="watch-suggestion" style="margin-top:var(--space-1);">
       ${thumb}
       <div class="grow-clip"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
@@ -16077,7 +16084,7 @@ function toggleEpWatchPicker() {
       const isSel = w.id === currentWatchId;
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div class="grow-clip">
@@ -16672,7 +16679,7 @@ function renderNpWatchDisplay() {
   if (w) {
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
       ${thumb}
       <div style="flex:1;min-width:0;font-size:var(--fs-base);"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
@@ -16770,7 +16777,7 @@ function toggleNpWatchPicker() {
       const isSel = w.id === npIdentifiedWatchId;
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div class="grow-clip">
@@ -18095,7 +18102,7 @@ function renderRecSettingsBody() {
     const included = !excluded.has(w.id);
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-2xs);border-radius:var(--radius-sm);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-2xs);border-radius:var(--radius-sm);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     return `<div class="toggle-row" style="gap:var(--space-2-5);">
       ${thumb}
       <div class="grow-clip">
@@ -18204,7 +18211,7 @@ let editingLogId   = null;  // log entry currently being edited
 let editLogUseCase = 'unspecified';
 let editLogStrapId = null;
 let deletingId  = null;
-let selColor    = '#c9a84c';
+let selColor    = DEFAULT_WATCH_COLOR;
 let wPendingImage    = null;  // objectURL or direct URL for preview during Fetch, applied on Save
 let wPendingFile     = null;  // raw Blob for deferred upload
 let editingWlId    = null;
@@ -18246,17 +18253,14 @@ let wEditingStrapIdx = null; // index of strap currently being edited inline
 
 const WATCH_TAGS = ['Daily Beater','Dress','Dive','Chronograph','GMT','Pilot','Field','Sport','Sport-Luxury','Vintage','Complication','Skeleton'];
 
-const PALETTE = [
-  '#c9a84c','#4caf7d','#818cf8','#ef7942','#38bdf8',
-  '#e879f9','#f43f5e','#94a3b8','#fbbf24','#34d399',
-  '#fb923c','#a78bfa'
-];
+const WATCH_HUE = h => dsToken('--watch-' + h);                  // design-system.css: --watch-*
+const PALETTE = ['gold', 'green', 'indigo', 'orange', 'sky', 'fuchsia', 'rose', 'slate', 'amber', 'emerald', 'tangerine', 'violet'].map(WATCH_HUE);
 
 const UC_COL = {
-  unspecified:'#7a7a95',
-  work:'#818cf8', leisure:'#4caf7d', dinner:'#c9a84c', travel:'#38bdf8',
+  unspecified: dsToken('--uc-unspecified'),
+  work: WATCH_HUE('indigo'), leisure: WATCH_HUE('green'), dinner: WATCH_HUE('gold'), travel: WATCH_HUE('sky'),
   // Legacy colors kept for existing log data
-  sport:'#ef7942', special:'#e879f9', casual:'#94a3b8'
+  sport: WATCH_HUE('orange'), special: WATCH_HUE('fuchsia'), casual: WATCH_HUE('slate')
 };
 
 // ══════════════════════════════════════════
@@ -20885,7 +20889,7 @@ async function loadExploreModels(reset) {
     <div class="watch-card explore-card" style="cursor:pointer;" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
       ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="watch-card-top" style="margin-bottom:0;">
-        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:var(--watch-default);color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
         <div class="grow-clip">
           <div class="watch-card-name">${escHtml(m.name)}</div>
           <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
@@ -22054,7 +22058,7 @@ function renderWatchSelector() {
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:36px;height:36px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
@@ -22080,7 +22084,7 @@ function openTrackModal(id) {
   const thumbEl = document.getElementById('tl-watch-thumb');
   thumbEl.innerHTML = w.image
     ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:48px;height:48px;object-fit:cover;">`
-    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')};font-weight:var(--fw-heavy);font-size:var(--fs-md);border-radius:var(--radius);">${initials(w.brand,w.name)}</div>`;
+    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)};font-weight:var(--fw-heavy);font-size:var(--fs-md);border-radius:var(--radius);">${initials(w.brand,w.name)}</div>`;
   document.getElementById('tl-watch-brand').textContent = w.brand || '';
   document.getElementById('tl-watch-name').textContent  = w.name  || '';
 
@@ -22143,7 +22147,7 @@ function renderTrackHistory() {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:22px;height:22px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:22px;height:22px;font-size:var(--fs-3xs);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:22px;height:22px;font-size:var(--fs-3xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
     const strapLabel = strap ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);line-height:var(--lh-snug)">${escHtml(strap.name)}</div>` : '';
     return `<tr>
@@ -23293,7 +23297,7 @@ function showSnapMatchPicker(matches, file) {
     const w = m.watch;
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:40px;height:40px;border-radius:var(--radius-btn);flex-shrink:0;object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div style="width:40px;height:40px;border-radius:var(--radius-btn);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:40px;height:40px;border-radius:var(--radius-btn);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     const matchLabel = m.matchType === 'reference' ? 'Ref match' : m.matchType === 'brand+model' ? 'Model match' : 'Brand match';
     return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
       ${thumb}
@@ -23527,7 +23531,7 @@ function renderGamePair() {
     const alt = i === 0 ? gamePair.bId : gamePair.aId;
     const img = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="game-card-img" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:64px;height:64px;font-size:var(--fs-lg);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:64px;height:64px;font-size:var(--fs-lg);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand, w.name)}</div>`;
     el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
@@ -23601,7 +23605,7 @@ function showGameResults() {
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:34px;height:34px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:34px;height:34px;font-size:var(--fs-2xs);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:34px;height:34px;font-size:var(--fs-2xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
@@ -24061,7 +24065,7 @@ function renderCollection(force) {
       const tileImg = collPhotoMode === 'post'
         ? (wLogs.filter(l => l.photoUrl).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0]?.photoUrl || w.image)
         : w.image;
-      const _wc = w.color || '#c9a84c';
+      const _wc = w.color || DEFAULT_WATCH_COLOR;
       const imgInner = tileImg
         ? `<img loading="lazy" src="${escHtml(tileImg)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
         : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
@@ -24123,7 +24127,7 @@ function renderCollection(force) {
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo" aria-label="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
-          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
+          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:var(--fs-lg);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>` : '';
           const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:var(--space-1);align-items:center;">
             <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo" aria-label="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
@@ -24224,7 +24228,7 @@ function renderCollectionList(visible, today) {
   const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market, wornToday }) => {
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:28px;height:28px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:28px;height:28px;font-size:var(--fs-2xs);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:28px;height:28px;font-size:var(--fs-2xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     let lastWornCell = na;
     if (lastDays !== null) {
       const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? '#ef7942' : 'var(--danger)';
@@ -25826,7 +25830,7 @@ function renderDowReport(fl) {
       const thumb = w
         ? (w.image
             ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;" onerror="this.style.display='none'">`
-            : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`)
+            : `<div class="avatar" style="width:32px;height:32px;font-size:var(--fs-3xs);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`)
         : `<div style="font-size:var(--fs-lg);opacity:.2;">○</div>`;
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
@@ -25869,9 +25873,9 @@ function computeWatchRec(skipSet) {
   const today    = todayStr();
   const todayDOW = now.getDay();
   const todayMonth = now.getMonth(); // 0-11
-  const WARM = new Set(['#c9a84c','#fbbf24','#fb923c','#ef7942','#f43f5e']);
-  const COOL = new Set(['#38bdf8','#818cf8','#a78bfa','#34d399','#4caf7d']);
-  const DARK = new Set(['#94a3b8']);
+  const WARM = new Set(['gold', 'amber', 'tangerine', 'orange', 'rose'].map(WATCH_HUE));
+  const COOL = new Set(['sky', 'indigo', 'violet', 'emerald', 'green'].map(WATCH_HUE));
+  const DARK = new Set([WATCH_HUE('slate')]);
   const isWeekend = todayDOW === 0 || todayDOW === 6;
 
   // Tag-to-occasion mapping for smarter tag matching
@@ -26105,7 +26109,7 @@ function recCardHTML(rec) {
           anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:56px;height:56px;border-radius:var(--radius-btn);object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:56px;height:56px;font-size:var(--fs-lg);border-radius:var(--radius-btn);background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="avatar" style="width:56px;height:56px;font-size:var(--fs-lg);border-radius:var(--radius-btn);background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
   const tags = [];
   if (daysSince === 999) tags.push({ text: 'Never worn', cls: '' });
   else if (daysSince >= 30) tags.push({ text: `${daysSince}d idle`, cls: '' });
@@ -26234,7 +26238,7 @@ function renderWearLeaderboard(fl) {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" style="width:32px;height:32px;border-radius:var(--radius-round);object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:32px;height:32px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:32px;height:32px;background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
     const share = r.pct == null ? '—' : r.pct + '%';
     const dim = r.wears === 0 ? 'opacity:.55;' : '';
     // Name on its own line, stats beneath: the single-line layout truncated 4 of
@@ -26375,7 +26379,7 @@ function renderChUsecase(fl) {
     type: 'doughnut',
     data: {
       labels: keys.map(k => k[0].toUpperCase() + k.slice(1)),
-      datasets: [{ data: keys.map(k => um[k]), backgroundColor: keys.map(k => UC_COL[k]||'#888'),
+      datasets: [{ data: keys.map(k => um[k]), backgroundColor: keys.map(k => UC_COL[k] || dsToken('--uc-other')),
                    borderWidth: 2, borderColor: '#141419' }]
     },
     options: {
@@ -26394,7 +26398,7 @@ function renderChUsecase(fl) {
       const cnt   = um[k];
       const pct   = Math.round(cnt / total * 100);
       const barW  = Math.round(cnt / maxCnt * 100);
-      const color = UC_COL[k] || '#888';
+      const color = UC_COL[k] || dsToken('--uc-other');
       const label = k[0].toUpperCase() + k.slice(1);
       return `<div style="display:flex;align-items:center;gap:var(--space-3);">
         <div style="width:10px;height:10px;border-radius:var(--radius-round);background:${color};flex-shrink:0;"></div>
@@ -26474,9 +26478,8 @@ function renderChCollectionValue() {
   if (hasMV && mvPts[mvPts.length - 1].x !== nowMs) mvPts.push({ x: nowMs, y: mvPts[mvPts.length - 1].y });
 
   // Theme-aware gold (matches light/dark) + subtle fill; grid/ticks readable on both themes.
-  const cs = getComputedStyle(document.documentElement);
-  const gold = cs.getPropertyValue('--gold').trim() || '#c9a84c';
-  const goldFill = /^#[0-9a-f]{6}$/i.test(gold) ? gold + '26' : 'rgba(201,168,76,.15)';
+  const gold = dsToken('--gold');
+  const goldFill = gold + '26';                  // --gold is a 6-digit hex in both themes; + alpha 15%
   const gridC = 'rgba(128,128,128,.15)';
   const tickC = '#7a8095';
 
@@ -28812,7 +28815,7 @@ async function checkBatchWatchValues(ids) {
   setTimeout(() => delete modal.dataset.justOpened, 600);
 
   list.innerHTML = targets.map((w, i) => {
-    const color = w.color || '#c9a84c';
+    const color = w.color || DEFAULT_WATCH_COLOR;
     const ini = initials(w.brand || '?', w.name || '?');
     return `<div class="pi-card" id="val-card-${i}">
       <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
@@ -29312,7 +29315,7 @@ async function enhanceAllWatches(scopedIds) {
   setTimeout(() => delete modal.dataset.justOpened, 600);
 
   list.innerHTML = target.map((w, i) => {
-    const color = w.color || '#c9a84c';
+    const color = w.color || DEFAULT_WATCH_COLOR;
     const ini = initials(w.brand || '?', w.name || '?');
     return `<div class="pi-card" id="enh-card-${i}">
       <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
@@ -30318,7 +30321,7 @@ function wlCardHtml(w, draggable) {
   const checked = selecting && _wlSelect.has(w.id);
   const thumb = w.image
     ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
-    : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="wl-card-avatar" style="background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
   const meta = [
     w.price != null ? fmtMoney(w.price) : '',
     w.ref   ? w.ref : '',
@@ -30358,7 +30361,7 @@ function wlTileImgFallback(img) {
   if (!img || !img.parentNode) return;
   const div = document.createElement('div');
   div.className = 'wl-tile-avatar';
-  div.style.background = img.dataset.color || '#c9a84c';
+  div.style.background = img.dataset.color || DEFAULT_WATCH_COLOR;
   div.style.color = img.dataset.textColor || '#000';
   div.textContent = img.dataset.initials || '';
   img.replaceWith(div);
@@ -30407,7 +30410,7 @@ function renderWishlist(force) {
       // not just hidden. .wl-tile-imglink has no size of its own and is the tap
       // target that opens Edit, so hiding the <img> collapsed it to zero height
       // and the tile silently stopped being tappable.
-      const _wc = w.color || '#c9a84c';
+      const _wc = w.color || DEFAULT_WATCH_COLOR;
       const imgInner = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
         : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
@@ -30446,7 +30449,7 @@ function renderWishlist(force) {
       const open = _wlFoldersOpen.has(f.key);
       const thumbs = f.items.slice(0, 3).map(w => w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} class="wl-folder-thumb" alt="" onerror="this.style.display='none'">`
-        : `<div class="wl-folder-thumb-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`
+        : `<div class="wl-folder-thumb-avatar" style="background:${escHtml(w.color||DEFAULT_WATCH_COLOR)};color:${initialsTextColor(w.color||DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`
       ).join('');
       return `<div class="wl-folder${open ? ' open' : ''}" data-folder="${escAttr(f.key)}">
         <!-- The folder key is a lowercased BRAND, so it is user text: an apostrophe
@@ -30730,7 +30733,7 @@ function previewWatchFromEl(el) {
     ref:   el.dataset.watchRef   || '',
     url:   el.dataset.watchUrl   || '',
     image: el.dataset.watchImage || '',
-    color: el.dataset.watchColor || '#c9a84c',
+    color: el.dataset.watchColor || DEFAULT_WATCH_COLOR,
     description: el.dataset.watchDesc || '',
     background: el.dataset.watchBg || '',
     functions: el.dataset.watchFunc || '',
@@ -30747,7 +30750,7 @@ function previewWishFromEl(el) {
     ref:   el.dataset.wishRef   || '',
     url:   el.dataset.wishUrl   || '',
     image: el.dataset.wishImage || '',
-    color: el.dataset.wishColor || '#c9a84c',
+    color: el.dataset.wishColor || DEFAULT_WATCH_COLOR,
   });
 }
 

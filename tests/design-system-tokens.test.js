@@ -182,6 +182,21 @@ export const SHARED_LIGHT = {
   '--badge-hidden-ink': '#4A4A3E',
   '--badge-hidden-bg': '#E8E6DD',
   '--badge-collection-bg': '#F0E4BD',
+  '--watch-gold': '#c9a84c',
+  '--watch-green': '#4caf7d',
+  '--watch-indigo': '#818cf8',
+  '--watch-orange': '#ef7942',
+  '--watch-sky': '#38bdf8',
+  '--watch-fuchsia': '#e879f9',
+  '--watch-rose': '#f43f5e',
+  '--watch-slate': '#94a3b8',
+  '--watch-amber': '#fbbf24',
+  '--watch-emerald': '#34d399',
+  '--watch-tangerine': '#fb923c',
+  '--watch-violet': '#a78bfa',
+  '--watch-default': 'var(--watch-gold)',
+  '--uc-unspecified': '#7a7a95',
+  '--uc-other': '#888',
   // Aliases of the tokens above. Declared 2026-08-08 after index.html was found
   // referencing them without ever declaring them. The indirection is deliberate:
   // it carries the dark values without a second declaration.
