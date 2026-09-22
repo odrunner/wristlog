@@ -360,7 +360,7 @@ function renderModelPage(el, ctx, h) {
     #page-model { max-width: 480px; margin: 0 auto; padding: 0; }
     .mp-tone-gold { background: var(--gold); } .mp-tone-dim { background: var(--gold-dim); } .mp-tone-flat { background: var(--surface2); }
     .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:var(--fw-normal); border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
-    .mp-tab:hover { background: var(--hover); }
+    .mp-tab:hover { background: var(--surface2); }
     .mp-tab[aria-selected="true"] { color:var(--gold-text); font-weight:var(--fw-semibold); border-bottom-color:var(--gold); }
     .mp-badge { font-size:var(--fs-3xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold-text); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
     .mp-h { font-size:var(--fs-2xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
@@ -368,9 +368,9 @@ function renderModelPage(el, ctx, h) {
     .mp-cell .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
     .mp-cell .v { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--text); margin:var(--space-1) 0 var(--space-0-5); }
     .mp-cell .f { font-size:var(--fs-2xs); color:var(--muted); margin-top:var(--space-1-5); }
-    .mp-quote button:hover { background: var(--hover); border-radius: var(--radius-sm); }
+    .mp-quote button:hover { background: var(--surface2); border-radius: var(--radius-sm); }
     .mp-row { display:flex; justify-content:space-between; align-items:center; padding:var(--space-2-5) 0; border-bottom:1px solid var(--border); font-size:var(--fs-sm); cursor:pointer; }
-    .mp-row:hover { background: var(--hover); }
+    .mp-row:hover { background: var(--surface2); }
     .mp-row:last-child { border-bottom:0; }
     .mp-pill { display:inline-flex; align-items:center; gap:var(--space-1-5); font-size:var(--fs-xs); font-weight:var(--fw-medium); color:var(--muted); border:1px solid var(--border); border-radius:var(--radius-pill); padding:var(--space-1-5) var(--space-3); cursor:pointer; background:none; font-family:inherit; }
     .mp-pill:hover { color:var(--gold-text); border-color:var(--gold); }

@@ -156,17 +156,17 @@ export const SHARED_LIGHT = {
   '--white': '#fff',
   '--black': '#000',
   '--on-gold': '#0a0a0e',
-  '--tag-type': '#818cf8',
+  '--tag-type': 'var(--watch-indigo)',
   '--medal-silver': '#b0b0b0',
   '--medal-bronze': '#cd7f32',
-  '--tag-strap': '#94a3b8',
-  '--tag-weather': '#38bdf8',
+  '--tag-strap': 'var(--watch-slate)',
+  '--tag-weather': 'var(--watch-sky)',
   '--rating': '#f59e0b',
   '--game-accent': '#c084fc',
   '--vis-followers-lt': '#f2dc9a',
   '--vis-friends-lt': '#cbb2ff',
   '--vis-private-lt': '#ff9f9f',
-  '--demo-gold': '#c9a84c',
+  '--demo-gold': 'var(--watch-gold)',
   '--demo-paper': '#f5f5f8', '--demo-cta': '#4f46e5',
   '--demo-gold-mid': '#b8963f',
   '--demo-gold-deep': '#a6842e',
@@ -227,15 +227,8 @@ export const SHARED_LIGHT = {
   '--uc-unspecified': '#7a7a95',
   '--uc-other': '#888',
   '--chart-grid': 'rgba(128,128,128,.15)', '--chart-tick': '#7a8095', '--chart-series-2': 'var(--watch-indigo)',
-  // Aliases of the tokens above. Declared 2026-08-08 after index.html was found
-  // referencing them without ever declaring them. The indirection is deliberate:
-  // it carries the dark values without a second declaration.
-  '--hover': 'var(--surface2)',
-  '--surface1': 'var(--surface2)',
-  '--error': 'var(--danger)',
-  '--fg': 'var(--text)',
-  '--accent': 'var(--gold)',
-  // An alias of --gold, so like the five above it is declared in both themes.
+  // An alias of --gold: a var() inside a custom property resolves where it is DECLARED,
+  // so it is repeated in the dark block rather than inherited from :root.
   '--ring': '0 0 0 1px var(--gold)',
 };
 
@@ -272,16 +265,8 @@ export const SHARED_DARK = {
   '--badge-close': '#c9a84c',
   '--badge-tier': '#dbbe72',
   '--badge-deep': '#d8b96a',
-  // The aliases are repeated here on purpose, not duplicated by accident: a
-  // var() inside a custom property is substituted where it is DECLARED, so an
-  // alias written only in :root freezes the light value and inherits it into
-  // dark. Each theme must resolve its own.
-  '--hover': 'var(--surface2)',
-  '--surface1': 'var(--surface2)',
-  '--error': 'var(--danger)',
-  '--fg': 'var(--text)',
-  '--accent': 'var(--gold)',
-  // An alias of --gold, so like the five above it is declared in both themes.
+  // An alias of --gold: a var() inside a custom property resolves where it is DECLARED,
+  // so it is repeated in the dark block rather than inherited from :root.
   '--ring': '0 0 0 1px var(--gold)',
 };
 

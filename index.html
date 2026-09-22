@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=db5db46b">
+  <link rel="stylesheet" href="/design-system.css?v=ff1c42dc">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -475,8 +475,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
     .prof-section { margin-top:0; }
-    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:0 0 var(--space-1-5); color:var(--fg); font-family:inherit; line-height:var(--lh-none); user-select:none; }
-    .prof-section-hdr:hover .prof-section-label { color:var(--fg); }
+    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:0 0 var(--space-1-5); color:var(--text); font-family:inherit; line-height:var(--lh-none); user-select:none; }
+    .prof-section-hdr:hover .prof-section-label { color:var(--text); }
     .prof-section-label { font-size:var(--fs-xs); font-weight:var(--fw-bold); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); transition:color var(--dur-fast); }
     .prof-section-chevron { font-size:var(--fs-2xs); color:var(--muted); transition:transform var(--dur-base); display:inline-block; line-height:var(--lh-none); }
     .prof-section-chevron.open { transform:rotate(90deg); }
@@ -1762,14 +1762,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-photo { position: relative; }
     .np-thumbstrip { display: flex; gap: var(--space-1-5); padding: var(--space-2) 0; overflow-x: auto; align-items: center; }
     .np-thumb { width: 60px; height: 60px; border-radius: var(--radius-sm); overflow: hidden; position: relative; flex-shrink: 0; border: 2px solid transparent; }
-    .np-thumb.hero { border-color: var(--accent); }
+    .np-thumb.hero { border-color: var(--gold); }
     .np-thumb img, .np-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .np-thumb .np-thumb-remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: var(--radius-round); background: color-mix(in srgb, var(--black) 70%, transparent); color: var(--white); font-size: var(--fs-xs); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: var(--lh-none); padding: 0; }
     .np-thumb-add { width: 60px; height: 60px; border-radius: var(--radius-sm); border: 2px dashed var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: var(--muted); font-size: var(--fs-2xl); background: none; }
-    .np-thumb-add:hover { border-color: var(--accent); color: var(--accent); }
+    .np-thumb-add:hover { border-color: var(--gold); color: var(--gold); }
     .np-photo-counter { font-size: var(--fs-sm); color: var(--muted); padding: var(--space-0-5) 0; }
     .np-thumb.dragging { opacity: .5; }
-    .np-thumb.drag-over { border-color: var(--accent); }
+    .np-thumb.drag-over { border-color: var(--gold); }
     .img-viewer-overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--black) 95%, transparent); z-index: var(--z-popover); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--dur-base); }
     .img-viewer-overlay.visible { opacity: 1; }
     .img-viewer-overlay img { max-width: 100%; max-height: 85vh; object-fit: contain; }
@@ -1824,7 +1824,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; gap: var(--space-1-5);
       transition: all var(--dur-fast);
     }
-    .feed-action-btn:hover { background: var(--hover); color: var(--text); }
+    .feed-action-btn:hover { background: var(--surface2); color: var(--text); }
     .feed-action-btn.liked  { color: var(--danger-text); }
 
     /* Caption (Instagram style — bold username inline) */
@@ -1840,7 +1840,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Official drafts admin */
     .draft-card { background:var(--surface2); border-radius:var(--radius); padding:var(--space-3-5); margin-bottom:var(--space-2-5); }
     .draft-card-header { display:flex; gap:var(--space-2-5); align-items:flex-start; }
-    .draft-thumb { width:72px; height:72px; border-radius:var(--radius-sm); object-fit:cover; background:var(--surface1); flex-shrink:0; }
+    .draft-thumb { width:72px; height:72px; border-radius:var(--radius-sm); object-fit:cover; background:var(--surface2); flex-shrink:0; }
     .draft-meta { flex:1; min-width:0; }
     .draft-meta .draft-caption { font-size:var(--fs-base); line-height:var(--lh-body); margin-bottom:var(--space-1); word-break:break-word; }
     .draft-meta .draft-info { font-size:var(--fs-sm); color:var(--muted); }
@@ -1864,7 +1864,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
                     text-transform:none; letter-spacing:normal; cursor:pointer; }
     .radio-option input[type="radio"] { flex:none; margin:0; }
     .draft-form-row textarea { resize:vertical; min-height:3rem; }
-    .draft-extract-preview { background:var(--surface1); border-radius:var(--radius-btn); padding:var(--space-3); margin-top:var(--space-2-5); }
+    .draft-extract-preview { background:var(--surface2); border-radius:var(--radius-btn); padding:var(--space-3); margin-top:var(--space-2-5); }
     .draft-extract-preview img { max-width:200px; max-height:200px; border-radius:var(--radius-sm); margin-bottom:var(--space-2); }
     .official-photo-drop {
       border:2px dashed var(--border); border-radius:var(--radius-btn); padding:var(--space-4); text-align:center;
@@ -2322,14 +2322,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: var(--fs-base); padding: var(--space-1) var(--space-1-5); border-radius: var(--radius-sm);
       transition: color var(--dur-fast), background var(--dur-fast); flex-shrink: 0;
     }
-    .feed-edit-btn:hover { color: var(--gold-text); background: var(--hover); }
+    .feed-edit-btn:hover { color: var(--gold-text); background: var(--surface2); }
 
     /* Three-dot feed menu */
     .feed-menu { position:absolute; right:0; top:100%; min-width:130px; background:var(--surface);
       border:1px solid var(--border); border-radius:var(--radius-btn); box-shadow:var(--shadow-3);
       z-index:var(--z-card-menu); overflow:hidden; }
     .feed-menu-item { padding:var(--space-2) var(--space-3); font-size:var(--fs-base); cursor:pointer; white-space:nowrap; }
-    .feed-menu-item:hover { background:var(--hover); }
+    .feed-menu-item:hover { background:var(--surface2); }
 
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:var(--space-1); font-size:var(--fs-xs);
@@ -2441,11 +2441,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       color: var(--muted); display: flex; align-items: center; line-height: 0;
       border-radius: var(--radius-sm); transition: color var(--dur-fast), background var(--dur-fast);
     }
-    .comment-menu-btn:hover { color: var(--text); background: var(--hover); }
+    .comment-menu-btn:hover { color: var(--text); background: var(--surface2); }
     .comment-menu-btn svg { width: 12px; height: 12px; }
     .comment-input-row { display: flex; gap: var(--space-2); margin-top: var(--space-2-5); }
     .comment-input {
-      flex: 1; background: var(--hover); border: 1px solid var(--border);
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
       border-radius: var(--radius-pill); padding: var(--space-1-5) var(--space-3-5); font-size: var(--fs-sm);
       color: var(--text); font-family: inherit;
       max-width: 100%; min-width: 0;
@@ -2475,7 +2475,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding: var(--space-2) var(--space-3); cursor: pointer; font-size: var(--fs-base);
       color: var(--text); transition: background var(--dur-fast);
     }
-    .mention-ac-item:hover, .mention-ac-item.active { background: var(--hover); }
+    .mention-ac-item:hover, .mention-ac-item.active { background: var(--surface2); }
     .mention-ac-item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
     .mention-ac-item:last-child  { border-radius: 0 0 var(--radius) var(--radius); }
     .mention-ac-item:only-child  { border-radius: var(--radius); }
@@ -2700,7 +2700,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-stat-btn:hover { background: var(--surface2); }
     .profile-stat-btn:hover .profile-stat-value { color: var(--gold-text); }
     .profile-bio-edit {
-      width: 100%; background: var(--hover); border: 1px solid var(--border);
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
       border-radius: var(--radius-btn); padding: var(--space-2) var(--space-3); font-size: var(--fs-base);
       color: var(--text); font-family: inherit; resize: none; box-sizing: border-box;
     }
@@ -4636,7 +4636,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Reported content is hidden from feeds immediately. An admin reviews every report and either confirms the removal or restores the content. Repeated violations may result in account suspension.</div>
             </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>By using WRotate you agree to the <a href="terms.html" target="_blank" style="color:var(--accent);">Terms of Use</a> and <a href="privacy.html" target="_blank" style="color:var(--accent);">Privacy Policy</a>. We have zero tolerance for objectionable content or abusive behaviour.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:var(--space-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:var(--space-0-5)"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>By using WRotate you agree to the <a href="terms.html" target="_blank" style="color:var(--gold);">Terms of Use</a> and <a href="privacy.html" target="_blank" style="color:var(--gold);">Privacy Policy</a>. We have zero tolerance for objectionable content or abusive behaviour.</span></div>
         </div>
       </div>
 
@@ -5116,7 +5116,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;">
-      <div id="edit-id-name" style="font-size:var(--fs-md);font-weight:var(--fw-medium);color:var(--fg);line-height:var(--lh-snug);"></div>
+      <div id="edit-id-name" style="font-size:var(--fs-md);font-weight:var(--fw-medium);color:var(--text);line-height:var(--lh-snug);"></div>
       <div id="edit-id-sub" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-px);line-height:var(--lh-snug);"></div>
       <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:var(--space-1-5);background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;">Add photo</button>
       <div style="border-bottom:0.5px solid var(--border);margin-top:var(--space-2-5);margin-bottom:var(--space-3);"></div>
@@ -8254,7 +8254,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.06.14';
+const APP_VERSION = '22.06.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18777,7 +18777,7 @@ async function renderBroadcastQueueStatus() {
         const waiting = held > 0 && pending === 0;
         const rank = waiting
           ? '<span style="color:var(--gold-text);font-weight:var(--fw-bold);">held for review</span>'
-          : (done ? '<span style="color:var(--error);">failed</span>'
+          : (done ? '<span style="color:var(--danger);">failed</span>'
                   : (isNext ? '<span style="color:var(--gold-text);font-weight:var(--fw-bold);">sending next</span>'
                             : `<span class="text-muted">#${position} in line</span>`));
         // Metrics + release controls load per campaign, on demand — one RPC per
@@ -18794,7 +18794,7 @@ async function renderBroadcastQueueStatus() {
             <span style="font-size:var(--fs-sm);white-space:nowrap;">${rank}</span>${arrows}
           </div>
           <div style="color:var(--muted);font-size:var(--fs-sm);margin-top:var(--space-0-5);">
-            ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span class="text-gold">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
+            ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span class="text-gold">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--danger);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
           </div>
           ${gate}
         </div>`;
@@ -18843,7 +18843,7 @@ async function showBroadcastBatchMetrics(label, btn) {
     if (error) throw error;
     m = data || {};
   } catch (err) {
-    gate.innerHTML = `<span style="color:var(--error);font-size:var(--fs-sm);">Could not load results: ${escHtml(err.message)}</span>`;
+    gate.innerHTML = `<span style="color:var(--danger);font-size:var(--fs-sm);">Could not load results: ${escHtml(err.message)}</span>`;
     return;
   }
   const sent = Number(m.sent) || 0;
@@ -18861,7 +18861,7 @@ async function showBroadcastBatchMetrics(label, btn) {
     <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--space-1);">
       batch of ${sent}: ${m.delivered || 0} delivered · ${human} opened (${pct(human)}%)${machine ? `<span style="opacity:.55;"> +${machine} prefetch</span>` : ''}
       · <span style="${warn ? 'color:var(--gold-text);' : ''}">${m.unsubscribed || 0} unsubscribed</span>
-      · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--error);">${m.complained} spam complaints</span>` : ''}
+      · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--danger);">${m.complained} spam complaints</span>` : ''}
     </div>
     <div style="display:flex;gap:var(--space-1-5);flex-wrap:wrap;">
       <button class="btn btn-primary btn-xs" data-bc-release="${escAttr(label)}">Send remaining</button>
@@ -19585,11 +19585,11 @@ function renderReportCard(r) {
   if (r._content) {
     if (r.content_type === 'log') {
       const photoThumb = r._content.photo_url ? `<img src="${escHtml(r._content.photo_url)}" alt="Reported photo" style="width:40px;height:40px;border-radius:var(--radius-xs);object-fit:cover;margin-right:var(--space-2);">` : '';
-      contentPreview = `<div style="display:flex;align-items:center;margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--hover);border-radius:var(--radius-sm);font-size:var(--fs-sm);">
+      contentPreview = `<div style="display:flex;align-items:center;margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--surface2);border-radius:var(--radius-sm);font-size:var(--fs-sm);">
         ${photoThumb}<span style="color:var(--text);">${escHtml((r._content.notes || '').slice(0, 80))}${(r._content.notes||'').length > 80 ? '…' : ''}</span>
       </div>`;
     } else {
-      contentPreview = `<div style="margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--hover);border-radius:var(--radius-sm);font-size:var(--fs-sm);color:var(--text);">
+      contentPreview = `<div style="margin:var(--space-1-5) 0;padding:var(--space-1-5);background:var(--surface2);border-radius:var(--radius-sm);font-size:var(--fs-sm);color:var(--text);">
         ${escHtml((r._content.body || '').slice(0, 100))}${(r._content.body||'').length > 100 ? '…' : ''}
       </div>`;
     }
@@ -22926,7 +22926,7 @@ async function loadCampaigns() {
   if (!container) return;
   // Drip-sequence order (day 1 → 14), not newest-first — reads as campaign 1, 2, 3, 4.
   const { data, error } = await db.from('email_campaigns').select('*').order('delay_days', { ascending: true }).order('created_at', { ascending: true }).limit(1000);
-  if (error) { container.innerHTML = `<div style="color:var(--error);font-size:var(--fs-base);">Error: ${error.message}</div>`; return; }
+  if (error) { container.innerHTML = `<div style="color:var(--danger);font-size:var(--fs-base);">Error: ${error.message}</div>`; return; }
   _campaignsData = data || [];
 
   // Resolve the sample fact once per load — updateCampaignPreview runs on every
@@ -25277,7 +25277,7 @@ function renderValueSection() {
       <label>${mpLabel}</label>
       <input type="text" inputmode="decimal" id="w-mp-display" aria-label="Market price" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
     </div>
-    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--fg);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1-5) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;margin-bottom:var(--space-px);">${hasPending ? 'Re-check' : 'Check price'}</button>
+    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--text);font-size:var(--fs-xs);font-family:inherit;padding:var(--space-1-5) var(--space-2-5);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;margin-bottom:var(--space-px);">${hasPending ? 'Re-check' : 'Check price'}</button>
   </div>`;
 
   // Pending price card (State B or B2)
@@ -25293,7 +25293,7 @@ function renderValueSection() {
           <div style="font-size:var(--fs-2xs);color:var(--muted);">${freshLabel}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:var(--space-2);margin-top:var(--space-1);">
-          <span style="font-size:var(--fs-2xl);font-weight:var(--fw-medium);color:var(--fg);">${fmtMoney(pending)}</span>
+          <span style="font-size:var(--fs-2xl);font-weight:var(--fw-medium);color:var(--text);">${fmtMoney(pending)}</span>
           <span class="caption">unchanged</span>
         </div>
         <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2-5);">
@@ -29170,7 +29170,7 @@ async function saveEnhanceResult(idx) {
     Object.assign(w, backup);
     toast('Save failed: ' + (e?.message || e), 'error');
     const statusEl = card?.querySelector('.enh-status');
-    if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.style.color = 'var(--error)'; }
+    if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.style.color = 'var(--danger)'; }
     if (saveBtn) saveBtn.disabled = false;
   } finally {
     _enhanceSavesInFlight--;

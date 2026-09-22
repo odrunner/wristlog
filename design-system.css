@@ -39,19 +39,9 @@
   --radius: 10px;
   --overlay-bg: rgba(245,245,248,.96);
 
-  /* ── Aliases ──
-     index.html referenced these five for months without ever declaring them,
-     so each rule was thrown away and the property reset: backgrounds painted
-     transparent, colours fell back to the parent. Declared here as aliases of
-     tokens that already exist, so nothing new enters the palette.
-     These are repeated verbatim in the dark block below — see the note there
-     before you think about deduplicating them. */
-  --hover: var(--surface2);
-  --surface1: var(--surface2);
-  --error: var(--danger);
-  --fg: var(--text);
-  --accent: var(--gold);
-  /* Hover / chosen outline on round header buttons and swatches. */
+  /* Hover / chosen outline on round header buttons and swatches. An alias of --gold, repeated in the
+     dark block on purpose: a var() inside a custom property resolves where it is DECLARED, so an alias
+     written only here would freeze the light gold into dark. */
   --ring: 0 0 0 1px var(--gold);
 
   /* ── Scale tokens (theme-independent) ── */
@@ -155,16 +145,16 @@
   --white: #fff;
   --black: #000;
   --on-gold: #0a0a0e;           /* ink on a gold fill: primary button, Post button, gold pills */
-  --tag-type: #818cf8;         /* the watch-type tag (indigo) */
-  --tag-strap: #94a3b8;        /* strap tag (slate) */
-  --tag-weather: #38bdf8;      /* weather recommendation tag (sky) */
+  --tag-type: var(--watch-indigo);         /* the watch-type tag (indigo) */
+  --tag-strap: var(--watch-slate);        /* strap tag (slate) */
+  --tag-weather: var(--watch-sky);      /* weather recommendation tag (sky) */
   --rating: #f59e0b;           /* feedback "rating" badge (amber) */
   --game-accent: #c084fc;      /* ranking-game timer bar, gradient end */
   --medal-silver: #b0b0b0; --medal-bronze: #cd7f32;      /* rank 2 / 3 (rank 1 is --gold) */
   /* visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger */
   --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
-  --demo-gold: #c9a84c; --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
+  --demo-gold: var(--watch-gold); --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
   --demo-paper: #f5f5f8; --demo-cta: #4f46e5;   /* light ink on the demo bar's dark button; the demo sign-up button */
   --status-good: #22c55e;
   --status-warn: #eab308;
@@ -255,18 +245,7 @@
   --badge-tier: #dbbe72;
   --badge-deep: #d8b96a;
 
-  /* ── Aliases, repeated on purpose ──
-     Do NOT delete these as duplicates of the light block. A var() inside a
-     custom property is substituted on the element that DECLARES it, not on the
-     element that uses it. An alias written only in :root therefore resolves
-     against :root's light values and inherits that frozen result into dark —
-     measured: --hover came out #eeeff5 on a dark surface. Each theme has to
-     resolve its own aliases. */
-  --hover: var(--surface2);
-  --surface1: var(--surface2);
-  --error: var(--danger);
-  --fg: var(--text);
-  --accent: var(--gold);
+  /* Repeated from the light block on purpose — see the note on --ring there. */
   --ring: 0 0 0 1px var(--gold);
 }
 
@@ -412,8 +391,8 @@
 .tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: var(--fw-semibold); }
 .tag-pill.suggested    { border-color:var(--badge-border); color: var(--badge-accent); border-style: dashed; }
 .modal-section { border-top: 1px solid var(--border); margin-top: var(--space-3-5); }
-.modal-section-hdr { display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: pointer; padding: var(--space-2) 0 var(--space-1-5); color: var(--fg); font-family: inherit; line-height: var(--lh-none); user-select: none; }
-.modal-section-hdr:hover .modal-section-hdr-label { color: var(--fg); }
+.modal-section-hdr { display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: pointer; padding: var(--space-2) 0 var(--space-1-5); color: var(--text); font-family: inherit; line-height: var(--lh-none); user-select: none; }
+.modal-section-hdr:hover .modal-section-hdr-label { color: var(--text); }
 .modal-section-hdr-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); text-transform: uppercase; color: var(--muted); transition: color var(--dur-fast); }
 .modal-section-chevron { font-size: var(--fs-2xs); color: var(--muted); transition: transform var(--dur-base); display: inline-block; line-height: var(--lh-none); margin-left: var(--space-1); }
 .modal-section-chevron.open { transform: rotate(90deg); }
