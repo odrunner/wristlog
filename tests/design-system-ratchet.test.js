@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countAll, countHardcoded, isTokenised, readBudget, PAGES } from '../scripts/ds-count.mjs';
+import { countAll, countHardcoded, isTokenised, isDesignStyle, readBudget, PAGES } from '../scripts/ds-count.mjs';
 
 // The ratchet. Every page that links design-system.css has a budget of
 // hardcoded design values per category (tests/design-system-budget.json). New
@@ -63,5 +63,18 @@ describe('countHardcoded', () => {
     </script>`);
     expect(c['inline-style-attr']).toBe(2);
     expect(c['js-style-assign']).toBe(2);
+  });
+
+  // Phase 4 step 5: behaviour and data are not design decisions. `display:none` is state JS toggles;
+  // `width:${pct}%` is a value from the data. Neither would change in a redesign, so neither counts.
+  it('does not count behaviour-only or data-driven inline styles', () => {
+    expect(isDesignStyle('display:none')).toBe(false);
+    expect(isDesignStyle('display:none;position:absolute;top:0')).toBe(false);
+    expect(isDesignStyle('width:${pct}%;background:${w.color}')).toBe(false);
+    expect(isDesignStyle('display:none;margin-bottom:var(--space-3)')).toBe(true);   // the margin is a decision
+    expect(isDesignStyle('color:var(--muted)')).toBe(true);
+    expect(isDesignStyle('width:${pct}%;color:var(--muted)')).toBe(true);
+    const c = countHardcoded('<div style="display:none"></div><div style="color:red"></div><i style="width:${w}%"></i>');
+    expect(c['inline-style-attr']).toBe(1);
   });
 });

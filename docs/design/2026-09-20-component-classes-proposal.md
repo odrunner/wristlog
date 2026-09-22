@@ -82,6 +82,11 @@ defined inside `index.html`. `p/` and `profile/` cannot use them, which is why t
    `fs-sm` and an odd padding becomes `.btn-sm`). *Small visible change, reviewed per screen like phase 3.*
 5. **Teach the ratchet the difference between design and behaviour.** `display: none` ×146 and the 69 attributes with
    a `${…}` data value (a watch's colour, a progress width) are not design decisions and should not count.
+   *Done 2026-09-21: `isDesignStyle()` in `scripts/ds-count.mjs` — an attribute counts only if some declaration is
+   neither behavioural (display, visibility, position/offsets, overflow, pointer-events) nor a `${…}` value.
+   Step 4 done the same day: `.btn-block/-grow/-xs/-md/-plain`, `.btn-ghost-gold/-muted/-danger`, `.field.field-compact`;
+   partial extraction keeps a button's one-off declarations inline; plain-button paddings deliberately NOT snapped
+   (icon / text link / menu row are different roles). Final: inline `style=` 2,053 → 1,375 design decisions.*
 
 **Expected result:** inline `style=` from 2,053 to roughly 500, and what remains is positioning, data-driven values
 and genuine one-offs. Colour literals (531) fall substantially as a side effect of step 4 and get their own pass after.
