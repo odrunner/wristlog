@@ -1887,29 +1887,30 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Fun-fact footnote — always visible below the chip row, clamped to 2 lines.
        Deliberately no container, background or border: it reads as a footnote to
-       the caption, not a module. 2 lines = 39px (13px x 1.5), which is UNDER the
-       44px tap-target floor, so 3px of vertical padding lifts the hit area to
-       45px. The negative top margin and reduced bottom margin cancel that padding
-       out visually, so the text sits exactly where it did at 3 lines. */
+       the caption, not a module. 2 lines = --fs-base x --lh-body x 2 (~40.7px), which is
+       UNDER the 44px tap-target floor, so --space-0-5 of vertical padding lifts the hit area
+       to ~44.7px. The negative top margin and reduced bottom margin cancel that padding out
+       visually. The clamp height is COMPUTED from the same tokens here and in FUNFACT_CLAMP_PX,
+       so font, line-height, clamp and JS can never drift apart (they used to be four numbers). */
     .funfact-row {
-      display: block; position: relative; width: calc(100% - 2rem);
-      margin: -3px var(--space-4) calc(.75rem - 3px); padding: 3px 0; text-align: left;
+      display: block; position: relative; width: calc(100% - 2 * var(--space-4));
+      margin: calc(-1 * var(--space-0-5)) var(--space-4) calc(var(--space-3) - var(--space-0-5)); padding: var(--space-0-5) 0; text-align: left;
       background: none; border: 0; font-family: inherit;
-      font-size: 13px; line-height: 1.5; color: var(--muted); cursor: pointer;
+      font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); cursor: pointer;
     }
     .funfact-clamp { display: block; overflow: hidden; transition: max-height var(--dur-base) ease; }
     .funfact-row.is-clamped .funfact-clamp {
       display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-      max-height: 39px;
+      max-height: calc(var(--fs-base) * var(--lh-body) * 2);
     }
-    .funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }
+    .funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }
     /* Uses the badge accent, not the tier gold: that gold measures 2.64:1 on
        the light card surface and fails AA for 13px text. */
     .funfact-label { color: var(--badge-accent); font-weight: var(--fw-medium); }
     .funfact-more {
       display: none; position: absolute; right: 0; bottom: 0; color: var(--muted);
       padding-left: var(--space-6);
-      background: linear-gradient(90deg, transparent, var(--surface) 1.2rem);
+      background: linear-gradient(90deg, transparent, var(--surface) var(--space-5));
     }
     .funfact-row.is-clamped.is-truncated .funfact-more { display: inline; }
     @media (prefers-reduced-motion: reduce) { .funfact-clamp { transition: none; } }
@@ -8253,7 +8254,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.54';
+const APP_VERSION = '22.05.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15357,9 +15358,9 @@ function recordFactClick(logId) {
   } catch (e) {}
 }
 
-// 2 lines of 13px text at line-height 1.5. Must match the max-height in the
-// .funfact-row.is-clamped .funfact-clamp rule.
-const FUNFACT_CLAMP_PX = 39;
+// 2 lines of the footnote: --fs-base x --lh-body x 2 — the same calc as the max-height in
+// the .funfact-row.is-clamped .funfact-clamp rule, from the same tokens, so they cannot drift.
+const FUNFACT_CLAMP_PX = dsPx('--fs-base') * parseFloat(dsToken('--lh-body')) * 2;
 
 // Expand/collapse the footnote in place. line-clamp can't be transitioned, so
 // the clamp class comes off for the duration and max-height carries the

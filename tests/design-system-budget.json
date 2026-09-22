@@ -1,14 +1,14 @@
 {
   "index.html": {
     "color": 43,
-    "font-size": 26,
+    "font-size": 25,
     "font-weight": 0,
     "font-family": 8,
-    "line-height": 10,
+    "line-height": 9,
     "letter-spacing": 15,
     "border-radius": 3,
-    "padding": 8,
-    "margin": 16,
+    "padding": 7,
+    "margin": 14,
     "gap": 6,
     "box-shadow": 3,
     "transition": 0,

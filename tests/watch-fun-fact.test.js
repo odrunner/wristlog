@@ -245,24 +245,33 @@ describe('toggleFunFact', () => {
     expect(fn).toContain('prefers-reduced-motion: reduce');
   });
 
-  it('uses the shared 2-line constant rather than a magic number', () => {
-    expect(html).toContain('const FUNFACT_CLAMP_PX = 39');
+  it('computes the 2-line constant from the design tokens rather than a magic number', () => {
+    expect(html).toContain("const FUNFACT_CLAMP_PX = dsPx('--fs-base') * parseFloat(dsToken('--lh-body')) * 2");
     expect(fn).toContain('FUNFACT_CLAMP_PX');
   });
 
   it('keeps the JS constant and the CSS max-height in lockstep', () => {
     // These two encode the same 2-line height. If they drift, collapse animates
     // to one height and the clamp snaps to another.
+    // Both are now the same calc over the same tokens; the row's own font uses them too.
     const css = html.slice(html.indexOf('.funfact-row.is-clamped .funfact-clamp'));
-    expect(css.slice(0, 200)).toContain('max-height: 39px');
-    expect(css.slice(0, 200)).toContain('-webkit-line-clamp: 2');
+    expect(css.slice(0, 220)).toContain('max-height: calc(var(--fs-base) * var(--lh-body) * 2)');
+    expect(css.slice(0, 220)).toContain('-webkit-line-clamp: 2');
+    const row = html.slice(html.indexOf('.funfact-row {'), html.indexOf('.funfact-clamp {'));
+    expect(row).toContain('font-size: var(--fs-base); line-height: var(--lh-body)');
   });
 
   it('pads the row back over the 44px tap-target floor', () => {
     // 2 lines is only 39px, under the 44px minimum, so the row carries 3px of
     // vertical padding. Without it the whole tap target is too small.
     const css = html.slice(html.indexOf('.funfact-row {'), html.indexOf('.funfact-clamp {'));
-    expect(css).toContain('padding: 3px 0');
+    expect(css).toContain('padding: var(--space-0-5) 0');
+    // …and the real token values still clear the floor: 2 lines + padding on both sides >= 44px
+    const ds = readFileSync(join(__dirname, '..', 'design-system.css'), 'utf8');
+    const val = n => ds.match(new RegExp(n + ':\\s*([\\d.]+)(rem|px)?'));
+    const px = n => { const m = val(n); return parseFloat(m[1]) * (m[2] === 'rem' ? 16 : 1); };
+    const lh = parseFloat(val('--lh-body')[1]);
+    expect(px('--fs-base') * lh * 2 + 2 * px('--space-0-5')).toBeGreaterThanOrEqual(44);
   });
 });
 
@@ -565,7 +574,7 @@ describe('fix: .funfact-bulb footnote color/spacing rule is scoped to the footno
   // `gap: .5rem`, so the extra margin-right widened its spacing — and this
   // feature was explicitly required not to alter that card's appearance.
   it('scopes the color/vertical-align/margin-right rule under .funfact-row .funfact-bulb', () => {
-    expect(html).toContain('.funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }');
+    expect(html).toContain('.funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }');
   });
 
   it('does not leave a bare, unscoped .funfact-bulb rule that would also style the amber card bulb', () => {
