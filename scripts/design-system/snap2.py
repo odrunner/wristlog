@@ -32,11 +32,17 @@ def table(t, prop):
 TERM = r'(?=\s*(?:!important)?\s*(?:[;"\'}<`]|$))'
 def rx(n): return re.compile(r'(?<![-\w])(' + n + r')(\s*:\s*)([^;"\'}<`$]+?)' + TERM)
 RULES = [(rx('font-size'), fs), (rx('letter-spacing'), table(LS, 'letter-spacing')), (rx('line-height'), table(LH, 'line-height'))]
-lines = open(ROOT + 'index.html', encoding='utf-8').read().split('\n'); ex = email_lines(lines)
-la = next(i for i, l in enumerate(lines) if '<!-- ════ AUTH / LANDING SCREEN' in l); lb = next(i for i, l in enumerate(lines) if '<!-- ════ UPDATE PRICES MODAL' in l)
+# snap2.py --file model-page.js [--apply]   same rules on a file with no email / landing / page <style>
+FILE = sys.argv[sys.argv.index('--file') + 1] if '--file' in sys.argv else 'index.html'
+lines = open(ROOT + FILE, encoding='utf-8').read().split('\n')
+ex = email_lines(lines) if FILE == 'index.html' else set()
+if FILE == 'index.html':
+    la = next(i for i, l in enumerate(lines) if '<!-- ════ AUTH / LANDING SCREEN' in l); lb = next(i for i, l in enumerate(lines) if '<!-- ════ UPDATE PRICES MODAL' in l)
+else: la = lb = -1
 # fences: coupled-number rules, the body root size, input text
-text = '\n'.join(lines); a = text.index('<style>'); b = text.index('</style>'); fence = set()
-for m in re.finditer(r'([^{}]+)\{([^{}]*)\}', text[a:b]):
+text = '\n'.join(lines); fence = set()
+a = text.find('<style>'); b = text.find('</style>')
+for m in (re.finditer(r'([^{}]+)\{([^{}]*)\}', text[a:b]) if a >= 0 else []):
     sel = m.group(1)
     if re.search(r'\.funfact-row\b|(?<![\w-])body\b|textarea|(?<![\w.#-])input|(?<![\w.#-])select|\.promo-', sel) or 'line-clamp' in m.group(2):
         fence.update(range(text.count('\n', 0, a + m.start(1)), text.count('\n', 0, a + m.end(2)) + 1))
@@ -54,4 +60,4 @@ for i, l in enumerate(lines):
 print('%d lines changed, %d values moved (fenced lines: %d)' % (ch, sum(moves.values()), len(fence)))
 print('MOVED'); [print('%4d  %s' % (c, k)) for k, c in sorted(moves.items())]
 print('LEFT'); [print('%4d  %s' % (c, k)) for k, c in sorted(left.items())]
-if APPLY: open(ROOT + 'index.html', 'w', encoding='utf-8').write('\n'.join(lines)); print('applied')
+if APPLY: open(ROOT + FILE, 'w', encoding='utf-8').write('\n'.join(lines)); print('applied')
