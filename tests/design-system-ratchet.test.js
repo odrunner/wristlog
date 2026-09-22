@@ -67,6 +67,14 @@ describe('countHardcoded', () => {
 
   // Phase 4 step 5: behaviour and data are not design decisions. `display:none` is state JS toggles;
   // `width:${pct}%` is a value from the data. Neither would change in a redesign, so neither counts.
+  it('does not count device insets, JS-quoted neutral values or runtime token reads', () => {
+    expect(isTokenised('env(safe-area-inset-top, 0)')).toBe(true);
+    expect(isTokenised('max(var(--space-3), env(safe-area-inset-top, 0))')).toBe(true);
+    expect(isTokenised('max(.8rem, env(safe-area-inset-top, 0))')).toBe(false);   // the .8rem is still a figure
+    const c = countHardcoded("<script>Object.assign(s, { margin: '0', transition: 'none' }); x = { padding: dsPx('--space-2') };</script>");
+    expect(c['margin'] + c['transition'] + c['padding']).toBe(0);
+  });
+
   it('treats a negated token as tokenised, but not a negated figure', () => {
     expect(isTokenised('calc(-1 * var(--space-7))')).toBe(true);
     expect(isTokenised('calc(-1 * var(--space-2)) var(--space-4)')).toBe(true);

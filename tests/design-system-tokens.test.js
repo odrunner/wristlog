@@ -99,6 +99,7 @@ export const SHARED_LIGHT = {
   // the categories that had no token at all, each at the value the app was
   // already typing by hand, so declaring them changed nothing on screen.
   '--fw-heavy': '800',
+  '--fw-light': '300',
   '--font-sans': "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   '--font-mono': "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
   '--dur-fast': '.15s',
@@ -157,6 +158,7 @@ export const SHARED_LIGHT = {
   '--status-expiring': '#ef7942', '--verified': '#4ea4f6',
   '--danger-fill': '#b91c1c',
   '--streak-frozen-bg': '#cfe8f5', '--streak-frozen-ink': '#0c4a6e', '--chip-warn-bg': '#fde68a', '--chip-warn-ink': '#7c2d12', '--media-placeholder': '#2a2a2a',
+  '--email-canvas': '#f4f4f4',
   '--tg-ink': '#4ade80',
   '--tg-bg': '#0a1a12',
   '--tg-rate-line': '#facc15', '--tg-card-bg': '#060f0a', '--tg-card-ink': '#e8efd9',
@@ -272,7 +274,7 @@ export const SHARED_OTHER = [
   '--nav-h',
   '--promo-gold', '--promo-gold-deep', '--promo-gold-bright', '--promo-gold-light',
   '--promo-parchment', '--promo-line', '--promo-sand', '--promo-band-body',
-  '--promo-ink', '--promo-ink-2', '--promo-quiet', '--promo-cta-fg', '--promo-mono',
+  '--promo-ink', '--promo-ink-2', '--promo-quiet', '--promo-cta-fg', '--promo-mono', '--promo-paper',
 ];
 const owned = t => t in SHARED_LIGHT || SHARED_OTHER.includes(t);
 

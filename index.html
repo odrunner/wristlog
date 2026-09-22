@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=1bdf538c">
+  <link rel="stylesheet" href="/design-system.css?v=c26245e5">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -862,7 +862,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .watch-card-add:hover { border-color: var(--gold); background: var(--gold-dim); }
     .watch-card-add-inner { display:flex; flex-direction:column; align-items:center; gap:var(--space-2); color:var(--muted); pointer-events:none; }
     .watch-card-add:hover .watch-card-add-inner { color: var(--gold-text); }
-    .watch-card-add-plus { font-size: 2rem; line-height: var(--lh-none); font-weight: 300; }
+    .watch-card-add-plus { font-size: 2rem; line-height: var(--lh-none); font-weight: var(--fw-light); }
     .watch-card-add-label { font-size: var(--fs-sm); letter-spacing: var(--ls-tight); }
     .watch-card-img-wrap {
       position: relative;
@@ -1501,7 +1501,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Crop adjuster overlay */
     .crop-adjuster { position:fixed; inset:0; z-index:var(--z-top); background:color-mix(in srgb, var(--black) 92%, transparent); display:flex; flex-direction:column; }
-    .crop-adjuster-header { display:flex; justify-content:space-between; align-items:center; padding:var(--space-3) var(--space-4); padding-top:max(.8rem, env(safe-area-inset-top, .8rem)); flex-shrink:0; }
+    .crop-adjuster-header { display:flex; justify-content:space-between; align-items:center; padding:var(--space-3) var(--space-4); padding-top:max(var(--space-3), env(safe-area-inset-top, .8rem)); flex-shrink:0; }
     .crop-adjuster-header button { background:none; border:none; color:var(--white); font-size:var(--fs-md); padding:var(--space-1-5) var(--space-3); cursor:pointer; border-radius:var(--radius-sm); }
     .crop-adjuster-header .crop-done { background:var(--gold); color:var(--black); font-weight:var(--fw-semibold); }
     .crop-viewport { flex:1; overflow:hidden; position:relative; touch-action:none; }
@@ -2113,11 +2113,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        hairlines to keep an edge. Inset shadow rather than a border: a border
        would change the bar's height and shift the layout between themes. */
     [data-theme="dark"] .promo-band--nudge {
-      box-shadow: inset 0 1px 0 rgba(200,163,58,.25), inset 0 -1px 0 rgba(200,163,58,.25);
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--promo-gold-light) 25%, transparent);
     }
     .promo-band--nudge .promo-band-eyebrow { font-size: var(--fs-2xs); color: var(--promo-gold-light); }
     .promo-band--nudge .promo-heading {
-      font-size: 16px; font-weight: var(--fw-bold); color: #FBFAF7; margin: 0;
+      font-size: 16px; font-weight: var(--fw-bold); color: var(--promo-paper); margin: 0;
     }
     .promo-band--nudge .promo-body { font-size: var(--fs-base); color: var(--promo-ink-2); }
     .promo-band--nudge .promo-cta {
@@ -3812,7 +3812,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Preview -->
         <div class="draft-form-row">
           <label id="broadcast-preview-label">Email Preview</label>
-          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" style="background:#f4f4f4;border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;">
+          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" style="background:var(--email-canvas);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;">
             <div class="empty empty-compact">Start typing to see preview</div>
           </div>
         </div>
@@ -8253,7 +8253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.05.51';
+const APP_VERSION = '22.05.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22990,7 +22990,7 @@ async function loadCampaigns() {
       <div id="camp-status-${c.id}" style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-1-5);" aria-live="polite"></div>
       <div class="draft-form-row" style="margin-top:var(--space-2-5);">
         <label>Email Preview</label>
-        <div id="camp-preview-${c.id}" style="background:#f4f4f4;border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;"></div>
+        <div id="camp-preview-${c.id}" style="background:var(--email-canvas);border-radius:var(--radius-btn);padding:var(--space-4);max-height:500px;overflow-y:auto;"></div>
       </div>
     </div>`;
   };

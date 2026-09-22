@@ -1,17 +1,17 @@
 {
   "index.html": {
-    "color": 48,
+    "color": 43,
     "font-size": 26,
-    "font-weight": 1,
+    "font-weight": 0,
     "font-family": 8,
     "line-height": 10,
     "letter-spacing": 15,
     "border-radius": 3,
-    "padding": 11,
-    "margin": 17,
+    "padding": 8,
+    "margin": 16,
     "gap": 6,
     "box-shadow": 3,
-    "transition": 2,
+    "transition": 0,
     "z-index": 0,
     "js-style-assign": 4,
     "inline-style-attr": 1342

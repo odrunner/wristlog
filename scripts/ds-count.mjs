@@ -77,6 +77,8 @@ function withoutDeclarations(src) {
 // `0 var(--space-4)` are tokenised; `.4rem var(--space-2)` is not — a half-swapped
 // shorthand still counts, so the budget cannot be gamed by partial edits.
 export function isTokenised(v) {
+  // env(safe-area-inset-*, 0) is the device's own inset, not a design value
+  v = v.replace(/env\([^()]*\)/g, 'var(--env)');
   if (!v.includes('var(')) return false;
   // calc(-1 * var(--space-2)) is a token pointing the other way (a margin that cancels a padding), not a figure
   v = v.replace(/calc\(\s*-1\s*\*\s*(var\([^()]*\))\s*\)/g, '$1');
@@ -92,8 +94,10 @@ export function countHardcoded(src) {
     let n = 0;
     for (const m of text.matchAll(rx)) {
       const v = m[1].trim().replace(/\s*!important$/, '').toLowerCase();
-      if (v.includes('${') || NEUTRAL.has(v)) continue;
+      // empty: a JS object literal quotes its values (margin: '0', transition: 'none') and the pattern stops at the quote
+      if (!v || v.includes('${') || NEUTRAL.has(v)) continue;
       if (isTokenised(v)) continue;
+      if (/^ds(px|token|color)\(/.test(v)) continue;                 // read from design-system.css at runtime
       n++;
     }
     out[name] = n;
