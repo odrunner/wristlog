@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=d2f5a04f">
+  <link rel="stylesheet" href="/design-system.css?v=82a26031">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -6472,12 +6472,12 @@ let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
 const BADGE_COLORS = {
-  onboarding:  { bezel: '#7A8B5C', stroke: '#4F5C3A', chipBg: '#E8EFD9', chipText: '#4F5C3A' },
-  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: '#F0E4BD', chipText: 'var(--badge-close)' },
-  connoisseur: { bezel: '#6B3D52', stroke: '#3F2230', chipBg: '#ECDAE3', chipText: '#3F2230' },
-  timegrapher: { bezel: '#4A6B7D', stroke: '#2C434F', chipBg: '#DCE6EC', chipText: '#2C434F' },
-  habit:       { bezel: '#B5663F', stroke: '#6B3A1F', chipBg: '#F0DCCE', chipText: '#6B3A1F' },
-  hidden:      { bezel: '#7A7A6A', stroke: '#4A4A3E', chipBg: '#E8E6DD', chipText: '#4A4A3E' },
+  onboarding:  { bezel: 'var(--badge-onboarding)', stroke: 'var(--badge-onboarding-ink)', chipBg: 'var(--badge-onboarding-bg)', chipText: 'var(--badge-onboarding-ink)' },
+  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: 'var(--badge-collection-bg)', chipText: 'var(--badge-close)' },
+  connoisseur: { bezel: 'var(--badge-connoisseur)', stroke: 'var(--badge-connoisseur-ink)', chipBg: 'var(--badge-connoisseur-bg)', chipText: 'var(--badge-connoisseur-ink)' },
+  timegrapher: { bezel: 'var(--badge-timegrapher)', stroke: 'var(--badge-timegrapher-ink)', chipBg: 'var(--badge-timegrapher-bg)', chipText: 'var(--badge-timegrapher-ink)' },
+  habit:       { bezel: 'var(--badge-habit)', stroke: 'var(--badge-habit-ink)', chipBg: 'var(--badge-habit-bg)', chipText: 'var(--badge-habit-ink)' },
+  hidden:      { bezel: 'var(--badge-hidden)', stroke: 'var(--badge-hidden-ink)', chipBg: 'var(--badge-hidden-bg)', chipText: 'var(--badge-hidden-ink)' },
 };
 const BADGE_REGISTRY = [
   // Onboarding (001-005)
@@ -8233,7 +8233,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.24';
+const APP_VERSION = '21.21.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

@@ -52,7 +52,7 @@ describe('countHardcoded', () => {
   });
 
   it('ignores HTML entities, fragment links and 4-letter ids that look like hex', () => {
-    const c = countHardcoded(`<a href="#feed">&#128512; &#169;</a><a href="/x#abc">`);
+    const c = countHardcoded(`<a href="#feed">&#128512; &#169;</a><a href="/x#abc"><style>#af2-sheet, #abc-list { }</style>`);
     expect(c.color).toBe(0);
   });
 

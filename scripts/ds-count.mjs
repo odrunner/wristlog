@@ -59,7 +59,8 @@ const PROPS = {
 
 // 3/6/8-digit hex not preceded by '&' (HTML entity) or a word char (URL
 // fragment, id). 4-digit is skipped: in this codebase it is "#feed", not #rgba.
-const HEX = /(?<![&\w])#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
+// …and not followed by '-' or a word char: #af2-sheet is an element id, not a colour.
+const HEX = /(?<![&\w])#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![\w-])/g;
 const RGB = /rgba?\([^)]*\)/g;
 
 // el.style.<design prop> = <literal>. Behavioural props (display, transform,
