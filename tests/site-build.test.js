@@ -14,8 +14,11 @@ let out;
 beforeAll(() => { out = buildSite(mkdtempSync(join(tmpdir(), 'wrotate-site-'))); });
 afterAll(() => rmSync(out, { recursive: true, force: true }));
 
-const published = (p) => {
-  const clean = p.replace(/[?#].*$/, '').replace(/^\.?\//, '');
+// `from` is the page's own URL: a link without a leading slash resolves against
+// the page's folder, exactly as the browser does (profile/'s href="icon.svg"
+// meant /profile/icon.svg, a 404 from March to September 2026).
+const published = (p, from = '/') => {
+  const clean = decodeURIComponent(new URL(p, `https://wrotate.com${from}`).pathname).replace(/^\//, '');
   const target = join(out, clean);
   if (!existsSync(target)) return false;
   return statSync(target).isDirectory() ? existsSync(join(target, 'index.html')) : true;
@@ -31,7 +34,7 @@ describe('site build', () => {
       for (const [, url] of html.matchAll(/\s(?:src|href)="([^"]+)"/g)) {
         if (/^(https?:|mailto:|tel:|data:|#|javascript:)/.test(url) || url.includes('${')) continue;
         if (url === 'dev-config.js') continue; // local-only credentials, 404 in production by design
-        if (!published(url)) missing.push(`${page} → ${url}`);
+        if (!published(url, '/' + page.replace(/index\.html$/, ''))) missing.push(`${page} → ${url}`);
       }
     }
     expect(missing).toEqual([]);
