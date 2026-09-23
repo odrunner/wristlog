@@ -1892,7 +1892,7 @@ git commit -m "admin: wishlist share link, sharer, open and revoke counts"
 **Files:**
 - Modify: `index.html` — Help page steps (~line 4037), What's New section (~line 2799)
 - Modify: `sw.js` (final cache bump)
-- Modify: `WROTATE-FEATURES.md`
+- Modify: `docs/WROTATE-FEATURES.md`
 
 **Interfaces:**
 - Consumes: the shipped feature.
@@ -1924,7 +1924,7 @@ sibling step:
 
 - [ ] **Step 3: Update the feature catalogue**
 
-Add a wishlist-sharing entry to `WROTATE-FEATURES.md` alongside the other
+Add a wishlist-sharing entry to `docs/WROTATE-FEATURES.md` alongside the other
 wishlist features, describing the selection flow, the four published fields, and
 revocation.
 

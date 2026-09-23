@@ -1,6 +1,6 @@
 # WRotate usage review — 2026-09-10
 
-Fresh production numbers (internal accounts excluded via `internal_accounts`, headline query run twice for determinism), compared against the 15 Aug review (`docs/usage-review-2026-08-15.md`) and the 28 Jun snapshot (`WROTATE-FEATURES.md` §1A–1D). Then a scorecard of what shipped since 15 Aug, a per-feature most→least used table, competitive research (two web sweeps, ~140 fetches), and ranked proposals — each checked against what the app already has.
+Fresh production numbers (internal accounts excluded via `internal_accounts`, headline query run twice for determinism), compared against the 15 Aug review (`docs/usage-review-2026-08-15.md`) and the 28 Jun snapshot (`docs/WROTATE-FEATURES.md` §1A–1D). Then a scorecard of what shipped since 15 Aug, a per-feature most→least used table, competitive research (two web sweeps, ~140 fetches), and ranked proposals — each checked against what the app already has.
 
 ## 1. Headline movement
 

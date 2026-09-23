@@ -1,5 +1,7 @@
 # Backups and restore
 
+> **ARCHIVED 2026-09-23.** This job caused the 2026-08-13 production outage and was abandoned the same day. The scripts it describes (`scripts/backup-supabase.py`, `scripts/backup-media.py`) were deleted from the tree; recover them from git history (`git show 8a12fcf:scripts/backup-supabase.py`) only if the root cause in CLAUDE.md is addressed first.
+
 Set up 2026-08-13, after declining Supabase's $100/mo Point-in-Time Recovery offer.
 
 ## What we rely on, and what these backups add

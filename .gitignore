@@ -44,3 +44,12 @@ docs/research/2026-06-30-social-platform-feature-catalog.md
 
 # Claude Code local settings (may contain approved command strings)
 .claude/settings.local.json
+
+# Generated hero-image previews (wrotate_hero_images.py writes them)
+scripts/hero-images/preview/
+
+# Before/after screenshots from design-system passes — local reference only
+docs/design/design-system/
+
+# Pages build output (scripts/build-site.sh)
+_site/

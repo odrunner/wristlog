@@ -12,7 +12,7 @@ interrupt, all compete for the same moment, and are each hardcoded one-offs. The
 only *targeted* channel is email, which reaches people who are not currently in
 the app.
 
-Meanwhile `WROTATE-FEATURES.md` §1B lists wishlist, clubs and the timegrapher as
+Meanwhile `docs/WROTATE-FEATURES.md` §1B lists wishlist, clubs and the timegrapher as
 underutilized, and the feed's empty state (users following nobody) is a dead end.
 
 This adds a **merchandising slot**: a card injected into the home feed,

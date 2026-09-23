@@ -1,6 +1,6 @@
 # WRotate usage review — 2026-08-15
 
-Fresh production numbers (internal accounts excluded, queried twice for determinism), compared against the 2026-06-28 snapshot in `WROTATE-FEATURES.md` §1A–1D. Then ranked proposals.
+Fresh production numbers (internal accounts excluded, queried twice for determinism), compared against the 2026-06-28 snapshot in `docs/WROTATE-FEATURES.md` §1A–1D. Then ranked proposals.
 
 ## 1. Headline movement since 28 Jun (7 weeks)
 
@@ -94,5 +94,5 @@ P1 → P2 → P3 (all JS, ship this week and next; each has a metric) → P4/P5 
 
 ## Caveats
 - iOS share is proxied by `device_tokens` (only users who granted push) — undercounts iOS.
-- PostHog click data was not re-pulled (needs a `phx_` key); §1D of `WROTATE-FEATURES.md` is still the click-level source.
+- PostHog click data was not re-pulled (needs a `phx_` key); §1D of `docs/WROTATE-FEATURES.md` is still the click-level source.
 - Cohort return-rates for July are partly right-censored.
