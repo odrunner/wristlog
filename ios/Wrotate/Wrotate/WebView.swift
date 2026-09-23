@@ -142,7 +142,7 @@ struct WebView: UIViewRepresentable {
             // FALLBACK only, used if the bundle value is missing or not "N.N" shaped —
             // still bump it with MARKETING_VERSION so the fallback is never behind.
             // 2.1+ gates the Pro V2 beta toggle; 2.3+ BE display; 2.6+ push routing.
-            let fallbackAppVersion = "2.7"
+            let fallbackAppVersion = "2.8"
             let appVersion = Self.injectedAppVersion(
                 bundle: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                 fallback: fallbackAppVersion)
