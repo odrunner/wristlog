@@ -6199,7 +6199,7 @@ let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
 const BADGE_COLORS = {
   onboarding:  { bezel: 'var(--badge-onboarding)', stroke: 'var(--badge-onboarding-ink)', chipBg: 'var(--badge-onboarding-bg)', chipText: 'var(--badge-onboarding-ink)' },
-  collection:  { bezel: 'var(--gold-lt)', stroke: 'var(--gold-deep)', chipBg: 'var(--sand)', chipText: 'var(--gold-deep)' },
+  collection:  { bezel: 'var(--gold-lt)', stroke: 'var(--gold-deep)', chipBg: 'var(--sand)', chipText: 'var(--badge-ink)' },   // chip is fixed sand in both themes, so its ink is fixed too
   connoisseur: { bezel: 'var(--badge-connoisseur)', stroke: 'var(--badge-connoisseur-ink)', chipBg: 'var(--badge-connoisseur-bg)', chipText: 'var(--badge-connoisseur-ink)' },
   timegrapher: { bezel: 'var(--badge-timegrapher)', stroke: 'var(--badge-timegrapher-ink)', chipBg: 'var(--badge-timegrapher-bg)', chipText: 'var(--badge-timegrapher-ink)' },
   habit:       { bezel: 'var(--badge-habit)', stroke: 'var(--badge-habit-ink)', chipBg: 'var(--badge-habit-bg)', chipText: 'var(--badge-habit-ink)' },
@@ -7942,7 +7942,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.05.21';
+const APP_VERSION = '23.05.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
