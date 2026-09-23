@@ -108,13 +108,13 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--danger` | `#e05555` | same | 50 |  |
-| `--success` | `#4caf7d` | same | 32 |  |
+| `--success` | `#4caf7d` | same | 33 |  |
 | `--danger-text` | `#b03636` | `var(--danger)` | 31 | Danger/success used as TEXT need darker values than the surface/border uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75 and --success #4caf7d only 2.37–2.71 on the light… |
 | `--success-text` | `#27714b` | `var(--success)` | 17 |  |
 | `--status-good` | `#22c55e` | same | 14 |  |
 | `--status-warn` | `#eab308` | same | 29 |  |
 | `--status-bad` | `#ef4444` | same | 15 |  |
-| `--status-expiring` | `#ef7942` | same | 2 | warranty running out; not worn for a while |
+| `--status-expiring` | `#ef7942` | same | 3 | warranty running out; not worn for a while |
 | `--danger-fill` | `#b91c1c` | same | 1 | a solid destructive button (white text), the same in both themes |
 | `--streak-frozen-bg` | `#cfe8f5` | same | 1 | a streak day covered by a freeze (ice) |
 | `--streak-frozen-ink` | `#0c4a6e` | same | 1 | a streak day covered by a freeze (ice) |
@@ -127,8 +127,8 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--scrim` | `rgba(0,0,0,.55)` | same | 7 | Dimmed backdrop behind sheets, viewers and popovers. |
-| `--white` | `#fff` | same | 53 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
-| `--black` | `#000` | same | 57 |  |
+| `--white` | `#fff` | same | 54 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
+| `--black` | `#000` | same | 56 |  |
 | `--paper` | `#f5f5f8` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
 | `--cream` | `#FEFCF6` | same | 4 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
 | `--sand` | `#F0E2B4` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
@@ -141,21 +141,19 @@ These are not style preferences; they are the reasons the current values were ch
 | `--tag-strap` | `var(--watch-slate)` | same | 1 | strap tag (slate) |
 | `--tag-weather` | `var(--watch-sky)` | same | 2 | weather recommendation tag (sky) |
 | `--rating` | `#f59e0b` | same | 2 | feedback "rating" badge (amber) |
-| `--medal-silver` | `#b0b0b0` | same | 0 | rank 2 / 3 (rank 1 is --gold) |
-| `--medal-bronze` | `#cd7f32` | same | 0 | rank 2 / 3 (rank 1 is --gold) |
 | `--vis-followers-lt` | `#f2dc9a` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
 | `--vis-friends-lt` | `#cbb2ff` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
 | `--vis-private-lt` | `#ff9f9f` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
-| `--vis-friends` | `#a78bfa` | same | 14 | visibility-state semantic colors (one hue per state, all surfaces) |
+| `--vis-friends` | `#a78bfa` | same | 15 | visibility-state semantic colors (one hue per state, all surfaces) |
 
 ### Watch colours (saved with a watch)
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--watch-gold` | `#c9a84c` | same | 15 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
-| `--watch-green` | `#4caf7d` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
+| `--watch-green` | `var(--success)` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
 | `--watch-indigo` | `#818cf8` | same | 2 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
-| `--watch-orange` | `#ef7942` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
+| `--watch-orange` | `var(--status-expiring)` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
 | `--watch-sky` | `#38bdf8` | same | 1 |  |
 | `--watch-fuchsia` | `#e879f9` | same | 0 |  |
 | `--watch-rose` | `#f43f5e` | same | 0 |  |
@@ -163,7 +161,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--watch-amber` | `#fbbf24` | same | 0 |  |
 | `--watch-emerald` | `#34d399` | same | 0 |  |
 | `--watch-tangerine` | `#fb923c` | same | 0 |  |
-| `--watch-violet` | `#a78bfa` | same | 0 |  |
+| `--watch-violet` | `var(--vis-friends)` | same | 0 |  |
 | `--watch-default` | `var(--watch-gold)` | same | 2 |  |
 
 ### Charts
@@ -227,11 +225,8 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--google-bg` | `var(--white)` | same | 2 | Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. |
 | `--google-ink` | `#3c4043` | same | 2 | Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. |
 | `--google-line` | `#dadce0` | same | 2 | Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. |
-| `--apple-bg` | `var(--black)` | same | 1 |  |
-| `--apple-ink` | `var(--white)` | same | 1 |  |
 
 
 ## Scales
@@ -268,7 +263,6 @@ These are not style preferences; they are the reasons the current values were ch
 | `--fw-semibold` | `600` | 82 |  |
 | `--fw-bold` | `700` | 86 |  |
 | `--fw-heavy` | `800` | 27 |  |
-| `--fw-light` | `300` | 0 |  |
 
 ### Line heights
 
@@ -286,8 +280,8 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--ls-snug` | `.02em` | 7 |  |
-| `--ls-wide` | `.16em` | 1 |  |
-| `--ls-display` | `-.02em` | 3 |  |
+| `--ls-wide` | `.16em` | 3 |  |
+| `--ls-display` | `-.02em` | 5 |  |
 | `--ls-tight` | `.04em` | 36 |  |
 | `--ls-eyebrow` | `.08em` | 18 |  |
 
@@ -296,7 +290,7 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--font-sans` | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` | 6 |  |
-| `--font-mono` | `ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace` | 5 |  |
+| `--font-mono` | `ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace` | 10 |  |
 
 ### Spacing (rem, scales with text)
 
@@ -374,15 +368,6 @@ These are not style preferences; they are the reasons the current values were ch
 | `--size-290` | `1160px` | 2 |  |
 | `--size-max` | `9999px` | 3 |  |
 
-### Icon sizes
-
-| Token | Value | Uses | What it is for |
-|---|---|---|---|
-| `--icon-sm` | `14px` | 0 |  |
-| `--icon-md` | `16px` | 0 |  |
-| `--icon-lg` | `20px` | 0 |  |
-| `--icon-xl` | `24px` | 0 |  |
-
 ### Corner radius
 
 | Token | Value | Uses | What it is for |
@@ -407,7 +392,6 @@ These are not style preferences; they are the reasons the current values were ch
 | `--glow-success` | `0 0 6px var(--success)` | 1 | the server-status dot |
 | `--shadow-ring-tag` | `0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent)` | 1 | ranking game: hover |
 | `--shadow-ring-win` | `0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent)` | 1 | ranking game: winner |
-| `--shadow-mask` | `0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent)` | 0 | dims all but the crop box |
 | `--shadow-btn-hover` | `0 1px 6px color-mix(in srgb, var(--black) 20%, transparent)` | 2 |  |
 | `--shadow-lift` | `0 4px 16px color-mix(in srgb, var(--black) 10%, transparent)` | 1 |  |
 | `--shadow-drag` | `0 8px 32px var(--scrim)` | 2 | a card being dragged |
@@ -454,8 +438,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--z-dropdown` | `10` | 1 | stacking inside one component: a badge over a photo, a menu over its card |
 | `--z-card-menu` | `20` | 1 | stacking inside one component: a badge over a photo, a menu over its card |
 | `--z-header` | `100` | 3 |  |
-| `--z-float` | `200` | 3 |  |
-| `--z-modal` | `200` | 1 |  |
+| `--z-modal` | `200` | 4 |  |
 | `--z-modal-top` | `210` | 1 |  |
 | `--z-nav` | `300` | 1 |  |
 | `--z-modal-high` | `300` | 2 |  |
@@ -607,7 +590,6 @@ A self-contained ticket palette, unaffected by the app theme except where noted.
 | `--promo-band-body` | `#EEE3C6` |  |
 | `--promo-cta-fg` | `#fff` |  |
 | `--promo-edge` | `inset 0 1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent)` |  |
-| `--promo-mono` | `var(--font-mono)` |  |
 
 ## If you want to propose a new look
 

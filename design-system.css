@@ -78,8 +78,7 @@
   --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fs-icon: 1.75rem; --fs-aside: .85em; --fs-aside-sm: .75em;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
-  --google-bg: var(--white); --google-ink: #3c4043; --google-line: #dadce0;
-  --apple-bg: var(--black); --apple-ink: var(--white);
+  --google-ink: #3c4043; --google-line: #dadce0;
   /* Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so
      boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. */
   --size-px: 1px; --size-0-5: 2px; --size-1: 4px; --size-1-5: 6px; --size-2: 8px; --size-2-5: 10px; --size-3: 12px; --size-3-5: 14px; --size-4: 16px; --size-5: 20px;
@@ -100,10 +99,9 @@
   --opacity-hover: .85;  /* pressed / hovered */
   /* --lh-none is for icons, numerals and single-line badges, never running text. */
   --lh-none: 1; --lh-tight: 1.2; --lh-compact: 1.3; --lh-snug: 1.4; --lh-body: 1.55; --lh-prose: 1.7;
-  --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
   --ls-snug: .02em; --ls-wide: .16em; --ls-display: -.02em;
   --ls-tight: .04em; --ls-eyebrow: .08em;
-  --fw-heavy: 800; --fw-light: 300;
+  --fw-heavy: 800;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -126,7 +124,6 @@
   --glow-success: 0 0 6px var(--success);                                       /* the server-status dot */
   --shadow-ring-tag: 0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent);  /* ranking game: hover */
   --shadow-ring-win: 0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent);    /* ranking game: winner */
-  --shadow-mask: 0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent);      /* dims all but the crop box */
   --shadow-btn-hover: 0 1px 6px color-mix(in srgb, var(--black) 20%, transparent);
   --shadow-lift: 0 4px 16px color-mix(in srgb, var(--black) 10%, transparent);
   --shadow-drag: 0 8px 32px var(--scrim);                                              /* a card being dragged */
@@ -140,7 +137,6 @@
   /* stacking inside one component: a badge over a photo, a menu over its card */
   --z-raised: 1; --z-raised-2: 2; --z-raised-3: 3; --z-dropdown: 10; --z-card-menu: 20;
   --z-header: 100;
-  --z-float: 200;
   --z-modal: 200;
   --z-modal-top: 210;
   --z-nav: 300;
@@ -165,7 +161,6 @@
   --tag-strap: var(--watch-slate);        /* strap tag (slate) */
   --tag-weather: var(--watch-sky);      /* weather recommendation tag (sky) */
   --rating: #f59e0b;           /* feedback "rating" badge (amber) */
-  --medal-silver: #b0b0b0; --medal-bronze: #cd7f32;      /* rank 2 / 3 (rank 1 is --gold) */
   /* visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger */
   --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
@@ -210,9 +205,9 @@
   --badge-locked: #C9C2A8; --badge-locked-ink: #A8A28C;   /* medallion face; a locked badge */
   /* watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as
      plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. */
-  --watch-gold: #c9a84c; --watch-green: #4caf7d; --watch-indigo: #818cf8; --watch-orange: #ef7942;
+  --watch-gold: #c9a84c; --watch-green: var(--success); --watch-indigo: #818cf8; --watch-orange: var(--status-expiring);
   --watch-sky: #38bdf8; --watch-fuchsia: #e879f9; --watch-rose: #f43f5e; --watch-slate: #94a3b8;
-  --watch-amber: #fbbf24; --watch-emerald: #34d399; --watch-tangerine: #fb923c; --watch-violet: #a78bfa;
+  --watch-amber: #fbbf24; --watch-emerald: #34d399; --watch-tangerine: #fb923c; --watch-violet: var(--vis-friends);
   --watch-default: var(--watch-gold);
   --uc-unspecified: #7a7a95; --uc-other: #888;   /* use-case chart: no use case / an unknown one */
   /* charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. */
@@ -272,7 +267,7 @@
    Scoped to the promo variants rather than :root because the band variant
    carries its own dark ground in both themes (see the dark block below).
    The mock specifies IBM Plex Mono for the brand eyebrow; this app loads no web
-   fonts, so --promo-mono is the platform mono face. */
+   fonts, so the brand eyebrow uses --font-mono, the platform mono face. */
 .promo-tag, .promo-band, .promo-recap {
   --promo-gold-deep: #6E5514;
   --promo-parchment: #F3EFE1;
@@ -291,18 +286,15 @@
   --promo-fs-fallback: 2rem;
   --promo-fs-streak: 52px;
   --promo-fs-mark: 96px;
-  --promo-ls-eyebrow: .16em;
   --promo-ls-label: .18em;
   --promo-ls-year: .22em;
   --promo-ls-tight: -.01em;
   --promo-ls-tight-2: -.015em;
-  --promo-ls-tight-3: -.02em;
   --promo-ls-tight-4: -.03em;
   --promo-ls-mark: -.05em;
   --promo-lh-eyebrow: 18px;
   --promo-lh-eyebrow-sm: 12px;
   --promo-edge: inset 0 1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent);
-  --promo-mono: var(--font-mono);
 }
 /* The tag and the recap deck are painted on the app surface, so a fixed white
    card + parchment strip would be a flashbang in dark mode. The band is left
@@ -555,7 +547,7 @@
 .u-bg-gold.u-bg-gold.u-bg-gold.u-bg-gold.u-bg-gold { background: var(--gold); }
 .u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim { background: var(--gold-dim); }
 .u-bg-gold-text.u-bg-gold-text.u-bg-gold-text.u-bg-gold-text.u-bg-gold-text { background: var(--gold-text); }
-.u-bg-google-bg.u-bg-google-bg.u-bg-google-bg.u-bg-google-bg.u-bg-google-bg { background: var(--google-bg); }
+.u-bg-white.u-bg-white.u-bg-white.u-bg-white.u-bg-white { background: var(--white); }
 .u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct { background: linear-gradient(135deg,var(--demo-gold) 0%,var(--demo-gold-mid) 50%,var(--demo-gold-deep) 100%); }
 .u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep { background: linear-gradient(135deg,var(--demo-gold),var(--demo-gold-deep)); }
 .u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct { background: linear-gradient(to right, color-mix(in srgb, var(--black) 90%, transparent) 0%, color-mix(in srgb, var(--black) 35%, transparent) 55%, color-mix(in srgb, var(--black) 10%, transparent) 100%); }
