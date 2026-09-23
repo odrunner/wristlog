@@ -10,6 +10,10 @@ where the inline style used to.
 import re, sys, os, collections
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..') + '/'
 APPLY = '--apply' in sys.argv; TEMPLATES = '--templates' in sys.argv
+# How often the class name is repeated in its own selector. The strongest class-based selector in this codebase
+# weighs 4 (.a input:checked + .b::before), so 5 always wins — while still losing to !important, as an inline
+# style did. tests/design-system-tokens.test.js re-measures this and fails if a heavier selector appears.
+REPEAT = 5
 BEH = {'display', 'visibility', 'position', 'top', 'right', 'bottom', 'left', 'inset', 'overflow', 'overflow-x', 'overflow-y', 'pointer-events', 'transform', 'clip', 'z-index'}
 SKIP_IDS = ('ptr-indicator', 'crop-img', 'af2-crop-img')                       # JS reads these back with parseFloat(el.style.x)
 EMAIL = [('const FUNFACT_CARD_HTML', 'function renderDevFlags'), ('function imgSnippet', 'function updateBroadcastPreview'),
@@ -212,7 +216,14 @@ def convert(text, fname):
             new_tag = re.sub(r'\s*' + re.escape(sm.group(0)), (' ' + new_style) if new_style else '', new_tag, count=1)
             return new_tag
         out.append(re.sub(r'<[a-zA-Z][^<>]*style=(\\?["\'])((?:(?!\1).)*)\1[^<>]*>', fix, line))
-    return '\n'.join(out)
+    text2 = '\n'.join(out)
+    # second pass: a tag written across several lines never matched above
+    def fix_multiline(m):
+        global i
+        if '\n' not in m.group(0): return m.group(0)
+        i = text2.count('\n', 0, m.start())                                   # for the ancestor lookup below
+        return fix(m)
+    return re.sub(r'<[a-zA-Z][^<>]*style=(\\?["\'])((?:(?!\1).)*)\1[^<>]*>', fix_multiline, text2)
 changed = {}
 for f in FILES:
     src = open(ROOT + f, encoding='utf-8').read()
@@ -232,7 +243,7 @@ if APPLY:
              "   <style> block is parsed after this file), while still yielding to an !important rule, as an inline style did.",
              "   Roles first: change one to restyle every place that uses it. */"]
     for name in sorted(rules, key=lambda n: (0 if n in ROLES.values() else 1, n)):
-        sel = '.{0}.{0}.{0}'.format(name)
+        sel = ('.{0}' * REPEAT).format(name)
         block.append('%s { %s }' % (sel, '; '.join(rules[name]) + ';'))
     css = css.split(MARK)[0].rstrip() + '\n\n' + '\n'.join(block) + '\n'
     open(ROOT + 'design-system.css', 'w', encoding='utf-8').write(css)

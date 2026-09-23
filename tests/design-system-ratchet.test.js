@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { countAll, countHardcoded, isTokenised, isDesignStyle, readBudget, PAGES } from '../scripts/ds-count.mjs';
+import { countAll, countHardcoded, isTokenised, isDesignStyle, readBudget, withoutEmailRanges, PAGES } from '../scripts/ds-count.mjs';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // The ratchet. Every page that links design-system.css has a budget of
 // hardcoded design values per category (tests/design-system-budget.json). New
@@ -24,6 +28,45 @@ describe('design-system ratchet', () => {
     for (const page of PAGES) {
       expect(Object.keys(budget[page] || {}).sort()).toEqual(Object.keys(now[page]).sort());
     }
+  });
+});
+
+// Every style="" left in the app builds its value or its attributes at runtime (a watch's colour, a progress
+// width, a conditional attribute). A style that could have been a class must be one: scripts/design-system/
+// inline_to_classes.py converts them, and design-system.css carries the roles and single-purpose classes.
+// The generated classes replace inline styles, so they have to win wherever an inline style did. Their
+// selector repeats the class name; that repeat must stay above the heaviest class-based selector anyone writes.
+describe('generated classes outweigh hand-written selectors', () => {
+  const MARK = '/* ── Generated: roles and single-purpose classes ── */';
+  const css = readFileSync(join(root, 'design-system.css'), 'utf8');
+  const [before, generated] = css.split(MARK);
+  const weigh = (sel) => (sel.match(/\.[\w-]+/g) || []).length + (sel.match(/\[[^\]]*\]/g) || []).length + (sel.match(/:(?!:)(?!not\b)[\w-]+/g) || []).length;
+  it('repeats the class name more than the heaviest selector in the codebase', () => {
+    const hand = [before, ...['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'open.html']
+      .map(f => readFileSync(join(root, f), 'utf8').match(/<style[^>]*>([\s\S]*?)<\/style>/g)?.join('\n') || '')].join('\n')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    let heaviest = 0;
+    for (const [, sel] of hand.matchAll(/([^{}]+)\{/g))
+      for (const one of sel.split(','))
+        if (!one.trim().startsWith('@') && !one.includes('#')) heaviest = Math.max(heaviest, weigh(one));
+    const repeats = Math.min(...[...generated.matchAll(/^(\.[\w-]+)+(?=\s*\{)/gm)].map(m => (m[0].match(/\./g) || []).length));
+    expect(repeats, `generated classes repeat ${repeats}x but a hand-written selector weighs ${heaviest}`).toBeGreaterThan(heaviest);
+  });
+});
+
+describe('no static inline styles', () => {
+  it.each(['index.html', 'model-page.js'])('%s styles only what it computes at runtime', (f) => {
+    const src = withoutEmailRanges(readFileSync(join(root, f), 'utf8'));
+    const BEHAVIOUR = new Set(['display', 'visibility', 'position', 'top', 'right', 'bottom', 'left', 'inset', 'overflow', 'overflow-x', 'overflow-y', 'pointer-events', 'transform', 'clip', 'z-index']);
+    const stuck = [];
+    for (const m of src.matchAll(/<[a-zA-Z][^<>]*style=(\\?["'])((?:(?!\1).)*)\1[^<>]*>/g)) {
+      const [tag, , body] = m;
+      if (/\$\{/.test(tag) || /['"`]/.test(body)) continue;                  // built at runtime
+      const design = body.split(';').map(d => d.trim()).filter(d => d.includes(':'))
+        .filter(d => !BEHAVIOUR.has(d.split(':')[0].trim().toLowerCase()));
+      if (design.length) stuck.push(tag.slice(0, 120));
+    }
+    expect(stuck, 'give these a class (scripts/design-system/inline_to_classes.py)').toEqual([]);
   });
 });
 
