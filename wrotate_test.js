@@ -1899,7 +1899,7 @@ export function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, la
   const x = (ms) => t1 === t0 ? width / 2 : pad + (ms - t0) / (t1 - t0) * (width - 2 * pad);
   const y = (v) => pad + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (height - 2 * pad);
   const band = (a, b, cls) => `<rect class="${cls}" x="0" y="${y(b).toFixed(1)}" width="${width}" height="${(y(a) - y(b)).toFixed(1)}"/>`;
-  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" class="u-maxw-100pct" style="display:block;">`;
+  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" class="u-maxw-100pct u-d-block">`;
   s += band(-15, 15, 'acc-band-15') + band(-5, 5, 'acc-band-5');
   s += `<line class="acc-zero" x1="0" x2="${width}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>`;
   if (labels) [15, 5, 0, -5, -15].filter(v => v > lo && v < hi).forEach(v => { s += `<text class="acc-label" x="${width - 2}" y="${(y(v) - 2).toFixed(1)}" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`; });
@@ -3148,7 +3148,7 @@ export function firstLoadCardHtml(days) {
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
         </table></div>
-        <div class="u-fs-sm u-c-muted u-mt-2">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+        <div class="text-meta u-mt-2">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
 }
 
@@ -3230,17 +3230,17 @@ export function experimentSpeedHtml(key, arms) {
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const row = (label, a) => {
-    if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div class="u-col-span-3 u-c-muted">no repeat loads yet</div></div>`;
-    return `<div style="display:contents;"><div>${label} <span class="text-muted">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
+    if (!a || !num(a.loads)) return `<div class="u-d-contents"><div>${label}</div><div class="u-col-span-3 u-c-muted">no repeat loads yet</div></div>`;
+    return `<div class="u-d-contents"><div>${label} <span class="text-muted">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
-  const head = t => `<div class="u-fs-2xs u-tt-uppercase u-ls-tight u-c-muted">${t}</div>`;
+  const head = t => `<div class="text-caption-xs u-tt-uppercase u-ls-tight">${t}</div>`;
   return `<div class="adm-exp-speed u-mt-0-5 u-mr-0 u-mb-2-5 u-ml-0 u-pt-2 u-pr-2-5 u-pb-2 u-pl-2-5 u-bd-0p5px-solid-border u-r-btn u-fs-sm u-fvn-tabular-nums">
-          <div class="u-cols-minmax-0-1p6fr-repeat-3-minmax-0-1fr u-gap-1-2-5 u-items-baseline" style="display:grid;">
+          <div class="u-cols-minmax-0-1p6fr-repeat-3-minmax-0-1fr u-gap-1-2-5 u-items-baseline u-d-grid">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}
             ${row('Treatment', arms.treatment)}
           </div>
-          <div class="u-c-muted u-fs-xs u-mt-1-5">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+          <div class="text-caption u-mt-1-5">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
 // Admin → Experiments: live sample-size progress for a running knob trial. The

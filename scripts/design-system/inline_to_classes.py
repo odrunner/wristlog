@@ -29,7 +29,7 @@ ROLES = {                                                                      #
   'align-items:center;display:flex;justify-content:space-between': 'row-spread',
 }
 SIDE = {'top': 't', 'right': 'r', 'bottom': 'b', 'left': 'l'}
-ABBR = {'font-size': 'fs', 'font-weight': 'fw', 'color': 'c', 'background': 'bg', 'gap': 'gap', 'border-radius': 'r',
+ABBR = {'display': 'd', 'font-size': 'fs', 'font-weight': 'fw', 'color': 'c', 'background': 'bg', 'gap': 'gap', 'border-radius': 'r',
         'line-height': 'lh', 'letter-spacing': 'ls', 'width': 'w', 'height': 'h', 'max-width': 'maxw', 'max-height': 'maxh',
         'min-width': 'minw', 'min-height': 'minh', 'text-align': 'ta', 'white-space': 'ws', 'cursor': 'cur', 'object-fit': 'of',
         'text-transform': 'tt', 'font-family': 'ff', 'opacity': 'op', 'align-items': 'items', 'justify-content': 'justify',
@@ -186,6 +186,8 @@ def convert(text, fname):
             for d in decls:
                 if ':' not in d or '${' in d or d.strip().startswith('--') or re.search(r"['\"`]\s*\+|\+\s*['\"`]", d): keep.append(d); continue
                 k, v = [x.strip() for x in d.split(':', 1)]
+                # display is a state toggle when it hides (JS flips it), but a layout choice otherwise
+                if k.lower() == 'display' and v.strip() not in ('none',): statics[k.lower()] = re.sub(r'\s+', ' ', v); continue
                 if k.lower() in BEH or not v: keep.append(d); continue
                 statics[k.lower()] = re.sub(r'\s+', ' ', v)
             idm = re.search(r'id=(\\?["\'])([^"\']*)\1', tag); cm0 = re.search(r'class=(\\?["\'])([^"\']*)\1', tag)

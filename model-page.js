@@ -103,7 +103,7 @@ function featuredFactIndex(count, now = new Date()) {
 
 function mpBars(counts, h, gap, radius, tone) {
   const pcts = barPcts(counts);
-  return `<div style="display:flex;align-items:flex-end;gap:${gap}px;height:${h}px;">${pcts.map((p, i) =>
+  return `<div class="u-d-flex u-items-flex-end" style="gap:${gap}px;height:${h}px;">${pcts.map((p, i) =>
     `<div class="mp-tone-${(Number(counts[i]) || 0) === 0 ? 'flat' : (tone ? tone(p, i) : (histTone(p) === 'flat' ? 'dim' : histTone(p)))}" style="flex:1;height:${p}%;border-radius:${radius};" title="${Number(counts[i]) || 0}"></div>`).join('')}</div>`;
 }
 
@@ -135,7 +135,7 @@ function renderModelPage(el, ctx, h) {
   const hero = `<div class="u-h-45 u-bg-surface2" style="position:relative;overflow:hidden;">
     ${heroImg ? `<img ${heroSrcAttrs(heroImg)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
     <div class="u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct" style="position:absolute;inset:0;pointer-events:none;"></div>
-    <div class="u-justify-space-between u-fs-sm u-c-mix-white-85" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);display:flex;">
+    <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="share">Share</span>
     </div>
@@ -151,7 +151,7 @@ function renderModelPage(el, ctx, h) {
   if (st.accuracy) {
     const a = st.accuracy;
     cells.push(`<div class="mp-cell"><div class="l">Median rate</div>
-      <div class="v">${escHtml(minus(nz(a.med_rate)))}<span class="u-fs-xs u-c-muted u-fw-normal"> s/d</span></div>
+      <div class="v">${escHtml(minus(nz(a.med_rate)))}<span class="text-caption u-fw-normal"> s/d</span></div>
       <div class="u-mt-1-5">${mpBars(a.hist || [], 16, 2, '0')}</div>
       <div class="f">${a.n_sessions} measurements · ${a.n_measurers} members</div></div>`);
   } else {
@@ -161,7 +161,7 @@ function renderModelPage(el, ctx, h) {
     const v = st.value, trend = valueTrendSummary(v.series), path = sparklinePath(v.series, 120, 16, 1);
     cells.push(`<div class="mp-cell"><div class="l">Median value</div>
       <div class="v">$${Number(v.median_now).toLocaleString()}</div>
-      <div class="u-h-4 u-mt-1-5" style="position:relative;overflow:hidden;">${path ? `<svg data-tile-spark width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="none" style="display:block;"><title>${escHtml((v.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title><path d="${path} L118,16 L2,16 Z" fill="var(--gold-dim)" stroke="none"/><path d="${path}" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>` : `<div class="u-bg-linear-gradient-to-top-gold-dim-transparent" style="position:absolute;inset:0;"></div>`}</div>
+      <div class="u-h-4 u-mt-1-5" style="position:relative;overflow:hidden;">${path ? `<svg data-tile-spark width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="none" class="u-d-block"><title>${escHtml((v.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title><path d="${path} L118,16 L2,16 Z" fill="var(--gold-dim)" stroke="none"/><path d="${path}" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>` : `<div class="u-bg-linear-gradient-to-top-gold-dim-transparent" style="position:absolute;inset:0;"></div>`}</div>
       <div class="f" style="color:${trend && trend.direction === 'down' ? 'var(--danger)' : trend ? 'var(--success)' : 'var(--muted)'};">${trend ? escHtml(trend.text) + ' · ' : ''}${v.n_contributors} valuations</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">Wishlisted</div><div class="v">${st.wishlisted || 0}</div><div class="f">members want one</div></div>`);
@@ -169,18 +169,18 @@ function renderModelPage(el, ctx, h) {
   const wr = st.wears || {};
   const strip = st.wear_strip || [];
   cells.push(`<div class="mp-cell"><div class="l">Wears / 90 days</div><div class="v">${wr.w90 || 0}</div>
-    <div class="u-cols-repeat-15-1fr u-gap-0-5 u-mt-1-5" style="display:grid;">${(strip.length ? strip : Array(15).fill(0)).map(n => `<div class="mp-tone-${n >= 2 ? 'gold' : n === 1 ? 'dim' : 'flat'}" style="aspect-ratio:1;" title="${n} wear${n === 1 ? '' : 's'}"></div>`).join('')}</div>
+    <div class="u-cols-repeat-15-1fr u-gap-0-5 u-mt-1-5 u-d-grid">${(strip.length ? strip : Array(15).fill(0)).map(n => `<div class="mp-tone-${n >= 2 ? 'gold' : n === 1 ? 'dim' : 'flat'}" style="aspect-ratio:1;" title="${n} wear${n === 1 ? '' : 's'}"></div>`).join('')}</div>
     <div class="f">by ${wr.wearers90 || 0} of ${owners} owners</div></div>`);
   if (st.cost_per_wear) {
     const c = st.cost_per_wear;
     const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
     cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v u-c-gold-text">${cpwTxt}</div>
-      <div class="u-items-center u-gap-1-5 u-h-4 u-mt-1-5" style="display:flex;"><div class="u-flex-1 u-h-1 u-r-hair u-bg-surface2" style="position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span class="u-fs-3xs u-c-muted">${Number(c.wears).toLocaleString()} wears</span></div>
+      <div class="row-tight u-h-4 u-mt-1-5"><div class="u-flex-1 u-h-1 u-r-hair u-bg-surface2" style="position:relative;overflow:hidden;"><div class="u-bg-gold" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;"></div></div><span class="u-fs-3xs u-c-muted">${Number(c.wears).toLocaleString()} wears</span></div>
       <div class="f">per logged wear · ${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} with price + wears</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">${st.accuracy ? 'Owners' : 'Wears all-time'}</div><div class="v">${st.accuracy ? owners : (wr.all_time || 0)}</div><div class="f">${st.accuracy ? (st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate') : 'logged by members'}</div></div>`);
   }
-  const grid = `<div class="u-cols-1fr-1fr u-gap-px u-bg-border" style="display:grid;">${cells.join('')}</div>`;
+  const grid = `<div class="u-cols-1fr-1fr u-gap-px u-bg-border u-d-grid">${cells.join('')}</div>`;
 
   // ── Story block (lore above the fold): history + fact pull-quote ──
   const key = m.id || m.slug;
@@ -198,7 +198,7 @@ function renderModelPage(el, ctx, h) {
         ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" class="mp-fact-nav">‹</button>` : ''}
         <div class="u-flex-1 u-minw-0 u-pt-1 u-pr-0 u-pb-1 u-pl-3 u-bdl-2px-solid-gold">
           <div id="mp-fact-kicker" class="u-fs-2xs u-fw-semibold u-ls-eyebrow u-tt-uppercase u-c-gold-text u-mb-1">Fun fact · ${fi + 1} of ${facts.length}</div>
-          <div id="mp-fact-body" class="u-fs-sm u-lh-snug u-c-text u-tw-pretty u-boxor-vertical u-clamp-4" style="display:-webkit-box;overflow:hidden;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
+          <div id="mp-fact-body" class="u-fs-sm u-lh-snug u-c-text u-tw-pretty u-boxor-vertical u-clamp-4 u-d-webkit-box" style="overflow:hidden;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
         </div>
         ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" class="mp-fact-nav">›</button>` : ''}
       </div>` : ''}
@@ -206,7 +206,7 @@ function renderModelPage(el, ctx, h) {
   }
 
   // ── Tabs ──
-  const tabBar = `<div id="mp-tabs" role="tablist" class="u-bdb-1px-solid-border u-bg-bg" style="display:flex;">${tabs.map(([k, label]) =>
+  const tabBar = `<div id="mp-tabs" role="tablist" class="u-bdb-1px-solid-border u-bg-bg u-d-flex">${tabs.map(([k, label]) =>
     `<button class="mp-tab" role="tab" id="mp-tab-${k}" aria-selected="${tab === k}" aria-controls="mp-panel" data-mp="tab" data-tab="${k}">${label}</button>`).join('')}</div>`;
 
   // ── Panels ──
@@ -223,17 +223,17 @@ function renderModelPage(el, ctx, h) {
       const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
       parts.push(`<div class="u-bg-surface u-bd-1px-solid-border u-bdt-2px-solid-gold u-r- u-pt-4 u-pr-4 u-pb-4 u-pl-4">
         <div class="mp-hrow stack-3"><div class="mp-h u-c-gold-text">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
-        <div class="mp-big"><span class="u-fs-4xl u-fw-semibold u-lh-none">${Number(w.index).toFixed(1)}×</span><span class="u-fs-sm u-lh-snug u-c-muted">its fair share of<br>owners' wrist time</span></div>
-        <div class="u-fs-sm u-lh-body u-c-muted u-mt-2-5">Owners give it <span class="u-c-text u-fw-medium">${w.share}%</span> of their logged wears, against <span class="u-c-text u-fw-medium">${w.fair}%</span> if they rotated their collections evenly.</div>
-        <div class="u-fd-column u-gap-2 u-mt-3-5 u-mr-0 u-mb-1 u-ml-0" style="display:flex;">${rows.map(([label, val, me]) => `<div class="u-items-center u-gap-2" style="display:flex;">
+        <div class="mp-big"><span class="u-fs-4xl u-fw-semibold u-lh-none">${Number(w.index).toFixed(1)}×</span><span class="text-meta u-lh-snug">its fair share of<br>owners' wrist time</span></div>
+        <div class="text-meta u-lh-body u-mt-2-5">Owners give it <span class="u-c-text u-fw-medium">${w.share}%</span> of their logged wears, against <span class="u-c-text u-fw-medium">${w.fair}%</span> if they rotated their collections evenly.</div>
+        <div class="u-fd-column u-gap-2 u-mt-3-5 u-mr-0 u-mb-1 u-ml-0 u-d-flex">${rows.map(([label, val, me]) => `<div class="row">
           <span style="width:var(--size-20);flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
           <div class="u-flex-1 u-h-2 u-bg-surface2 u-r-pill" style="overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
           <span style="width:var(--size-7);flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
         ${ret.length ? `<div class="u-bdt-1px-solid-border u-mt-3-5 u-pt-3-5">
           <div class="mp-hrow stack-2-5"><div class="mp-h u-fs-2xs u-ls-tight">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
-          <div class="u-items-flex-end u-gap-1-5 u-h-10" style="display:flex;">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
-          <div class="u-gap-1-5 u-mt-1-5 u-fs-3xs u-c-muted" style="display:flex;">${ret.map(r => `<span class="u-flex-1 u-ta-center">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
-        <div class="u-items-center u-gap-2 u-mt-3-5 u-pt-3 u-bdt-1px-solid-border" style="display:flex;">
+          <div class="u-items-flex-end u-gap-1-5 u-h-10 u-d-flex">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
+          <div class="u-gap-1-5 u-mt-1-5 u-fs-3xs u-c-muted u-d-flex">${ret.map(r => `<span class="u-flex-1 u-ta-center">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
+        <div class="row u-mt-3-5 u-pt-3 u-bdt-1px-solid-border">
           ${w.pct_rank != null ? `<span class="u-fs-2xs u-fw-semibold u-c-black u-bg-gold u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
           <span class="text-caption">of ${Number(w.n_models).toLocaleString()} models · ${Number(w.wears).toLocaleString()} wears from ${w.n_owners} collections</span></div>
       </div>`);
@@ -242,8 +242,8 @@ function renderModelPage(el, ctx, h) {
       const a = st.accuracy;
       parts.push(sect(H('Rate distribution', `<span class="mp-meta">s/day · ${a.n_sessions} readings</span><span class="mp-badge">Exclusive</span>`) +
         `<div class="u-pb-1-5 u-bdb-1px-solid-border">${mpBars(a.hist || [], 70, 2, '0')}</div>
-        <div class="u-justify-space-between u-mt-1-5 u-fs-2xs u-c-muted" style="display:flex;"><span>${minus(String(a.hist_min))}</span><span class="text-gold">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
-        <div class="u-gap-2-5 u-mt-3" style="display:flex;">
+        <div class="text-caption-xs u-justify-space-between u-mt-1-5 u-d-flex"><span>${minus(String(a.hist_min))}</span><span class="text-gold">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
+        <div class="u-gap-2-5 u-mt-3 u-d-flex">
           ${a.med_amp ? `<div class="mp-card grow"><div class="l">Amplitude</div><div class="v">${a.med_amp}°</div></div>` : ''}
           <div class="mp-card grow"><div class="l">Drift</div><div class="v">±${a.med_abs_rate} s/d</div></div>
           <div class="mp-card grow"><div class="l">Members</div><div class="v">${a.n_measurers}</div></div>
@@ -254,7 +254,7 @@ function renderModelPage(el, ctx, h) {
       const total = wk.reduce((x, y) => x + (Number(y) || 0), 0);
       const peak = wk.indexOf(Math.max(...wk));
       parts.push(sect(H('Wear pattern', `<span class="mp-meta">12 weeks</span><span class="mp-badge">Exclusive</span>`) +
-        mpBars(wk, 44, 3, '2px') + `<div class="u-fs-2xs u-c-muted u-mt-1-5">${total} wears over 12 weeks · busiest ${peak >= 10 ? 'in the last fortnight' : `${11 - peak} week${11 - peak === 1 ? '' : 's'} ago`}.</div>`, !parts.length));
+        mpBars(wk, 44, 3, '2px') + `<div class="text-caption-xs u-mt-1-5">${total} wears over 12 weeks · busiest ${peak >= 10 ? 'in the last fortnight' : `${11 - peak} week${11 - peak === 1 ? '' : 's'} ago`}.</div>`, !parts.length));
     }
     panel = `<div class="mp-stack">${parts.join('')}</div>`;
   } else if (tab === 'specs') {
@@ -265,12 +265,12 @@ function renderModelPage(el, ctx, h) {
     const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
     const parts = [];
     if (refRows.length) parts.push(`<div><div class="mp-h stack-2-5">Reference spec</div>
-        <div class="u-cols-auto-1fr u-gap-0-3 u-fs-sm" style="display:grid;">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${l}</span><span style="color:var(--text);padding:var(--space-2) 0;text-align:right;${bt}">${escHtml(v)}</span>`; }).join('')}</div></div>`);
-    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div class="u-gap-2-5 u-fs-sm u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdt-1px-solid-border" style="display:flex;"><span class="u-minw-18 u-c-text">${escHtml(r.reference || '')}</span><span class="u-minw-20 u-c-muted">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
-    if (cals.length) parts.push(sect(`<div class="mp-h stack-1-5">Calibers by era</div><div class="u-fw--wrap u-gap-1-5" style="display:flex;">${cals.map(c => `<span class="u-fs-xs u-bd-1px-solid-border u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5">${escHtml(c.caliber || '')}${c.years ? ` <span class="text-muted">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
-    if (mv.length) parts.push(sect(`<div class="u-justify-space-between u-items-center u-mb-2-5" style="display:flex;"><span class="mp-h u-c-gold-text">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
-        <div class="u-cols-auto-1fr-auto u-gap-0-3 u-fs-sm u-items-center" style="display:grid;">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span style="color:var(--muted);padding:var(--space-2) 0;${bt}">${label}</span><span style="color:var(--text);padding:var(--space-2) 0;${bt}">${escHtml(agg[k].v)}</span><span style="color:var(--muted);font-size:var(--fs-2xs);padding:var(--space-2) 0;${bt}">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
-    panel = parts.length ? `<div class="u-fd-column u-gap-4" style="display:flex;">${parts.join('')}</div>` : `<div class="caption">No specs on file yet.</div>`;
+        <div class="u-cols-auto-1fr u-gap-0-3 u-fs-sm u-d-grid">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span class="u-c-muted u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${l}</span><span class="u-c-text u-pt-2 u-pr-0 u-pb-2 u-pl-0 u-ta-right" style="${bt};">${escHtml(v)}</span>`; }).join('')}</div></div>`);
+    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div class="u-gap-2-5 u-fs-sm u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdt-1px-solid-border u-d-flex"><span class="u-minw-18 u-c-text">${escHtml(r.reference || '')}</span><span class="u-minw-20 u-c-muted">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
+    if (cals.length) parts.push(sect(`<div class="mp-h stack-1-5">Calibers by era</div><div class="u-fw--wrap u-gap-1-5 u-d-flex">${cals.map(c => `<span class="u-fs-xs u-bd-1px-solid-border u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5">${escHtml(c.caliber || '')}${c.years ? ` <span class="text-muted">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
+    if (mv.length) parts.push(sect(`<div class="row-between u-mb-2-5"><span class="mp-h u-c-gold-text">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
+        <div class="u-cols-auto-1fr-auto u-gap-0-3 u-fs-sm u-items-center u-d-grid">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span class="u-c-muted u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${label}</span><span class="u-c-text u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${escHtml(agg[k].v)}</span><span class="text-caption-xs u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
+    panel = parts.length ? `<div class="u-fd-column u-gap-4 u-d-flex">${parts.join('')}</div>` : `<div class="caption">No specs on file yet.</div>`;
   } else {
     const era = st.era || [0, 0, 0, 0, 0, 0];
     const cards = [];
@@ -280,19 +280,19 @@ function renderModelPage(el, ctx, h) {
     panel = `<div class="mp-stack">
       <div class="mp-big"><span class="u-fs-display u-fw-semibold u-lh-none">${owners}</span><span class="caption">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
       ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span class="mp-meta">year of example</span><span class="mp-badge">Exclusive</span>`) +
-        mpBars(era, 56, 4, '2px 2px 0 0') + `<div class="u-gap-1 u-mt-1-5 u-fs-2xs u-c-muted" style="display:flex;">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span class="u-flex-1 u-ta-center">${l}</span>`).join('')}</div>`) : ''}
-      <div class="u-bdt-1px-solid-border u-pt-4 u-cols-1fr-1fr u-gap-2-5" style="display:grid;">${cards.map(([l, v]) => `<div class="mp-card u-pt-3 u-pr-3 u-pb-3 u-pl-3"><div class="l">${l}</div><div class="v u-fs-xl">${escHtml(v)}</div></div>`).join('')}</div>
+        mpBars(era, 56, 4, '2px 2px 0 0') + `<div class="text-caption-xs u-gap-1 u-mt-1-5 u-d-flex">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span class="u-flex-1 u-ta-center">${l}</span>`).join('')}</div>`) : ''}
+      <div class="u-bdt-1px-solid-border u-pt-4 u-cols-1fr-1fr u-gap-2-5 u-d-grid">${cards.map(([l, v]) => `<div class="mp-card u-pt-3 u-pr-3 u-pb-3 u-pl-3"><div class="l">${l}</div><div class="v u-fs-xl">${escHtml(v)}</div></div>`).join('')}</div>
     </div>`;
   }
 
   // ── More from brand ──
   const rel = (st.related || []).slice(0, 4);
   const more = `<div class="u-bdt-1px-solid-border u-pt-4 u-pb-5"><div class="mp-h stack-2-5">More from ${escHtml(m.brand)}</div>
-    <div class="u-fd-column" style="display:flex;">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span class="u-c-text">${escHtml(r.name)}</span><span class="caption-xs">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
+    <div class="u-fd-column u-d-flex">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span class="u-c-text">${escHtml(r.name)}</span><span class="caption-xs">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
       ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span class="text-gold">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span class="caption-xs">›</span></div>`}</div></div>`;
 
   // ── Request an edit + action bar ──
-  const reqEdit = publicMode ? '' : `<div class="u-bdt-1px-solid-border u-pt-3-5 u-pr-0 u-pb-5 u-pl-0 u-justify-center" style="display:flex;"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span class="u-fs-xs">✎</span><span>Request an edit</span></button></div>`;
+  const reqEdit = publicMode ? '' : `<div class="u-bdt-1px-solid-border u-pt-3-5 u-pr-0 u-pb-5 u-pl-0 u-justify-center u-d-flex"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span class="u-fs-xs">✎</span><span>Request an edit</span></button></div>`;
   const wl = st.wishlisted_by_me;
   const actions = publicMode ? `<div class="mp-actions">
     <button class="mp-act mp-act-primary" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div class="mp-actions">
@@ -303,7 +303,7 @@ function renderModelPage(el, ctx, h) {
   </div>` : '';
 
   el.innerHTML = hero + band + grid + tabBar +
-    `<div id="mp-panel" role="tabpanel" class="u-pt-4 u-pr-4 u-pb-2 u-pl-4 u-fd-column u-gap-5 u-minh-105" style="display:flex;">${panel}${more}${reqEdit}</div>` + actions;
+    `<div id="mp-panel" role="tabpanel" class="u-pt-4 u-pr-4 u-pb-2 u-pl-4 u-fd-column u-gap-5 u-minh-105 u-d-flex">${panel}${more}${reqEdit}</div>` + actions;
   if (!el._mpBound) {
     el._mpBound = true;
     el.addEventListener('click', e => {

@@ -54,6 +54,26 @@ describe('generated classes outweigh hand-written selectors', () => {
   });
 });
 
+// A generated class must not quietly redefine a class the app already has: .text-danger is colour only, and a
+// role of the same name once added a font size to every existing use of it.
+describe('generated classes do not redefine hand-written ones', () => {
+  it('any name shared with hand-written CSS carries the same declarations', () => {
+    const MARK = '/* ── Generated: roles and single-purpose classes ── */';
+    const css = readFileSync(join(root, 'design-system.css'), 'utf8');
+    const [hand, generated] = css.split(MARK);
+    const pageCss = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'open.html']
+      .map(f => (readFileSync(join(root, f), 'utf8').match(/<style[^>]*>([\s\S]*?)<\/style>/g) || []).join('\n')).join('\n');
+    const norm = (b) => b.split(';').map(d => d.trim().replace(/\s+/g, ' ')).filter(Boolean).sort().join('; ');
+    const handRules = new Map();
+    for (const m of (hand + pageCss).replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(^|\})\s*\.([\w-]+)\s*\{([^}]*)\}/g))
+      if (!handRules.has(m[2])) handRules.set(m[2], norm(m[3]));
+    const clashes = [];
+    for (const m of generated.matchAll(/^\.([\w-]+)(?:\.[\w-]+)*\s*\{([^}]*)\}/gm))
+      if (handRules.has(m[1]) && handRules.get(m[1]) !== norm(m[2])) clashes.push(`${m[1]}: app has "${handRules.get(m[1])}", generated has "${norm(m[2])}"`);
+    expect(clashes, 'rename the role, or reuse the existing class as it is').toEqual([]);
+  });
+});
+
 describe('no static inline styles', () => {
   it.each(['index.html', 'model-page.js'])('%s styles only what it computes at runtime', (f) => {
     const src = withoutEmailRanges(readFileSync(join(root, f), 'utf8'));

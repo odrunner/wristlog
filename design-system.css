@@ -485,12 +485,20 @@
 .adm-panel-row { display: contents; }
 
 /* ── Generated: roles and single-purpose classes ── */
-/* Written by scripts/design-system/inline_to_classes.py. Doubled selector so a class lands with the same
-   weight the inline style it replaced had: the name is repeated so it outranks a page's own rules (their
-   <style> block is parsed after this file), while still yielding to an !important rule, as an inline style did.
+/* Written by scripts/design-system/inline_to_classes.py + roles_pass.py. The name repeats so a class
+   lands with the weight the inline style it replaced had, while still yielding to !important.
    Roles first: change one to restyle every place that uses it. */
+.row.row.row.row.row { display: flex; align-items: center; gap: var(--space-2); }
+.row-between.row-between.row-between.row-between.row-between { display: flex; align-items: center; justify-content: space-between; }
+.row-center.row-center.row-center.row-center.row-center { display: flex; align-items: center; justify-content: center; }
+.row-start.row-start.row-start.row-start.row-start { display: flex; align-items: flex-start; gap: var(--space-2); }
+.row-tight.row-tight.row-tight.row-tight.row-tight { display: flex; align-items: center; gap: var(--space-1-5); }
+.text-alert.text-alert.text-alert.text-alert.text-alert { color: var(--danger-text); font-size: var(--fs-base); }
+.text-body.text-body.text-body.text-body.text-body { color: var(--muted); font-size: var(--fs-base); line-height: var(--lh-body); }
 .text-body-lg.text-body-lg.text-body-lg.text-body-lg.text-body-lg { color: var(--muted); font-size: var(--fs-md); line-height: var(--lh-body); }
 .text-caption.text-caption.text-caption.text-caption.text-caption { color: var(--muted); font-size: var(--fs-xs); }
+.text-caption-xs.text-caption-xs.text-caption-xs.text-caption-xs.text-caption-xs { color: var(--muted); font-size: var(--fs-2xs); }
+.text-default.text-default.text-default.text-default.text-default { color: var(--text); font-size: var(--fs-base); }
 .text-meta.text-meta.text-meta.text-meta.text-meta { color: var(--muted); font-size: var(--fs-sm); }
 .text-secondary.text-secondary.text-secondary.text-secondary.text-secondary { color: var(--muted); font-size: var(--fs-base); }
 .u-ac-gold.u-ac-gold.u-ac-gold.u-ac-gold.u-ac-gold { accent-color: var(--gold); }
@@ -619,6 +627,13 @@
 .u-cols-repeat-3-minmax-0-1fr.u-cols-repeat-3-minmax-0-1fr.u-cols-repeat-3-minmax-0-1fr.u-cols-repeat-3-minmax-0-1fr.u-cols-repeat-3-minmax-0-1fr { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .u-cur-not-allowed.u-cur-not-allowed.u-cur-not-allowed.u-cur-not-allowed.u-cur-not-allowed { cursor: not-allowed; }
 .u-cur-pointer.u-cur-pointer.u-cur-pointer.u-cur-pointer.u-cur-pointer { cursor: pointer; }
+.u-d-block.u-d-block.u-d-block.u-d-block.u-d-block { display: block; }
+.u-d-contents.u-d-contents.u-d-contents.u-d-contents.u-d-contents { display: contents; }
+.u-d-flex.u-d-flex.u-d-flex.u-d-flex.u-d-flex { display: flex; }
+.u-d-grid.u-d-grid.u-d-grid.u-d-grid.u-d-grid { display: grid; }
+.u-d-inline-block.u-d-inline-block.u-d-inline-block.u-d-inline-block.u-d-inline-block { display: inline-block; }
+.u-d-inline-flex.u-d-inline-flex.u-d-inline-flex.u-d-inline-flex.u-d-inline-flex { display: inline-flex; }
+.u-d-webkit-box.u-d-webkit-box.u-d-webkit-box.u-d-webkit-box.u-d-webkit-box { display: -webkit-box; }
 .u-fd-column.u-fd-column.u-fd-column.u-fd-column.u-fd-column { flex-direction: column; }
 .u-fd-row.u-fd-row.u-fd-row.u-fd-row.u-fd-row { flex-direction: row; }
 .u-ff-font-mono.u-ff-font-mono.u-ff-font-mono.u-ff-font-mono.u-ff-font-mono { font-family: var(--font-mono); }
