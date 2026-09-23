@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=687e1e2d">
+  <link rel="stylesheet" href="/design-system.css?v=da0856b9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -965,7 +965,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .fb-status-select.ignored  { border-color:var(--muted); color:var(--muted); }
 
     /* ── HELP PAGE ── */
-    .help-wrap { max-width: var(--size-180); margin: 0 auto; }
+    .help-wrap { max-width: var(--size-170); margin: 0 auto; }
     .help-section { margin-bottom: var(--space-9); }
     .help-section-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); margin-bottom: var(--space-3-5); display: flex; align-items: center; gap: var(--space-2); }
     .help-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-2-5); }
@@ -1895,7 +1895,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Gap owns the spacing in both variants, so the classic .promo-heading
        margin is zeroed rather than doubling up with it. */
     .promo-tag .promo-heading {
-      font-size: var(--fs-2xl); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight);
+      font-size: var(--fs-2xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display);
       color: var(--text); margin: 0;
     }
     .promo-tag .promo-body {
@@ -1921,7 +1921,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-tag--nudge .promo-tag-body {
       flex-direction: row; align-items: center; gap: var(--space-3-5); padding: var(--space-3-5) var(--space-4);
     }
-    .promo-tag--nudge .promo-heading { font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); }
+    .promo-tag--nudge .promo-heading { font-size: var(--fs-input); font-weight: var(--fw-bold); }
     .promo-tag--nudge .promo-body { font-size: var(--fs-base); }
     .promo-tag--nudge .promo-cta {
       padding: var(--space-2-5) var(--space-4); border-radius: var(--radius-btn); flex-shrink: 0;
@@ -1958,11 +1958,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-band-eyebrow {
       font-family: var(--font-mono);
-      font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--promo-ls-label);
+      font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--ls-wide);
       text-transform: uppercase; color: var(--sand);
     }
     .promo-band--prompt .promo-heading {
-      font-size: var(--promo-fs-prompt); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-2);
+      font-size: var(--fs-2xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display);
       line-height: var(--lh-tight); color: var(--white); margin: 0;
     }
     .promo-band--prompt .promo-body {
@@ -1991,7 +1991,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-band--nudge .promo-band-eyebrow { font-size: var(--fs-2xs); color: var(--watch-gold); }
     .promo-band--nudge .promo-heading {
-      font-size: var(--promo-fs-heading); font-weight: var(--fw-bold); color: var(--white); margin: 0;
+      font-size: var(--fs-input); font-weight: var(--fw-bold); color: var(--white); margin: 0;
     }
     .promo-band--nudge .promo-body { font-size: var(--fs-base); color: var(--badge-locked-ink); }
     .promo-band--nudge .promo-cta {
@@ -2040,11 +2040,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       flex: 0 0 100%; min-width: 100%; scroll-snap-align: center;
       box-sizing: border-box; padding: var(--space-6) var(--space-5) var(--space-5);
       display: flex; flex-direction: column; align-items: center; text-align: center;
-      gap: var(--space-2-5); min-height: var(--size-60); justify-content: center;
+      gap: var(--space-2-5); min-height: var(--size-65); justify-content: center;
     }
     .promo-recap-slide-lbl {
       font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: var(--fw-semibold);
-      letter-spacing: var(--promo-ls-label); text-transform: uppercase; color: var(--muted);
+      letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--muted);
     }
 
     /* Cover: the month name is the hero, so it gets the size the numbers would
@@ -2055,7 +2055,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-year {
       font-family: var(--font-mono); font-size: var(--fs-body); font-weight: var(--fw-semibold);
-      letter-spacing: var(--promo-ls-year); color: var(--muted); margin-top: calc(-1 * var(--space-0-5));
+      letter-spacing: var(--ls-wide); color: var(--muted); margin-top: calc(-1 * var(--space-0-5));
     }
     .promo-recap-cover-line {
       font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text); margin-top: var(--space-1-5);
@@ -2068,10 +2068,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-weight: var(--fw-bold);
     }
     .promo-recap-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .promo-recap-thumb--hero   { width: var(--size-24); height: var(--size-24); font-size: var(--promo-fs-flat); }
+    .promo-recap-thumb--hero   { width: var(--size-24); height: var(--size-24); font-size: var(--fs-3xl); }
     .promo-recap-thumb--podium { width: var(--size-14); height: var(--size-14); font-size: var(--fs-base); }
 
-    .promo-recap-hero-name { font-size: var(--promo-fs-hero); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight); color: var(--text); }
+    .promo-recap-hero-name { font-size: var(--fs-xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); color: var(--text); }
     .promo-recap-hero-sub  { font-size: var(--fs-base); color: var(--muted); margin-top: calc(-1 * var(--space-1)); }
 
     .promo-recap-podium {
@@ -2099,10 +2099,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        the colour stays in the house palette. */
     .promo-recap-trend { display: flex; align-items: baseline; gap: var(--space-2); }
     .promo-recap-delta {
-      font-size: var(--promo-fs-delta); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display);
+      font-size: var(--fs-display); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display);
       color: var(--gold-deep);
     }
-    .promo-recap-flat { font-size: var(--promo-fs-flat); font-weight: var(--fw-heavy); color: var(--gold-deep); }
+    .promo-recap-flat { font-size: var(--fs-3xl); font-weight: var(--fw-heavy); color: var(--gold-deep); }
     .promo-recap-trend-sub { font-size: var(--fs-md); color: var(--muted); }
 
     /* Top post: the photo is the point, so it gets a rectangle rather than the
@@ -2116,7 +2116,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Sits behind the photo, so a 404 or a hidden broken image leaves the
        watch's initials rather than an empty rectangle. */
     .promo-recap-shot-fallback {
-      font-size: var(--promo-fs-fallback); font-weight: var(--fw-bold); color: var(--muted);
+      font-size: var(--fs-display); font-weight: var(--fw-bold); color: var(--muted);
     }
     .promo-recap-shot img {
       position: absolute; inset: 0;
@@ -2124,7 +2124,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     .promo-recap-streak {
-      font-size: var(--promo-fs-streak); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-4); line-height: var(--lh-none);
+      font-size: var(--promo-fs-streak); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); line-height: var(--lh-none);
       color: var(--gold-deep);
     }
 
@@ -2665,7 +2665,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ UPDATE PRICES MODAL ════ -->
 <div id="update-prices-modal" class="overlay hidden" role="dialog" aria-modal="true">
-  <div class="modal u-maxw-140 u-pt-6 u-pr-6 u-pb-6 u-pl-6">
+  <div class="modal u-maxw-130 u-pt-6 u-pr-6 u-pb-6 u-pl-6">
     <div class="modal-title row-between">
       <span>Update Market Prices</span>
       <button class="btn btn-md btn-ghost" onclick="closeUpdatePrices()">Close</button>
@@ -2681,7 +2681,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ WHAT'S NEW MODAL ════ -->
 <div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
-  <div class="modal u-maxw-110">
+  <div class="modal u-maxw-105">
     <div class="modal-title row" id="whats-new-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
@@ -3542,7 +3542,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Preview -->
         <div class="draft-form-row">
           <label id="broadcast-preview-label">Email Preview</label>
-          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" class="u-bg-paper u-r-btn u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-maxh-125" style="overflow-y:auto;">
+          <div id="broadcast-preview" aria-labelledby="broadcast-preview-label" class="u-bg-paper u-r-btn u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-maxh-120" style="overflow-y:auto;">
             <div class="empty empty-compact">Start typing to see preview</div>
           </div>
         </div>
@@ -7942,7 +7942,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.05.36';
+const APP_VERSION = '23.05.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22625,7 +22625,7 @@ async function loadCampaigns() {
       <div id="camp-status-${c.id}" class="text-meta u-mt-1-5" aria-live="polite"></div>
       <div class="draft-form-row u-mt-2-5">
         <label>Email Preview</label>
-        <div id="camp-preview-${c.id}" class="u-bg-paper u-r-btn u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-maxh-125" style="overflow-y:auto;"></div>
+        <div id="camp-preview-${c.id}" class="u-bg-paper u-r-btn u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-maxh-120" style="overflow-y:auto;"></div>
       </div>
     </div>`;
   };

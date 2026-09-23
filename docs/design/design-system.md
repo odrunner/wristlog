@@ -184,7 +184,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--badge-text` | `#3D2A14` | `#e7d9bd` | 3 | Badges / achievements ── warm theme; dark variants below. |
 | `--badge-bg` | `#FAEEDA` | `#221a0e` | 6 |  |
 | `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
-| `--badge-ink` | `#3D2A14` | same | 57 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
+| `--badge-ink` | `#3D2A14` | same | 58 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
 | `--badge-onboarding` | `#7A8B5C` | same | 3 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
 | `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
 | `--badge-onboarding-bg` | `color-mix(in srgb, var(--badge-onboarding) 20%, white)` | same | 1 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
@@ -227,18 +227,18 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--fs-body` | `.9375rem` | 35 | The root size every em and every unsized element inherits from. Exactly 15px at the default 16px root; deliberately NOT a step of the scale below — moving it moves the whole app (and the landing… |
-| `--fs-input` | `1rem` | 2 | Text inside inputs. iOS zooms the page when a focused field is under 16px, so this is a floor, not a step: do not lower it. |
+| `--fs-input` | `1rem` | 4 | Text inside inputs. iOS zooms the page when a focused field is under 16px, so this is a floor, not a step: do not lower it. |
 | `--fs-3xs` | `.56rem` | 11 | Below the UI range: badge counts and chart ticks only. |
 | `--fs-2xs` | `.62rem` | 47 |  |
 | `--fs-xs` | `.68rem` | 61 |  |
 | `--fs-sm` | `.75rem` | 110 |  |
 | `--fs-base` | `.82rem` | 95 |  |
 | `--fs-md` | `.88rem` | 42 |  |
-| `--fs-xl` | `1.1rem` | 23 |  |
-| `--fs-2xl` | `1.3rem` | 12 |  |
-| `--fs-3xl` | `1.6rem` | 9 |  |
+| `--fs-xl` | `1.1rem` | 24 |  |
+| `--fs-2xl` | `1.3rem` | 13 |  |
+| `--fs-3xl` | `1.6rem` | 11 |  |
 | `--fs-4xl` | `2.5rem` | 6 |  |
-| `--fs-display` | `2rem` | 2 |  |
+| `--fs-display` | `2rem` | 4 |  |
 | `--fs-icon` | `1.75rem` | 1 |  |
 | `--fs-aside` | `.85em` | 1 |  |
 | `--fs-aside-sm` | `.75em` | 1 |  |
@@ -269,8 +269,8 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--ls-snug` | `.02em` | 7 |  |
-| `--ls-wide` | `.16em` | 3 |  |
-| `--ls-display` | `-.02em` | 5 |  |
+| `--ls-wide` | `.16em` | 6 |  |
+| `--ls-display` | `-.02em` | 9 |  |
 | `--ls-tight` | `.04em` | 36 |  |
 | `--ls-eyebrow` | `.08em` | 18 |  |
 
@@ -335,8 +335,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--size-45` | `180px` | 4 |  |
 | `--size-50` | `200px` | 8 |  |
 | `--size-55` | `220px` | 5 |  |
-| `--size-60` | `240px` | 1 |  |
-| `--size-65` | `260px` | 4 |  |
+| `--size-65` | `260px` | 5 |  |
 | `--size-70` | `280px` | 3 |  |
 | `--size-75` | `300px` | 2 |  |
 | `--size-80` | `320px` | 6 |  |
@@ -345,14 +344,10 @@ These are not style preferences; they are the reasons the current values were ch
 | `--size-95` | `380px` | 2 |  |
 | `--size-100` | `400px` | 4 |  |
 | `--size-105` | `420px` | 6 |  |
-| `--size-110` | `440px` | 1 |  |
 | `--size-115` | `460px` | 1 |  |
-| `--size-120` | `480px` | 7 |  |
-| `--size-125` | `500px` | 1 |  |
+| `--size-120` | `480px` | 8 |  |
 | `--size-130` | `520px` | 4 |  |
-| `--size-140` | `560px` | 1 |  |
-| `--size-170` | `680px` | 1 |  |
-| `--size-180` | `720px` | 1 |  |
+| `--size-170` | `680px` | 2 |  |
 | `--size-215` | `860px` | 1 |  |
 | `--size-290` | `1160px` | 2 |  |
 | `--size-max` | `9999px` | 3 |  |
@@ -442,7 +437,7 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--gold-deep` | `#6E5514` | 31 | The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. |
+| `--gold-deep` | `#6E5514` | 30 | The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. |
 
 
 ## Roles
