@@ -185,21 +185,17 @@ These are not style preferences; they are the reasons the current values were ch
 | `--badge-bg` | `#FAEEDA` | `#221a0e` | 6 |  |
 | `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
 | `--badge-ink` | `#3D2A14` | same | 58 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
-| `--badge-onboarding` | `#7A8B5C` | same | 3 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
-| `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
-| `--badge-onboarding-bg` | `color-mix(in srgb, var(--badge-onboarding) 20%, white)` | same | 1 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
-| `--badge-connoisseur` | `#6B3D52` | same | 3 |  |
+| `--badge-onboarding` | `#7A8B5C` | same | 2 | badge categories (BADGE_COLORS): a bezel and its ink (stroke + chip text), fixed hues, the same in both themes. Every category chip but Collection (sand) shares one neutral background,… |
+| `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel and its ink (stroke + chip text), fixed hues, the same in both themes. Every category chip but Collection (sand) shares one neutral background,… |
+| `--badge-connoisseur` | `#6B3D52` | same | 2 |  |
 | `--badge-connoisseur-ink` | `color-mix(in srgb, var(--badge-connoisseur) 58%, black)` | same | 2 |  |
-| `--badge-connoisseur-bg` | `color-mix(in srgb, var(--badge-connoisseur) 20%, white)` | same | 1 |  |
-| `--badge-timegrapher` | `#4A6B7D` | same | 3 |  |
+| `--badge-timegrapher` | `#4A6B7D` | same | 2 |  |
 | `--badge-timegrapher-ink` | `color-mix(in srgb, var(--badge-timegrapher) 58%, black)` | same | 2 |  |
-| `--badge-timegrapher-bg` | `color-mix(in srgb, var(--badge-timegrapher) 20%, white)` | same | 1 |  |
-| `--badge-habit` | `#B5663F` | same | 3 |  |
+| `--badge-habit` | `#B5663F` | same | 2 |  |
 | `--badge-habit-ink` | `color-mix(in srgb, var(--badge-habit) 58%, black)` | same | 2 |  |
-| `--badge-habit-bg` | `color-mix(in srgb, var(--badge-habit) 20%, white)` | same | 1 |  |
 | `--badge-hidden` | `#7A7A6A` | same | 3 |  |
 | `--badge-hidden-ink` | `color-mix(in srgb, var(--badge-hidden) 58%, black)` | same | 2 |  |
-| `--badge-hidden-bg` | `color-mix(in srgb, var(--badge-hidden) 20%, white)` | same | 1 |  |
+| `--badge-chip-bg` | `color-mix(in srgb, var(--badge-hidden) 20%, white)` | same | 5 |  |
 | `--badge-locked` | `#C9C2A8` | same | 1 | medallion face; a locked badge |
 | `--badge-locked-ink` | `#A8A28C` | same | 2 | medallion face; a locked badge |
 

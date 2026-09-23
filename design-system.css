@@ -189,13 +189,14 @@
   /* badge medallion glyph ink — fixed dark (disc is always --white,
      both themes), so NOT overridden in dark like --badge-text is. */
   --badge-ink: #3D2A14;
-  /* badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background.
-     Collection uses the badge gold above; the rest are fixed hues, the same in both themes. */
-  --badge-onboarding: #7A8B5C;  --badge-onboarding-ink: color-mix(in srgb, var(--badge-onboarding) 58%, black);  --badge-onboarding-bg: color-mix(in srgb, var(--badge-onboarding) 20%, white);
-  --badge-connoisseur: #6B3D52; --badge-connoisseur-ink: color-mix(in srgb, var(--badge-connoisseur) 58%, black); --badge-connoisseur-bg: color-mix(in srgb, var(--badge-connoisseur) 20%, white);
-  --badge-timegrapher: #4A6B7D; --badge-timegrapher-ink: color-mix(in srgb, var(--badge-timegrapher) 58%, black); --badge-timegrapher-bg: color-mix(in srgb, var(--badge-timegrapher) 20%, white);
-  --badge-habit: #B5663F;       --badge-habit-ink: color-mix(in srgb, var(--badge-habit) 58%, black);       --badge-habit-bg: color-mix(in srgb, var(--badge-habit) 20%, white);
-  --badge-hidden: #7A7A6A;      --badge-hidden-ink: color-mix(in srgb, var(--badge-hidden) 58%, black);      --badge-hidden-bg: color-mix(in srgb, var(--badge-hidden) 20%, white);
+  /* badge categories (BADGE_COLORS): a bezel and its ink (stroke + chip text), fixed hues, the same in
+     both themes. Every category chip but Collection (sand) shares one neutral background, --badge-chip-bg
+     (the five near-identical per-category tints were merged 2026-09-23). */
+  --badge-onboarding: #7A8B5C;  --badge-onboarding-ink: color-mix(in srgb, var(--badge-onboarding) 58%, black);
+  --badge-connoisseur: #6B3D52; --badge-connoisseur-ink: color-mix(in srgb, var(--badge-connoisseur) 58%, black);
+  --badge-timegrapher: #4A6B7D; --badge-timegrapher-ink: color-mix(in srgb, var(--badge-timegrapher) 58%, black);
+  --badge-habit: #B5663F;       --badge-habit-ink: color-mix(in srgb, var(--badge-habit) 58%, black);
+  --badge-hidden: #7A7A6A;      --badge-hidden-ink: color-mix(in srgb, var(--badge-hidden) 58%, black);      --badge-chip-bg: color-mix(in srgb, var(--badge-hidden) 20%, white);
   --badge-locked: #C9C2A8; --badge-locked-ink: #A8A28C;   /* medallion face; a locked badge */
   /* watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as
      plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. */
