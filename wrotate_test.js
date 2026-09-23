@@ -3131,10 +3131,6 @@ export function feedPageToState(j, today) {
   return { items, likes, comments, commentCounts, commentIds, commentLikeRows: arr(j.comment_likes) };
 }
 
-export function feedRpcHintKey(userId) {
-  return userId ? 'wrotate_feed_rpc_' + userId : null;
-}
-
 // Admin → Experiments: load-time per arm for experiments that are ABOUT load time.
 // The judge only knows behaviour metrics, so a speed change (feed_rpc) had nothing
 // to show on its card. `arms` comes from admin_experiment_speed(): repeat loads
@@ -3221,13 +3217,12 @@ export function socialSignature({ following, blocked, friends }) {
   return part(following) + '|' + part(blocked) + '|' + part(friends);
 }
 
-// The head's early-fetch script parks the feed's two user-independent queries on
-// window.__earlyFeed before the boot script has even arrived. They are only
-// trusted for the same user and while fresh; anything else → issue the queries
-// normally.
+// The head's early-fetch script parks the feed_page() call on window.__earlyFeed
+// before the boot script has even arrived. It is only trusted for the same user
+// and while fresh; anything else → issue the call normally.
 export function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   if (!early || !userId || early.uid !== userId) return false;
-  if (!(early.rpc || (early.q1 && early.q2)) || typeof early.at !== 'number') return false;
+  if (!early.rpc || typeof early.at !== 'number') return false;
   const age = now - early.at;
   return age >= 0 && age < maxAgeMs;
 }

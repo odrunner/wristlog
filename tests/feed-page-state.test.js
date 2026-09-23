@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { feedPageToState, feedRpcHintKey } from '../wrotate_test.js';
+import { feedPageToState } from '../wrotate_test.js';
 
 // feed_page() returns the whole first page in one payload; feedPageToState()
 // must turn it into exactly the state the classic three-stage load builds.
@@ -75,13 +75,5 @@ describe('feedPageToState', () => {
     expect(feedPageToState({}, TODAY)).toBeNull();
     expect(feedPageToState({ logs: 'x' }, TODAY)).toBeNull();
     expect(feedPageToState(payload({ comments: [null] }), TODAY).commentIds).toEqual([]);
-  });
-});
-
-describe('feedRpcHintKey', () => {
-  it('is per user; no user → no key', () => {
-    expect(feedRpcHintKey('u1')).toBe('wrotate_feed_rpc_u1');
-    expect(feedRpcHintKey(null)).toBeNull();
-    expect(feedRpcHintKey('')).toBeNull();
   });
 });

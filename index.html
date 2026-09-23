@@ -128,14 +128,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        this document and cannot run until all of it has arrived, so the feed's
        first requests used to start only after the whole shell downloaded. This
        runs as soon as the parser gets here: with a stored, unexpired session it
-       fires the two feed queries that need nothing but the user id (public
-       posts, own posts) and parks the promises on window.__earlyFeed;
-       loadFeed()'s first stage consumes them once (takeEarlyFeed) instead of
-       issuing its own. In the feed_rpc experiment's treatment arm the single
-       feed_page() call is fired here instead (parked as .rpc, consumed by
-       _loadFeedViaRpc). Any failure resolves to { error } and the normal retry
-       re-runs the stage through supabase-js. EARLY_KEY / EARLY_COLS mirror
-       SUPABASE_KEY / FEED_LOG_COLS — tests/early-feed.test.js fails on drift. -->
+       fires feed_page() (the whole first page in one request) and parks the
+       promise on window.__earlyFeed.rpc; _loadFeedViaRpc consumes it once
+       (takeEarlyFeed) instead of issuing its own. Any failure resolves to
+       { error } and is retried once through supabase-js, then the classic load
+       runs. EARLY_KEY mirrors SUPABASE_KEY — tests/early-feed.test.js fails on drift. -->
   <script>
     (function () {
       try {
@@ -146,26 +143,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         var s = JSON.parse(localStorage.getItem(k));
         if (!s || !s.access_token || !s.user || !s.user.id) return;
         if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
-        // Admin-only override, stamped with the admin's id when it is set — another account on this device never inherits it.
-        var forced = localStorage.getItem('exp_force_uid') === s.user.id ? localStorage.getItem('exp_force_feed_rpc') : null;
-        var viaRpc = forced === 'treatment' || (forced !== 'control' && localStorage.getItem('wrotate_feed_rpc_' + s.user.id) === '1'); // feed_page() arm: one request
         var EARLY_URL = 'https://api.wrotate.com';
         var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
-        var EARLY_COLS = 'id,user_id,watch_id,club_id,photo_url,notes,use_case,date,created_at,visibility,moderation_status,location,badge_refs,fact_id';
-        var base = EARLY_URL + '/rest/v1/logs?select=' + encodeURIComponent(EARLY_COLS);
-        var tail = '&order=date.desc,created_at.desc&limit=50';
-        var h = { apikey: EARLY_KEY, Authorization: 'Bearer ' + s.access_token, Accept: 'application/json' };
         var send = function (url, init) {
           return fetch(url, init)
             .then(function (r) { return r.ok ? r.json().then(function (d) { return { data: d, error: null }; }) : { data: null, error: { message: 'early feed HTTP ' + r.status } }; })
             .catch(function (e) { return { data: null, error: { message: 'early feed: ' + (e && e.message || e) } }; });
         };
-        var get = function (filter) { return send(base + '&' + filter + tail, { headers: h }); };
-        if (viaRpc) {
-          window.__earlyFeed = { uid: s.user.id, at: Date.now(), rpc: send(EARLY_URL + '/rest/v1/rpc/feed_page', { method: 'POST', headers: { apikey: h.apikey, Authorization: h.Authorization, Accept: h.Accept, 'Content-Type': 'application/json' }, body: '{}' }) };
-          return;
-        }
-        window.__earlyFeed = { uid: s.user.id, at: Date.now(), q1: get('visibility=eq.public'), q2: get('user_id=eq.' + encodeURIComponent(s.user.id)) };
+        window.__earlyFeed = { uid: s.user.id, at: Date.now(), rpc: send(EARLY_URL + '/rest/v1/rpc/feed_page', { method: 'POST', headers: { apikey: EARLY_KEY, Authorization: 'Bearer ' + s.access_token, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{}' }) };
       } catch (e) { /* no early fetch — the normal path runs */ }
     })();
   </script>
@@ -7941,7 +7926,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.06.48';
+const APP_VERSION = '23.07.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11828,36 +11813,14 @@ function feedPageToState(j, today) {
   return { items, likes, comments, commentCounts, commentIds, commentLikeRows: arr(j.comment_likes) };
 }
 
-function feedRpcHintKey(userId) {
-  return userId ? 'wrotate_feed_rpc_' + userId : null;
-}
-
-// Which path loadFeed() takes. Experiment state is cleared at every boot and
-// get_experiments now loads AFTER the feed, so the arm comes from a per-user
-// hint written on the previous visit (experiments:loaded) — or from the admin's
-// forced variant, which persists on its own.
+// True when this load's feed came from feed_page(); false after a fallback to the classic load.
 let _feedViaRpc = false;
-function _useFeedRpc() {
-  try {
-    if (!currentUser || _isDemoMode) return false;
-    // Same rule as experiment(): force overrides are the admin's only. Without the
-    // check a test account on the admin's device was pushed into treatment.
-    const forced = currentUser.id === ADMIN_USER_ID ? safeLS.get('exp_force_feed_rpc') : null;
-    if (forced === 'treatment') return true;
-    if (forced === 'control') return false;
-    return safeLS.get(feedRpcHintKey(currentUser.id)) === '1';
-  } catch (e) { return false; }
-}
-document.addEventListener('experiments:loaded', () => {
-  const key = feedRpcHintKey(currentUser && currentUser.id);
-  if (key) { try { safeLS.set(key, experiment('feed_rpc') ? '1' : '0'); } catch (e) {} }
-});
 // True when the feed was fully loaded and rendered from feed_page().
 async function _loadFeedViaRpc() {
   try {
     // The call may already be in flight from the head's early-fetch script; a
     // failed early call is retried once here before the classic fallback.
-    const early = takeEarlyFeed(true);
+    const early = takeEarlyFeed();
     let res = early ? await withTimeout(early.rpc, 8000) : null;
     if (!res || res.error) { if (res) _earlyFeedUsed = false; res = await withTimeout(db.rpc('feed_page'), 8000); }
     const { data, error } = res;
@@ -11884,30 +11847,6 @@ async function _loadFeedViaRpc() {
     return false;
   }
 }
-// Admin/dev check, run from the console on a CLASSIC load: does feed_page()
-// produce the same feed this account is looking at? Logs and returns the diffs.
-async function _feedPageParity() {
-  const shape = (items, likes, counts) => items.map(i => ({
-    id: i.id, featured: !!i.__featured, visibility: i.visibility || null,
-    likes: (likes[i.id] || { count: 0 }).count, liked: !!(likes[i.id] || {}).liked,
-    comments: counts[i.id] || 0, author: i.profile ? i.profile.username : null,
-    watch: i.watch ? (i.watch.brand + '|' + i.watch.name) : null, fact: i.fact || '',
-  }));
-  if (_feedViaRpc) return console.warn('This feed came from feed_page already — force the control variant and reload first.');
-  const { data, error } = await db.rpc('feed_page');
-  if (error) return console.error('feed_page error:', error.message);
-  const st = feedPageToState(data, todayStr());
-  const app = shape(feedItems, feedLikes, feedCommentCounts), rpc = shape(st.items, st.likes, st.commentCounts);
-  const diffs = [];
-  for (let i = 0; i < Math.max(app.length, rpc.length); i++) {
-    if (JSON.stringify(app[i]) !== JSON.stringify(rpc[i])) diffs.push({ position: i, app: app[i] || null, rpc: rpc[i] || null });
-  }
-  const summary = { posts: app.length, rpcPosts: rpc.length, identical: diffs.length === 0, diffs: diffs.length,
-    visibilities: [...new Set(app.map(p => p.visibility))], withComments: app.filter(p => p.comments).length };
-  console.log('[feed_page parity]', summary); if (diffs.length) console.table(diffs.slice(0, 10));
-  return { summary, diffs };
-}
-
 // Admin → Experiments: load-time per arm for experiments that are ABOUT load time.
 // The judge only knows behaviour metrics, so a speed change (feed_rpc) had nothing
 // to show on its card. `arms` comes from admin_experiment_speed(): repeat loads
@@ -12062,25 +12001,23 @@ function restoreSocialCache() {
   return true;
 }
 
-// The head's early-fetch script parks the feed's two user-independent queries on
-// window.__earlyFeed before the boot script has even arrived. They are only
-// trusted for the same user and while fresh; anything else → issue the queries
-// normally.
+// The head's early-fetch script parks the feed_page() call on window.__earlyFeed
+// before the boot script has even arrived. It is only trusted for the same user
+// and while fresh; anything else → issue the call normally.
 function earlyFeedUsable(early, userId, now, maxAgeMs = 15000) {
   if (!early || !userId || early.uid !== userId) return false;
-  if (!(early.rpc || (early.q1 && early.q2)) || typeof early.at !== 'number') return false;
+  if (!early.rpc || typeof early.at !== 'number') return false;
   const age = now - early.at;
   return age >= 0 && age < maxAgeMs;
 }
 
-// Consume-once: the first Phase-1 attempt of the first load may use the early
-// results; a retry, a foreground re-pull or another account never does.
+// Consume-once: the first feed_page() attempt of the first load may use the early
+// result; a retry, a foreground re-pull or another account never does.
 let _earlyFeedUsed = false;
-function takeEarlyFeed(rpc = false) {
+function takeEarlyFeed() {
   const e = window.__earlyFeed || null;
   window.__earlyFeed = null;
   if (!earlyFeedUsable(e, currentUser && currentUser.id, Date.now())) return null;
-  if (!!e.rpc !== rpc) return null;   // parked for the other feed path
   _earlyFeedUsed = true;
   return e;
 }
@@ -12095,15 +12032,15 @@ function feedCaughtUpHtml() {
 }
 
 // How long one loadFeed() may legitimately run: the sum of its per-phase timeouts —
-// phase 1 up to 8 s + the 4 s own-posts fallback + featured/club fetches, and the
-// feed_rpc arm puts up to two 8 s feed_page() attempts in front.
-function _feedLoadBudgetMs() { return _useFeedRpc() ? 32000 : 16000; }
+// up to two 8 s feed_page() attempts, then the classic fallback's phase 1 up to
+// 8 s + the 4 s own-posts fallback + featured/club fetches.
+const FEED_LOAD_BUDGET_MS = 32000;
 
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for longer than a load can take, treat it as dead and allow re-entry
   if (feedLoading) {
-    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < _feedLoadBudgetMs()) return;
+    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < FEED_LOAD_BUDGET_MS) return;
     console.warn('[WRotate] feedLoading stuck — forcing re-entry');
     feedLoading = false;
   }
@@ -12122,10 +12059,10 @@ async function loadFeed() {
   const _sigAtStart = _socialSig();
   _feedSocialSig = _sigAtStart;
   // Master safety net for a load that HANGS. Every phase below has its own timeout,
-  // and their sum (_feedLoadBudgetMs) is what this must outlast. At 8 s it fired mid-load: a full error screen,
+  // and their sum (FEED_LOAD_BUDGET_MS) is what this must outlast. At 8 s it fired mid-load: a full error screen,
   // the fallback mislabelled "Couldn't refresh", and feedLoading=false let a second
   // loadFeed() start under the first (audit 2026-09-20 C7).
-  const _feedSafetyMs = _feedLoadBudgetMs();
+  const _feedSafetyMs = FEED_LOAD_BUDGET_MS;
   const _feedSafety = setTimeout(() => {
     if (feedLoading) {
       console.warn(`[WRotate] loadFeed master timeout (${_feedSafetyMs / 1000}s) — forcing error render`);
@@ -12137,10 +12074,10 @@ async function loadFeed() {
   // them in place when Phase 1 returns.
   const listEl = document.getElementById('feed-list');
   if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-40pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-90pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-70pct u-h-3"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-35pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-80pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-60pct u-h-3"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-45pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-85pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-65pct u-h-3"></div></div>';
-  // Experiment feed_rpc: the whole first page in ONE request. Any failure falls
-  // through to the classic path below, which is untouched.
+  // The whole first page in ONE request (feed_page, shipped via experiment feed_rpc
+  // 2026-09-23). Any failure falls through to the classic path below.
   _feedViaRpc = false;   // describes this load only — a stale true skipped the follows/blocks-changed reload
-  if (_useFeedRpc() && await _loadFeedViaRpc()) {
+  if (!_isDemoMode && await _loadFeedViaRpc()) {
     clearTimeout(_feedSafety);
     feedLoading = false;
     feedLoadedAt = Date.now();
@@ -12166,14 +12103,12 @@ async function loadFeed() {
     const featuredP = withTimeout(db.rpc('featured_current'), 4000).catch(() => null);
     try {
       const buildPhase1 = () => {
-      // Q1 + Q2 may already be in flight from the head's early-fetch script.
-      const early = takeEarlyFeed();
       // Q1: public posts — no user restriction, global discovery feed
-      const q1 = early ? early.q1 : db.from('logs').select(FEED_LOG_COLS)
+      const q1 = db.from('logs').select(FEED_LOG_COLS)
         .eq('visibility', 'public')
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       // Q2: own posts — all visibility types (owner sees own private/followers/etc.)
-      const q2 = early ? early.q2 : db.from('logs').select(FEED_LOG_COLS)
+      const q2 = db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
 
@@ -30997,7 +30932,7 @@ function initApp() {
   // they land the sets are recomputed and saved, and the feed reloads once only
   // if what it was built from has changed (or loadFeed()'s own end-of-load
   // check does it, when a load is still in flight).
-  const _fromSocialCache = restoreSocialCache() || _useFeedRpc();   // feed_page() resolves follows server-side
+  const _fromSocialCache = restoreSocialCache() || !_isDemoMode;   // feed_page() resolves follows server-side
   if (_fromSocialCache) { _feedFired = true; loadFeed(); }
   // Without a remembered copy the feed NEEDS these first; with one they can wait
   // for the feed-first gate like everything else.

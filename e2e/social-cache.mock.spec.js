@@ -91,17 +91,20 @@ test('a follow list that changed since the stored copy reloads the feed once', a
   await page.unroute(FOLLOWS, h);
 });
 
-test('without a stored copy the feed still waits for the follows lookup', async ({ page }) => {
+// feed_page() resolves follows server-side, so even with no stored copy the feed
+// no longer waits for the follows lookup (it did before feed_rpc shipped, 2026-09-23).
+test('without a stored copy the feed does not wait for the follows lookup', async ({ page }) => {
   await injectSession(page);
-  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });
+  await page.route('**/rest/v1/rpc/feed_page*', route => route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ logs: POSTS, profiles: [], watches: [], likes: {}, comments: [], comment_likes: [], facts: [] }) }));
   let release; const gate = new Promise(r => { release = r; });
   const h = followsHandler([OTHER], gate);
   await page.route(FOLLOWS, h);
   await page.goto('/');
   await waitForAppBoot(page);
-  await page.waitForTimeout(800);
-  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(0);
+  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);   // follows still held
+  expect(await page.evaluate(() => _feedViaRpc)).toBe(true);
   release();
-  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
   await page.unroute(FOLLOWS, h);
 });

@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, SAMPLE_WATCHES } from './helpers.js';
 
-// Experiment feed_rpc: the whole first page of the feed comes from ONE request
-// (feed_page). These drive the real boot with the arm hinted the way a previous
-// visit leaves it, and check the two things that matter: the classic feed
-// queries are not made, and any failure falls back to them untouched.
+// The whole first page of the feed comes from ONE request (feed_page; shipped via
+// experiment feed_rpc 2026-09-23). These drive the real boot and check the two
+// things that matter: the classic feed queries are not made, and any failure
+// falls back to them untouched.
 
 const OTHER = '00000000-0000-4000-8000-0000000000ff';
 const POSTS = [1, 2, 3].map(i => ({
@@ -19,9 +19,6 @@ const PAYLOAD = {
   comments: [{ id: 'c1', log_id: 'p-2', user_id: OTHER, body: 'nice', created_at: '2026-08-06T11:00:00+00:00', moderation_status: null }],
   comment_likes: [], facts: [],
 };
-// The arm reaches the boot through the per-user hint the previous visit wrote — the
-// admin's exp_force override is ignored for every other account (audit 2026-09-20 C8).
-const force = (page, variant) => page.addInitScript(v => localStorage.setItem('wrotate_feed_rpc_test-user-id-000', v === 'treatment' ? '1' : '0'), variant);
 const spyPostHog = page => page.addInitScript(() => {
   window.__ph = [];
   window.posthog = { __SV: 1, init() {}, identify() {}, capture(name, props) { window.__ph.push({ name, props }); } };
@@ -32,9 +29,8 @@ const classicFeedReqs = page => {
   return seen;
 };
 
-test('treatment: one feed_page call — fired from the head — renders the feed; no classic feed queries', async ({ page }) => {
+test('first load: one feed_page call — fired from the head — renders the feed; no classic feed queries', async ({ page }) => {
   await injectSession(page);
-  await force(page, 'treatment');
   await spyPostHog(page);
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });   // classic path would render an EMPTY feed
   let calls = 0, fromHead = 0;
@@ -59,9 +55,8 @@ test('treatment: one feed_page call — fired from the head — renders the feed
 
 // The feed_page path renders once, before get_experiments() resolves, so the
 // follow_suggest card has to be drawn when the arms arrive (audit 2026-09-20 C2).
-test('treatment: the follow-suggestions card still appears on the boot load', async ({ page }) => {
+test('the follow-suggestions card still appears on the boot load', async ({ page }) => {
   await injectSession(page);
-  await force(page, 'treatment');
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });
   await page.route('**/rest/v1/rpc/feed_page*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }));
   await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant: 'treatment' }]) }));
@@ -75,9 +70,8 @@ test('treatment: the follow-suggestions card still appears on the boot load', as
   expect(await page.evaluate(() => _feedViaRpc)).toBe(true);
 });
 
-test('treatment: a failing feed_page falls back to the classic load', async ({ page }) => {
+test('a failing feed_page falls back to the classic load', async ({ page }) => {
   await injectSession(page);
-  await force(page, 'treatment');
   await spyPostHog(page);
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
   await page.route('**/rest/v1/rpc/feed_page*', route => route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' }));
@@ -90,9 +84,8 @@ test('treatment: a failing feed_page falls back to the classic load', async ({ p
   expect((await ev())[0].props.feed_rpc).toBe(false);
 });
 
-test('treatment: a failed early feed_page is retried once through the SDK before any fallback', async ({ page }) => {
+test('a failed early feed_page is retried once through the SDK before any fallback', async ({ page }) => {
   await injectSession(page);
-  await force(page, 'treatment');
   await spyPostHog(page);
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [] });
   await page.route('**/rest/v1/rpc/feed_page*', route => route.request().headers()['x-client-info']
@@ -104,27 +97,4 @@ test('treatment: a failed early feed_page is retried once through the SDK before
   const ev = () => page.evaluate(() => window.__ph.filter(e => e.name === 'boot_timing'));
   await expect.poll(() => ev().then(e => e.length)).toBe(1);
   expect((await ev())[0].props).toMatchObject({ feed_rpc: true, early_feed: false });
-});
-
-test('control and unassigned users never call feed_page', async ({ page }) => {
-  await injectSession(page);
-  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
-  let calls = 0;
-  await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });
-  await page.goto('/');
-  await waitForAppBoot(page);
-  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
-  expect(calls).toBe(0);
-});
-
-test("the admin's force override is ignored for another account on the same device", async ({ page }) => {
-  await injectSession(page);
-  await page.addInitScript(() => { localStorage.setItem('exp_force_feed_rpc', 'treatment'); localStorage.setItem('exp_force_uid', 'someone-else'); });
-  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: POSTS });
-  let calls = 0;
-  await page.route('**/rest/v1/rpc/feed_page*', route => { calls++; route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PAYLOAD) }); });
-  await page.goto('/');
-  await waitForAppBoot(page);
-  await expect(page.locator('#feed-list > .feed-card')).toHaveCount(3);
-  expect(calls).toBe(0);
 });

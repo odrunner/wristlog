@@ -19,6 +19,9 @@
    row's **Refresh** button) — the list does not recompute on page load.
 6. After **won**: delete the `experiment()` branch, keep the treatment path, ship, then
    press **Archive**. After **killed**: delete the treatment path, ship, Archive.
+   **A won or killed status IS the go-ahead for this cleanup** — whether the user pressed
+   Roll out / Kill or the nightly judge decided. Claude does it without asking (tests,
+   SW bump, push as usual); it only asks when the cleanup itself raises a real question.
 
 Metrics: `experiment_metrics` table. Add a `feature_events:<event>` row for any event you
 already write to `feature_events` (no SQL change). Table-backed metrics need one `CASE`
