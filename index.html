@@ -3259,113 +3259,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<!-- ════ WELCOME ONBOARDING MODAL ════ -->
-<div id="welcome-modal" class="overlay hidden welcome-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title">
-  <div class="modal u-maxw-95 u-ta-center">
-    <div class="welcome-step" id="ws-1">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-      <div class="modal-title u-fs-2xl" id="welcome-modal-title">Welcome to WRotate</div>
-      <p class="text-body-lg u-mt-2 u-mr-0 u-mb-6 u-ml-0">Track every wear, build your collection story, and discover what other enthusiasts are wearing.</p>
-      <button class="btn btn-primary btn-block" onclick="welcomeStep(2)">Get started →</button>
-    </div>
-    <div class="welcome-step hidden" id="ws-2">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="modal-title u-fs-xl">Add your first watch</div>
-      <p class="text-body-lg u-mt-2 u-mr-0 u-mb-6 u-ml-0">Your collection is the heart of WRotate. Add watches manually, or snap a photo and let AI identify them for you.</p>
-      <button class="btn btn-primary btn-block stack-2-5" onclick="pauseWelcome(3);openPhotoIdentify()">Add from Photo</button>
-      <button class="btn btn-ghost btn-block stack-2-5" onclick="pauseWelcome(3);openAddWatch()">Add Manually</button>
-      <button class="btn btn-ghost btn-block" onclick="welcomeStep(3)">Skip for now</button>
-    </div>
-    <div class="welcome-step hidden" id="ws-3">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="modal-title u-fs-xl">Complete your profile</div>
-      <p class="text-body-lg u-mt-2 u-mr-0 u-mb-4 u-ml-0">Add your name and pick a username so others can find you.</p>
-      <div class="form-group u-ta-left u-mb-3">
-        <label for="ws-display-name" class="u-fs-base u-mb-1 u-d-block">Name</label>
-        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off" maxlength="50">
-      </div>
-      <div class="form-group u-ta-left u-mb-1">
-        <label for="ws-username" class="u-fs-base u-mb-1 u-d-block">Username</label>
-        <div class="username-field">
-          <span class="username-prefix">@</span>
-          <input type="text" id="ws-username" placeholder="username" maxlength="30"
-            oninput="onUsernameInput(this, 'ws-username-status')">
-        </div>
-      </div>
-      <div id="ws-username-status" class="username-status stack-3"></div>
-      <div class="form-group u-ta-left u-mb-4">
-        <label for="ws-bio" class="u-fs-base u-mb-1 u-d-block">About you</label>
-        <textarea id="ws-bio" rows="2" placeholder="A short bio..." class="u-rs-none" maxlength="300"></textarea>
-      </div>
-      <button class="btn btn-primary btn-block stack-2-5" id="ws-profile-btn" onclick="saveWelcomeProfile()">Save & Continue →</button>
-      <button class="btn btn-ghost btn-block" onclick="welcomeStep(4)">Skip for now</button>
-    </div>
-    <div class="welcome-step hidden" id="ws-4">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="modal-title u-fs-xl">Find people to follow</div>
-      <p class="text-body-lg u-mt-2 u-mr-0 u-mb-6 u-ml-0">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary btn-block u-mb-2-5 u-justify-center" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
-      <button class="btn btn-ghost btn-block" onclick="welcomeStep(5)">Skip for now</button>
-    </div>
-    <div class="welcome-step hidden" id="ws-5">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
-      <div class="modal-title u-fs-xl">One last thing</div>
-      <p class="text-body-lg u-mt-2 u-mr-0 u-mb-5 u-ml-0">A few things live in the top-right corner of every screen.</p>
-      <div class="u-fd-column u-gap-3 u-ta-left u-mb-6 u-d-flex">
-        <div class="row-start-lg">
-          <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
-          <div>
-            <div class="u-fs-md u-fw-semibold u-c-text">Theme</div>
-            <div class="body-muted">Tap the icon to cycle Dark, Light, or System.</div>
-          </div>
-        </div>
-        <div class="row-start-lg">
-          <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-          <div>
-            <div class="u-fs-md u-fw-semibold u-c-text">Notifications</div>
-            <div class="body-muted">Likes and comments on your posts.</div>
-          </div>
-        </div>
-        <div class="row-start-lg">
-          <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-          <div>
-            <div class="u-fs-md u-fw-semibold u-c-text">Your profile</div>
-            <div class="body-muted">Collection, privacy settings, and sign out.</div>
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="welcomeStep(6)">Start tracking →</button>
-    </div>
-    <div class="welcome-step hidden" id="ws-6">
-      <div class="u-mb-3 u-justify-center u-d-flex"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-      <div class="modal-title u-fs-xl">Terms of Use</div>
-      <div class="text-body u-mt-2 u-mr-0 u-mb-4 u-ml-0 u-maxh-50 u-ta-left u-pt-0 u-pr-2 u-pb-0 u-pl-2" style="overflow-y:auto;">
-        <p class="stack-2">By using WRotate, you agree to:</p>
-        <ul class="u-mt-0 u-mr-0 u-mb-2 u-ml-0 u-pl-5">
-          <li>Not post objectionable, offensive, or inappropriate content</li>
-          <li>Not harass, bully, or threaten other users</li>
-          <li>Content that violates these terms will be removed</li>
-          <li>Accounts that violate these terms may be suspended or terminated</li>
-        </ul>
-        <p>Read the full <a href="/terms.html" target="_blank" class="text-gold">Terms of Use</a> and <a href="/privacy.html" target="_blank" class="text-gold">Privacy Policy</a>.</p>
-      </div>
-      <label class="row u-mb-4 u-cur-pointer u-fs-md">
-        <input type="checkbox" id="ws-eula-check" onchange="document.getElementById('ws-eula-btn').disabled = !this.checked">
-        <span>I agree to the Terms of Use and Privacy Policy</span>
-      </label>
-      <button class="btn btn-primary btn-block" id="ws-eula-btn" onclick="acceptEula()" disabled>Accept &amp; Start</button>
-    </div>
-    <div class="u-justify-center u-gap-1-5 u-mt-4 u-d-flex">
-      <div class="welcome-dot active" id="wd-1"></div>
-      <div class="welcome-dot" id="wd-2"></div>
-      <div class="welcome-dot" id="wd-3"></div>
-      <div class="welcome-dot" id="wd-4"></div>
-      <div class="welcome-dot" id="wd-5"></div>
-      <div class="welcome-dot" id="wd-6"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ════ EULA GATE (for existing users who haven't accepted) ════ -->
 <div id="eula-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="eula-modal-title" style="z-index:var(--z-modal-high);">
   <div class="modal u-maxw-105 u-ta-center">
@@ -3386,22 +3279,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </label>
     <button class="btn btn-primary btn-block" id="eula-gate-btn" onclick="acceptEula()" disabled>I Agree</button>
     <button class="btn btn-ghost btn-block u-mt-2" onclick="declineEula()">Decline &amp; Sign Out</button>
-  </div>
-</div>
-
-<div id="login-prompt-modal" class="overlay hidden login-prompt-modal" role="dialog" aria-modal="true" style="z-index:var(--z-modal-high);">
-  <div class="modal u-maxw-90">
-    <div class="modal-title u-fs-xl u-mb-1">Sign in to continue</div>
-    <p class="text-secondary u-mb-5">Create a free account to start tracking your watches.</p>
-    <button class="btn-google u-w-100pct u-mb-2-5" onclick="closeLoginPrompt();signInWithGoogle()">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-      Continue with Google
-    </button>
-    <button class="btn-apple u-w-100pct u-mb-2-5" onclick="closeLoginPrompt();signInWithApple()">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
-      Continue with Apple
-    </button>
-    <button class="btn btn-ghost btn-block" onclick="closeLoginPrompt()">Cancel</button>
   </div>
 </div>
 
@@ -5464,19 +5341,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- Measure modal kept as alias — openMeasureModal now navigates to the Measure tab -->
 
-<!-- ════ RECEIPTS MODAL ════ -->
-<div id="receipts-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="receipts-modal-title">
-  <div class="modal u-maxw-120">
-    <div class="modal-title" id="receipts-modal-title">Receipts &amp; Documents</div>
-    <div id="receipts-watch-name" class="text-secondary u-mb-4"></div>
-    <div id="receipts-list"></div>
-    <div class="modal-actions u-mt-5">
-      <button class="btn btn-primary" onclick="addReceipt()">+ Upload Receipt</button>
-      <button class="btn btn-ghost"   onclick="closeReceiptsModal()">Close</button>
-    </div>
-  </div>
-</div>
-
 <!-- ════ DELETE CONFIRM MODAL ════ -->
 <div id="del-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="del-modal-title">
   <div class="modal u-maxw-90">
@@ -5538,17 +5402,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<!-- ════ ADD FLOW V2 DEBUG PREVIEW ════ -->
-<div id="af2-debug-sheet" class="overlay hidden" role="dialog" aria-modal="true">
-  <div class="modal u-maxw-120">
-    <div class="modal-title row-between">
-      <span>Add Flow V2 — State Preview</span>
-      <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" class="btn-plain u-fs-xl u-pt-0 u-pr-0-5 u-pb-0 u-pl-0-5 u-lh-none">&times;</button>
-    </div>
-    <div id="af2-debug-rows" class="u-maxh-70vh" style="overflow-y:auto;"></div>
-  </div>
-</div>
-
 <!-- ════ ENHANCE ALL MODAL ════ -->
 <div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
   <div class="modal u-maxw-120">
@@ -5559,20 +5412,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-actions u-mt-4">
       <button id="enhance-all-close-btn" class="btn btn-ghost" onclick="closeEnhanceAll()">Close</button>
       <button id="enhance-all-save-all-btn" class="btn btn-md btn-primary" style="display:none;" onclick="saveAllEnhanceResults()">Save All</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════ BATCH VALUE CHECK MODAL ════ -->
-<div id="value-check-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="value-check-modal-title">
-  <div class="modal u-maxw-120">
-    <div class="modal-title row" id="value-check-modal-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Market Value Check
-    </div>
-    <div id="value-check-list" class="u-maxh-60vh" style="overflow-y:auto;"></div>
-    <div class="modal-actions u-mt-4">
-      <button id="value-check-close-btn" class="btn btn-ghost" onclick="closeValueCheck()">Close</button>
-      <button id="value-check-save-all-btn" class="btn btn-md btn-primary" style="display:none;" onclick="saveAllValueResults()">Save All</button>
     </div>
   </div>
 </div>
@@ -8267,7 +8106,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.25';
+const APP_VERSION = '23.04.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8670,7 +8509,6 @@ async function loadMyProfile() {
     }
     btn.style.display = 'flex';
   }
-  // New users go through the welcome tour (which includes profile setup)
 
 }
 
@@ -11734,13 +11572,6 @@ document.addEventListener('click', e => {
 // that detect a logged-out visitor.
 function loadPublicFeed() {
   if (window.posthog) posthog.capture('landing_page_viewed');
-}
-
-function requireLogin() {
-  document.getElementById('login-prompt-modal').classList.remove('hidden');
-}
-function closeLoginPrompt() {
-  document.getElementById('login-prompt-modal').classList.add('hidden');
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────
@@ -15076,8 +14907,6 @@ function renderFeedCard(item) {
   const cCount   = feedCommentCounts[item.id] || 0;
   const expanded = expandedComments.has(item.id);
 
-  const ucMap  = { work:'', leisure:'', dinner:'', travel:'' };
-  const ucIcon = ucMap[item.use_case] || '';
   const _loc = normalizeLocation(item.location);
   const metaParts = [
     formatFeedDate(item.date, item.created_at),
@@ -17599,56 +17428,6 @@ async function deleteComment(commentId, logId, el) {
   }
 }
 
-// ── Welcome Onboarding ────────────────────────────────────────────────────
-function maybeShowWelcome() {
-  return; // DISABLED — onboarding skipped, EULA gated on content creation instead
-  if (!currentUser) return;
-  if (safeLS.get('wristlog_onboarded_' + currentUser.id)) return;
-  if (!myProfile || myProfile.eula_accepted_at) return;
-  if (watches.length > 0 || following.size > 0) return;
-  document.getElementById('welcome-modal').classList.remove('hidden');
-  welcomeStep(2);
-}
-let _welcomePendingStep = null;
-function pauseWelcome(nextStep) {
-  _welcomePendingStep = nextStep;
-  document.getElementById('welcome-modal').classList.add('hidden');
-}
-function resumeWelcome() {
-  if (_welcomePendingStep !== null) {
-    const step = _welcomePendingStep;
-    _welcomePendingStep = null;
-    document.getElementById('welcome-modal').classList.remove('hidden');
-    welcomeStep(step);
-  }
-}
-function welcomeStep(n) {
-  trackVisit({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome' });
-  [1,2,3,4,5,6].forEach(i => {
-    document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
-    document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
-  });
-  // Prefill profile step with existing data
-  if (n === 3 && myProfile) {
-    const uInput = document.getElementById('ws-username');
-    if (uInput && !uInput.value) {
-      uInput.value = myProfile.username || '';
-      uInput.dataset.original = myProfile.username || '';
-      onUsernameInput(uInput, 'ws-username-status');
-    }
-    const nInput = document.getElementById('ws-display-name');
-    if (nInput && !nInput.value && myProfile.display_name) nInput.value = myProfile.display_name;
-  }
-}
-function closeWelcome() {
-  document.getElementById('welcome-modal').classList.add('hidden');
-  try { if (currentUser) safeLS.set('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
-  // If user dismissed welcome before accepting EULA, show standalone EULA gate
-  if (currentUser && (!myProfile || !myProfile.eula_accepted_at)) {
-    document.getElementById('eula-modal').classList.remove('hidden');
-  }
-}
-
 // ── EULA acceptance ────────────────────────────────────────────────
 async function checkEulaAcceptance() {
   if (!currentUser || !myProfile) return true;
@@ -17667,8 +17446,6 @@ async function acceptEula() {
   if (profErr) { toast('Could not save agreement — please try again', 'error'); return; }
   if (myProfile) myProfile.eula_accepted_at = new Date().toISOString();
   document.getElementById('eula-modal').classList.add('hidden');
-  document.getElementById('welcome-modal').classList.add('hidden');
-  try { if (currentUser) safeLS.set('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
   toast('Terms accepted — you\'re all set!');
   feedLoading = false; feedLoadedAt = 0;
   loadFeed();
@@ -17678,34 +17455,6 @@ async function acceptEula() {
 
 function declineEula() {
   signOut();
-}
-async function saveWelcomeProfile() {
-  if (demoGuard()) return;
-  const name = (document.getElementById('ws-display-name').value || '').trim();
-  const usernameRaw = (document.getElementById('ws-username')?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const bio  = (document.getElementById('ws-bio').value || '').trim();
-
-  // Validate username if provided
-  if (usernameRaw) {
-    const { valid } = validateUsername(usernameRaw);
-    if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
-  }
-
-  const btn = document.getElementById('ws-profile-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-
-  const updateData = {};
-  if (name)        updateData.display_name = name;
-  if (usernameRaw) { updateData.username = usernameRaw; updateData.username_set = true; }
-  if (bio)         updateData.bio = bio;
-
-  if (Object.keys(updateData).length && currentUser) {
-    const { error } = await db.from('profiles').update(updateData).eq('id', currentUser.id);
-    if (error) { toast('Could not save — ' + error.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Save & Continue →'; } return; }
-    if (window.myProfile) Object.assign(myProfile, updateData);
-  }
-  if (btn) { btn.disabled = false; btn.textContent = 'Save & Continue →'; }
-  welcomeStep(4);
 }
 
 // ── Discover ──────────────────────────────────────────────────────────────
@@ -17721,7 +17470,6 @@ function openDiscover() {
 }
 function closeDiscover() {
   document.getElementById('discover-modal').classList.add('hidden');
-  resumeWelcome();
 }
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
@@ -18198,8 +17946,6 @@ function renderRecSettingsBody() {
 }
 
 
-
-// [Timegrapher code removed — see shelved/timegrapher.html]
 
 
 // Safe localStorage reader — returns fallback on corrupted/missing data
@@ -19747,9 +19493,8 @@ async function loadAdminStats(force = false) {
   el.innerHTML = '<div class="note-md">Loading…</div>';
   try {
     // Parallel queries for all stats
-    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
+    const [usersRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
       db.from('profiles').select('id', { count: 'exact', head: true }),
-      db.from('watches').select('id', { count: 'exact', head: true }),
       db.from('logs').select('id', { count: 'exact', head: true }).not('watch_id', 'is', null),
       db.from('logs').select('id', { count: 'exact', head: true }).is('watch_id', null),
       db.from('wishlist').select('id', { count: 'exact', head: true }),
@@ -19761,7 +19506,6 @@ async function loadAdminStats(force = false) {
 
     const adminTotals = (totalsRes.data || [])[0] || {};
     const users     = usersRes.count    || 0;
-    const totalWatches = watchesRes.count || 0;
     const wearLogs  = logsRes.count     || 0;
     const posts     = postsRes.count    || 0;
     const totalLogs = wearLogs + posts;
@@ -20700,7 +20444,6 @@ function renderFunnelFromRpc(f, su) {
   const signinA7 = f.signin_apple_7d || 0;
   const signinG1 = f.signin_google_1d || 0;
   const signinA1 = f.signin_apple_1d || 0;
-  const totalSignins = signinGAll + signinAAll;
   const totalSignins7 = signinG7 + signinA7;
   const totalSignins1 = signinG1 + signinA1;
   const newUsersAll = su.total || 0;
@@ -22248,8 +21991,6 @@ function renderTrackHistory() {
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-6 u-h-6 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
       : `<div class="avatar u-w-6 u-h-6 u-fs-3xs u-shrink-0" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
-    const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
-    const strapLabel = strap ? `<div class="text-caption u-mt-1 u-lh-snug">${escHtml(strap.name)}</div>` : '';
     return `<tr>
       <td class="u-ws-nowrap">${fmtDate(log.date)}</td>
       <td>
@@ -23211,52 +22952,6 @@ async function runCampaignNow() {
     toast(summary || 'No emails to send');
     loadCampaigns();
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
-}
-
-async function sendToCohort(id) {
-  const camp = _campaignsData.find(c => c.id === id);
-  if (!camp) return;
-  const cohort = document.getElementById('camp-cohort-' + id)?.value;
-  if (!cohort) { toast('Pick a cohort first', 'error'); return; }
-  const cohortLabels = { pre_april: 'Pre-April dormant', april: 'April dormant', may: 'May dormant' };
-  const label = cohortLabels[cohort] || cohort;
-  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
-  const body = document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html;
-  if (!subject || !body) { toast('Subject and body are required', 'error'); return; }
-  const limitRaw = document.getElementById('camp-limit-' + id)?.value?.trim();
-  const limit = limitRaw ? Math.max(1, parseInt(limitRaw, 10)) : null;
-  const statusEl = document.getElementById('camp-status-' + id);
-  const sharedBody = { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort };
-  if (limit) sharedBody.limit = limit;
-  // Step 1: dry-run to get count
-  if (statusEl) statusEl.textContent = 'Counting recipients…';
-  try {
-    const { data: countData, error: countErr } = await db.functions.invoke('send-broadcast', {
-      body: { ...sharedBody, dry_run: true }
-    });
-    if (countErr) throw countErr;
-    const eligible = countData?.eligible ?? 0;
-    const willSend = countData?.will_send ?? eligible;
-    if (eligible === 0) {
-      if (statusEl) statusEl.textContent = `No eligible recipients in ${label} (all already sent, opted out, or active).`;
-      return;
-    }
-    const sliceNote = limit && willSend < eligible
-      ? ` (test slice of ${willSend} from ${eligible} eligible)`
-      : '';
-    if (!await showConfirm(`Send "${camp.name}" to ${willSend} ${label} user${willSend === 1 ? '' : 's'}${sliceNote}? This cannot be undone.`, { title: 'Send broadcast?', confirmLabel: 'Send' })) {
-      if (statusEl) statusEl.textContent = 'Cancelled.';
-      return;
-    }
-    // Step 2: actual send
-    if (statusEl) statusEl.textContent = `Sending to ${willSend} recipients…`;
-    const { data, error } = await db.functions.invoke('send-broadcast', { body: sharedBody });
-    if (error) throw error;
-    if (statusEl) statusEl.textContent = `Sent ${data?.sent ?? 0} / ${data?.total ?? 0}${data?.failed ? `, ${data.failed} failed` : ''}.`;
-    loadCampaigns();
-  } catch (e) {
-    if (statusEl) statusEl.textContent = 'Failed: ' + (e.message || e);
-  }
 }
 
 // ── SNAP TO TRACK ─────────────────────────────────────────────────────────
@@ -25147,7 +24842,6 @@ function closeWatchModal() {
   wPendingImage = null; wPendingFile = null;
   document.getElementById('watch-modal').classList.add('hidden');
   movingFromWishlistId = null; movingFromWishlistData = null;
-  resumeWelcome();
 }
 
 /* ── Watch modal photo preview ── */
@@ -25161,27 +24855,6 @@ function renderWatchModalImg() {
     if (img) img.src = '';
     if (changeBtn) changeBtn.textContent = 'Add photo';
   }
-}
-async function openModalCropAdjuster() {
-  let sourceBlob = null;
-  if (wPendingImage) {
-    try {
-      if (wPendingFile instanceof Blob) {
-        sourceBlob = wPendingFile;
-      } else {
-        // Fetch from URL (Supabase storage or blob URL)
-        const resp = await fetch(wPendingImage, { signal: AbortSignal.timeout(8000) });
-        if (resp.ok) sourceBlob = await resp.blob();
-      }
-    } catch (_) {}
-  }
-  if (!sourceBlob) { toast('Could not load photo to crop', 'info'); return; }
-  _openCropUI(sourceBlob, null, (croppedBlob) => {
-    if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
-    wPendingFile = croppedBlob;
-    wPendingImage = URL.createObjectURL(croppedBlob);
-    renderWatchModalImg();
-  });
 }
 
 function pickWatchModalImage() {
@@ -25197,12 +24870,6 @@ function pickWatchModalImage() {
     renderWatchModalImg();
   };
   input.click();
-}
-function clearWatchModalImage() {
-  if (wPendingImage) URL.revokeObjectURL(wPendingImage);
-  wPendingImage = null;
-  wPendingFile  = null;
-  renderWatchModalImg();
 }
 
 function onInsuranceChange() {
@@ -25486,7 +25153,6 @@ async function checkSingleWatchValue() {
     }
     const data = await r.json();
     if (data.cached) {
-      const cachedMid = (data.estimated_value_usd || {}).mid;
       const cachedDate = data.looked_up_at || w.marketPriceDate;
       const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;
       const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
@@ -25972,7 +25638,6 @@ function computeWatchRec(skipSet) {
   const now      = new Date();
   const today    = todayStr();
   const todayDOW = now.getDay();
-  const todayMonth = now.getMonth(); // 0-11
   const WARM = new Set(['gold', 'amber', 'tangerine', 'orange', 'rose'].map(WATCH_HUE));
   const COOL = new Set(['sky', 'indigo', 'violet', 'emerald', 'green'].map(WATCH_HUE));
   const DARK = new Set([WATCH_HUE('slate')]);
@@ -26391,13 +26056,6 @@ function renderStatsRow(fl) {
   const days   = new Set(fl.map(l=>l.date)).size;
   const unique = new Set(fl.map(l=>l.watchId)).size;
 
-  // favourite (dedup same watch+date)
-  const wm   = {};
-  const _sSeen = new Set();
-  fl.forEach(l => { const k = l.watchId + '|' + l.date; if (!_sSeen.has(k)) { _sSeen.add(k); wm[l.watchId] = (wm[l.watchId]||0)+1; } });
-  const favId = Object.keys(wm).sort((a,b)=>wm[b]-wm[a])[0];
-  const fav   = favId ? watches.find(x=>x.id===favId) : null;
-
   const pricePaid = watches.reduce((s,w)=>s+(w.price||0), 0);
   const marketVal = watches.reduce((s,w)=>s+(Number(w.marketPrice)||0), 0);
   const hasMarket = marketVal > 0 && pricePaid > 0;
@@ -26782,15 +26440,6 @@ function renderCollectionReport(fl) {
 function setCollSort(field) {
   collSort = (collSort === field+'-desc') ? field+'-asc' : field+'-desc';
   renderCollectionReport(filteredLogs());
-}
-
-function deleteLogFromStats(id) {
-  if (demoGuard()) return;
-  logs = logs.filter(l => l.id !== id);
-  save();
-  if (currentUser) queueDelete('logs', id);
-  cloudSync();
-  renderStats();
 }
 
 // ══════════════════════════════════════════
@@ -27677,107 +27326,6 @@ function removeWatchImage(watchId) {
 // ══════════════════════════════════════════
 //  RECEIPTS
 // ══════════════════════════════════════════
-let receiptsWatchId = null;
-
-function closeReceiptsModal() {
-  document.getElementById('receipts-modal').classList.add('hidden');
-  receiptsWatchId = null;
-}
-
-function renderReceiptsList(w) {
-  const receipts = w.receipts || [];
-  const el = document.getElementById('receipts-list');
-  if (!receipts.length) {
-    el.innerHTML = `<div class="empty">No receipts yet. Upload a receipt or document.</div>`;
-    return;
-  }
-  el.innerHTML = `<div class="receipt-list">${receipts.map(r => {
-    const isPdf = r.type === 'application/pdf';
-    const icon  = isPdf ? 'PDF' : 'IMG';
-    const date  = r.addedDate ? fmtDate(r.addedDate) : '';
-    return `<div class="receipt-item">
-      <div class="receipt-icon">${icon}</div>
-      <div class="receipt-info">
-        <div class="receipt-name">${escHtml(r.name)}</div>
-        ${date ? `<div class="receipt-date">${date}</div>` : ''}
-      </div>
-      <div class="receipt-actions">
-        <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" aria-label="Remove receipt" onclick="removeReceipt('${w.id}','${r.id}',this)">✕</button>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
-}
-
-function addReceipt() {
-  if (!receiptsWatchId) return;
-  const input = document.createElement('input');
-  input.type   = 'file';
-  input.accept = 'image/*,.pdf,application/pdf';
-  input.multiple = true;
-  input.onchange = async () => {
-    if (!input.files.length) return;
-    const wId = receiptsWatchId;
-    const idx = watches.findIndex(x => x.id === wId);
-    if (idx < 0) return;
-    if (!watches[idx].receipts) watches[idx].receipts = [];
-    const results = await Promise.allSettled([...input.files].map(async (file) => {
-      const rId = uid();
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      let data;
-      if (currentUser) {
-        const ext = isPdf ? 'pdf' : 'jpg';
-        const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
-        data = isPdf
-          ? await uploadFile(file, path, 'application/pdf')
-          : await uploadImage(file, path);
-      } else {
-        if (isPdf) {
-          data = await new Promise((res, rej) => {
-            const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
-          });
-        } else {
-          data = await blobToResizedBase64(file);
-        }
-      }
-      return { id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr() };
-    }));
-    let added = 0;
-    for (const r of results) {
-      if (r.status === 'fulfilled') { watches[idx].receipts.push(r.value); added++; }
-      else toast('Could not upload: ' + (r.reason?.fileName || 'file'), 'error');
-    }
-    if (added > 0) {
-      markDirty('watches', wId);
-      save();
-      renderReceiptsList(watches[idx]);
-      renderCollection();
-      toast(added === 1 ? 'Receipt saved!' : added + ' receipts saved!');
-    }
-  };
-  input.click();
-}
-
-function removeReceipt(watchId, receiptId, btn) {
-  if (btn && !btn.dataset.confirm) {
-    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger)';
-    setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
-    return;
-  }
-  const idx = watches.findIndex(x => x.id === watchId);
-  if (idx < 0) return;
-  const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
-  if (receipt?.data) {
-    const p = storagePathFrom(receipt.data);
-    if (p) deleteStorageFile(p);
-  }
-  watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
-  markDirty('watches', watchId);
-  save();
-  renderReceiptsList(watches[idx]);
-  renderCollection();
-  toast('Receipt removed');
-}
 
 function viewReceipt(watchId, receiptId) {
   const w = watches.find(x => x.id === watchId);
@@ -28234,7 +27782,7 @@ function openAddFlowV2() {
   input.accept = 'image/*';
   input.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
   document.body.appendChild(input);
-  input.addEventListener('cancel', () => { input.remove(); resumeWelcome(); });
+  input.addEventListener('cancel', () => { input.remove(); });
   input.onchange = async () => {
     input.remove();
     if (!input.files || !input.files[0]) return;
@@ -28863,193 +28411,11 @@ function af2UpdatePill() {
   }
 }
 
-// Debug preview — renders all 10 states with sample data
-function openAf2DebugPreview() {
-  const sample = [
-    { _af2State: 'waiting', brand: 'Rolex', model: 'Submariner' },
-    { _af2State: 'identifying', brand: '?', model: '?', _af2Theater: 'Reading dial text…', _af2TheaterSub: 'Looking for brand and model clues' },
-    { _af2State: 'identified', brand: 'Vacheron Constantin', model: 'Overseas', reference: '4500V/110A-B128', caseDiameter: '41mm', caseMaterial: 'Stainless Steel', movementType: 'Automatic', yearRange: '2016-present' },
-    { _af2State: 'identified', brand: 'Omega', model: 'Speedmaster', reference: '310.30.42.50.01.001', caseDiameter: '42mm', caseMaterial: 'Steel', movementType: 'Manual', _af2Duplicate: true },
-    { _af2State: 'confirmed', brand: 'Rolex', model: 'Submariner', reference: '126610LN' },
-    { _af2State: 'enhancing', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Theater: 'Finding dimensions and materials…' },
-    { _af2State: 'enhanced', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2EnhanceCount: 8 },
-    { _af2State: 'pricing', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Theater: 'Comparing recent sales…' },
-    { _af2State: 'done', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Price: 27500, price: 24915 },
-    { _af2State: 'done', brand: 'Tudor', model: 'Black Bay 58', reference: 'M79030N', _af2Price: 3800 },
-    { _af2State: 'done', brand: 'Seiko', model: 'Presage', reference: 'SPB167', _af2PriceFailed: true },
-    { _af2State: 'skipped', brand: 'Casio', model: 'G-Shock', _af2UndoTimer: true },
-    { _af2State: 'skipped', brand: 'Timex', model: 'Weekender' },
-    { _af2State: 'failed' },
-  ];
-  const el = document.getElementById('af2-debug-rows');
-  el.innerHTML = sample.map((w, i) => {
-    const stateLabel = `<div style="font-size:var(--fs-2xs);font-weight:var(--fw-semibold);color:var(--gold-text);text-transform:uppercase;letter-spacing:var(--ls-tight);margin:${i > 0 ? '12px' : '0'} 0 4px;">${w._af2State}${w._af2Duplicate ? ' (duplicate)' : ''}${w._af2PriceFailed ? ' (price failed)' : ''}</div>`;
-    return stateLabel + af2RenderRow(w, i);
-  }).join('');
-  document.getElementById('af2-debug-sheet').classList.remove('hidden');
-}
-
 function openPhotoIdentify() {
   if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
   if (myProfile && !myProfile.username_set) { requireUsername(() => openPhotoIdentify()); return; }
   openAddFlowV2();
-}
-let _valueCheckResults = [];
-let _valueCheckTargets = [];
-
-async function checkBatchWatchValues(ids) {
-  const targets = watches.filter(w => ids.includes(w.id));
-  if (!targets.length) return;
-  _valueCheckTargets = targets;
-  _valueCheckResults = targets.map(() => ({ _value: null, _data: null, _saved: false }));
-  const count = targets.length;
-
-  const modal = document.getElementById('value-check-modal');
-  const list = document.getElementById('value-check-list');
-  const closeBtn = document.getElementById('value-check-close-btn');
-  closeBtn.disabled = true;
-  closeBtn.textContent = 'Working…';
-  document.getElementById('value-check-save-all-btn').style.display = 'none';
-  modal.classList.remove('hidden');
-  modal.dataset.justOpened = '1';
-  setTimeout(() => delete modal.dataset.justOpened, 600);
-
-  list.innerHTML = targets.map((w, i) => {
-    const color = DEFAULT_WATCH_COLOR;
-    const ini = initials(w.brand || '?', w.name || '?');
-    return `<div class="pi-card" id="val-card-${i}">
-      <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
-      <div class="pi-card-info">
-        <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
-        <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
-        <div class="text-meta val-status u-mt-1">Searching…</div>
-      </div>
-      <div class="pi-card-actions"></div>
-    </div>`;
-  }).join('');
-
-  let totalWithValues = 0;
-  for (let i = 0; i < targets.length; i++) {
-    const w = targets[i];
-    const card = document.getElementById(`val-card-${i}`);
-    const statusEl = card?.querySelector('.val-status');
-    const actionsEl = card?.querySelector('.pi-card-actions');
-    if (statusEl) { statusEl.textContent = 'Looking up market value…'; statusEl.style.color = 'var(--gold)'; }
-    try {
-      const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'batch', watch_id: w.id };
-      if (w.ref) payload.reference = w.ref;
-      const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }, 60000);
-      if (r.status === 429) {
-        if (statusEl) { statusEl.textContent = 'Daily limit reached'; statusEl.style.color = 'var(--danger)'; }
-        for (let j = i + 1; j < count; j++) {
-          const sk = document.getElementById(`val-card-${j}`)?.querySelector('.val-status');
-          if (sk) { sk.textContent = 'Skipped (limit)'; sk.style.color = 'var(--muted)'; }
-        }
-        break;
-      }
-      const data = await r.json();
-      if (data.cached) {
-        const cachedMid = (data.estimated_value_usd || {}).mid;
-        const cachedDate = data.looked_up_at || w.marketPriceDate;
-        if (cachedMid && cachedDate) {
-          const ageMs = Date.now() - new Date(cachedDate).getTime();
-          const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
-          if (statusEl) {
-            statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(cachedMid)}</span> <span class="caption-xs">still valid — refresh in ${remaining} day${remaining !== 1 ? 's' : ''}</span>`;
-          }
-          continue;
-        }
-      }
-      const ev = data.estimated_value_usd || {};
-      const mid = ev.mid;
-      if (!mid) {
-        if (statusEl) { statusEl.textContent = 'No pricing found'; statusEl.style.color = 'var(--muted)'; }
-        continue;
-      }
-      _valueCheckResults[i]._value = mid;
-      _valueCheckResults[i]._data = data;
-      totalWithValues++;
-      const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
-      if (statusEl) {
-        statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
-      }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveValueResult(${i})">Save</button>`;
-    } catch (e) {
-      if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
-    }
-  }
-
-  if (totalWithValues > 1) {
-    document.getElementById('value-check-save-all-btn').style.display = '';
-  }
-  closeBtn.disabled = false;
-  closeBtn.textContent = 'Close';
-}
-
-async function saveValueResult(idx) {
-  const r = _valueCheckResults[idx];
-  const w = _valueCheckTargets[idx];
-  if (!r || !w || r._saved || !r._value) return;
-  const card = document.getElementById(`val-card-${idx}`);
-  const saveBtn = card?.querySelector('.pi-card-actions button');
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
-  try {
-    const mid = r._value;
-    const today = todayStr();
-    const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
-    if (w.marketPrice && w.marketPriceDate) {
-      const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
-      if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
-    }
-    history.push({ src: 'WRotate', date: today, price: mid });
-    const { error } = await db.from('watches').update({
-      market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
-    }).eq('id', w.id);
-    if (error) throw error;
-    w.marketPrice = mid;
-    w.marketPriceDate = today;
-    w.marketPriceSrc = 'WRotate';
-    w.priceHistory = history;
-    r._saved = true;
-    markDirty('watches', w.id);
-    save();
-    if (saveBtn) { saveBtn.textContent = 'Saved ✓'; saveBtn.style.color = 'var(--success-text)'; }
-    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
-    const allValDone = _valueCheckResults.every(vr => !vr._value || vr._saved);
-    if (allValDone) setTimeout(() => closeValueCheck(), 600);
-  } catch (e) {
-    toast('Save failed: ' + (e?.message || e), 'error');
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
-  }
-}
-
-async function saveAllValueResults() {
-  const saveAllBtn = document.getElementById('value-check-save-all-btn');
-  if (saveAllBtn) saveAllBtn.disabled = true;
-  let saved = 0;
-  for (let i = 0; i < _valueCheckResults.length; i++) {
-    if (_valueCheckResults[i]._value && !_valueCheckResults[i]._saved) {
-      await saveValueResult(i);
-      if (_valueCheckResults[i]._saved) saved++;
-    }
-  }
-  if (saveAllBtn) { saveAllBtn.disabled = false; }
-  if (saved > 0) {
-    renderCollection(true);
-    toast(`Saved ${saved} market value${saved !== 1 ? 's' : ''}`, 'success');
-  }
-}
-
-function closeValueCheck() {
-  document.getElementById('value-check-modal').classList.add('hidden');
-  _valueCheckResults = [];
-  _valueCheckTargets = [];
-  renderCollection(true);
 }
 
 async function enhanceSingleWatch() {
@@ -29560,183 +28926,6 @@ async function enhanceAllWatches(scopedIds) {
     closeBtn.textContent = 'Close';
     closeBtn.onclick = closeEnhanceAll;
   }
-}
-
-/**
- * Shared crop UI — fullscreen overlay with pan + zoom.
- * @param {Blob} sourceBlob - the image to crop from
- * @param {number[]|null} initialBbox - [x,y,w,h] percentages to center on, or null
- * @param {function} onDone - callback(croppedBlob, bboxPct) when user taps Done
- */
-function _openCropUI(sourceBlob, initialBbox, onDone) {
-  const overlay = document.createElement('div');
-  overlay.className = 'crop-adjuster';
-  overlay.innerHTML = `
-    <div class="crop-adjuster-header">
-      <button class="crop-cancel">Cancel</button>
-      <span class="u-c-white u-fw-semibold u-fs-md">Adjust Crop</span>
-      <button class="crop-done">Done</button>
-    </div>
-    <div class="crop-viewport">
-      <img alt="">
-      <div class="crop-guide"><div class="crop-guide-border"></div></div>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  const viewport = overlay.querySelector('.crop-viewport');
-  const img = overlay.querySelector('.crop-viewport img');
-  const guideBox = overlay.querySelector('.crop-guide-border');
-
-  const blobUrl = URL.createObjectURL(sourceBlob);
-  overlay.querySelector('.crop-cancel').onclick = () => { URL.revokeObjectURL(blobUrl); overlay.remove(); };
-  img.onload = () => {
-    const vw = viewport.clientWidth;
-    const vh = viewport.clientHeight;
-    const guideSize = Math.round(Math.min(vw, vh) * 0.7);
-    const guideLeft = Math.round((vw - guideSize) / 2);
-    const guideTop = Math.round((vh - guideSize) / 2);
-    guideBox.style.left = guideLeft + 'px';
-    guideBox.style.top = guideTop + 'px';
-    guideBox.style.width = guideSize + 'px';
-    guideBox.style.height = guideSize + 'px';
-
-    // Initial scale: fit image so shorter side = guideSize * 1.5
-    const imgAspect = img.naturalWidth / img.naturalHeight;
-    const baseScale = 1.5;
-    let baseW, baseH;
-    if (imgAspect > 1) {
-      baseH = guideSize * baseScale;
-      baseW = baseH * imgAspect;
-    } else {
-      baseW = guideSize * baseScale;
-      baseH = baseW / imgAspect;
-    }
-
-    let curScale = 1;
-    let imgW = baseW, imgH = baseH;
-    img.style.width = imgW + 'px';
-    img.style.height = imgH + 'px';
-
-    // Position: center bbox or center image
-    let imgX, imgY;
-    if (initialBbox && initialBbox.length === 4) {
-      const [bx, by, bw, bh] = initialBbox;
-      const cx = imgW * (bx + bw / 2) / 100;
-      const cy = imgH * (by + bh / 2) / 100;
-      imgX = guideLeft + guideSize / 2 - cx;
-      imgY = guideTop + guideSize / 2 - cy;
-    } else {
-      imgX = guideLeft + guideSize / 2 - imgW / 2;
-      imgY = guideTop + guideSize / 2 - imgH / 2;
-    }
-    img.style.left = imgX + 'px';
-    img.style.top = imgY + 'px';
-
-    function applyScale(newScale, centerX, centerY) {
-      // Zoom toward the center point
-      const oldW = parseFloat(img.style.width);
-      const oldH = parseFloat(img.style.height);
-      const oldX = parseFloat(img.style.left);
-      const oldY = parseFloat(img.style.top);
-      const newW = baseW * newScale;
-      const newH = baseH * newScale;
-      // Keep the point under centerX/centerY fixed
-      const ratioX = (centerX - oldX) / oldW;
-      const ratioY = (centerY - oldY) / oldH;
-      img.style.width = newW + 'px';
-      img.style.height = newH + 'px';
-      img.style.left = (centerX - ratioX * newW) + 'px';
-      img.style.top = (centerY - ratioY * newH) + 'px';
-      imgW = newW; imgH = newH;
-      curScale = newScale;
-    }
-
-    // ── Pan (touch + mouse) ──
-    let startX, startY, origX, origY, isPinching = false;
-    function onStart(e) {
-      if (e.touches && e.touches.length > 1) return; // let pinch handle it
-      e.preventDefault();
-      isPinching = false;
-      const pt = e.touches ? e.touches[0] : e;
-      startX = pt.clientX; startY = pt.clientY;
-      origX = parseFloat(img.style.left); origY = parseFloat(img.style.top);
-      const moveEvt = e.touches ? 'touchmove' : 'mousemove';
-      const endEvt = e.touches ? 'touchend' : 'mouseup';
-      function onMove(e2) {
-        if (isPinching) return;
-        e2.preventDefault();
-        const pt2 = e2.touches ? e2.touches[0] : e2;
-        img.style.left = (origX + pt2.clientX - startX) + 'px';
-        img.style.top  = (origY + pt2.clientY - startY) + 'px';
-      }
-      function onEnd() {
-        document.removeEventListener(moveEvt, onMove);
-        document.removeEventListener(endEvt, onEnd);
-      }
-      document.addEventListener(moveEvt, onMove, { passive: false });
-      document.addEventListener(endEvt, onEnd);
-    }
-    viewport.addEventListener('touchstart', onStart, { passive: false });
-    viewport.addEventListener('mousedown', onStart);
-
-    // ── Pinch to zoom (touch) ──
-    let pinchStartDist = 0, pinchStartScale = 1;
-    viewport.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
-        isPinching = true;
-        e.preventDefault();
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        pinchStartDist = Math.sqrt(dx * dx + dy * dy);
-        pinchStartScale = curScale;
-      }
-    }, { passive: false });
-    viewport.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        const newScale = Math.max(0.5, Math.min(5, pinchStartScale * (dist / pinchStartDist)));
-        applyScale(newScale, midX, midY);
-      }
-    }, { passive: false });
-
-    // ── Scroll/wheel to zoom (desktop) ──
-    viewport.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newScale = Math.max(0.5, Math.min(5, curScale + delta));
-      const rect = viewport.getBoundingClientRect();
-      applyScale(newScale, e.clientX - rect.left, e.clientY - rect.top);
-    }, { passive: false });
-
-    // ── Done ──
-    overlay.querySelector('.crop-done').onclick = async () => {
-      const curX = parseFloat(img.style.left);
-      const curY = parseFloat(img.style.top);
-      const curW = parseFloat(img.style.width);
-      const curH = parseFloat(img.style.height);
-      const srcX = guideLeft - curX;
-      const srcY = guideTop - curY;
-      const xPct = Math.max(0, (srcX / curW) * 100);
-      const yPct = Math.max(0, (srcY / curH) * 100);
-      const wPct = Math.min(100 - xPct, (guideSize / curW) * 100);
-      const hPct = Math.min(100 - yPct, (guideSize / curH) * 100);
-      try {
-        const cropped = await cropWatchFromPhoto(sourceBlob, [xPct, yPct, wPct, hPct], 0);
-        onDone(cropped, [xPct, yPct, wPct, hPct]);
-      } catch (err) {
-        console.error('[WristLog] crop adjust error:', err);
-        toast('Crop failed', 'error');
-      }
-      URL.revokeObjectURL(blobUrl);
-      overlay.remove();
-    };
-  };
-  img.src = blobUrl;
 }
 
 /**
@@ -31331,193 +30520,7 @@ function updateWlUrlBtn() {
   }
 }
 
-// ── Auto-fetch details from URL ─────────────────────────────────────────────
-async function fetchWishlistDetails() {
-  const urlVal = document.getElementById('wl-url').value.trim();
-  if (!urlVal) { toast('Enter a URL first', 'error'); return; }
-
-  const btn = document.getElementById('wl-fetch-btn');
-  btn.disabled = true; btn.textContent = 'Fetching…';
-
-  try {
-    // Fetch page HTML
-    let html = '';
-    for (const proxy of [
-      `https://corsproxy.io/?${encodeURIComponent(urlVal)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(urlVal)}`
-    ]) {
-      try {
-        const r = await fetch(proxy, { signal: AbortSignal.timeout(12000) });
-        if (r.ok) { html = await r.text(); break; }
-      } catch (_) {}
-    }
-    if (!html) throw new Error('fetch failed');
-
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-
-    // ── Parse JSON-LD (Product schema) ──────────────────────────────────────
-    const jsonLds = [...doc.querySelectorAll('script[type="application/ld+json"]')]
-      .map(s => { try { return JSON.parse(s.textContent); } catch { return null; } })
-      .filter(Boolean)
-      .flatMap(j => j['@graph'] ? j['@graph'] : Array.isArray(j) ? j : [j]);
-    const product = jsonLds.find(j => j['@type'] === 'Product' || j.offers);
-
-    // ── Model name ──────────────────────────────────────────────────────────
-    let name = product?.name ||
-      doc.querySelector('meta[property="og:title"]')?.content ||
-      doc.querySelector('meta[name="og:title"]')?.content ||
-      doc.title || '';
-    // Strip site name suffix (e.g. " - Rolex", " | Omega")
-    name = name.split(/\s[\-\|–]\s[A-Z]/).shift().trim();
-
-    // ── Reference / SKU ─────────────────────────────────────────────────────
-    let ref = product?.mpn || product?.sku || product?.model || product?.gtin || '';
-    if (!ref) {
-      // Try URL path: find segment that looks like a watch ref (alphanumeric + dots/dashes)
-      const segs = new URL(urlVal).pathname.split('/').filter(Boolean);
-      const refSeg = segs.reverse().find(s => /[A-Z0-9]{4,}[\.\-][A-Z0-9\.]{3,}/i.test(s));
-      if (refSeg) ref = refSeg.replace(/\.html?$/i, '');
-    }
-
-    // Strip reference number from the name if it leaked in.
-    // Also handle slash-variants (e.g. "7097BR/G1/9WU" vs extracted "7097BRG19WU")
-    if (ref) {
-      // Try direct match first
-      if (name.includes(ref)) {
-        name = name.replace(ref, '');
-      } else {
-        // Try matching any trailing token that looks like a watch ref (letters+digits with /.-)
-        name = name.replace(/\s+[\dA-Z]{3,}[\.\-\/][A-Z\d\.\/\-]{2,}[\w\.\/\-]*\s*$/i, '');
-      }
-      name = name.replace(/[\s\-:·,]+$/, '').replace(/^[\s\-:·,]+/, '').trim();
-    }
-
-    // ── Price ───────────────────────────────────────────────────────────────
-    let price = '';
-    const offers = product?.offers;
-    if (offers) {
-      const p = Array.isArray(offers) ? offers[0]?.price : offers.price;
-      if (p != null && !isNaN(parseFloat(String(p)))) price = String(parseFloat(String(p)));
-    }
-    if (!price) {
-      price = doc.querySelector('meta[property="product:price:amount"]')?.content ||
-              doc.querySelector('meta[property="og:price:amount"]')?.content       ||
-              doc.querySelector('meta[name="price"]')?.content || '';
-    }
-    if (!price) {
-      // Scan raw HTML for JSON-like price fields
-      const m = html.match(/"price"\s*:\s*"?(\d[\d,\.]*)"?/i);
-      if (m) price = m[1].replace(/,/g, '');
-    }
-
-    // ── Brand auto-detect from hostname ─────────────────────────────────────
-    const hostname = new URL(urlVal).hostname.replace('www.', '');
-    const detectedBrand = Object.entries(WL_BRAND_MAP)
-      .find(([k]) => hostname.includes(k))?.[1];
-
-    // ── Auto-add brand to brands list if not already present ────────────────
-    if (detectedBrand && !brands.map(b => b.toLowerCase()).includes(detectedBrand.toLowerCase())) {
-      brands.push(detectedBrand);
-      saveBrands();
-    }
-
-    // ── Also strip brand name from model name if auto-detected ──────────────
-    if (detectedBrand && name.toLowerCase().startsWith(detectedBrand.toLowerCase())) {
-      name = name.slice(detectedBrand.length).replace(/^[\s\-:·,]+/, '').trim();
-    }
-
-    // ── Fill form ───────────────────────────────────────────────────────────
-    if (detectedBrand) buildWlBrandSelect(detectedBrand);
-    if (name)  document.getElementById('wl-name').value  = name;
-    if (ref)   document.getElementById('wl-ref').value   = ref;
-    if (price) setPriceInput('wl-price', parseFloat(price));
-
-    // ── Extract image from the same page (no second page request) ────────────
-    btn.textContent = 'Loading image…';
-    let imgUrl = sanitizeImageUrl(
-      doc.querySelector('meta[property="og:image"]')?.content ||
-      doc.querySelector('meta[name="og:image"]')?.content ||
-      doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content,
-      urlVal
-    );
-    if (!imgUrl) {
-      const wd = new URL(urlVal).hostname.replace(/^www\./, '');
-      const candidates = [...doc.querySelectorAll('img')]
-        .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .map(s => sanitizeImageUrl(s, urlVal))
-        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
-      imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
-    }
-    if (imgUrl) {
-      try {
-        const result = await fetchImageBlobOrUrl(imgUrl);
-        if (result.blob) {
-          wlPendingFile  = result.blob;
-          wlPendingImage = URL.createObjectURL(result.blob);
-        } else {
-          wlPendingFile  = null;
-          wlPendingImage = result.directUrl;
-        }
-      } catch (_) { wlPendingImage = null; wlPendingFile = null; }
-    }
-
-    const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wlPendingImage && 'photo'].filter(Boolean);
-    if (wlPendingImage) { wlRemoveImage = false; renderWlModalImg(); }
-    toast(`Fetched: ${filled.join(', ') || 'no data found'}`);
-
-  } catch (e) {
-    toast('Could not fetch page — fill in manually', 'error');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Fetch';
-  }
-}
-
-// ── Collection fetch (same logic, collection field IDs) ──────────────────────
-
 // ── Wishlist photo helpers (mirror collection) ──────────────────────────────
-async function fetchWishlistImage(itemId) {
-  const w = wishlist.find(x => x.id === itemId);
-  if (!w || !w.url) return;
-  const btn = document.getElementById(`wlfetchbtn-${itemId}`);
-  if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Fetching…'; }
-  try {
-    let pageHtml = '';
-    for (const p of [`https://corsproxy.io/?${encodeURIComponent(w.url)}`, `https://api.allorigins.win/raw?url=${encodeURIComponent(w.url)}`]) {
-      try { const r = await fetch(p, { signal: AbortSignal.timeout(12000) }); if (r.ok) { pageHtml = await r.text(); break; } } catch (_) {}
-    }
-    if (!pageHtml) throw new Error('proxy failed');
-    const doc = new DOMParser().parseFromString(pageHtml, 'text/html');
-    let imgUrl = sanitizeImageUrl(
-      doc.querySelector('meta[property="og:image"]')?.content ||
-      doc.querySelector('meta[name="og:image"]')?.content ||
-      doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content,
-      w.url
-    );
-    if (!imgUrl) {
-      const wd = new URL(w.url).hostname.replace(/^www\./, '');
-      const candidates = [...doc.querySelectorAll('img')]
-        .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .map(s => sanitizeImageUrl(s, w.url))
-        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
-      imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
-    }
-    if (!imgUrl) { toast('No image found on that page', 'error'); if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; } return; }
-    toast('Image found — uploading…');
-    const imageUrl = await fetchAndUploadImage(imgUrl, `wishlist/${currentUser?.id || 'local'}/${itemId}.jpg`);
-    const idx = wishlist.findIndex(x => x.id === itemId);
-    if (idx === -1) return;
-    wishlist[idx].image = imageUrl;
-    markDirty('wishlist', itemId);
-    saveWishlist();
-    renderWishlist();
-    toast('Photo saved!');
-  } catch (e) {
-    toast('Could not fetch image — try pasting one', 'error');
-    if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; }
-  }
-}
 
 // ── Wishlist modal image helpers ─────────────────────────────────────────────
 function renderWlModalImg(existingSrc) {
@@ -31530,25 +30533,6 @@ function renderWlModalImg(existingSrc) {
   const changeBtn = document.getElementById('wl-change-photo-btn');
   if (img) img.src = src || '';
   if (changeBtn) changeBtn.textContent = src ? 'Change photo' : 'Add photo';
-}
-
-async function openWlModalCropAdjuster() {
-  var sourceBlob = null;
-  if (wlPendingFile instanceof Blob) {
-    sourceBlob = wlPendingFile;
-  } else if (wlPendingImage) {
-    try {
-      var resp = await fetch(wlPendingImage, {signal: AbortSignal.timeout(8000)});
-      if (resp.ok) sourceBlob = await resp.blob();
-    } catch (_) {}
-  }
-  if (!sourceBlob) { toast('Could not load photo to crop', 'info'); return; }
-  _openCropUI(sourceBlob, null, function(croppedBlob) {
-    if (wlPendingImage && wlPendingImage.startsWith('blob:')) URL.revokeObjectURL(wlPendingImage);
-    wlPendingFile = croppedBlob;
-    wlPendingImage = URL.createObjectURL(croppedBlob);
-    renderWlModalImg();
-  });
 }
 
 function pickWlModalImage() {
@@ -31565,14 +30549,6 @@ function pickWlModalImage() {
     renderWlModalImg();
   };
   input.click();
-}
-
-function clearWlModalImg() {
-  if (wlPendingImage) URL.revokeObjectURL(wlPendingImage);
-  wlPendingImage = null;
-  wlPendingFile  = null;
-  wlRemoveImage  = true;
-  renderWlModalImg();
 }
 
 
@@ -32008,7 +30984,7 @@ function _syncInert() {
     if (el.classList.contains('overlay')) {
       makeInert = false; // open overlays stay interactive; hidden ones are display:none
     } else if (el === authEl) {
-      makeInert = anyOverlay; // welcome/EULA modal can sit above the auth screen
+      makeInert = anyOverlay; // EULA modal can sit above the auth screen
     } else {
       makeInert = anyOverlay || authUp;
     }
@@ -32027,17 +31003,13 @@ if (document.getElementById('auth-screen')) {
 const _overlayCloseMap = {
   'followers-modal':     closeFollowersModal,
   'following-modal':     closeFollowingModal,
-  // welcome-modal: intentionally excluded — must not close on overlay click or Escape
   'watch-modal':         closeWatchModal,
-  'receipts-modal':      closeReceiptsModal,
   'del-modal':           closeDelModal,
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
   'af2-sheet':            closeAf2Sheet,
   'fact-modal':           closeFactModal,
-  'af2-debug-sheet':      () => document.getElementById('af2-debug-sheet').classList.add('hidden'),
   'enhance-all-modal':    closeEnhanceAll,
-  'value-check-modal':    closeValueCheck,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
@@ -32060,7 +31032,6 @@ const _overlayCloseMap = {
   'msr-help-modal':      closeMsrHelp,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
-  'login-prompt-modal':  closeLoginPrompt,
   'admin-user-modal':    closeAdminUserModal,
   'adm-exp-info-modal':  closeAdminExpInfo,
   'update-prices-modal': closeUpdatePrices,
@@ -32741,131 +31712,6 @@ function initTgSection(watchId) {
 // Web Audio API fallback for mic listening
 let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null;
 
-async function toggleTgListen() {
-  if (demoGuard()) return;
-  if (_tgListening) {
-    stopTgListen();
-    return;
-  }
-  // Try native bridge first
-  if (_tgHasNative()) {
-    const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
-    const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens, source: _tgSource(), pzMode: _pzMode() });
-    _tgListening = true;
-    _msrTarget = null;
-    const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
-    document.getElementById('tg-live-status').style.display = '';
-    document.getElementById('tg-live-rate').textContent = '—';
-    document.getElementById('tg-live-be').textContent = '—';
-    document.getElementById('tg-live-ticks').textContent = '0';
-    return;
-  }
-  // Fall back to Web Audio API
-  const warn = document.getElementById('tg-mic-warning');
-  warn.style.display = 'none';
-  if (!navigator.mediaDevices?.getUserMedia) {
-    warn.textContent = 'Microphone not available in this browser.';
-    warn.style.display = 'block';
-    return;
-  }
-  try {
-    _tgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
-  } catch (e) {
-    warn.textContent = e.name === 'NotAllowedError' ? 'Microphone permission denied.' : 'Could not access microphone: ' + e.message;
-    warn.style.display = 'block';
-    return;
-  }
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    _tgAudioCtx = new AC();
-    if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
-    const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
-    const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
-    _tgScriptNode = scriptNode;
-    _tgListening = true;
-    const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
-    document.getElementById('tg-live-status').style.display = '';
-    document.getElementById('tg-live-rate').textContent = '—';
-    document.getElementById('tg-live-be').textContent = '—';
-    document.getElementById('tg-live-ticks').textContent = '0';
-    warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
-    warn.style.color = 'var(--status-warn)';
-    warn.style.display = 'block';
-
-    const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
-    const expectedInterval = 3600000 / bph;
-    const sampleRate = _tgAudioCtx.sampleRate;
-    const WINDOW = 64;
-    const windowDur = WINDOW / sampleRate * 1000;
-    const envCap = Math.ceil(10000 / windowDur);
-    const envelope = new Float32Array(envCap);
-    let envW = 0, envN = 0, lastAnalysis = 0;
-    let acRate = null, acBE = null, acConf = 0, acInterval = 0;
-    const minLag = Math.max(2, Math.round((expectedInterval * 0.7) / windowDur));
-    const maxLag = Math.round((expectedInterval * 1.3) / windowDur);
-
-    scriptNode.onaudioprocess = function(e) {
-      if (!_tgListening) return;
-      const samples = e.inputBuffer.getChannelData(0);
-      const now = performance.now();
-      let maxAmp = 0;
-      for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > maxAmp) maxAmp = a; }
-      const bar = document.getElementById('tg-noise-bar');
-      const lbl = document.getElementById('tg-noise-label');
-      bar.style.width = Math.min(100, maxAmp * 200) + '%';
-
-      for (let s = 0; s + WINDOW <= samples.length; s += WINDOW) {
-        let en = 0;
-        for (let j = s; j < s + WINDOW; j++) en += samples[j] * samples[j];
-        envelope[envW % envCap] = en / WINDOW;
-        envW++; envN = Math.min(envN + 1, envCap);
-      }
-
-      if (now - lastAnalysis > 1000 && envN > envCap * 0.3) {
-        lastAnalysis = now;
-        let mean = 0;
-        for (let i = 0; i < envN; i++) mean += envelope[i];
-        mean /= envN;
-        let variance = 0;
-        for (let i = 0; i < envN; i++) { const d = envelope[i] - mean; variance += d * d; }
-        variance /= envN;
-        if (variance > 0) {
-          let bestLag = 0, bestCorr = -1;
-          for (let lag = minLag; lag <= maxLag && lag < envN / 2; lag++) {
-            let corr = 0; const pairs = envN - lag;
-            for (let i = 0; i < pairs; i++) corr += (envelope[i] - mean) * (envelope[(i + lag) % envCap] - mean);
-            corr = corr / (pairs * variance);
-            if (corr > bestCorr) { bestCorr = corr; bestLag = lag; }
-          }
-          acInterval = bestLag * windowDur;
-          acConf = Math.max(0, bestCorr);
-          acRate = Math.round(((acInterval - expectedInterval) / expectedInterval) * 864000) / 10;
-        }
-      }
-
-      if (acRate !== null && acConf > 0.1) {
-        const rateEl = document.getElementById('tg-live-rate');
-        rateEl.textContent = (acRate >= 0 ? '+' : '') + acRate;
-        rateEl.style.color = Math.abs(acRate) <= 5 ? 'var(--status-good)' : Math.abs(acRate) <= 15 ? 'var(--status-warn)' : 'var(--danger)';
-        bar.style.background = acConf > 0.3 ? 'var(--status-good)' : 'var(--status-warn)';
-        lbl.textContent = 'Confidence: ' + (acConf * 100).toFixed(0) + '%';
-      } else {
-        lbl.textContent = envN < envCap * 0.3 ? 'Accumulating...' : 'Analyzing...';
-        bar.style.background = 'var(--verified)';
-      }
-      const output = e.outputBuffer.getChannelData(0);
-      for (let i = 0; i < output.length; i++) output[i] = 0;
-    };
-    source.connect(scriptNode);
-    scriptNode.connect(_tgAudioCtx.destination);
-  } catch (e) {
-    warn.textContent = 'Audio setup failed: ' + e.message;
-    warn.style.display = 'block';
-    if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
-  }
-}
-
 function stopTgListen() {
   _tgListening = false;
   if (_tgHasNative()) {
@@ -32987,8 +31833,6 @@ window._tgNativeCallback = function(data) {
     const beEl = document.getElementById(prefix + '-live-be');
     if (!rateEl) return;
 
-    // Sticky detection: treat as detected if confidence > 0.1 OR we detected within last 8s
-    const stickyDetected = isMsr && _msrLastDetectTime > 0 && (Date.now() - _msrLastDetectTime) < 8000;
     const isConfident = data.rate != null && data.confidence > 0.1;
 
     // Piezo: real signal strength (engine periodicity×SNR), smoothed, + weak-signal gate.
@@ -34120,16 +32964,6 @@ function hideTroubleshootTips() {
   if (statusText) statusText.style.display = '';
 }
 
-function tgQuickApplyPreset(preset) {
-  tgSelectPreset(preset);
-  toast(preset.charAt(0).toUpperCase() + preset.slice(1) + ' preset applied');
-  hideTroubleshootTips();
-}
-
-function tgQuickApplyNoisy() {
-  tgQuickApplyPreset('noisy');
-}
-
 function _resetMsrState(bph) {
   hideTroubleshootTips();
   _msrScatterData = []; _msrLastCumDev = 0;
@@ -34896,19 +33730,6 @@ async function onMsrWatchChange() {
 
 function closeMeasureModal() {
   if (_msrListening) stopMsrListen('user_cancelled');
-}
-
-let _msrWatchPresent = false;
-function toggleWatchPresent() {
-  _msrWatchPresent = !_msrWatchPresent;
-  const btn = document.getElementById('msr-watch-present-btn');
-  if (_msrWatchPresent) {
-    btn.textContent = 'YES — listening';
-    btn.style.background = 'var(--status-good)';
-  } else {
-    btn.textContent = 'NO — away';
-    btn.style.background = 'var(--danger)';
-  }
 }
 
 // Re-apply flag-on overrides AFTER tgApplySettingsToInputs so they survive measurement start:
@@ -35924,23 +34745,6 @@ async function bootApp(user) {
 // Reads directly from localStorage — the reliable path for the refresh case.
 // onAuthStateChange alone is not sufficient because event ordering varies.
 // Safety net: if getSession() hangs (token refresh stuck, network issue),
-// ── Landing carousel ──
-function initLandingCarousel() {
-  const slides = document.querySelectorAll('#landing-carousel img');
-  const dots = document.querySelectorAll('.carousel-dot');
-  const captionEl = document.getElementById('carousel-caption');
-  if (!slides.length || !captionEl) return;
-  const captions = ['Snap to track — log today\'s wear in seconds','Your collection — value, cost per wear','Stats at a glance — wears, value, rotation'];
-  let cur = 0, timer;
-  function goTo(i) { slides[cur].classList.remove('active'); dots[cur].classList.remove('active'); cur = i; slides[cur].classList.add('active'); dots[cur].classList.add('active'); captionEl.style.opacity='0'; setTimeout(()=>{ captionEl.textContent=captions[cur]; captionEl.style.opacity=''; },200); }
-  function next() { goTo((cur+1)%slides.length); }
-  function startTimer() { timer=setInterval(next,3500); }
-  function resetTimer() { clearInterval(timer); startTimer(); }
-  let touchX=0; const cel=document.getElementById('landing-carousel');
-  if(cel){cel.addEventListener('touchstart',e=>{touchX=e.touches[0].clientX},{passive:true});cel.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-touchX;if(Math.abs(dx)>40){goTo(dx<0?(cur+1)%slides.length:(cur-1+slides.length)%slides.length);resetTimer();}},{passive:true});}
-  dots.forEach((d,i)=>d.addEventListener('click',()=>{goTo(i);resetTimer();}));
-  startTimer();
-}
 
 // show login screen after 10s rather than skeleton forever
 const _sessionTimeout = setTimeout(() => {

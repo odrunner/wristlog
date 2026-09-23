@@ -13,8 +13,8 @@ test.describe('EULA gate UAT (real Supabase)', () => {
   });
 
   test('app boots without showing onboarding or EULA modal', async ({ page }) => {
-    const welcomeModal = page.locator('#welcome-modal');
-    await expect(welcomeModal).toHaveClass(/hidden/);
+    // The onboarding tour was removed; it must not come back.
+    await expect(page.locator('#welcome-modal')).toHaveCount(0);
     const eulaModal = page.locator('#eula-modal');
     await expect(eulaModal).toHaveClass(/hidden/);
     await expect(page.locator('#feed-list')).toBeVisible();
