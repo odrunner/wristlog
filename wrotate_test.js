@@ -3144,11 +3144,11 @@ export function firstLoadCardHtml(days) {
     + '</tr>').join('');
   return `<div class="admin-card">
         <div class="eyebrow stack-2">First load (last ${rows.length} days, UTC)</div>
-        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
+        <div style="overflow-x:auto;"><table class="u-w-100pct u-bc-collapse u-fs-sm u-fvn-tabular-nums">
           <thead><tr>${th('Day', true)}${th('Loads')}${th('Page ready')}${th('Cached feed')}${th('First posts')}${th('Feed complete')}${th('Had cache')}${th('Early fetch')}${th('Errors')}</tr></thead>
           <tbody>${body}</tbody>
         </table></div>
-        <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:var(--space-2);">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
+        <div class="u-fs-sm u-c-muted u-mt-2">Seconds since the page started loading, median / 90th percentile. Signed-in loads only; internal accounts excluded.</div>
       </div>`;
 }
 
@@ -3235,12 +3235,12 @@ export function experimentSpeedHtml(key, arms) {
   };
   const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${t}</div>`;
   return `<div class="adm-exp-speed" style="margin:var(--space-0-5) 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
-          <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-2-5);align-items:baseline;">
+          <div class="u-cols-minmax-0-1p6fr-repeat-3-minmax-0-1fr u-gap-1-2-5 u-items-baseline" style="display:grid;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}
             ${row('Treatment', arms.treatment)}
           </div>
-          <div style="color:var(--muted);font-size:var(--fs-xs);margin-top:var(--space-1-5);">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
+          <div class="u-c-muted u-fs-xs u-mt-1-5">Median / 90th percentile, seconds since the page started loading. Repeat loads only: a user's group takes effect from their second visit.</div>
         </div>`;
 }
 // Admin → Experiments: live sample-size progress for a running knob trial. The

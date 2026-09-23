@@ -16,7 +16,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 1333
+    "inline-style-attr": 707
   },
   "p/index.html": {
     "color": 0,
@@ -35,7 +35,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 3
+    "inline-style-attr": 0
   },
   "profile/index.html": {
     "color": 0,
@@ -54,7 +54,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 2
+    "inline-style-attr": 0
   },
   "privacy.html": {
     "color": 0,
@@ -111,7 +111,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 3
+    "inline-style-attr": 0
   },
   "w/index.html": {
     "color": 0,
