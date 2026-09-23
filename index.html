@@ -2815,7 +2815,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal u-maxw-140 u-pt-6 u-pr-6 u-pb-6 u-pl-6">
     <div class="modal-title row-between">
       <span>Update Market Prices</span>
-      <button class="btn btn-ghost u-pt-1 u-pr-2 u-pb-1 u-pl-2" onclick="closeUpdatePrices()">Close</button>
+      <button class="btn btn-md btn-ghost" onclick="closeUpdatePrices()">Close</button>
     </div>
     <div id="update-prices-status" class="text-meta u-mb-3">Loading...</div>
     <div id="update-prices-body" class="u-maxh-65vh" style="overflow-y:auto;overflow-x:hidden;"></div>
@@ -3468,8 +3468,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="reminder-banner-body">
       <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
       <div class="u-gap-2 u-mt-2 u-fw--wrap u-d-flex">
-        <button class="btn btn-primary u-minh-9 u-pt-1 u-pr-3-5 u-pb-1 u-pl-3-5" id="logagain-yes">Log it</button>
-        <button class="btn u-minh-9 u-pt-1 u-pr-3-5 u-pb-1 u-pl-3-5" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+        <button class="btn btn-md btn-primary u-minh-9" id="logagain-yes">Log it</button>
+        <button class="btn btn-md u-minh-9" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
@@ -3528,8 +3528,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div class="row">
-        <button id="coll-view-btn" class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
-        <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        <button class="btn btn-md btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary btn-md u-gap-1-5 u-ws-nowrap u-d-inline-flex" onclick="openPhotoIdentify()" title="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-enhance-all-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-md" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;">$</button>
@@ -3571,7 +3571,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ PROFILE PAGE ════ -->
   <div id="page-profile" class="page">
     <div class="stack-4">
-      <button class="btn btn-ghost u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="goBackFromProfile()">← Back</button>
+      <button class="btn btn-md btn-ghost" onclick="goBackFromProfile()">← Back</button>
     </div>
     <div id="profile-page-content">
       <div class="empty">Loading…</div>
@@ -3603,14 +3603,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-clubs" class="page">
     <div class="row-between u-mb-4">
       <h1 class="u-fs-xl u-fw-bold">Clubs</h1>
-      <button class="btn btn-primary u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" onclick="openCreateClub()">+ Create</button>
+      <button class="btn btn-md btn-primary" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
   </div>
 
   <div id="page-club-detail" class="page">
     <div class="stack-4">
-      <button class="btn btn-ghost u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="goBackFromClub()">&#8592; Back</button>
+      <button class="btn btn-md btn-ghost" onclick="goBackFromClub()">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
       <div class="empty">Loading&#8230;</div>
@@ -5558,7 +5558,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="enhance-all-list" class="u-maxh-60vh" style="overflow-y:auto;"></div>
     <div class="modal-actions u-mt-4">
       <button id="enhance-all-close-btn" class="btn btn-ghost" onclick="closeEnhanceAll()">Close</button>
-      <button id="enhance-all-save-all-btn" class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" style="display:none;" onclick="saveAllEnhanceResults()">Save All</button>
+      <button id="enhance-all-save-all-btn" class="btn btn-md btn-primary" style="display:none;" onclick="saveAllEnhanceResults()">Save All</button>
     </div>
   </div>
 </div>
@@ -5572,7 +5572,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="value-check-list" class="u-maxh-60vh" style="overflow-y:auto;"></div>
     <div class="modal-actions u-mt-4">
       <button id="value-check-close-btn" class="btn btn-ghost" onclick="closeValueCheck()">Close</button>
-      <button id="value-check-save-all-btn" class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" style="display:none;" onclick="saveAllValueResults()">Save All</button>
+      <button id="value-check-save-all-btn" class="btn btn-md btn-primary" style="display:none;" onclick="saveAllValueResults()">Save All</button>
     </div>
   </div>
 </div>
@@ -5980,7 +5980,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p class="text-body-lg u-mt-2 u-mr-0 u-mb-5 u-ml-0">
         This will permanently erase <strong class="u-c-text">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong class="u-c-text">This cannot be undone.</strong>
       </p>
-      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
@@ -5989,7 +5989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p class="text-body-lg u-mt-2 u-mr-0 u-mb-5 u-ml-0">
         Every watch, every wear log, every wishlist item — <strong class="u-c-text">gone forever.</strong> There is no way to recover this data.
       </p>
-      <button id="da-final-btn" class="btn btn-block u-mb-2-5 u-bg-danger-fill u-c-white u-fw-bold u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button id="da-final-btn" class="btn btn-block u-mb-2-5 u-bg-danger-fill u-c-white u-fw-bold" onclick="deleteAccount()">Permanently Delete Everything</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
@@ -6014,7 +6014,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-title text-danger" id="delete-club-modal-title">Delete this club?</div>
       <p id="dc-club-name" class="u-fw-bold u-mt-1 u-mr-0 u-mb-3 u-ml-0"></p>
       <p class="text-body-lg u-mb-5">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong class="u-c-text">This cannot be undone.</strong></p>
-      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteClub()">Yes, Delete This Club</button>
+      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -7492,7 +7492,7 @@ function badgeWallProfileSection() {
       <div class="u-gap-2 u-fw--wrap u-justify-center u-pt-2 u-pr-0 u-pb-2 u-pl-0 u-d-flex">
         ${previewCards}${lockedPreview}
       </div>
-      <button class="btn btn-ghost btn-block u-mt-2 u-fs-sm u-pt-1-5 u-pr-1-5 u-pb-1-5 u-pl-1-5" onclick="openBadgeWall()">View All Badges</button>
+      <button class="btn btn-md btn-ghost btn-block u-mt-2" onclick="openBadgeWall()">View All Badges</button>
     </div>`;
 }
 // ── END BADGE SYSTEM ──────────────────────────────────────────────────────
@@ -8255,7 +8255,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.19.27';
+const APP_VERSION = '22.19.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9284,7 +9284,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           </div>
           <div class="toggle-row" id="push-setting-row" style="display:none;">
             <span class="toggle-label">Push notifications <span id="push-setting-state" class="text-secondary u-fw-normal"></span></span>
-            <button id="push-setting-btn" class="btn btn-ghost btn-sm u-pt-1 u-pr-3 u-pb-1 u-pl-3">Turn on</button>
+            <button id="push-setting-btn" class="btn btn-xs btn-ghost">Turn on</button>
           </div>
           <div class="text-meta u-mt-3 u-mr-0 u-mb-2-5 u-ml-0 u-bdt-1px-solid-border u-pt-3">Sharing</div>
           <div class="toggle-row">
@@ -9439,7 +9439,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-card">
         <div class="profile-page-section-title">Posts</div>
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
-        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost btn-block u-mt-2 u-fs-sm u-pt-1-5 u-pr-1-5 u-pb-1-5 u-pl-1-5" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-md btn-ghost btn-block u-mt-2" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
@@ -14964,7 +14964,7 @@ function showFeedLoadMoreButton() {
   const s = document.getElementById('feed-load-sentinel');
   if (!s) return;
   if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
-  s.innerHTML = '<button class="btn btn-ghost u-pt-2 u-pr-4 u-pb-2 u-pl-4" onclick="loadMoreFeed()">Load more</button>';
+  s.innerHTML = '<button class="btn btn-md btn-ghost" onclick="loadMoreFeed()">Load more</button>';
 }
 
 // ── Floating "Post" button ────────────────────────────────────────────────
@@ -21788,7 +21788,7 @@ function renderBroadcastDrafts() {
   el.innerHTML = '<div class="eyebrow eyebrow-muted stack-1">Saved Drafts <span class="u-tt-none u-fw-normal">— order here sets which sends first</span></div>' +
     drafts.map((d, i) => `<div class="row-tight u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-bg-surface u-r-sm u-mb-1 u-fs-base">
       <span class="text-meta u-w-4 u-ta-right u-flex-0-0-auto">${i + 1}</span>
-      <button class="btn btn-ghost btn-grow u-to-ellipsis u-ws-nowrap u-ta-left u-pt-0-5 u-pr-1 u-pb-0-5 u-pl-1" style="overflow:hidden;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-md btn-ghost btn-grow u-to-ellipsis u-ws-nowrap u-ta-left" style="overflow:hidden;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
       <span class="text-meta u-ws-nowrap">${new Date(d.savedAt).toLocaleDateString()}</span>
@@ -22952,7 +22952,7 @@ async function loadCampaigns() {
         <div class="u-fs-md u-fw-semibold">${escHtml(c.name)}</div>
         <div class="row">
           <span class="u-fs-sm u-fw-semibold" style="color:${statusColor};">${statusLabel}</span>
-          <button class="btn btn-ghost u-fs-sm u-pt-0-5 u-pr-2 u-pb-0-5 u-pl-2" onclick="toggleCampaign('${c.id}', ${!c.is_active})">${toggleIcon} ${toggleLabel}</button>
+          <button class="btn btn-md btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
       <div class="text-meta u-mb-2">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup${(c.backfill_daily || 0) > 0 ? ` · backfill ${c.backfill_daily}/day` : ''} · ${sends} sent total</div>
@@ -24456,7 +24456,7 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">
-      <button type="button" class="btn btn-primary btn-block u-bg-badge-accent u-c-white u-fw-medium u-fs-sm u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block u-bg-badge-accent u-c-white u-fw-medium" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
@@ -28898,7 +28898,7 @@ async function checkBatchWatchValues(ids) {
       if (statusEl) {
         statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
       }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveValueResult(${i})">Save</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
     }
@@ -29431,7 +29431,7 @@ async function enhanceAllWatches(scopedIds) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveEnhanceResult(${i})">Save</button>`;
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
@@ -29458,7 +29458,7 @@ async function enhanceAllWatches(scopedIds) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveEnhanceResult(${i})">Save</button>`;
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
               }
@@ -30097,7 +30097,7 @@ async function loadShareComments(kind) {
 function shareCommentChipHtml(kind, token) {
   const th = groupCommentsByToken(_shareComments[kind]).get(token) || [];
   if (!th.length) return '';
-  return `<button class="btn btn-ghost btn-sm u-pt-0-5 u-pr-2 u-pb-0-5 u-pl-2 u-fs-xs" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
+  return `<button class="btn btn-xs btn-ghost" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
 }
 
 // The expanded thread under a link row (only when _shareThreadOpen === token).
