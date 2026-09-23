@@ -1,0 +1,39 @@
+name: Deploy site
+
+# Publishes only the files in scripts/build-site.mjs (SITE_FILES) to wrotate.com.
+# Requires Settings → Pages → Source = "GitHub Actions".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - run: node scripts/build-site.mjs
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          # .well-known/apple-app-site-association is a dotfile; without this
+          # the action drops it and universal links stop working.
+          include-hidden-files: true
+      - id: deployment
+        uses: actions/deploy-pages@v5
