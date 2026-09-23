@@ -113,7 +113,7 @@ describe('msrCardAmpText (Pro V2 amplitude readout)', () => {
   });
 
   it('colors low amplitude red (<200)', () => {
-    expect(msrCardAmpText(180).color).toBe('#ef4444');
+    expect(msrCardAmpText(180).color).toBe('#e05555');
   });
 
   it('returns null for missing / non-numeric amplitude', () => {

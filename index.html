@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=4f40ccd4">
+  <link rel="stylesheet" href="/design-system.css?v=687e1e2d">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -534,7 +534,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-wish-card.wl-pub,  .col-watch-card.col-pub  { background-color:color-mix(in srgb, var(--status-good) 7%, transparent); }
     .wl-wish-card.wl-fri,  .col-watch-card.col-fri  { background-color:color-mix(in srgb, var(--status-warn) 10%, transparent); }
     .wl-wish-card.wl-frd,  .col-watch-card.col-frd  { background-color:color-mix(in srgb, var(--vis-friends) 12%, transparent); }
-    .wl-wish-card.wl-priv, .col-watch-card.col-priv { background-color:color-mix(in srgb, var(--status-bad) 8%, transparent); }
+    .wl-wish-card.wl-priv, .col-watch-card.col-priv { background-color:color-mix(in srgb, var(--danger) 8%, transparent); }
 
     /* ── BUTTONS ── */
 
@@ -948,7 +948,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .fb-type-badge { font-size:var(--fs-xs); font-weight:var(--fw-bold); text-transform:uppercase; letter-spacing:var(--ls-tight); padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-pill); flex-shrink:0; }
     .fb-type-badge.bug     { background:color-mix(in srgb, var(--danger) 15%, transparent); color:var(--danger-text); }
     .fb-type-badge.feature { background:color-mix(in srgb, var(--tag-type) 15%, transparent); color:var(--tag-type); }
-    .fb-type-badge.rating  { background:color-mix(in srgb, var(--rating) 15%, transparent); color:var(--rating); }
+    .fb-type-badge.rating  { background:color-mix(in srgb, var(--status-warn) 15%, transparent); color:var(--status-warn); }
     .fb-title { font-size:var(--fs-md); font-weight:var(--fw-semibold); flex:1; min-width:0; }
     .fb-details { font-size:var(--fs-base); color:var(--muted); line-height:var(--lh-body); margin-bottom:var(--space-2-5); white-space:pre-wrap; }
     .fb-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-2); }
@@ -1188,8 +1188,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .badge-wall-card:active { background:var(--gold-dim); }
     .badge-wall-card.locked { opacity: var(--opacity-soft); }
     .badge-wall-name { font-size: var(--fs-sm); color: var(--badge-text); margin-top: var(--space-1-5); line-height: var(--lh-tight); }
-    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--badge-close);opacity:var(--opacity-soft); font-family: var(--font-mono); margin-top: var(--space-0-5); }
-    .badge-wall-date { font-size: var(--fs-3xs); color:var(--badge-close);opacity:var(--opacity-soft); margin-top: var(--space-0-5); }
+    .badge-wall-ref { font-size: var(--fs-2xs); color:var(--gold-deep);opacity:var(--opacity-soft); font-family: var(--font-mono); margin-top: var(--space-0-5); }
+    .badge-wall-date { font-size: var(--fs-3xs); color:var(--gold-deep);opacity:var(--opacity-soft); margin-top: var(--space-0-5); }
     .badge-cat-chip {
       display: inline-block; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2);
       border-radius: var(--radius-sm); letter-spacing: var(--ls-tight); text-transform: uppercase;
@@ -1383,7 +1383,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-conf { font-size:var(--fs-xs); font-weight:var(--fw-semibold); padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-sm); text-transform:capitalize; }
     .pi-card-conf.high { background:color-mix(in srgb, var(--status-good) 12%, transparent); color:var(--success-text); }
     .pi-card-conf.medium { background:color-mix(in srgb, var(--status-warn) 12%, transparent); color:var(--watch-gold); }
-    .pi-card-conf.low { background:color-mix(in srgb, var(--status-bad) 12%, transparent); color:var(--danger-text); }
+    .pi-card-conf.low { background:color-mix(in srgb, var(--danger) 12%, transparent); color:var(--danger-text); }
     .pi-card-actions { display:flex; gap:var(--space-1-5); flex-shrink:0; }
     .funfact-card{display:flex;gap:var(--space-2);align-items:flex-start;background:var(--badge-bg);border:.5px solid var(--badge-border);border-radius:var(--radius-btn);padding:var(--space-2) var(--space-2-5);font-size:var(--fs-base);line-height:var(--lh-snug);color:var(--text);}
     .funfact-bulb{flex:0 0 auto;}
@@ -1406,7 +1406,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-row.af2-skipped { opacity:var(--opacity-dim); }
     .af2-avatar { width:var(--size-10); height:var(--size-10); border-radius:var(--radius-btn); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:var(--fs-md); font-weight:var(--fw-medium); color:var(--white); position:relative; }
     .af2-avatar-gray { background:var(--surface2); color:var(--muted); }
-    .af2-avatar-gold { background:var(--badge-accent); }
+    .af2-avatar-gold { background:var(--gold-deep); }
     .af2-spinner-sm { display:inline-block; width:var(--size-4); height:var(--size-4); border:2px solid color-mix(in srgb, var(--white) 30%, transparent); border-top-color:var(--white); border-radius:var(--radius-round); animation:spin .7s linear infinite; }
     .af2-spinner-gold { display:inline-block; width:var(--size-4); height:var(--size-4); border:2px solid var(--border); border-top-color:var(--gold); border-radius:var(--radius-round); animation:spin .7s linear infinite; }
     .af2-info { flex:1; min-width:0; }
@@ -1415,14 +1415,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-ref { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-px); }
     .af2-specs { font-size:var(--fs-xs); color:var(--muted); margin-top:var(--space-0-5); }
     .af2-status { font-size:var(--fs-xs); margin-top:var(--space-1); }
-    .af2-status-gold { color:var(--badge-accent); }
+    .af2-status-gold { color:var(--gold-deep); }
     .af2-status-green { color:var(--success-text); }
     .af2-status-muted { color:var(--muted); }
     .af2-actions { display:flex; flex-direction:column; gap:var(--space-1); flex-shrink:0; align-items:flex-end; }
-    .af2-btn-confirm { background:var(--badge-accent); color:var(--white); border:none; font-size:var(--fs-sm); font-weight:var(--fw-medium); padding:var(--space-1-5) var(--space-3); border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; }
-    .af2-btn-edit { background:transparent; color:var(--badge-accent); border:1px solid var(--badge-accent); font-size:var(--fs-xs); padding:var(--space-1) var(--space-2-5); border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; }
+    .af2-btn-confirm { background:var(--gold-deep); color:var(--white); border:none; font-size:var(--fs-sm); font-weight:var(--fw-medium); padding:var(--space-1-5) var(--space-3); border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; }
+    .af2-btn-edit { background:transparent; color:var(--gold-deep); border:1px solid var(--gold-deep); font-size:var(--fs-xs); padding:var(--space-1) var(--space-2-5); border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; }
     .af2-btn-skip { background:none; border:none; color:var(--muted); font-size:var(--fs-md); cursor:pointer; padding:var(--space-0-5) var(--space-1); line-height:var(--lh-none); }
-    .af2-btn-undo { background:none; border:none; color:var(--badge-accent); font-size:var(--fs-xs); cursor:pointer; font-family:inherit; padding:var(--space-0-5) var(--space-1); }
+    .af2-btn-undo { background:none; border:none; color:var(--gold-deep); font-size:var(--fs-xs); cursor:pointer; font-family:inherit; padding:var(--space-0-5) var(--space-1); }
     .af2-check-gold { color:var(--gold-text); font-size:var(--fs-md); }
     .af2-check-green { color:var(--success-text); font-size:var(--fs-base); }
     .af2-theater-text { transition:opacity var(--dur-base); }
@@ -1777,10 +1777,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
       max-height: calc(var(--fs-base) * var(--lh-body) * 2);
     }
-    .funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }
+    .funfact-row .funfact-bulb { color: var(--gold-deep); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }
     /* Uses the badge accent, not the tier gold: that gold measures 2.64:1 on
        the light card surface and fails AA for 13px text. */
-    .funfact-label { color: var(--badge-accent); font-weight: var(--fw-medium); }
+    .funfact-label { color: var(--gold-deep); font-weight: var(--fw-medium); }
     .funfact-more {
       display: none; position: absolute; right: 0; bottom: 0; color: var(--muted);
       padding-left: var(--space-6);
@@ -1810,13 +1810,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .promo-name { font-weight: var(--fw-bold); font-size: var(--fs-md); line-height: var(--lh-tight); }
-    /* --badge-accent, NOT --gold: gold measures 2.64:1 on the light card
+    /* --gold-deep, NOT --gold: gold measures 2.64:1 on the light card
        surface and fails AA for small text. Same reason .funfact-label uses it
        (see the note at .funfact-row). */
     .promo-eyebrow {
       font-size: var(--fs-sm); font-weight: var(--fw-bold);
       letter-spacing: var(--ls-eyebrow); text-transform: uppercase;
-      color: var(--badge-accent);
+      color: var(--gold-deep);
     }
     /* 16:9, never the post's 4:5 — that portrait crop is a wrist shot's signature. */
     .promo-card-hero { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface2); }
@@ -1825,7 +1825,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-heading { font-size: var(--fs-body); font-weight: var(--fw-bold); margin-bottom: var(--space-1-5); }
     .promo-body { font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); }
     .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: var(--space-2) 0; }
-    .promo-body a { color: var(--badge-accent); }
+    .promo-body a { color: var(--gold-deep); }
     .promo-cta { width: 100%; margin-top: var(--space-3-5); }
 
     /* ── Promo card variants (promo_slots.variant + .size) ────────────────
@@ -1911,7 +1911,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--gold-text); color: var(--promo-cta-fg);
       font-size: var(--fs-body); font-weight: var(--fw-heavy);
     }
-    .promo-tag--prompt .promo-cta:hover { background: var(--promo-gold-deep); }
+    .promo-tag--prompt .promo-cta:hover { background: var(--gold-deep); }
 
     /* tag · nudge — one line, inline CTA. Strip is 8 + 12 + 8 = 28px here, so
        the notch centre moves to 21px. */
@@ -1928,7 +1928,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--gold-text); color: var(--promo-cta-fg);
       font-size: var(--fs-md); font-weight: var(--fw-bold);
     }
-    .promo-tag--nudge .promo-cta:hover { background: var(--promo-gold-deep); }
+    .promo-tag--nudge .promo-cta:hover { background: var(--gold-deep); }
     .promo-nudge-copy { flex: 1; min-width: 0; }
 
     /* ── Variant B — full-bleed band ── */
@@ -1943,7 +1943,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        static content, so every content row is lifted above it. */
     .promo-band > *:not(.promo-band-mark):not(.promo-band-rule) { position: relative; }
     .promo-band--prompt {
-      background: linear-gradient(160deg, var(--demo-gold-deep) 0%, var(--promo-gold-deep) 100%);
+      background: linear-gradient(160deg, var(--demo-gold-deep) 0%, var(--gold-deep) 100%);
       padding: var(--space-6) var(--space-5) var(--space-5);
       display: flex; flex-direction: column; gap: var(--space-3-5);
     }
@@ -1971,7 +1971,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-band .promo-body a { color: var(--white); text-decoration: underline; }
     .promo-band--prompt .promo-cta {
-      align-self: flex-start; background: var(--white); color: var(--promo-gold-deep);
+      align-self: flex-start; background: var(--white); color: var(--gold-deep);
       font-size: var(--fs-body); font-weight: var(--fw-heavy); padding: var(--space-3) var(--space-6); border-radius: var(--radius-pill);
     }
     .promo-band--prompt .promo-cta:hover { background: var(--sand); }
@@ -2023,7 +2023,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
       letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--gold-text);
     }
-    .promo-recap-period { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--promo-gold-deep); }
+    .promo-recap-period { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--gold-deep); }
 
     /* scroll-snap does the paging; no carousel JS, no gesture handler.
        scrollbar-width/::-webkit-scrollbar hide the bar on the platforms that
@@ -2051,7 +2051,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        normally take. line-height 1 keeps month and year as one block. */
     .promo-recap-month {
       font-size: var(--fs-4xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); line-height: var(--lh-none);
-      color: var(--promo-gold-deep);
+      color: var(--gold-deep);
     }
     .promo-recap-year {
       font-family: var(--font-mono); font-size: var(--fs-body); font-weight: var(--fw-semibold);
@@ -2100,9 +2100,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-recap-trend { display: flex; align-items: baseline; gap: var(--space-2); }
     .promo-recap-delta {
       font-size: var(--promo-fs-delta); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display);
-      color: var(--promo-gold-deep);
+      color: var(--gold-deep);
     }
-    .promo-recap-flat { font-size: var(--promo-fs-flat); font-weight: var(--fw-heavy); color: var(--promo-gold-deep); }
+    .promo-recap-flat { font-size: var(--promo-fs-flat); font-weight: var(--fw-heavy); color: var(--gold-deep); }
     .promo-recap-trend-sub { font-size: var(--fs-md); color: var(--muted); }
 
     /* Top post: the photo is the point, so it gets a rectangle rather than the
@@ -2125,7 +2125,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     .promo-recap-streak {
       font-size: var(--promo-fs-streak); font-weight: var(--fw-heavy); letter-spacing: var(--promo-ls-tight-4); line-height: var(--lh-none);
-      color: var(--promo-gold-deep);
+      color: var(--gold-deep);
     }
 
     .promo-recap-rows { width: 100%; max-width: var(--size-65); display: flex; flex-direction: column; gap: var(--space-0-5); }
@@ -2172,7 +2172,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       border: none; border-radius: var(--radius); padding: var(--space-3-5);
       font-size: var(--fs-body); font-weight: var(--fw-heavy); cursor: pointer;
     }
-    .promo-recap .promo-cta:hover { background: var(--promo-gold-deep); }
+    .promo-recap .promo-cta:hover { background: var(--gold-deep); }
     /* Composer-only state (see renderRecapCard) — never reached in a feed. */
     .promo-recap-note { padding: var(--space-4) var(--space-5); font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); }
 
@@ -2214,7 +2214,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        the same card height as everyone else's */
     .vis-badge--overlay { position:absolute; top:var(--size-2); right:var(--size-2); margin:0; z-index:var(--z-raised-3);
       pointer-events:none; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
-    .vis-badge--overlay.followers { background:var(--scrim); color:var(--vis-followers-lt); }
+    .vis-badge--overlay.followers { background:var(--scrim); color:var(--sand); }
     .vis-badge--overlay.friends   { background:var(--scrim); color:var(--vis-friends-lt); }
     .vis-badge--overlay.private   { background:var(--scrim); color:var(--vis-private-lt); }
     /* Photo-less posts (compact wear, text, badge) — badge rides in the header */
@@ -3184,7 +3184,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <main id="main-content" tabindex="-1">
 
   <!-- ════ DEMO MODE BANNER ════ -->
-  <div id="demo-banner" class="row-between demo-banner hidden u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct u-c-demo-ink u-pt-2-5 u-pr-5 u-pb-2-5 u-pl-5 u-mt-calc-1-3 u-mr-3 u-mb-2 u-ml-3 u-gap-3 u-fs-base u-fw-semibold u-r- u-sh-shadow-2">
+  <div id="demo-banner" class="row-between demo-banner hidden u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep u-c-demo-ink u-pt-2-5 u-pr-5 u-pb-2-5 u-pl-5 u-mt-calc-1-3 u-mr-3 u-mb-2 u-ml-3 u-gap-3 u-fs-base u-fw-semibold u-r- u-sh-shadow-2">
     <span class="grow-clip">Demo Mode — read-only preview of Alex Rivera's collection</span>
     <div class="row u-shrink-0">
       <button onclick="exitDemoMode()" class="u-bg-demo-ink u-c-paper u-bd-none u-r-btn u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-fs-sm u-cur-pointer u-ff-inherit u-fw-semibold u-ws-nowrap">Sign Up Free</button>
@@ -5183,8 +5183,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="modal-actions u-fw--nowrap u-gap-1-5">
       <button id="save-watch-btn" class="btn btn-primary btn-grow" onclick="saveWatch()">Save</button>
-      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-badge-accent u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">⭐ Enhance</button>
-      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-badge-accent u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">$ Value</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-gold-deep u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">⭐ Enhance</button>
+      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-gold-deep u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
@@ -5246,7 +5246,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="af2-sheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="af2-sheet-title">
   <div class="modal u-maxw-120">
     <div class="modal-title row" id="af2-sheet-title">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--badge-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="af2-title-text" class="grow">Identifying Watches</span>
       <span id="af2-progress-chip" class="text-caption" style="display:none;"></span>
     </div>
@@ -6199,7 +6199,7 @@ let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
 const BADGE_COLORS = {
   onboarding:  { bezel: 'var(--badge-onboarding)', stroke: 'var(--badge-onboarding-ink)', chipBg: 'var(--badge-onboarding-bg)', chipText: 'var(--badge-onboarding-ink)' },
-  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: 'var(--sand)', chipText: 'var(--badge-close)' },
+  collection:  { bezel: 'var(--gold-lt)', stroke: 'var(--gold-deep)', chipBg: 'var(--sand)', chipText: 'var(--gold-deep)' },
   connoisseur: { bezel: 'var(--badge-connoisseur)', stroke: 'var(--badge-connoisseur-ink)', chipBg: 'var(--badge-connoisseur-bg)', chipText: 'var(--badge-connoisseur-ink)' },
   timegrapher: { bezel: 'var(--badge-timegrapher)', stroke: 'var(--badge-timegrapher-ink)', chipBg: 'var(--badge-timegrapher-bg)', chipText: 'var(--badge-timegrapher-ink)' },
   habit:       { bezel: 'var(--badge-habit)', stroke: 'var(--badge-habit-ink)', chipBg: 'var(--badge-habit-bg)', chipText: 'var(--badge-habit-ink)' },
@@ -6288,7 +6288,7 @@ const BADGE_REGISTRY = [
   { ref: 60, slug: 'chronometer_grade', name: 'Chronometer Grade', category: 'timegrapher',
     flavor: 'Within COSC spec. Precision confirmed.',
     unlock: 'Submit a measurement with rate between -4 and +6 s/day (>=60s duration).',
-    glyph: '<path d="M50 28l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" fill="var(--badge-tier)" stroke="var(--badge-close)" stroke-width="0.6" stroke-linejoin="round"/>',
+    glyph: '<path d="M50 28l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" fill="var(--gold-lt)" stroke="var(--gold-deep)" stroke-width="0.6" stroke-linejoin="round"/>',
     isHidden: false },
   { ref: 61, slug: 'ten_measurements', name: 'Ten Measurements', category: 'timegrapher',
     flavor: 'Ten readings in the book. The data grows.',
@@ -7942,7 +7942,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.05.16';
+const APP_VERSION = '23.05.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22574,7 +22574,7 @@ async function loadCampaigns() {
 
   const cardHtml = (c) => {
     const sends = countMap[c.id] || 0;
-    const statusColor = c.is_active ? 'var(--status-good)' : 'var(--status-bad)';
+    const statusColor = c.is_active ? 'var(--status-good)' : 'var(--danger)';
     const statusLabel = c.is_active ? 'Active' : 'Paused';
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
@@ -23969,7 +23969,7 @@ function updateStrapsSummary() {
   const onWrist = straps.find(s => s.onWrist);
   const count = straps.length;
   if (onWrist) {
-    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span class="u-c-badge-accent">on wrist</span>`;
+    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span class="u-c-gold-deep">on wrist</span>`;
   } else {
     sum.textContent = String(count);
   }
@@ -23997,7 +23997,7 @@ function updateTypeSummary() {
   if (!sum) return;
   const tags = getSelectedTags();
   if (!tags.length) { sum.innerHTML = '<span class="text-muted">Add type tags</span>'; return; }
-  const pill = t => `<span class="u-fs-2xs u-bg-badge-bg u-c-badge-accent u-bd-0p5px-solid-badge-border u-pt-px u-pr-1-5 u-pb-px u-pl-1-5 u-r- u-ws-nowrap">${escHtml(t)}</span>`;
+  const pill = t => `<span class="u-fs-2xs u-bg-badge-bg u-c-gold-deep u-bd-0p5px-solid-badge-border u-pt-px u-pr-1-5 u-pb-px u-pl-1-5 u-r- u-ws-nowrap">${escHtml(t)}</span>`;
   if (tags.length <= 2) { sum.innerHTML = tags.map(pill).join(' '); return; }
   sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span class="text-caption-xs">+${tags.length - 2}</span>`;
 }
@@ -24042,24 +24042,24 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">
-      <button type="button" class="btn btn-primary btn-block u-bg-badge-accent u-c-white u-fw-medium" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block u-bg-gold-deep u-c-white u-fw-medium" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
   let html = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">';
   if (desc) {
-    html += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Description</div>`;
+    html += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Description</div>`;
     html += `<div class="badge-body">${escHtml(desc)}</div>`;
   }
   if (bg) {
-    html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Background &amp; History</div>`;
+    html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Background &amp; History</div>`;
     html += `<div class="badge-body">${escHtml(bg)}</div>`;
   }
   if (fns) {
-    html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Functions</div>`;
+    html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Functions</div>`;
     html += `<div class="badge-body">${escHtml(fns)}</div>`;
   }
-  html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-badge-accent u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">⭐ Re-enhance</button></div>`;
+  html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-gold-deep u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">⭐ Re-enhance</button></div>`;
   html += '</div>';
   el.innerHTML = html;
 }
@@ -24815,7 +24815,7 @@ function renderValueSection() {
   // Summary
   if (sum) {
     if (hasPending && !isSamePrice) {
-      sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span class="u-c-badge-accent u-fw-medium">· new price ${fmtMoney(pending)}</span>` : `<span class="u-c-badge-accent u-fw-medium">new price ${fmtMoney(pending)}</span>`;
+      sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span class="u-c-gold-deep u-fw-medium">· new price ${fmtMoney(pending)}</span>` : `<span class="u-c-gold-deep u-fw-medium">new price ${fmtMoney(pending)}</span>`;
     } else if (savedPrice && paid) {
       const diff = savedPrice - paid;
       const color = diff >= 0 ? 'var(--success)' : 'var(--danger-text)';
@@ -24824,7 +24824,7 @@ function renderValueSection() {
     } else if (savedPrice) {
       sum.textContent = fmtMoney(savedPrice);
     } else {
-      sum.innerHTML = '<span class="u-c-badge-accent">Check price</span>';
+      sum.innerHTML = '<span class="u-c-gold-deep">Check price</span>';
     }
   }
 
@@ -24866,16 +24866,16 @@ function renderValueSection() {
       const deltaColor = delta >= 0 ? 'var(--success)' : 'var(--danger-text)';
       html += `<div class="u-bg-badge-bg u-bd-0p5px-solid-badge-border u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-mt-2-5">
         <div class="row-between">
-          <div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep">New Market Price</div>
-          <div class="u-fs-2xs u-c-badge-accent">${freshLabel}</div>
+          <div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep">New Market Price</div>
+          <div class="u-fs-2xs u-c-gold-deep">${freshLabel}</div>
         </div>
         <div class="u-items-baseline u-gap-2 u-mt-1 u-d-flex">
           <span class="u-fs-2xl u-fw-medium u-c-badge-text">${fmtMoney(pending)}</span>
           ${savedPrice ? `<span class="u-fs-sm" style="color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
         </div>
         <div class="u-gap-2 u-mt-2-5 u-d-flex">
-          <button type="button" onclick="applyPendingPrice()" class="u-flex-1 u-bg-badge-accent u-c-white u-bd-none u-fs-sm u-fw-medium u-ff-inherit u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-sm u-cur-pointer">Apply ${fmtMoney(pending)}</button>
-          <button type="button" onclick="dismissPendingPrice()" class="u-bg-transparent u-c-badge-accent u-bd-0p5px-solid-badge-border u-fs-sm u-ff-inherit u-pt-2 u-pr-3-5 u-pb-2 u-pl-3-5 u-r-sm u-cur-pointer">Dismiss</button>
+          <button type="button" onclick="applyPendingPrice()" class="u-flex-1 u-bg-gold-deep u-c-white u-bd-none u-fs-sm u-fw-medium u-ff-inherit u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-sm u-cur-pointer">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" class="u-bg-transparent u-c-gold-deep u-bd-0p5px-solid-badge-border u-fs-sm u-ff-inherit u-pt-2 u-pr-3-5 u-pb-2 u-pl-3-5 u-r-sm u-cur-pointer">Dismiss</button>
         </div>
       </div>`;
     }
@@ -25948,7 +25948,7 @@ function renderChUsecase(fl) {
     type: 'doughnut',
     data: {
       labels: keys.map(k => k[0].toUpperCase() + k.slice(1)),
-      datasets: [{ data: keys.map(k => um[k]), backgroundColor: keys.map(k => UC_COL[k] || dsToken('--uc-other')),
+      datasets: [{ data: keys.map(k => um[k]), backgroundColor: keys.map(k => UC_COL[k] || dsToken('--uc-unspecified')),
                    borderWidth: 2, borderColor: dsToken('--surface') }]   // slices separated by the card's own colour
     },
     options: {
@@ -25967,7 +25967,7 @@ function renderChUsecase(fl) {
       const cnt   = um[k];
       const pct   = Math.round(cnt / total * 100);
       const barW  = Math.round(cnt / maxCnt * 100);
-      const color = UC_COL[k] || dsToken('--uc-other');
+      const color = UC_COL[k] || dsToken('--uc-unspecified');
       const label = k[0].toUpperCase() + k.slice(1);
       return `<div class="u-items-center u-gap-3 u-d-flex">
         <div class="u-w-2-5 u-h-2-5 u-r-round u-shrink-0" style="background:${color};"></div>
@@ -27473,7 +27473,7 @@ function af2RenderRow(watch, idx) {
       break;
     case 'failed':
       contentHtml = `<div class="af2-model">Couldn't identify</div>`
-        + `<div class="af2-brand u-c-badge-accent u-cur-pointer">Tap to add manually</div>`;
+        + `<div class="af2-brand u-c-gold-deep u-cur-pointer">Tap to add manually</div>`;
       break;
   }
 
@@ -29650,7 +29650,7 @@ function wlTouchStart(e, id) {
     zIndex:        '9999',
     opacity:       '0.9',
     pointerEvents: 'none',
-    boxShadow:     'var(--shadow-drag)',
+    boxShadow:     'var(--shadow-4)',
     transform:     'scale(1.03)',
     transition:    'none',
     borderRadius:  '10px',
@@ -29762,7 +29762,7 @@ function collTouchStart(e, id) {
   Object.assign(collTouchGhost.style, {
     position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
     width: rect.width + 'px', zIndex: '9999', opacity: '0.9',
-    pointerEvents: 'none', boxShadow: 'var(--shadow-drag)',
+    pointerEvents: 'none', boxShadow: 'var(--shadow-4)',
     transform: 'scale(1.03)', transition: 'none', borderRadius: '10px',
   });
   document.body.appendChild(collTouchGhost);
@@ -29891,15 +29891,15 @@ function previewWatch(w) {
   if (hasContent) {
     cardHtml = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-badge-border">';
     if (desc) {
-      cardHtml += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Description</div>`;
+      cardHtml += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Description</div>`;
       cardHtml += `<div class="badge-body">${escHtml(desc)}</div>`;
     }
     if (bg) {
-      cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Background &amp; History</div>`;
+      cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Background &amp; History</div>`;
       cardHtml += `<div class="badge-body">${escHtml(bg)}</div>`;
     }
     if (fns) {
-      cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Functions</div>`;
+      cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Functions</div>`;
       cardHtml += `<div class="badge-body">${escHtml(fns)}</div>`;
     }
     cardHtml += '</div>';
@@ -31662,7 +31662,7 @@ window._tgNativeCallback = function(data) {
         if (isTgAlgo && data.amplitude != null) {
           ampWrap.style.display = '';
           ampEl.textContent = Math.round(data.amplitude) + '°';
-          ampEl.style.color = data.amplitude >= 250 ? 'var(--tg-ink)' : (data.amplitude >= 200 ? 'var(--status-warn)' : 'var(--status-bad)');
+          ampEl.style.color = data.amplitude >= 250 ? 'var(--tg-ink)' : (data.amplitude >= 200 ? 'var(--status-warn)' : 'var(--danger)');
         } else { ampWrap.style.display = 'none'; }
       }
       const scopePanel = document.getElementById('msr-beat-scope-panel');
@@ -31709,10 +31709,10 @@ window._tgNativeCallback = function(data) {
     } else if (pzWeak) {
       // Weak piezo signal: don't show a (garbage) number; tell the user to reseat.
       rateEl.textContent = '—';
-      rateEl.style.color = 'color-mix(in srgb, var(--status-bad) 75%, transparent)';
+      rateEl.style.color = 'color-mix(in srgb, var(--danger) 75%, transparent)';
       if (beEl) beEl.textContent = '—';
       const _stW = document.getElementById('msr-status-text');
-      if (_stW && _msrPhase !== 'converged') { _stW.textContent = 'Signal too weak · reseat the pickup'; _stW.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)'; }
+      if (_stW && _msrPhase !== 'converged') { _stW.textContent = 'Signal too weak · reseat the pickup'; _stW.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)'; }
     }
 
     // BPH detection display (auto mode)
@@ -31805,7 +31805,7 @@ window._tgNativeCallback = function(data) {
           statusText.textContent = recalExhausted
             ? 'Could not lock ticks \u00b7 try repositioning or check BPH'
             : 'No signal detected \u00b7 try placing watch on mic';
-          statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
+          statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
           statusText.style.fontSize = 'var(--fs-xs)';
           statusText.style.fontWeight = 'var(--fw-semibold)';
         }
@@ -31832,7 +31832,7 @@ window._tgNativeCallback = function(data) {
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
           statusText.textContent = 'Signal too weak · rest the watch on the bottom-edge mic in a quiet spot, then Retry';
-          statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
+          statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
           statusText.style.fontSize = 'var(--fs-xs)';
           statusText.style.fontWeight = 'var(--fw-semibold)';
         }
@@ -32097,7 +32097,7 @@ window._tgNativeCallback = function(data) {
             if (_retryLabel2) _retryLabel2.textContent = 'Retry';
           } else {
             statusText.textContent = 'No ticks detected \u00b7 move closer and retry';
-            statusText.style.color = 'color-mix(in srgb, var(--status-bad) 70%, transparent)';
+            statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
             statusText.style.fontSize = 'var(--fs-xs)';
             statusText.style.fontWeight = '';
             const _retryLabel3 = document.getElementById('msr-btn-label');
@@ -33059,7 +33059,7 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
   }
   const dimColor = 'color-mix(in srgb, var(--tg-ink) 15%, transparent)';
   const colors = [
-    'color-mix(in srgb, var(--status-bad) 80%, transparent)',    // 1 bar: red
+    'color-mix(in srgb, var(--danger) 80%, transparent)',    // 1 bar: red
     'color-mix(in srgb, var(--status-warn) 80%, transparent)',   // 2 bars: yellow
     'color-mix(in srgb, var(--tg-ink) 70%, transparent)',        // 3 bars: green
     'var(--tg-ink)'                                              // 4 bars: bright green
@@ -33070,8 +33070,8 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
     if (bar) bar.style.background = i <= bars ? barColor : dimColor;
   }
   if (label) {
-    if (bars === 0) { label.textContent = 'NO SIGNAL'; label.style.color = 'color-mix(in srgb, var(--status-bad) 60%, transparent)'; }
-    else if (bars === 1) { label.textContent = 'WEAK'; label.style.color = 'color-mix(in srgb, var(--status-bad) 60%, transparent)'; }
+    if (bars === 0) { label.textContent = 'NO SIGNAL'; label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
+    else if (bars === 1) { label.textContent = 'WEAK'; label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
     else if (bars === 2) { label.textContent = 'FAIR'; label.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)'; }
     else { label.textContent = ''; }
   }
@@ -33340,7 +33340,7 @@ function msrCardAmpText(amp) {
   const a = Number(amp);
   if (amp == null || amp === '' || !isFinite(a)) return null;
   const deg = Math.round(a);
-  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--status-bad'));
+  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--danger'));
   return { text: 'Amplitude ' + deg + '°', color };
 }
 
@@ -33804,7 +33804,7 @@ function toggleMsrListen() {
     if (btnMic) btnMic.style.display = 'none';
     if (btnStop) btnStop.style.display = '';
     if (btnLabel) btnLabel.textContent = 'Stop';
-    if (listenBtnEl) { listenBtnEl.style.borderColor = 'color-mix(in srgb, var(--status-bad) 40%, transparent)'; listenBtnEl.style.color = 'var(--danger)'; listenBtnEl.style.background = 'var(--tg-error-bg)'; }
+    if (listenBtnEl) { listenBtnEl.style.borderColor = 'color-mix(in srgb, var(--danger) 40%, transparent)'; listenBtnEl.style.color = 'var(--danger)'; listenBtnEl.style.background = 'var(--tg-error-bg)'; }
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -33844,7 +33844,7 @@ function toggleMsrListen() {
       const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
       const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
       const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = 'Stop';
-      lb.style.background = 'var(--tg-error-bg)'; lb.style.color = 'var(--danger)'; lb.style.borderColor = 'color-mix(in srgb, var(--status-bad) 40%, transparent)';
+      lb.style.background = 'var(--tg-error-bg)'; lb.style.color = 'var(--danger)'; lb.style.borderColor = 'color-mix(in srgb, var(--danger) 40%, transparent)';
       document.getElementById('msr-live-status').style.display = '';
       warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
       warn.style.color = 'var(--status-warn)';

@@ -21,6 +21,9 @@
      Audit U5. */
   --gold-text: #8b6719;
   --gold-lt: #c9a84c;
+  /* The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the
+     pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. */
+  --gold-deep: #6E5514;
   --gold-dim: rgba(154,118,40,.12);
   --text: #16161e;
   /* #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1
@@ -125,9 +128,7 @@
   --shadow-ring-tag: 0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent);  /* ranking game: hover */
   --shadow-ring-win: 0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent);    /* ranking game: winner */
   --shadow-btn-hover: 0 1px 6px color-mix(in srgb, var(--black) 20%, transparent);
-  --shadow-lift: 0 4px 16px color-mix(in srgb, var(--black) 10%, transparent);
-  --shadow-drag: 0 8px 32px var(--scrim);                                              /* a card being dragged */
-  --shadow-toast: 0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--badge-tier) 6%, transparent);
+  --shadow-toast: 0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--gold-lt) 6%, transparent);
   /* Dimmed backdrop behind sheets, viewers and popovers. */
   --scrim: rgba(0,0,0,.55);
 
@@ -150,9 +151,8 @@
   --z-popover: 9999;
   --z-top: 10000;
 
-  /* ── Status ── the timegrapher's rate / amplitude traffic light. Distinct from
-     --success / --danger today only because they were typed by hand;
-     kept at their current values so declaring them changes nothing on screen. */
+  /* ── Status ── the timegrapher's rate / amplitude traffic light. Red is --danger (merged
+     2026-09-23: the two reds were distinct only because they were typed by hand). */
   /* Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on
      purpose — these sit on surfaces that do not follow the theme. */
   --white: #fff;
@@ -160,15 +160,13 @@
   --tag-type: var(--watch-indigo);         /* the watch-type tag (indigo) */
   --tag-strap: var(--watch-slate);        /* strap tag (slate) */
   --tag-weather: var(--watch-sky);      /* weather recommendation tag (sky) */
-  --rating: #f59e0b;           /* feedback "rating" badge (amber) */
-  /* visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger */
-  --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
+  /* visibility badges drawn on a photo scrim: lighter tints: --sand (followers) / --vis-friends-lt / --vis-private-lt */
+  --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
   --paper: #f5f5f8; --sand: #F0E2B4;   /* fixed off-white and sand: demo, promo, badges, admin previews */
-  --demo-gold: var(--watch-gold); --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
+  --demo-gold: var(--watch-gold); --demo-gold-deep: #a6842e; --demo-ink: #16161e;
   --status-good: #22c55e;
   --status-warn: #eab308;
-  --status-bad: #ef4444;
   --status-expiring: #ef7942;    /* warranty running out; not worn for a while */
   --danger-fill: #b91c1c;         /* a solid destructive button (white text), the same in both themes */
   --streak-frozen-bg: #cfe8f5; --streak-frozen-ink: #0c4a6e;   /* a streak day covered by a freeze (ice) */
@@ -186,12 +184,8 @@
 
   /* ── Badges / achievements ── warm theme; dark variants below. */
   --badge-text: #3D2A14;
-  --badge-accent: #854F0B;
   --badge-bg: #FAEEDA;
   --badge-border: #BA7517;
-  --badge-close: #6B5618;
-  --badge-tier: #B8952A;
-  --badge-deep: #633806;
   /* badge medallion glyph ink — fixed dark (disc is always --white,
      both themes), so NOT overridden in dark like --badge-text is. */
   --badge-ink: #3D2A14;
@@ -209,7 +203,7 @@
   --watch-sky: #38bdf8; --watch-fuchsia: #e879f9; --watch-rose: #f43f5e; --watch-slate: #94a3b8;
   --watch-amber: #fbbf24; --watch-emerald: #34d399; --watch-tangerine: #fb923c; --watch-violet: var(--vis-friends);
   --watch-default: var(--watch-gold);
-  --uc-unspecified: #7a7a95; --uc-other: #888;   /* use-case chart: no use case / an unknown one */
+  --uc-unspecified: #7a7a95;   /* use-case chart: no use case, or an unknown one */
   /* charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. */
   --chart-grid: rgba(128,128,128,.15); --chart-series-2: var(--watch-indigo);
 }
@@ -230,6 +224,8 @@
   --danger-text: var(--danger);
   --success-text: var(--success);
   --gold-lt: #dbbe72;
+  /* Dark has no deeper gold that reads: the deep role takes the light gold. */
+  --gold-deep: var(--gold-lt);
   --gold-dim: color-mix(in srgb, var(--gold) 12%, transparent);
   --text: #e6e6f0;
   /* #7a7a95 measured 4.41:1 on --surface and 4.06:1 on --surface2, under the
@@ -241,12 +237,8 @@
 
   /* badge/achievement warm theme — dark variants (readable on dark) */
   --badge-text: #e7d9bd;
-  --badge-accent: #dbbe72;
   --badge-bg: #221a0e;
   --badge-border: rgba(219,190,114,.35);
-  --badge-close: #c9a84c;
-  --badge-tier: #dbbe72;
-  --badge-deep: #d8b96a;
 
   /* Repeated from the light block on purpose — see the note on --ring there. */
   --ring: 0 0 0 1px var(--gold);
@@ -265,11 +257,10 @@
 
 /* ── Component tokens: promo cards ──
    Scoped to the promo variants rather than :root because the band variant
-   carries its own dark ground in both themes (see the dark block below).
+   carries its own gold ground in both themes (see the pin below).
    The mock specifies IBM Plex Mono for the brand eyebrow; this app loads no web
    fonts, so the brand eyebrow uses --font-mono, the platform mono face. */
 .promo-tag, .promo-band, .promo-recap {
-  --promo-gold-deep: #6E5514;
   --promo-line: #D9C48A;
   --promo-cta-fg: #fff;
   /* the promo family's own editorial scale — deliberately not the app's (display sizes, wide eyebrow
@@ -298,8 +289,9 @@
    card + parchment strip would be a flashbang in dark mode. The band is left
    alone. Gold flips to the theme's lighter gold (#8A6D1B on dark fails
    contrast), which means the CTA's fill is light and its label becomes ink. */
+/* The band keeps the light deep gold in dark mode too: it is a fixed gold ground, not the app surface. */
+[data-theme="dark"] .promo-band { --gold-deep: #6E5514; }
 [data-theme="dark"] .promo-tag, [data-theme="dark"] .promo-recap {
-  --promo-gold-deep: #DBBE72;
   --promo-line: rgba(201,168,76,.34);
   --promo-cta-fg: var(--demo-ink);
 }
@@ -373,9 +365,9 @@
 .chip.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold-text); }
 .btn-loading { opacity: var(--opacity-soft); cursor: not-allowed; }
 .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); font-weight: var(--fw-medium); padding: var(--space-1) var(--space-2-5); border-radius: var(--radius-pill); cursor: pointer; transition: all var(--dur-fast); font-family: inherit; }
-.tag-pill:hover        { border-color: var(--badge-border); color: var(--badge-accent); }
-.tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: var(--fw-semibold); }
-.tag-pill.suggested    { border-color:var(--badge-border); color: var(--badge-accent); border-style: dashed; }
+.tag-pill:hover        { border-color: var(--badge-border); color: var(--gold-deep); }
+.tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--gold-deep); font-weight: var(--fw-semibold); }
+.tag-pill.suggested    { border-color:var(--badge-border); color: var(--gold-deep); border-style: dashed; }
 .modal-section { border-top: 1px solid var(--border); margin-top: var(--space-3-5); }
 .modal-section-hdr { display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: pointer; padding: var(--space-2) 0 var(--space-1-5); color: var(--text); font-family: inherit; line-height: var(--lh-none); user-select: none; }
 .modal-section-hdr:hover .modal-section-hdr-label { color: var(--text); }
@@ -530,7 +522,7 @@
 .u-bdt-2px-solid-gold.u-bdt-2px-solid-gold.u-bdt-2px-solid-gold.u-bdt-2px-solid-gold.u-bdt-2px-solid-gold { border-top: 2px solid var(--gold); }
 .u-bdtc-gold.u-bdtc-gold.u-bdtc-gold.u-bdtc-gold.u-bdtc-gold { border-top-color: var(--gold); }
 .u-bf-blur-12px.u-bf-blur-12px.u-bf-blur-12px.u-bf-blur-12px.u-bf-blur-12px { backdrop-filter: blur(12px); }
-.u-bg-badge-accent.u-bg-badge-accent.u-bg-badge-accent.u-bg-badge-accent.u-bg-badge-accent { background: var(--badge-accent); }
+.u-bg-gold-deep.u-bg-gold-deep.u-bg-gold-deep.u-bg-gold-deep.u-bg-gold-deep { background: var(--gold-deep); }
 .u-bg-badge-bg.u-bg-badge-bg.u-bg-badge-bg.u-bg-badge-bg.u-bg-badge-bg { background: var(--badge-bg); }
 .u-bg-bg.u-bg-bg.u-bg-bg.u-bg-bg.u-bg-bg { background: var(--bg); }
 .u-bg-black.u-bg-black.u-bg-black.u-bg-black.u-bg-black { background: var(--black); }
@@ -545,7 +537,6 @@
 .u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim.u-bg-gold-dim { background: var(--gold-dim); }
 .u-bg-gold-text.u-bg-gold-text.u-bg-gold-text.u-bg-gold-text.u-bg-gold-text { background: var(--gold-text); }
 .u-bg-white.u-bg-white.u-bg-white.u-bg-white.u-bg-white { background: var(--white); }
-.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct.u-bg-linear-gradient-135deg-demo-gold-0pct-demo-gold-mid-50pct-demo-gold-deep-100pct { background: linear-gradient(135deg,var(--demo-gold) 0%,var(--demo-gold-mid) 50%,var(--demo-gold-deep) 100%); }
 .u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep.u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep { background: linear-gradient(135deg,var(--demo-gold),var(--demo-gold-deep)); }
 .u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct.u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct { background: linear-gradient(to right, color-mix(in srgb, var(--black) 90%, transparent) 0%, color-mix(in srgb, var(--black) 35%, transparent) 55%, color-mix(in srgb, var(--black) 10%, transparent) 100%); }
 .u-bg-linear-gradient-to-top-gold-dim-transparent.u-bg-linear-gradient-to-top-gold-dim-transparent.u-bg-linear-gradient-to-top-gold-dim-transparent.u-bg-linear-gradient-to-top-gold-dim-transparent.u-bg-linear-gradient-to-top-gold-dim-transparent { background: linear-gradient(to top, var(--gold-dim), transparent); }
@@ -567,8 +558,7 @@
 .u-bg-transparent.u-bg-transparent.u-bg-transparent.u-bg-transparent.u-bg-transparent { background: transparent; }
 .u-bg-watch-default.u-bg-watch-default.u-bg-watch-default.u-bg-watch-default.u-bg-watch-default { background: var(--watch-default); }
 .u-boxor-vertical.u-boxor-vertical.u-boxor-vertical.u-boxor-vertical.u-boxor-vertical { -webkit-box-orient: vertical; }
-.u-c-badge-accent.u-c-badge-accent.u-c-badge-accent.u-c-badge-accent.u-c-badge-accent { color: var(--badge-accent); }
-.u-c-badge-deep.u-c-badge-deep.u-c-badge-deep.u-c-badge-deep.u-c-badge-deep { color: var(--badge-deep); }
+.u-c-gold-deep.u-c-gold-deep.u-c-gold-deep.u-c-gold-deep.u-c-gold-deep { color: var(--gold-deep); }
 .u-c-badge-text.u-c-badge-text.u-c-badge-text.u-c-badge-text.u-c-badge-text { color: var(--badge-text); }
 .u-c-black.u-c-black.u-c-black.u-c-black.u-c-black { color: var(--black); }
 .u-c-danger.u-c-danger.u-c-danger.u-c-danger.u-c-danger { color: var(--danger); }

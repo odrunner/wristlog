@@ -99,7 +99,7 @@ These are not style preferences; they are the reasons the current values were ch
 |---|---|---|---|---|
 | `--gold` | `#9a7628` | `#c9a84c` | 159 |  |
 | `--gold-text` | `#8b6719` | `var(--gold)` | 94 | Gold used as TEXT needs to be darker than gold used as a surface. #9a7628 measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the 4.5:1 WCAG AA floor. Darkening --gold itself… |
-| `--gold-lt` | `#c9a84c` | `#dbbe72` | 14 |  |
+| `--gold-lt` | `#c9a84c` | `#dbbe72` | 18 |  |
 | `--gold-dim` | `rgba(154,118,40,.12)` | `color-mix(in srgb, var(--gold) 12%, transparent)` | 24 |  |
 | `--ring` | `0 0 0 1px var(--gold)` | same | 8 | Hover / chosen outline on round header buttons and swatches. An alias of --gold, repeated in the dark block on purpose: a var() inside a custom property resolves where it is DECLARED, so an alias… |
 
@@ -107,13 +107,12 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--danger` | `#e05555` | same | 50 |  |
+| `--danger` | `#e05555` | same | 65 |  |
 | `--success` | `#4caf7d` | same | 33 |  |
 | `--danger-text` | `#b03636` | `var(--danger)` | 31 | Danger/success used as TEXT need darker values than the surface/border uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75 and --success #4caf7d only 2.37–2.71 on the light… |
 | `--success-text` | `#27714b` | `var(--success)` | 17 |  |
 | `--status-good` | `#22c55e` | same | 14 |  |
-| `--status-warn` | `#eab308` | same | 29 |  |
-| `--status-bad` | `#ef4444` | same | 15 |  |
+| `--status-warn` | `#eab308` | same | 31 |  |
 | `--status-expiring` | `#ef7942` | same | 3 | warranty running out; not worn for a while |
 | `--danger-fill` | `#b91c1c` | same | 1 | a solid destructive button (white text), the same in both themes |
 | `--streak-frozen-bg` | `#cfe8f5` | same | 1 | a streak day covered by a freeze (ice) |
@@ -126,11 +125,11 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--scrim` | `rgba(0,0,0,.55)` | same | 7 | Dimmed backdrop behind sheets, viewers and popovers. |
+| `--scrim` | `rgba(0,0,0,.55)` | same | 6 | Dimmed backdrop behind sheets, viewers and popovers. |
 | `--white` | `#fff` | same | 58 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
-| `--black` | `#000` | same | 56 |  |
+| `--black` | `#000` | same | 55 |  |
 | `--paper` | `#f5f5f8` | same | 3 | fixed off-white and sand: demo, promo, badges, admin previews |
-| `--sand` | `#F0E2B4` | same | 4 | fixed off-white and sand: demo, promo, badges, admin previews |
+| `--sand` | `#F0E2B4` | same | 5 | fixed off-white and sand: demo, promo, badges, admin previews |
 
 ### Tags, ranks, visibility
 
@@ -139,10 +138,8 @@ These are not style preferences; they are the reasons the current values were ch
 | `--tag-type` | `var(--watch-indigo)` | same | 15 | the watch-type tag (indigo) |
 | `--tag-strap` | `var(--watch-slate)` | same | 1 | strap tag (slate) |
 | `--tag-weather` | `var(--watch-sky)` | same | 2 | weather recommendation tag (sky) |
-| `--rating` | `#f59e0b` | same | 2 | feedback "rating" badge (amber) |
-| `--vis-followers-lt` | `#f2dc9a` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
-| `--vis-friends-lt` | `#cbb2ff` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
-| `--vis-private-lt` | `#ff9f9f` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
+| `--vis-friends-lt` | `#cbb2ff` | same | 1 | visibility badges drawn on a photo scrim: lighter tints: --sand (followers) / --vis-friends-lt / --vis-private-lt |
+| `--vis-private-lt` | `#ff9f9f` | same | 1 | visibility badges drawn on a photo scrim: lighter tints: --sand (followers) / --vis-friends-lt / --vis-private-lt |
 | `--vis-friends` | `#a78bfa` | same | 15 | visibility-state semantic colors (one hue per state, all surfaces) |
 
 ### Watch colours (saved with a watch)
@@ -167,8 +164,7 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--uc-unspecified` | `#7a7a95` | same | 2 | use-case chart: no use case / an unknown one |
-| `--uc-other` | `#888` | same | 2 | use-case chart: no use case / an unknown one |
+| `--uc-unspecified` | `#7a7a95` | same | 4 | use-case chart: no use case, or an unknown one |
 | `--chart-grid` | `rgba(128,128,128,.15)` | same | 1 | charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. |
 | `--chart-series-2` | `var(--watch-indigo)` | same | 1 | charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. |
 
@@ -186,12 +182,8 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--badge-text` | `#3D2A14` | `#e7d9bd` | 3 | Badges / achievements ── warm theme; dark variants below. |
-| `--badge-accent` | `#854F0B` | `#dbbe72` | 16 |  |
 | `--badge-bg` | `#FAEEDA` | `#221a0e` | 6 |  |
 | `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
-| `--badge-close` | `#6B5618` | `#c9a84c` | 5 |  |
-| `--badge-tier` | `#B8952A` | `#dbbe72` | 3 |  |
-| `--badge-deep` | `#633806` | `#d8b96a` | 1 |  |
 | `--badge-ink` | `#3D2A14` | same | 57 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
 | `--badge-onboarding` | `#7A8B5C` | same | 3 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
 | `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
@@ -215,9 +207,8 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--demo-gold` | `var(--watch-gold)` | same | 2 |  |
-| `--demo-gold-mid` | `#b8963f` | same | 1 |  |
-| `--demo-gold-deep` | `#a6842e` | same | 3 |  |
+| `--demo-gold` | `var(--watch-gold)` | same | 1 |  |
+| `--demo-gold-deep` | `#a6842e` | same | 2 |  |
 | `--demo-ink` | `#16161e` | same | 9 |  |
 
 ### Sign-in buttons (brand rules)
@@ -385,15 +376,13 @@ These are not style preferences; they are the reasons the current values were ch
 |---|---|---|---|
 | `--shadow-1` | `0 1px 4px rgba(0,0,0,.18)` | 4 | Elevation ── four levels, same light source: offset and blur double as a surface lifts. Pick by ROLE, never by eye: 1 a control on a surface (toggle knob, select box) 2 a card resting on the page… |
 | `--shadow-2` | `0 2px 12px rgba(0,0,0,.18)` | 4 |  |
-| `--shadow-3` | `0 4px 16px rgba(0,0,0,.25)` | 6 |  |
-| `--shadow-4` | `0 8px 32px rgba(0,0,0,.4)` | 5 |  |
+| `--shadow-3` | `0 4px 16px rgba(0,0,0,.25)` | 7 |  |
+| `--shadow-4` | `0 8px 32px rgba(0,0,0,.4)` | 7 |  |
 | `--glow-success` | `0 0 6px var(--success)` | 1 | the server-status dot |
 | `--shadow-ring-tag` | `0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent)` | 1 | ranking game: hover |
 | `--shadow-ring-win` | `0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent)` | 1 | ranking game: winner |
 | `--shadow-btn-hover` | `0 1px 6px color-mix(in srgb, var(--black) 20%, transparent)` | 2 |  |
-| `--shadow-lift` | `0 4px 16px color-mix(in srgb, var(--black) 10%, transparent)` | 1 |  |
-| `--shadow-drag` | `0 8px 32px var(--scrim)` | 2 | a card being dragged |
-| `--shadow-toast` | `0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--badge-tier) 6%, transparent)` | 1 |  |
+| `--shadow-toast` | `0 8px 32px color-mix(in srgb, var(--black) 15%, transparent), 0 0 12px color-mix(in srgb, var(--gold-lt) 6%, transparent)` | 1 |  |
 
 ### Motion
 
@@ -448,6 +437,12 @@ These are not style preferences; they are the reasons the current values were ch
 | `--z-popover-backdrop` | `9998` | 1 |  |
 | `--z-popover` | `9999` | 5 |  |
 | `--z-top` | `10000` | 1 |  |
+
+### Everything else
+
+| Token | Value | Uses | What it is for |
+|---|---|---|---|
+| `--gold-deep` | `#6E5514` | 31 | The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. |
 
 
 ## Roles
@@ -512,9 +507,9 @@ They are generated, named after the token they read, and not something a redesig
 | `.chip.selected` | background: var(--gold-dim); border-color: var(--gold); color: var(--gold-text); |
 | `.btn-loading` | opacity: var(--opacity-soft); cursor: not-allowed; |
 | `.tag-pill` | background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); font-weight: var(--fw-medium); … |
-| `.tag-pill:hover` | border-color: var(--badge-border); color: var(--badge-accent); |
-| `.tag-pill.active` | background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: var(--fw-semibold); |
-| `.tag-pill.suggested` | border-color:var(--badge-border); color: var(--badge-accent); border-style: dashed; |
+| `.tag-pill:hover` | border-color: var(--badge-border); color: var(--gold-deep); |
+| `.tag-pill.active` | background: var(--badge-bg); border-color: var(--badge-border); color: var(--gold-deep); font-weight: var(--fw-semibold); |
+| `.tag-pill.suggested` | border-color:var(--badge-border); color: var(--gold-deep); border-style: dashed; |
 | `.modal-section` | border-top: 1px solid var(--border); margin-top: var(--space-3-5); |
 | `.modal-section-hdr` | display: flex; justify-content: space-between; align-items: center; background: none; border: none; width: 100%; text-align: left; cursor: … |
 | `.modal-section-hdr:hover .modal-section-hdr-label` | color: var(--text); |
@@ -582,7 +577,6 @@ A self-contained ticket palette, unaffected by the app theme except where noted.
 
 | Token | Value | What it is for |
 |---|---|---|
-| `--promo-gold-deep` | `#6E5514` |  |
 | `--promo-line` | `#D9C48A` |  |
 | `--promo-cta-fg` | `#fff` |  |
 | `--promo-edge` | `inset 0 1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent)` |  |

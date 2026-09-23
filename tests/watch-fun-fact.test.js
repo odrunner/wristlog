@@ -219,7 +219,7 @@ describe('feed card uses the footnote row, not the pill', () => {
 
   it('styles the label with the AA-compliant accent, not the tier gold', () => {
     const css = html.slice(html.indexOf('.funfact-row {'), html.indexOf('.feed-chip-row {'));
-    expect(css).toContain('var(--badge-accent)');
+    expect(css).toContain('var(--gold-deep)');
     expect(css).not.toContain('--badge-tier');
     expect(css).not.toContain('#B8952A');
   });
@@ -574,7 +574,7 @@ describe('fix: .funfact-bulb footnote color/spacing rule is scoped to the footno
   // `gap: .5rem`, so the extra margin-right widened its spacing — and this
   // feature was explicitly required not to alter that card's appearance.
   it('scopes the color/vertical-align/margin-right rule under .funfact-row .funfact-bulb', () => {
-    expect(html).toContain('.funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }');
+    expect(html).toContain('.funfact-row .funfact-bulb { color: var(--gold-deep); vertical-align: calc(-1 * var(--space-0-5)); margin-right: var(--space-1); }');
   });
 
   it('does not leave a bare, unscoped .funfact-bulb rule that would also style the amber card bulb', () => {

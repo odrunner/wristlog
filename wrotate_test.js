@@ -661,7 +661,7 @@ export function watchToRow(w, userId, eloRatings = {}) {
 // The browser reads this from design-system.css (--watch-default) via dsToken(); tests have no stylesheet.
 const DEFAULT_WATCH_COLOR = '#c9a84c';
 // dsColor() reads a colour token from design-system.css in the browser; these are its exact values there.
-const _DS_COLORS = { '--black': '#000', '--white': '#fff', '--tg-ink': '#4ade80', '--status-warn': '#eab308', '--status-bad': '#ef4444' };
+const _DS_COLORS = { '--black': '#000', '--white': '#fff', '--tg-ink': '#4ade80', '--status-warn': '#eab308', '--danger': '#e05555' };
 const dsColor = (name) => _DS_COLORS[name];
 
 export function rowToWatch(r) {
@@ -2849,7 +2849,7 @@ export function msrCardAmpText(amp) {
   const a = Number(amp);
   if (amp == null || amp === '' || !isFinite(a)) return null;
   const deg = Math.round(a);
-  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--status-bad'));
+  const color = a >= 250 ? dsColor('--tg-ink') : (a >= 200 ? dsColor('--status-warn') : dsColor('--danger'));
   return { text: 'Amplitude ' + deg + '°', color };
 }
 
