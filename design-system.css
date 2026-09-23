@@ -327,7 +327,6 @@
 .modal-close { position: absolute; top: var(--size-2); right: var(--size-3); background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); line-height: var(--lh-none); cursor: pointer; opacity: var(--opacity-soft); transition: opacity var(--dur-fast), color var(--dur-fast); }
 .modal-close:hover { opacity: 1; color: var(--text); }
 .pill { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); }
-.pill-muted { color: var(--muted); background: var(--surface2); }
 .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -364,7 +363,6 @@
 .btn-primary:disabled { opacity: var(--opacity-faint); cursor: not-allowed; }
 .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-ghost:hover { border-color: var(--gold); color: var(--gold-text); }
-.btn-label-short { display: none; }
 .btn-danger { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger-text); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
 .btn-danger:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
 .btn-sm { padding: var(--space-1-5) var(--space-3); font-size: var(--fs-sm); }
@@ -397,13 +395,6 @@
 .modal-section-chevron.open { transform: rotate(90deg); }
 .modal-section-body { padding-bottom: var(--space-1); }
 .modal-section-body.collapsed { display: none; }
-.btn-ic {
-      padding: var(--space-1-5) var(--space-2); background: var(--surface2); border: 1px solid var(--border);
-      color: var(--muted); cursor: pointer; font-size: var(--fs-base); line-height: var(--lh-none);
-      border-radius: var(--radius-sm); transition: all var(--dur-fast); font-family: inherit; white-space: nowrap;
-      flex-shrink: 0;
-    }
-.btn-ic:hover { border-color: var(--gold); color: var(--text); }
 .overlay {
       position: fixed; inset: 0;
       background: color-mix(in srgb, var(--black) 72%, transparent);
@@ -429,9 +420,6 @@
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  /* Icon-only collection buttons on mobile */ .btn-label { display: none; }
-  .btn-label-short { display: inline; }
-  .btn-label-full { display: none; }
   /* Modals: centered on mobile with side margins */ .overlay { align-items: center; padding: var(--space-4); overflow-x: hidden; }
   .modal-actions { flex-wrap: wrap; gap: var(--space-2); }
   /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 32: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: var(--size-11); }
@@ -733,7 +721,6 @@
 .u-maxh-14.u-maxh-14.u-maxh-14.u-maxh-14.u-maxh-14 { max-height: var(--size-14); }
 .u-maxh-30.u-maxh-30.u-maxh-30.u-maxh-30.u-maxh-30 { max-height: var(--size-30); }
 .u-maxh-45.u-maxh-45.u-maxh-45.u-maxh-45.u-maxh-45 { max-height: var(--size-45); }
-.u-maxh-50.u-maxh-50.u-maxh-50.u-maxh-50.u-maxh-50 { max-height: var(--size-50); }
 .u-maxh-50vh.u-maxh-50vh.u-maxh-50vh.u-maxh-50vh.u-maxh-50vh { max-height: 50vh; }
 .u-maxh-55vh.u-maxh-55vh.u-maxh-55vh.u-maxh-55vh.u-maxh-55vh { max-height: 55vh; }
 .u-maxh-60vh.u-maxh-60vh.u-maxh-60vh.u-maxh-60vh.u-maxh-60vh { max-height: 60vh; }

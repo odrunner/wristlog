@@ -85,50 +85,50 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--bg` | `#f5f5f8` | `#0b0b10` | 17 |  |
+| `--bg` | `#f5f5f8` | `#0b0b10` | 16 |  |
 | `--surface` | `#ffffff` | `#141419` | 66 |  |
-| `--surface2` | `#eeeff5` | `#1c1c25` | 77 |  |
-| `--border` | `#d8d9e8` | `#272734` | 173 |  |
-| `--text` | `#16161e` | `#e6e6f0` | 82 |  |
-| `--muted` | `#6a6a84` | `#82829d` | 266 | #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed it. #6a6a84 clears 4.5 on all three light… |
+| `--surface2` | `#eeeff5` | `#1c1c25` | 72 |  |
+| `--border` | `#d8d9e8` | `#272734` | 163 |  |
+| `--text` | `#16161e` | `#e6e6f0` | 79 |  |
+| `--muted` | `#6a6a84` | `#82829d` | 250 | #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed it. #6a6a84 clears 4.5 on all three light… |
 | `--overlay-bg` | `rgba(245,245,248,.96)` | `rgba(11,11,16,.94)` | 1 |  |
 
 ### Brand gold
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--gold` | `#9a7628` | `#c9a84c` | 171 |  |
-| `--gold-text` | `#8b6719` | `var(--gold)` | 101 | Gold used as TEXT needs to be darker than gold used as a surface. #9a7628 measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the 4.5:1 WCAG AA floor. Darkening --gold itself… |
+| `--gold` | `#9a7628` | `#c9a84c` | 159 |  |
+| `--gold-text` | `#8b6719` | `var(--gold)` | 94 | Gold used as TEXT needs to be darker than gold used as a surface. #9a7628 measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the 4.5:1 WCAG AA floor. Darkening --gold itself… |
 | `--gold-lt` | `#c9a84c` | `#dbbe72` | 14 |  |
-| `--gold-dim` | `rgba(154,118,40,.12)` | `color-mix(in srgb, var(--gold) 12%, transparent)` | 26 |  |
+| `--gold-dim` | `rgba(154,118,40,.12)` | `color-mix(in srgb, var(--gold) 12%, transparent)` | 24 |  |
 | `--ring` | `0 0 0 1px var(--gold)` | same | 8 | Hover / chosen outline on round header buttons and swatches. An alias of --gold, repeated in the dark block on purpose: a var() inside a custom property resolves where it is DECLARED, so an alias… |
 
 ### Feedback
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--danger` | `#e05555` | same | 55 |  |
-| `--success` | `#4caf7d` | same | 34 |  |
+| `--danger` | `#e05555` | same | 50 |  |
+| `--success` | `#4caf7d` | same | 32 |  |
 | `--danger-text` | `#b03636` | `var(--danger)` | 31 | Danger/success used as TEXT need darker values than the surface/border uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75 and --success #4caf7d only 2.37–2.71 on the light… |
-| `--success-text` | `#27714b` | `var(--success)` | 18 |  |
-| `--status-good` | `#22c55e` | same | 17 |  |
-| `--status-warn` | `#eab308` | same | 32 |  |
+| `--success-text` | `#27714b` | `var(--success)` | 17 |  |
+| `--status-good` | `#22c55e` | same | 14 |  |
+| `--status-warn` | `#eab308` | same | 29 |  |
 | `--status-bad` | `#ef4444` | same | 15 |  |
-| `--status-expiring` | `#ef7942` | same | 3 | warranty running out; not worn for a while |
+| `--status-expiring` | `#ef7942` | same | 2 | warranty running out; not worn for a while |
 | `--danger-fill` | `#b91c1c` | same | 1 | a solid destructive button (white text), the same in both themes |
 | `--streak-frozen-bg` | `#cfe8f5` | same | 1 | a streak day covered by a freeze (ice) |
 | `--streak-frozen-ink` | `#0c4a6e` | same | 1 | a streak day covered by a freeze (ice) |
 | `--chip-warn-bg` | `#fde68a` | same | 1 | a warning chip (AI add-a-watch) |
 | `--chip-warn-ink` | `#7c2d12` | same | 1 | a warning chip (AI add-a-watch) |
-| `--verified` | `#4ea4f6` | same | 6 | the official-account tick |
+| `--verified` | `#4ea4f6` | same | 5 | the official-account tick |
 
 ### Fixed inks
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--scrim` | `rgba(0,0,0,.55)` | same | 7 | Dimmed backdrop behind sheets, viewers and popovers. |
-| `--white` | `#fff` | same | 55 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
-| `--black` | `#000` | same | 63 |  |
+| `--white` | `#fff` | same | 53 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
+| `--black` | `#000` | same | 57 |  |
 | `--paper` | `#f5f5f8` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
 | `--cream` | `#FEFCF6` | same | 4 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
 | `--sand` | `#F0E2B4` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
@@ -141,8 +141,8 @@ These are not style preferences; they are the reasons the current values were ch
 | `--tag-strap` | `var(--watch-slate)` | same | 1 | strap tag (slate) |
 | `--tag-weather` | `var(--watch-sky)` | same | 2 | weather recommendation tag (sky) |
 | `--rating` | `#f59e0b` | same | 2 | feedback "rating" badge (amber) |
-| `--medal-silver` | `#b0b0b0` | same | 2 | rank 2 / 3 (rank 1 is --gold) |
-| `--medal-bronze` | `#cd7f32` | same | 2 | rank 2 / 3 (rank 1 is --gold) |
+| `--medal-silver` | `#b0b0b0` | same | 0 | rank 2 / 3 (rank 1 is --gold) |
+| `--medal-bronze` | `#cd7f32` | same | 0 | rank 2 / 3 (rank 1 is --gold) |
 | `--vis-followers-lt` | `#f2dc9a` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
 | `--vis-friends-lt` | `#cbb2ff` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
 | `--vis-private-lt` | `#ff9f9f` | same | 1 | visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger |
@@ -189,7 +189,7 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--badge-text` | `#3D2A14` | `#e7d9bd` | 3 | Badges / achievements ── warm theme; dark variants below. |
-| `--badge-accent` | `#854F0B` | `#dbbe72` | 17 |  |
+| `--badge-accent` | `#854F0B` | `#dbbe72` | 16 |  |
 | `--badge-bg` | `#FAEEDA` | `#221a0e` | 4 |  |
 | `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
 | `--badge-close` | `#6B5618` | `#c9a84c` | 5 |  |
@@ -244,19 +244,19 @@ These are not style preferences; they are the reasons the current values were ch
 | `--fs-body` | `.9375rem` | 3 | The root size every em and every unsized element inherits from. Exactly 15px at the default 16px root; deliberately NOT a step of the scale below — moving it moves the whole app (and the landing… |
 | `--fs-input` | `1rem` | 2 | Text inside inputs. iOS zooms the page when a focused field is under 16px, so this is a floor, not a step: do not lower it. |
 | `--fs-3xs` | `.56rem` | 11 | Below the UI range: badge counts and chart ticks only. |
-| `--fs-2xs` | `.62rem` | 48 |  |
-| `--fs-xs` | `.68rem` | 67 |  |
-| `--fs-sm` | `.75rem` | 116 |  |
-| `--fs-base` | `.82rem` | 103 |  |
-| `--fs-md` | `.88rem` | 44 |  |
-| `--fs-lg` | `.95rem` | 34 |  |
+| `--fs-2xs` | `.62rem` | 47 |  |
+| `--fs-xs` | `.68rem` | 61 |  |
+| `--fs-sm` | `.75rem` | 110 |  |
+| `--fs-base` | `.82rem` | 95 |  |
+| `--fs-md` | `.88rem` | 42 |  |
+| `--fs-lg` | `.95rem` | 32 |  |
 | `--fs-xl` | `1.1rem` | 23 |  |
 | `--fs-2xl` | `1.3rem` | 12 |  |
-| `--fs-3xl` | `1.6rem` | 10 |  |
+| `--fs-3xl` | `1.6rem` | 9 |  |
 | `--fs-4xl` | `2.5rem` | 6 |  |
-| `--fs-display` | `2rem` | 3 |  |
+| `--fs-display` | `2rem` | 2 |  |
 | `--fs-icon` | `1.75rem` | 1 |  |
-| `--fs-aside` | `.85em` | 2 |  |
+| `--fs-aside` | `.85em` | 1 |  |
 | `--fs-aside-sm` | `.75em` | 1 |  |
 
 ### Type weights
@@ -264,21 +264,21 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--fw-normal` | `400` | 8 |  |
-| `--fw-medium` | `500` | 20 |  |
-| `--fw-semibold` | `600` | 90 |  |
+| `--fw-medium` | `500` | 18 |  |
+| `--fw-semibold` | `600` | 82 |  |
 | `--fw-bold` | `700` | 86 |  |
-| `--fw-heavy` | `800` | 30 |  |
-| `--fw-light` | `300` | 1 |  |
+| `--fw-heavy` | `800` | 27 |  |
+| `--fw-light` | `300` | 0 |  |
 
 ### Line heights
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--lh-none` | `1` | 29 | lh-none is for icons, numerals and single-line badges, never running text. |
+| `--lh-none` | `1` | 26 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-tight` | `1.2` | 15 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-compact` | `1.3` | 2 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-snug` | `1.4` | 15 | lh-none is for icons, numerals and single-line badges, never running text. |
-| `--lh-body` | `1.55` | 32 | lh-none is for icons, numerals and single-line badges, never running text. |
+| `--lh-body` | `1.55` | 31 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-prose` | `1.7` | 0 | lh-none is for icons, numerals and single-line badges, never running text. |
 
 ### Letter spacing
@@ -288,7 +288,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--ls-snug` | `.02em` | 7 |  |
 | `--ls-wide` | `.16em` | 1 |  |
 | `--ls-display` | `-.02em` | 3 |  |
-| `--ls-tight` | `.04em` | 40 |  |
+| `--ls-tight` | `.04em` | 36 |  |
 | `--ls-eyebrow` | `.08em` | 18 |  |
 
 ### Fonts
@@ -302,11 +302,11 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--space-1` | `.25rem` | 158 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
-| `--space-2` | `.5rem` | 160 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
-| `--space-3` | `.75rem` | 133 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
-| `--space-4` | `1rem` | 121 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
-| `--space-5` | `1.25rem` | 73 |  |
+| `--space-1` | `.25rem` | 153 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
+| `--space-2` | `.5rem` | 149 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
+| `--space-3` | `.75rem` | 126 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
+| `--space-4` | `1rem` | 120 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
+| `--space-5` | `1.25rem` | 68 |  |
 | `--space-6` | `1.5rem` | 26 |  |
 | `--space-7` | `1.75rem` | 11 |  |
 | `--space-8` | `2rem` | 7 |  |
@@ -314,11 +314,11 @@ These are not style preferences; they are the reasons the current values were ch
 | `--space-10` | `2.5rem` | 4 | larger steps (2026-09-22): panel padding, empty states, page breathing room |
 | `--space-12` | `3rem` | 5 | larger steps (2026-09-22): panel padding, empty states, page breathing room |
 | `--space-16` | `4rem` | 4 | larger steps (2026-09-22): panel padding, empty states, page breathing room |
-| `--space-px` | `1px` | 19 | optical nudges: a border's width, an icon settling onto a baseline |
-| `--space-0-5` | `.125rem` | 98 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
-| `--space-1-5` | `.375rem` | 139 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
-| `--space-2-5` | `.625rem` | 105 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
-| `--space-3-5` | `.875rem` | 73 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
+| `--space-px` | `1px` | 18 | optical nudges: a border's width, an icon settling onto a baseline |
+| `--space-0-5` | `.125rem` | 93 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
+| `--space-1-5` | `.375rem` | 130 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
+| `--space-2-5` | `.625rem` | 101 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
+| `--space-3-5` | `.875rem` | 72 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
 
 ### Sizes (px, boxes and positions)
 
@@ -327,14 +327,14 @@ These are not style preferences; they are the reasons the current values were ch
 | `--size-px` | `1px` | 9 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-0-5` | `2px` | 11 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-1` | `4px` | 19 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
-| `--size-1-5` | `6px` | 11 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
-| `--size-2` | `8px` | 30 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
+| `--size-1-5` | `6px` | 7 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
+| `--size-2` | `8px` | 28 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-2-5` | `10px` | 14 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-3` | `12px` | 17 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-3-5` | `14px` | 20 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
-| `--size-4` | `16px` | 44 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
+| `--size-4` | `16px` | 43 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
 | `--size-5` | `20px` | 4 | Sizes: widths, heights and positions on one ladder, N x 4px — every 4px up to 96px, every 20px above, in px so boxes do not grow with the text. --size-max is 'no limit' / off-screen, not a size. |
-| `--size-6` | `24px` | 26 |  |
+| `--size-6` | `24px` | 23 |  |
 | `--size-7` | `28px` | 29 |  |
 | `--size-8` | `32px` | 33 |  |
 | `--size-9` | `36px` | 16 |  |
@@ -343,14 +343,14 @@ These are not style preferences; they are the reasons the current values were ch
 | `--size-12` | `48px` | 18 |  |
 | `--size-14` | `56px` | 6 |  |
 | `--size-16` | `64px` | 15 |  |
-| `--size-18` | `72px` | 13 |  |
+| `--size-18` | `72px` | 12 |  |
 | `--size-20` | `80px` | 10 |  |
 | `--size-24` | `96px` | 4 |  |
 | `--size-30` | `120px` | 5 |  |
 | `--size-35` | `140px` | 4 |  |
 | `--size-40` | `160px` | 7 |  |
 | `--size-45` | `180px` | 4 |  |
-| `--size-50` | `200px` | 9 |  |
+| `--size-50` | `200px` | 8 |  |
 | `--size-55` | `220px` | 5 |  |
 | `--size-60` | `240px` | 1 |  |
 | `--size-65` | `260px` | 4 |  |
@@ -387,14 +387,14 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--radius` | `10px` | 63 |  |
+| `--radius` | `10px` | 62 |  |
 | `--radius-hair` | `2px` | 7 | bar tops, tiny chips |
 | `--radius-xs` | `4px` | 16 |  |
-| `--radius-sm` | `6px` | 37 |  |
-| `--radius-btn` | `8px` | 52 |  |
+| `--radius-sm` | `6px` | 34 |  |
+| `--radius-btn` | `8px` | 50 |  |
 | `--radius-lg` | `16px` | 8 |  |
-| `--radius-pill` | `999px` | 28 |  |
-| `--radius-round` | `50%` | 61 | A circle. Not the pill: 50% on a non-square box is an ellipse. |
+| `--radius-pill` | `999px` | 26 |  |
+| `--radius-round` | `50%` | 57 | A circle. Not the pill: 50% on a non-square box is an ellipse. |
 
 ### Shadows and glow
 
@@ -407,7 +407,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--glow-success` | `0 0 6px var(--success)` | 1 | the server-status dot |
 | `--shadow-ring-tag` | `0 0 0 3px color-mix(in srgb, var(--tag-type) 20%, transparent)` | 1 | ranking game: hover |
 | `--shadow-ring-win` | `0 0 0 3px color-mix(in srgb, var(--tg-ink) 25%, transparent)` | 1 | ranking game: winner |
-| `--shadow-mask` | `0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent)` | 1 | dims all but the crop box |
+| `--shadow-mask` | `0 0 0 9999px color-mix(in srgb, var(--black) 50%, transparent)` | 0 | dims all but the crop box |
 | `--shadow-btn-hover` | `0 1px 6px color-mix(in srgb, var(--black) 20%, transparent)` | 2 |  |
 | `--shadow-lift` | `0 4px 16px color-mix(in srgb, var(--black) 10%, transparent)` | 1 |  |
 | `--shadow-drag` | `0 8px 32px var(--scrim)` | 2 | a card being dragged |
@@ -417,8 +417,8 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--dur-fast` | `.15s` | 100 | Motion |
-| `--dur-base` | `.2s` | 25 | Motion |
+| `--dur-fast` | `.15s` | 95 | Motion |
+| `--dur-base` | `.2s` | 24 | Motion |
 | `--dur-slow` | `.3s` | 5 | Motion |
 | `--dur-xslow` | `.5s` | 1 | Motion |
 | `--ease-standard` | `cubic-bezier(.4, 0, .2, 1)` | 1 |  |
@@ -429,8 +429,8 @@ These are not style preferences; they are the reasons the current values were ch
 |---|---|---|---|
 | `--opacity-ghost` | `.1` | 1 | a watermark |
 | `--opacity-faint` | `.3` | 10 | disabled, not yet, empty |
-| `--opacity-dim` | `.5` | 22 | set aside: dragging, skipped, inactive rows |
-| `--opacity-soft` | `.7` | 14 | secondary: quieter text and icons, locked |
+| `--opacity-dim` | `.5` | 20 | set aside: dragging, skipped, inactive rows |
+| `--opacity-soft` | `.7` | 13 | secondary: quieter text and icons, locked |
 | `--opacity-hover` | `.85` | 5 | pressed / hovered |
 
 ### Breakpoints
@@ -458,7 +458,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--z-modal` | `200` | 1 |  |
 | `--z-modal-top` | `210` | 1 |  |
 | `--z-nav` | `300` | 1 |  |
-| `--z-modal-high` | `300` | 3 |  |
+| `--z-modal-high` | `300` | 2 |  |
 | `--z-toast` | `400` | 2 |  |
 | `--z-toast-top` | `410` | 1 |  |
 | `--z-auth` | `500` | 1 |  |
@@ -466,7 +466,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--z-skip` | `4000` | 1 |  |
 | `--z-popover-backdrop` | `9998` | 1 |  |
 | `--z-popover` | `9999` | 5 |  |
-| `--z-top` | `10000` | 2 |  |
+| `--z-top` | `10000` | 1 |  |
 
 
 ## Roles
@@ -509,7 +509,6 @@ They are generated, named after the token they read, and not something a redesig
 | `.modal-close` | position: absolute; top: var(--size-2); right: var(--size-3); background: none; border: none; color: var(--muted); font-size: var(--fs-2xl); … |
 | `.modal-close:hover` | opacity: 1; color: var(--text); |
 | `.pill` | display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); padding: … |
-| `.pill-muted` | color: var(--muted); background: var(--surface2); |
 | `.card` | background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-5); min-width: 0; |
 | `.card-label` | font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--muted); … |
 | `.form-group` | margin-bottom: var(--space-3-5); |
@@ -521,7 +520,6 @@ They are generated, named after the token they read, and not something a redesig
 | `.btn-primary:disabled` | opacity: var(--opacity-faint); cursor: not-allowed; |
 | `.btn-ghost` | background: var(--surface2); color: var(--text); border: 1px solid var(--border); |
 | `.btn-ghost:hover` | border-color: var(--gold); color: var(--gold-text); |
-| `.btn-label-short` | display: none; |
 | `.btn-danger` | background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger-text); border: 1px solid color-mix(in srgb, var(--danger) 25%, … |
 | `.btn-danger:hover` | background: color-mix(in srgb, var(--danger) 20%, transparent); |
 | `.btn-sm` | padding: var(--space-1-5) var(--space-3); font-size: var(--fs-sm); |
@@ -544,8 +542,6 @@ They are generated, named after the token they read, and not something a redesig
 | `.modal-section-chevron.open` | transform: rotate(90deg); |
 | `.modal-section-body` | padding-bottom: var(--space-1); |
 | `.modal-section-body.collapsed` | display: none; |
-| `.btn-ic` | padding: var(--space-1-5) var(--space-2); background: var(--surface2); border: 1px solid var(--border); color: var(--muted); cursor: pointer; … |
-| `.btn-ic:hover` | border-color: var(--gold); color: var(--text); |
 | `.overlay` | position: fixed; inset: 0; background: color-mix(in srgb, var(--black) 72%, transparent); backdrop-filter: blur(4px); display: flex; align-items: … |
 | `.overlay.hidden` | display: none; |
 | `.modal-title` | font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-6); |
@@ -596,6 +592,8 @@ They are generated, named after the token they read, and not something a redesig
 | `.adm-panel-head` | font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); |
 | `.adm-panel-note` | margin-top: var(--space-1-5); |
 | `.adm-panel-row` | display: contents; |
+| `.adm-exp-name` | background: none; border: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; |
+| `.adm-exp-name:hover` | color: var(--gold); |
 
 ## Promo cards (fixed palette)
 
