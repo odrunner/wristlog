@@ -26,6 +26,13 @@ ROLES = {                                                                      #
   'row-between':      ['display: flex', 'align-items: center', 'justify-content: space-between'],  # the app's own name
   'row-center':       ['display: flex', 'align-items: center', 'justify-content: center'],
   'row-start':        ['display: flex', 'align-items: flex-start', 'gap: var(--space-2)'],
+  'row-start-lg':     ['display: flex', 'align-items: flex-start', 'gap: var(--space-3)'],
+  'row-inline':       ['display: inline-flex', 'align-items: center', 'gap: var(--space-1-5)'],
+  'img-cover':        ['display: block', 'width: 100%', 'height: 100%', 'object-fit: cover'],
+  'img-avatar':       ['width: 100%', 'height: 100%', 'object-fit: cover', 'border-radius: var(--radius-round)'],
+  'badge-body':       ['color: var(--badge-text)', 'font-size: var(--fs-sm)', 'line-height: var(--lh-body)'],
+  'title-lg':         ['color: var(--text)', 'font-size: var(--fs-xl)', 'font-weight: var(--fw-bold)'],
+  'panel':            ['background: var(--surface)', 'border: 1px solid var(--border)', 'border-radius: var(--radius)'],
 }
 css = open(ROOT + 'design-system.css', encoding='utf-8').read()
 head, gen = css.split(MARK)

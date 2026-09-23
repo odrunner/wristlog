@@ -221,7 +221,7 @@ function renderModelPage(el, ctx, h) {
       const max = Math.max(...rows.map(r => Number(r[1]) || 0), 1);
       const ret = w.retention || [];
       const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
-      parts.push(`<div class="u-bg-surface u-bd-1px-solid-border u-bdt-2px-solid-gold u-r- u-pt-4 u-pr-4 u-pb-4 u-pl-4">
+      parts.push(`<div class="panel u-bdt-2px-solid-gold u-pt-4 u-pr-4 u-pb-4 u-pl-4">
         <div class="mp-hrow stack-3"><div class="mp-h u-c-gold-text">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
         <div class="mp-big"><span class="u-fs-4xl u-fw-semibold u-lh-none">${Number(w.index).toFixed(1)}×</span><span class="text-meta u-lh-snug">its fair share of<br>owners' wrist time</span></div>
         <div class="text-meta u-lh-body u-mt-2-5">Owners give it <span class="u-c-text u-fw-medium">${w.share}%</span> of their logged wears, against <span class="u-c-text u-fw-medium">${w.fair}%</span> if they rotated their collections evenly.</div>

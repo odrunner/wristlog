@@ -488,10 +488,16 @@
 /* Written by scripts/design-system/inline_to_classes.py + roles_pass.py. The name repeats so a class
    lands with the weight the inline style it replaced had, while still yielding to !important.
    Roles first: change one to restyle every place that uses it. */
+.badge-body.badge-body.badge-body.badge-body.badge-body { color: var(--badge-text); font-size: var(--fs-sm); line-height: var(--lh-body); }
+.img-avatar.img-avatar.img-avatar.img-avatar.img-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-round); }
+.img-cover.img-cover.img-cover.img-cover.img-cover { display: block; width: 100%; height: 100%; object-fit: cover; }
+.panel.panel.panel.panel.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .row.row.row.row.row { display: flex; align-items: center; gap: var(--space-2); }
 .row-between.row-between.row-between.row-between.row-between { display: flex; align-items: center; justify-content: space-between; }
 .row-center.row-center.row-center.row-center.row-center { display: flex; align-items: center; justify-content: center; }
+.row-inline.row-inline.row-inline.row-inline.row-inline { display: inline-flex; align-items: center; gap: var(--space-1-5); }
 .row-start.row-start.row-start.row-start.row-start { display: flex; align-items: flex-start; gap: var(--space-2); }
+.row-start-lg.row-start-lg.row-start-lg.row-start-lg.row-start-lg { display: flex; align-items: flex-start; gap: var(--space-3); }
 .row-tight.row-tight.row-tight.row-tight.row-tight { display: flex; align-items: center; gap: var(--space-1-5); }
 .text-alert.text-alert.text-alert.text-alert.text-alert { color: var(--danger-text); font-size: var(--fs-base); }
 .text-body.text-body.text-body.text-body.text-body { color: var(--muted); font-size: var(--fs-base); line-height: var(--lh-body); }
@@ -501,6 +507,7 @@
 .text-default.text-default.text-default.text-default.text-default { color: var(--text); font-size: var(--fs-base); }
 .text-meta.text-meta.text-meta.text-meta.text-meta { color: var(--muted); font-size: var(--fs-sm); }
 .text-secondary.text-secondary.text-secondary.text-secondary.text-secondary { color: var(--muted); font-size: var(--fs-base); }
+.title-lg.title-lg.title-lg.title-lg.title-lg { color: var(--text); font-size: var(--fs-xl); font-weight: var(--fw-bold); }
 .u-ac-gold.u-ac-gold.u-ac-gold.u-ac-gold.u-ac-gold { accent-color: var(--gold); }
 .u-anim-spin-0p7s-linear-infinite.u-anim-spin-0p7s-linear-infinite.u-anim-spin-0p7s-linear-infinite.u-anim-spin-0p7s-linear-infinite.u-anim-spin-0p7s-linear-infinite { animation: spin 0.7s linear infinite; }
 .u-anim-spin-p6s-linear-infinite.u-anim-spin-p6s-linear-infinite.u-anim-spin-p6s-linear-infinite.u-anim-spin-p6s-linear-infinite.u-anim-spin-p6s-linear-infinite { animation: spin .6s linear infinite; }

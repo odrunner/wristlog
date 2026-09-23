@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=30ad3543">
+  <link rel="stylesheet" href="/design-system.css?v=41c21ebf">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -3135,7 +3135,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal u-maxw-90 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-5">Anniversary</div>
     <div id="anniversary-watch-img" class="stack-5"></div>
-    <div id="anniversary-modal-title" class="u-fs-xl u-fw-bold u-c-text u-lh-body u-mb-1-5"></div>
+    <div id="anniversary-modal-title" class="title-lg u-lh-body u-mb-1-5"></div>
     <div id="anniversary-text" class="text-body u-mb-6"></div>
     <button class="btn btn-ghost btn-block btn-ghost-gold" onclick="dismissAnniversary()">Dismiss</button>
   </div>
@@ -3161,7 +3161,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
   <div class="modal u-maxw-85 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-4">Reminders</div>
-    <div id="push-ask-title" class="u-fs-xl u-fw-bold u-c-text u-mb-2">Get the 5pm nudge on your lock screen</div>
+    <div id="push-ask-title" class="title-lg u-mb-2">Get the 5pm nudge on your lock screen</div>
     <div class="text-body u-mb-6">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
     <div class="u-gap-2 u-d-flex">
       <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="pushAskNotNow()">Not now</button>
@@ -3175,7 +3175,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Step 1: Enjoying WRotate? -->
     <div id="review-step-ask">
       <div class="eyebrow stack-4">Quick question</div>
-      <div id="review-prompt-title" class="u-fs-xl u-fw-bold u-c-text u-mb-2">Enjoying WRotate?</div>
+      <div id="review-prompt-title" class="title-lg u-mb-2">Enjoying WRotate?</div>
       <div class="text-body u-mb-6">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
       <div class="u-gap-2 u-d-flex">
         <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="reviewPromptNo()">Not really</button>
@@ -3185,7 +3185,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Step 2a: Feedback form (unhappy path) -->
     <div id="review-step-feedback" style="display:none;">
       <div class="eyebrow stack-4">Feedback</div>
-      <div class="u-fs-xl u-fw-bold u-c-text u-mb-2">What could be better?</div>
+      <div class="title-lg u-mb-2">What could be better?</div>
       <div class="text-body u-mb-4">We read every response. Tell us what's on your mind.</div>
       <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" class="text-default u-w-100pct u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-r-btn u-bd-1px-solid-border u-bg-surface2 u-rs-vertical u-mb-4"></textarea>
       <div class="u-gap-2 u-d-flex">
@@ -3195,7 +3195,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Step 2b: Thank you (after happy or after feedback sent) -->
     <div id="review-step-thanks" style="display:none;">
-      <div class="u-fs-xl u-fw-bold u-c-text u-mb-2">Thank you!</div>
+      <div class="title-lg u-mb-2">Thank you!</div>
       <div id="review-thanks-msg" class="text-body u-mb-5">Your feedback means a lot to us.</div>
       <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost u-w-100pct u-bdc-gold u-c-gold-text u-td-none" onclick="closeReviewPrompt()" style="display:none;">Rate on the App Store</a>
     </div>
@@ -3211,23 +3211,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
   <div class="modal u-maxw-95 u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-5">How to Measure</div>
-    <div id="msr-help-title" class="u-fs-xl u-fw-bold u-c-text u-mb-5">Measure Your Watch's Accuracy</div>
+    <div id="msr-help-title" class="title-lg u-mb-5">Measure Your Watch's Accuracy</div>
     <div class="u-fd-column u-gap-4 u-mb-6 u-d-flex">
-      <div class="u-gap-3 u-items-flex-start u-d-flex">
+      <div class="row-start-lg">
         <div class="row-center u-minw-7 u-h-7 u-r-round u-bg-gold-dim u-c-gold-text u-fs-sm u-fw-bold">1</div>
         <div>
           <div class="text-default u-fw-semibold u-mb-0-5">Find a quiet spot</div>
           <div class="text-meta u-lh-body">Background noise interferes with tick detection. A quiet room works best.</div>
         </div>
       </div>
-      <div class="u-gap-3 u-items-flex-start u-d-flex">
+      <div class="row-start-lg">
         <div class="row-center u-minw-7 u-h-7 u-r-round u-bg-gold-dim u-c-gold-text u-fs-sm u-fw-bold">2</div>
         <div>
           <div class="text-default u-fw-semibold u-mb-0-5">Position the watch</div>
           <div class="text-meta u-lh-body">Place the watch touching the iPhone microphone (bottom edge, next to the charging port).</div>
         </div>
       </div>
-      <div class="u-gap-3 u-items-flex-start u-d-flex">
+      <div class="row-start-lg">
         <div class="row-center u-minw-7 u-h-7 u-r-round u-bg-gold-dim u-c-gold-text u-fs-sm u-fw-bold">3</div>
         <div>
           <div class="text-default u-fw-semibold u-mb-0-5">Tap Measure and hold still</div>
@@ -3312,21 +3312,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-title u-fs-xl">One last thing</div>
       <p class="text-body-lg u-mt-2 u-mr-0 u-mb-5 u-ml-0">A few things live in the top-right corner of every screen.</p>
       <div class="u-fd-column u-gap-3 u-ta-left u-mb-6 u-d-flex">
-        <div class="u-items-flex-start u-gap-3 u-d-flex">
+        <div class="row-start-lg">
           <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
           <div>
             <div class="u-fs-md u-fw-semibold u-c-text">Theme</div>
             <div class="body-muted">Tap the icon to cycle Dark, Light, or System.</div>
           </div>
         </div>
-        <div class="u-items-flex-start u-gap-3 u-d-flex">
+        <div class="row-start-lg">
           <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
           <div>
             <div class="u-fs-md u-fw-semibold u-c-text">Notifications</div>
             <div class="body-muted">Likes and comments on your posts.</div>
           </div>
         </div>
-        <div class="u-items-flex-start u-gap-3 u-d-flex">
+        <div class="row-start-lg">
           <div class="u-shrink-0 u-lh-snug u-items-center u-d-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div>
             <div class="u-fs-md u-fw-semibold u-c-text">Your profile</div>
@@ -3536,7 +3536,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
-    <div id="coll-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r- coll-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
+    <div id="coll-select-bar" class="panel u-items-center u-fw--wrap u-mb-3 coll-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
       <span id="coll-select-count" class="u-fs-base u-fw-semibold">0 selected</span>
       <button id="coll-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="coll-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
@@ -5028,7 +5028,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
-    <div id="wl-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r- wl-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
+    <div id="wl-select-bar" class="panel u-items-center u-fw--wrap u-mb-3 wl-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
       <span id="wl-select-count" class="u-fs-base u-fw-semibold">0 selected</span>
       <button id="wl-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="wl-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
@@ -5699,7 +5699,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="watch-preview-modal" class="overlay hidden watch-preview-modal" role="dialog" aria-modal="true" aria-labelledby="watch-preview-modal-title">
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
-    <div class="u-items-flex-start u-gap-3 u-mb-2 u-d-flex">
+    <div class="row-start-lg u-mb-2">
       <div class="grow-clip">
         <div class="modal-title u-mb-0" id="watch-preview-modal-title"></div>
       </div>
@@ -5833,7 +5833,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title row" id="new-post-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
       <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
-        <div id="np-photo-placeholder" class="log-photo-placeholder u-items-center u-gap-1-5 u-d-inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+        <div id="np-photo-placeholder" class="row-inline log-photo-placeholder"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="np-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="np-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -5905,7 +5905,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
       <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
-        <div id="ep-photo-placeholder" class="log-photo-placeholder u-items-center u-gap-1-5 u-d-inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+        <div id="ep-photo-placeholder" class="row-inline log-photo-placeholder"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="ep-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="ep-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -6173,7 +6173,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="tl-field">
       <div class="tl-label">Photo <span class="tl-opt">optional</span></div>
       <div id="track-photo-area" class="log-photo-area tl-photo" onclick="if(demoGuard())return;document.getElementById('track-photo-input').click()">
-        <div id="track-photo-placeholder" class="log-photo-placeholder u-items-center u-gap-1-5 u-d-inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
+        <div id="track-photo-placeholder" class="row-inline log-photo-placeholder"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
         <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
         <button type="button" id="track-photo-clear" aria-label="Remove photo" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
@@ -8255,7 +8255,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.19.54';
+const APP_VERSION = '22.19.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8278,7 +8278,7 @@ async function maybeImportProviderAvatar() {
     myProfile = { ...myProfile, avatar_url: pic };
     delete _profileCache[currentUser.id];
     const btn = document.getElementById('profile-btn');
-    if (btn) btn.innerHTML = `<img ${thumbSrcAttrs(pic)} alt="" class="u-w-100pct u-h-100pct u-of-cover u-r-round">`;
+    if (btn) btn.innerHTML = `<img ${thumbSrcAttrs(pic)} alt="" class="img-avatar">`;
     if (window.posthog) posthog.capture('avatar_imported', { provider: meta.iss && String(meta.iss).includes('apple') ? 'apple' : 'google' });
   } catch (_) { /* best effort */ }
 }
@@ -8287,7 +8287,7 @@ function profileInitials(p) {
   if (!p) return '';
   if (p.avatar_url) {
     const fb = escAttr((p.display_name||p.username||'').slice(0,2).toUpperCase());
-    return `<img ${thumbSrcAttrs(p.avatar_url)} alt="" class="u-w-100pct u-h-100pct u-of-cover u-d-block" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
+    return `<img ${thumbSrcAttrs(p.avatar_url)} alt="" class="img-cover" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
   }
   const name = (p.display_name || p.username || '').trim();
   const parts = name.split(/\s+/);
@@ -8652,7 +8652,7 @@ async function loadMyProfile() {
   const btn = document.getElementById('profile-btn');
   if (btn) {
     if (myProfile?.avatar_url) {
-      btn.innerHTML = `<img ${thumbSrcAttrs(myProfile.avatar_url)} alt="" class="u-w-100pct u-h-100pct u-of-cover u-r-round">`;
+      btn.innerHTML = `<img ${thumbSrcAttrs(myProfile.avatar_url)} alt="" class="img-avatar">`;
     } else {
       btn.textContent = profileInitials(myProfile);
     }
@@ -9586,7 +9586,7 @@ async function saveProfileFromPage() {
     const btn = document.getElementById('profile-btn');
     if (btn) {
       if (myProfile.avatar_url) {
-        btn.innerHTML = `<img ${thumbSrcAttrs(myProfile.avatar_url)} alt="" class="u-w-100pct u-h-100pct u-of-cover u-r-round">`;
+        btn.innerHTML = `<img ${thumbSrcAttrs(myProfile.avatar_url)} alt="" class="img-avatar">`;
       } else {
         btn.textContent = profileInitials(myProfile);
       }
@@ -9661,7 +9661,7 @@ async function uploadProfilePic() {
       myProfile = { ...myProfile, avatar_url: url };
       const btn = document.getElementById('profile-btn');
       if (btn) {
-        btn.innerHTML = `<img src="${escHtml(url)}" alt="" class="u-w-100pct u-h-100pct u-of-cover u-r-round">`;
+        btn.innerHTML = `<img src="${escHtml(url)}" alt="" class="img-avatar">`;
       }
       loadAndRenderProfile(currentUser.id);
       toast('Profile photo updated!');
@@ -10414,7 +10414,7 @@ async function renderClubDetail(clubId) {
   const clubInitials = (club.name || '?').slice(0, 2).toUpperCase();
 
   const ownerEditSection = isOwner ? `
-    <div id="club-edit-section" class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-mb-5" style="display:none;">
+    <div id="club-edit-section" class="panel u-pt-4 u-pr-4 u-pb-4 u-pl-4 u-mb-5" style="display:none;">
       <div class="eyebrow eyebrow-muted stack-3">Edit Club</div>
 
       <div class="form-group stack-3">
@@ -15068,7 +15068,7 @@ function renderFeedCard(item) {
     // the fixed 4:5 photo slot, so they aren't cropped.
     const isAccuracyCard = isMeasurementCardImage(item.use_case, _urls, 0);
     const heroInner = heroIsVideo
-      ? `<video id="feed-hero-${item.id}" muted loop playsinline webkit-playsinline preload="none" class="u-w-100pct u-h-100pct u-of-cover u-d-block"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
+      ? `<video id="feed-hero-${item.id}" muted loop playsinline webkit-playsinline preload="none" class="img-cover"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
       : `<img id="feed-hero-${item.id}" ${cardSrcAttrs(heroUrl)} alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroIsPhoto = true;
     heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" data-idx="0" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))}, +(this.dataset.idx||0))">
@@ -15518,7 +15518,7 @@ function feedThumbTap(logId, idx, urls) {
   const visHtml = heroContainer.querySelector('.vis-badge--overlay')?.outerHTML || '';
   let innerHtml = '';
   if (isVid) {
-    innerHtml = `<video id="feed-hero-${logId}" muted loop playsinline webkit-playsinline preload="none" class="u-w-100pct u-h-100pct u-of-cover u-d-block"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
+    innerHtml = `<video id="feed-hero-${logId}" muted loop playsinline webkit-playsinline preload="none" class="img-cover"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
       + `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${logId}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>`;
   } else {
     innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
@@ -20166,7 +20166,7 @@ async function openAdminUserDetail(userId) {
         </div>
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
         <div class="eyebrow stack-1-5">Activity</div>
         ${row('Joined', joinDate + (joinedAgo ? ' <span class="text-caption u-fw-normal">(' + joinedAgo + ')</span>' : ''))}
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span class="text-caption u-fw-normal">(' + lastActiveAgo + ')</span>' : ''))}
@@ -20175,7 +20175,7 @@ async function openAdminUserDetail(userId) {
         ${row('Repeat user', isRepeat ? '<span class="text-success">Yes</span>' : '<span class="text-muted">No</span>')}
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
         <div class="eyebrow stack-1-5">Collection</div>
         ${row('Watches', d.watches)}
         ${row('Wears', d.wears)}
@@ -20183,7 +20183,7 @@ async function openAdminUserDetail(userId) {
         ${row('Wishlist', d.wishlist)}
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
         <div class="eyebrow stack-1-5">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span class="text-caption u-fw-normal">(' + msrRate + ' success)</span>' : ''))}
         ${row('Advanced mode', d.advanced_sessions > 0
@@ -20193,7 +20193,7 @@ async function openAdminUserDetail(userId) {
         ${row('Value checks', d.price_checks)}
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
         <div class="eyebrow stack-1-5">Social</div>
         ${row('Followers', d.followers)}
         ${row('Following', d.following)}
@@ -20203,13 +20203,13 @@ async function openAdminUserDetail(userId) {
         ${row('Clubs', d.clubs)}
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-mb-3">
         <div class="eyebrow stack-1-5">Feedback</div>
         ${row('Review prompted', d.feedback_asked)}
         ${row('Feedback given', d.feedback_given)}
       </div>
 
-      <div class="u-bg-surface u-bd-1px-solid-border u-r- u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5">
+      <div class="panel u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5">
         <div class="eyebrow stack-1-5">Watches (${watches.length})</div>
         ${watchListHtml}
       </div>`;
@@ -21072,7 +21072,7 @@ function updateOfficialPreview() {
 
   const imgSrc = hasFile ? previewImg.src : (imageUrl || '');
   const heroHtml = imgSrc
-    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="u-w-100pct u-h-100pct u-of-cover u-d-block"></div>`
+    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="img-cover"></div>`
     : (caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(caption)}</p></div>` : '');
   const captionHtml = (imgSrc && caption)
     ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(caption)}</div>`
@@ -21171,7 +21171,7 @@ function previewOfficialDraft(draftId) {
   if (!card) return;
   const imgSrc = draft.photo_stored_url || draft.image_url;
   const heroHtml = imgSrc
-    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="u-w-100pct u-h-100pct u-of-cover u-d-block"></div>`
+    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="img-cover"></div>`
     : (draft.caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(draft.caption)}</p></div>` : '');
   const captionHtml = (imgSrc && draft.caption)
     ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(draft.caption)}</div>`
@@ -23842,7 +23842,7 @@ async function openUpdatePrices() {
     _uprCompleteLogged = true;
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0 }).then(() => {});
   };
-  status.innerHTML = `<span class="u-items-center u-gap-1-5 u-d-inline-flex"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
+  status.innerHTML = `<span class="row-inline"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
   // Dispatch a few at a time, not the whole collection at once. A bare forEach
   // fired one request per watch in the same millisecond, which is fine at ten
@@ -23879,7 +23879,7 @@ async function openUpdatePrices() {
         return;
       }
       status.innerHTML = done < eligible.length
-        ? `<span class="u-items-center u-gap-1-5 u-d-inline-flex"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Found ${done} of ${eligible.length}...</span>`
+        ? `<span class="row-inline"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const ev = data.estimated_value_usd || {};
       const mid = ev.mid;
@@ -23909,7 +23909,7 @@ async function openUpdatePrices() {
     .catch(() => {
       done++;
       status.innerHTML = done < eligible.length
-        ? `<span class="u-items-center u-gap-1-5 u-d-inline-flex"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Found ${done} of ${eligible.length}...</span>`
+        ? `<span class="row-inline"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
       if (valCell) valCell.innerHTML = '<span class="text-danger">Error</span>';
@@ -24463,15 +24463,15 @@ function renderStorySection() {
   let html = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">';
   if (desc) {
     html += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Description</div>`;
-    html += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(desc)}</div>`;
+    html += `<div class="badge-body">${escHtml(desc)}</div>`;
   }
   if (bg) {
     html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Background &amp; History</div>`;
-    html += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(bg)}</div>`;
+    html += `<div class="badge-body">${escHtml(bg)}</div>`;
   }
   if (fns) {
     html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Functions</div>`;
-    html += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(fns)}</div>`;
+    html += `<div class="badge-body">${escHtml(fns)}</div>`;
   }
   html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-badge-accent u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">⭐ Re-enhance</button></div>`;
   html += '</div>';
@@ -24841,7 +24841,7 @@ async function loadModelOwnersRow(w) {
     row.textContent = "You're the only one on WRotate with this one — rare bird.";
   } else {
     const stack = vis.slice(0, 3).map(o =>
-      `<span class="feed-user-avatar u-w-6 u-h-6 u-fs-2xs u-items-center u-justify-center u-mr-calc-1-1-5 u-bd-1p5px-solid-surface u-d-inline-flex">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" class="u-w-100pct u-h-100pct u-r-round u-of-cover" alt="">` : profileInitials(o)}</span>`).join('');
+      `<span class="feed-user-avatar u-w-6 u-h-6 u-fs-2xs u-items-center u-justify-center u-mr-calc-1-1-5 u-bd-1p5px-solid-surface u-d-inline-flex">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" class="img-avatar" alt="">` : profileInitials(o)}</span>`).join('');
     const era = data.era_min && data.era_max && data.era_min !== data.era_max
       ? ` <span class="text-muted">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
     row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
@@ -25382,12 +25382,12 @@ async function checkSingleWatchValue() {
   if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
 
   const valSpinner = '<span class="spinner u-w-3 u-h-3 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span>';
-  if (status) status.innerHTML = `<span class="u-items-center u-gap-1-5 u-d-inline-flex">${valSpinner} Looking up market value…</span>`;
+  if (status) status.innerHTML = `<span class="row-inline">${valSpinner} Looking up market value…</span>`;
   const valMsgs = ['Searching current listings…', 'Checking retail pricing…', 'Comparing market prices…', 'Finalizing estimate…'];
   let valMsgIdx = 0;
   const valMsgTimer = setInterval(() => {
     if (valMsgIdx < valMsgs.length && status) {
-      status.innerHTML = `<span class="u-items-center u-gap-1-5 u-d-inline-flex">${valSpinner} ${valMsgs[valMsgIdx++]}</span>`;
+      status.innerHTML = `<span class="row-inline">${valSpinner} ${valMsgs[valMsgIdx++]}</span>`;
     }
   }, 5000);
   try {
@@ -26198,7 +26198,7 @@ function renderNeglectedStrip() {
   el.innerHTML = list.map(({ w, days, neverWorn }) => `
     <button data-wid="${escAttr(w.id)}" onclick="openTrackModal(this.dataset.wid); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
       class="row-tight u-flex-0-0-auto u-maxw-55 u-pt-1-5 u-pr-2-5 u-pb-1-5 u-pl-1-5 u-bd-1px-solid-border u-bg-surface u-r-pill u-cur-pointer u-ff-inherit u-c-text u-minh-9">
-      <span class="u-w-6 u-h-6 u-r-round u-shrink-0 u-d-inline-block" style="background:${escAttr(DEFAULT_WATCH_COLOR)};overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-100pct u-h-100pct u-of-cover u-d-block">` : ''}</span>
+      <span class="u-w-6 u-h-6 u-r-round u-shrink-0 u-d-inline-block" style="background:${escAttr(DEFAULT_WATCH_COLOR)};overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" class="img-cover">` : ''}</span>
       <span class="u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
       <span class="text-caption u-ws-nowrap">${neverWorn ? 'never' : days + 'd'}</span>
     </button>`).join('');
@@ -30815,15 +30815,15 @@ function previewWatch(w) {
     cardHtml = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-badge-border">';
     if (desc) {
       cardHtml += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Description</div>`;
-      cardHtml += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(desc)}</div>`;
+      cardHtml += `<div class="badge-body">${escHtml(desc)}</div>`;
     }
     if (bg) {
       cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Background &amp; History</div>`;
-      cardHtml += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(bg)}</div>`;
+      cardHtml += `<div class="badge-body">${escHtml(bg)}</div>`;
     }
     if (fns) {
       cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-badge-deep u-mb-1">Functions</div>`;
-      cardHtml += `<div class="u-fs-sm u-lh-body u-c-badge-text">${escHtml(fns)}</div>`;
+      cardHtml += `<div class="badge-body">${escHtml(fns)}</div>`;
     }
     cardHtml += '</div>';
   }
