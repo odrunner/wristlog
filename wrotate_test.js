@@ -1899,7 +1899,7 @@ export function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, la
   const x = (ms) => t1 === t0 ? width / 2 : pad + (ms - t0) / (t1 - t0) * (width - 2 * pad);
   const y = (v) => pad + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (height - 2 * pad);
   const band = (a, b, cls) => `<rect class="${cls}" x="0" y="${y(b).toFixed(1)}" width="${width}" height="${(y(a) - y(b)).toFixed(1)}"/>`;
-  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" style="display:block;max-width:100%;">`;
+  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" class="u-maxw-100pct" style="display:block;">`;
   s += band(-15, 15, 'acc-band-15') + band(-5, 5, 'acc-band-5');
   s += `<line class="acc-zero" x1="0" x2="${width}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>`;
   if (labels) [15, 5, 0, -5, -15].filter(v => v > lo && v < hi).forEach(v => { s += `<text class="acc-label" x="${width - 2}" y="${(y(v) - 2).toFixed(1)}" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`; });
@@ -3230,11 +3230,11 @@ export function experimentSpeedHtml(key, arms) {
   const secs = v => num(v) == null ? '–' : (num(v) / 1000).toFixed(1) + 's';
   const pair = (p50, p90) => `${secs(p50)} <span class="text-muted">/ ${secs(p90)}</span>`;
   const row = (label, a) => {
-    if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div style="grid-column:span 3;color:var(--muted);">no repeat loads yet</div></div>`;
+    if (!a || !num(a.loads)) return `<div style="display:contents;"><div>${label}</div><div class="u-col-span-3 u-c-muted">no repeat loads yet</div></div>`;
     return `<div style="display:contents;"><div>${label} <span class="text-muted">(${num(a.loads)} loads, ${num(a.users) == null ? '–' : num(a.users)} users)</span></div><div>${pair(a.first_live_p50, a.first_live_p90)}</div><div>${pair(a.enriched_p50, a.enriched_p90)}</div><div>${num(a.error_pct) == null ? '–' : Math.round(num(a.error_pct)) + '%'}</div></div>`;
   };
-  const head = t => `<div style="font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:var(--ls-tight);color:var(--muted);">${t}</div>`;
-  return `<div class="adm-exp-speed" style="margin:var(--space-0-5) 0 var(--space-2-5);padding:var(--space-2) var(--space-2-5);border:0.5px solid var(--border);border-radius:var(--radius-btn);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;">
+  const head = t => `<div class="u-fs-2xs u-tt-uppercase u-ls-tight u-c-muted">${t}</div>`;
+  return `<div class="adm-exp-speed u-mt-0-5 u-mr-0 u-mb-2-5 u-ml-0 u-pt-2 u-pr-2-5 u-pb-2 u-pl-2-5 u-bd-0p5px-solid-border u-r-btn u-fs-sm u-fvn-tabular-nums">
           <div class="u-cols-minmax-0-1p6fr-repeat-3-minmax-0-1fr u-gap-1-2-5 u-items-baseline" style="display:grid;">
             ${head('Speed')}${head('Fresh posts')}${head('Feed complete')}${head('Errors')}
             ${row('Control', arms.control)}

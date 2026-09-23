@@ -109,8 +109,26 @@ def ancestor_ids(src):
 
 FILES = ['index.html', 'model-page.js', 'p/index.html', 'profile/index.html', 'w/index.html', 'open.html']
 rules = {}; used = collections.Counter(); stats = collections.Counter(); skipped = collections.Counter()
+def fn_container_ids(lines):
+    """For template code: the ids a function writes into (getElementById('x') / querySelector('#x') / id="x"),
+    used as stand-ins for ancestors, since a template's DOM position cannot be parsed."""
+    out = [set()] * 0; cur = set(); starts = []
+    bounds = []
+    for i, l in enumerate(lines):
+        if re.match(r'\s{0,2}(async\s+)?function\s+\w+|\s{0,2}(const|let)\s+\w+\s*=\s*(async\s*)?\(', l): bounds.append(i)
+    bounds.append(len(lines))
+    per = {}
+    for k in range(len(bounds) - 1):
+        a, b = bounds[k], bounds[k + 1]
+        ids = set()
+        for l in lines[a:b]:
+            ids |= set(re.findall(r"getElementById\(['\"]([\w-]+)", l)) | set(re.findall(r"querySelector\(['\"]#([\w-]+)", l)) | set(re.findall(r'id=\\?["\']([\w-]+)', l))
+        for i in range(a, b): per[i] = ids
+    return per
+
 def convert(text, fname):
     ANC = ancestor_ids(text) if not fname.endswith('.js') else {}
+    FNIDS = fn_container_ids(text.split('\n')) if TEMPLATES else {}
     lines = text.split('\n'); fence = set()
     if fname == 'index.html':
         for a, b in EMAIL:
@@ -127,7 +145,13 @@ def convert(text, fname):
             if any(s in tag for s in SKIP_IDS): skipped['JS reads the style back'] += 1; return tag
             sm = re.search(r'style=(\\?["\'])((?:(?!\1).)*)\1', tag)
             if not sm: return tag
-            decls = [d.strip() for d in sm.group(2).split(';') if d.strip()]
+            for seg in re.findall(r'\$\{[^{}]*\}', tag):                   # an interpolation that writes attributes
+                if any(c in seg for c in ('"', "'", '=')):
+                    skipped['the tag is assembled by code'] += 1; return tag
+            raw = sm.group(2)
+            if '${' in raw or "'" in raw or '"' in raw or '`' in raw:        # a value built by code: splitting it is not safe
+                skipped['built by code'] += 1; return tag
+            decls = [d.strip() for d in raw.split(';') if d.strip()]
             keep, add = [], []
             statics = {}
             for d in decls:
@@ -136,7 +160,7 @@ def convert(text, fname):
                 if k.lower() in BEH or not v: keep.append(d); continue
                 statics[k.lower()] = re.sub(r'\s+', ' ', v)
             idm = re.search(r'id=(\\?["\'])([^"\']*)\1', tag); cm0 = re.search(r'class=(\\?["\'])([^"\']*)\1', tag)
-            toks = ([idm.group(2)] if idm else []) + (cm0.group(2).split() if cm0 else []) + sorted(ANC.get((i + 1, m.start()), ()))
+            toks = ([idm.group(2)] if idm else []) + (cm0.group(2).split() if cm0 else []) + sorted(ANC.get((i + 1, m.start()), ())) + sorted(FNIDS.get(i, ()))
             for k in list(statics):
                 sides = [k] + (['%s-%s' % (k, x) for x in SIDE] if k in ('margin', 'padding') else ([k.rsplit('-', 1)[0]] if k.rsplit('-', 1)[0] in ('margin', 'padding', 'border') else []))
                 if any(any(p in ID_RULES.get(t, ()) for p in sides) for t in toks):
@@ -176,6 +200,9 @@ if APPLY:
     for f, new in changed.items(): open(ROOT + f, 'w', encoding='utf-8').write(new)
     css = open(ROOT + 'design-system.css', encoding='utf-8').read()
     MARK = '/* ── Generated: roles and single-purpose classes ── */'
+    prev = css.split(MARK)[1] if MARK in css else ''                       # keep rules an earlier run generated
+    for m in re.finditer(r'^\.([\w-]+)(?:\.[\w-]+)*\s*\{([^}]*)\}', prev, re.M):
+        rules.setdefault(m.group(1), [d.strip() for d in m.group(2).split(';') if d.strip()])
     block = [MARK, "/* Written by scripts/design-system/inline_to_classes.py. Doubled selector so a class lands with the same", "   weight the inline style it replaced had: the name is repeated so it outranks a page's own rules (their",
              "   <style> block is parsed after this file), while still yielding to an !important rule, as an inline style did.",
              "   Roles first: change one to restyle every place that uses it. */"]

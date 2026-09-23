@@ -16,7 +16,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 707
+    "inline-style-attr": 277
   },
   "p/index.html": {
     "color": 0,
@@ -149,7 +149,7 @@
     "opacity": 0,
     "size": 0,
     "js-style-assign": 0,
-    "inline-style-attr": 88
+    "inline-style-attr": 17
   },
   "design-system.css": {
     "color": 0,
