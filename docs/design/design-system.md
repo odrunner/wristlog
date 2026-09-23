@@ -127,11 +127,10 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--scrim` | `rgba(0,0,0,.55)` | same | 7 | Dimmed backdrop behind sheets, viewers and popovers. |
-| `--white` | `#fff` | same | 54 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
+| `--white` | `#fff` | same | 58 | Fixed ink: white text on a photo or a dark scrim, black on a gold disc. The same in both themes on purpose — these sit on surfaces that do not follow the theme. |
 | `--black` | `#000` | same | 56 |  |
-| `--paper` | `#f5f5f8` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
-| `--cream` | `#FEFCF6` | same | 4 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
-| `--sand` | `#F0E2B4` | same | 3 | fixed off-white, cream, sand: demo, promo, badges, admin previews |
+| `--paper` | `#f5f5f8` | same | 3 | fixed off-white and sand: demo, promo, badges, admin previews |
+| `--sand` | `#F0E2B4` | same | 4 | fixed off-white and sand: demo, promo, badges, admin previews |
 
 ### Tags, ranks, visibility
 
@@ -188,12 +187,12 @@ These are not style preferences; they are the reasons the current values were ch
 |---|---|---|---|---|
 | `--badge-text` | `#3D2A14` | `#e7d9bd` | 3 | Badges / achievements ── warm theme; dark variants below. |
 | `--badge-accent` | `#854F0B` | `#dbbe72` | 16 |  |
-| `--badge-bg` | `#FAEEDA` | `#221a0e` | 4 |  |
+| `--badge-bg` | `#FAEEDA` | `#221a0e` | 6 |  |
 | `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
 | `--badge-close` | `#6B5618` | `#c9a84c` | 5 |  |
 | `--badge-tier` | `#B8952A` | `#dbbe72` | 3 |  |
 | `--badge-deep` | `#633806` | `#d8b96a` | 1 |  |
-| `--badge-ink` | `#3D2A14` | same | 57 | badge medallion glyph ink — fixed dark (disc is always cream #FEFCF6, both themes), so NOT overridden in dark like --badge-text is. |
+| `--badge-ink` | `#3D2A14` | same | 57 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
 | `--badge-onboarding` | `#7A8B5C` | same | 3 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
 | `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
 | `--badge-onboarding-bg` | `color-mix(in srgb, var(--badge-onboarding) 20%, white)` | same | 1 | badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background. Collection uses the badge gold above; the rest are fixed hues, the same in both themes. |
@@ -236,7 +235,7 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--fs-body` | `.9375rem` | 3 | The root size every em and every unsized element inherits from. Exactly 15px at the default 16px root; deliberately NOT a step of the scale below — moving it moves the whole app (and the landing… |
+| `--fs-body` | `.9375rem` | 35 | The root size every em and every unsized element inherits from. Exactly 15px at the default 16px root; deliberately NOT a step of the scale below — moving it moves the whole app (and the landing… |
 | `--fs-input` | `1rem` | 2 | Text inside inputs. iOS zooms the page when a focused field is under 16px, so this is a floor, not a step: do not lower it. |
 | `--fs-3xs` | `.56rem` | 11 | Below the UI range: badge counts and chart ticks only. |
 | `--fs-2xs` | `.62rem` | 47 |  |
@@ -244,7 +243,6 @@ These are not style preferences; they are the reasons the current values were ch
 | `--fs-sm` | `.75rem` | 110 |  |
 | `--fs-base` | `.82rem` | 95 |  |
 | `--fs-md` | `.88rem` | 42 |  |
-| `--fs-lg` | `.95rem` | 32 |  |
 | `--fs-xl` | `1.1rem` | 23 |  |
 | `--fs-2xl` | `1.3rem` | 12 |  |
 | `--fs-3xl` | `1.6rem` | 9 |  |
@@ -532,7 +530,7 @@ They are generated, named after the token they read, and not something a redesig
 | `.table-wrap` | overflow-x: auto; max-height: var(--size-80); overflow-y: auto; |
 | `.empty` | text-align: center; padding: var(--space-10) var(--space-4); color: var(--muted); |
 | `.empty-icon` | font-size: var(--fs-4xl); opacity: var(--opacity-faint); margin-bottom: var(--space-3); |
-| `.empty-text` | font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text); margin-bottom: var(--space-1); |
+| `.empty-text` | font-size: var(--fs-body); font-weight: var(--fw-bold); color: var(--text); margin-bottom: var(--space-1); |
 | `.empty-sub` | font-size: var(--fs-base); opacity: var(--opacity-soft); |
 | `.empty-compact` | padding: var(--space-6) var(--space-4); font-size: var(--fs-base); |
 | `.form-row-3` | display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3-5); |
@@ -585,9 +583,7 @@ A self-contained ticket palette, unaffected by the app theme except where noted.
 | Token | Value | What it is for |
 |---|---|---|
 | `--promo-gold-deep` | `#6E5514` |  |
-| `--promo-parchment` | `#F3EFE1` |  |
 | `--promo-line` | `#D9C48A` |  |
-| `--promo-band-body` | `#EEE3C6` |  |
 | `--promo-cta-fg` | `#fff` |  |
 | `--promo-edge` | `inset 0 1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--watch-gold) 25%, transparent)` |  |
 

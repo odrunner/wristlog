@@ -376,7 +376,7 @@ function renderModelPage(el, ctx, h) {
     .mp-pill:hover { color:var(--gold-text); border-color:var(--gold); }
     .mp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:var(--space-2-5) var(--space-3); }
     .mp-card .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); }
-    .mp-card .v { font-size:var(--fs-lg); font-weight:var(--fw-semibold); color:var(--text); margin-top:var(--space-1); }
+    .mp-card .v { font-size:var(--fs-body); font-weight:var(--fw-semibold); color:var(--text); margin-top:var(--space-1); }
     .mp-act { flex:1; text-align:center; font-size:var(--fs-base); border-radius:var(--radius-btn); padding:var(--space-3); cursor:pointer; font-family:inherit; }
     /* page components — each decision once, values are tokens (2026-09-22) */
     .mp-actions { position:sticky; bottom:0; display:flex; gap:var(--space-2); padding:var(--space-3) var(--space-4) var(--space-5); border-top:1px solid var(--border); background:var(--bg); }

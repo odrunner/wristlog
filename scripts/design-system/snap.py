@@ -12,7 +12,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..") + "/
 APPLY = '--apply' in sys.argv
 
 FS = [('--fs-2xs', 9.92), ('--fs-xs', 10.88), ('--fs-sm', 12), ('--fs-base', 13.12), ('--fs-md', 14.08),
-      ('--fs-lg', 15.2), ('--fs-xl', 17.6), ('--fs-2xl', 20.8), ('--fs-3xl', 25.6), ('--fs-4xl', 40)]
+      ('--fs-body', 15), ('--fs-xl', 17.6), ('--fs-2xl', 20.8), ('--fs-3xl', 25.6), ('--fs-4xl', 40)]
 SP = [('--space-0-5', 2), ('--space-1', 4), ('--space-1-5', 6), ('--space-2', 8), ('--space-2-5', 10), ('--space-3', 12),
       ('--space-3-5', 14), ('--space-4', 16), ('--space-5', 20), ('--space-6', 24), ('--space-8', 32)]
 RAD = [('--radius-sm', 6), ('--radius-btn', 8), ('--radius', 10)]

@@ -7,7 +7,7 @@ from scope import email_lines, LANDING
 import os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..") + "/"; APPLY = '--apply' in sys.argv
 CANVAS = re.compile(r'fillStyle|strokeStyle|addColorStop|shadowColor|ctx\.|\.font\s*=|getContext')
-FS = [('--fs-3xs', 8.96), ('--fs-2xs', 9.92), ('--fs-xs', 10.88), ('--fs-sm', 12), ('--fs-base', 13.12), ('--fs-md', 14.08), ('--fs-lg', 15.2),
+FS = [('--fs-3xs', 8.96), ('--fs-2xs', 9.92), ('--fs-xs', 10.88), ('--fs-sm', 12), ('--fs-base', 13.12), ('--fs-md', 14.08), ('--fs-body', 15),
       ('--fs-xl', 17.6), ('--fs-2xl', 20.8), ('--fs-3xl', 25.6), ('--fs-4xl', 40)]
 LS = {'.03em': '--ls-tight', '.05em': '--ls-tight', '.06em': '--ls-tight', '.1em': '--ls-eyebrow', '.09em': '--ls-eyebrow', '.07em': '--ls-eyebrow'}
 LH = {'1.3': '--lh-snug', '1.35': '--lh-snug', '1.25': '--lh-tight', '1.1': '--lh-tight', '1.5': '--lh-body', '1.6': '--lh-body', '1.65': '--lh-body'}

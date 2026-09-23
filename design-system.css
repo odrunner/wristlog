@@ -75,7 +75,7 @@
   /* Below the UI range: badge counts and chart ticks only. */
   --fs-3xs: .56rem;
   --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem; --fs-md: .88rem;
-  --fs-lg: .95rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fs-icon: 1.75rem; --fs-aside: .85em; --fs-aside-sm: .75em;
+  --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fs-icon: 1.75rem; --fs-aside: .85em; --fs-aside-sm: .75em;
   --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
   /* Sign-in buttons: the providers' own colours (Google and Apple brand rules), the same in both themes. */
   --google-ink: #3c4043; --google-line: #dadce0;
@@ -164,7 +164,7 @@
   /* visibility badges drawn on a photo scrim: lighter tints of --gold / --vis-friends / --danger */
   --vis-followers-lt: #f2dc9a; --vis-friends-lt: #cbb2ff; --vis-private-lt: #ff9f9f;
   /* demo-mode banner: a fixed gold band with dark ink, deliberately identical in both themes */
-  --paper: #f5f5f8; --cream: #FEFCF6; --sand: #F0E2B4;   /* fixed off-white, cream, sand: demo, promo, badges, admin previews */
+  --paper: #f5f5f8; --sand: #F0E2B4;   /* fixed off-white and sand: demo, promo, badges, admin previews */
   --demo-gold: var(--watch-gold); --demo-gold-mid: #b8963f; --demo-gold-deep: #a6842e; --demo-ink: #16161e;
   --status-good: #22c55e;
   --status-warn: #eab308;
@@ -192,7 +192,7 @@
   --badge-close: #6B5618;
   --badge-tier: #B8952A;
   --badge-deep: #633806;
-  /* badge medallion glyph ink — fixed dark (disc is always cream #FEFCF6,
+  /* badge medallion glyph ink — fixed dark (disc is always --white,
      both themes), so NOT overridden in dark like --badge-text is. */
   --badge-ink: #3D2A14;
   /* badge categories (BADGE_COLORS): a bezel, its ink (stroke + chip text) and a chip background.
@@ -270,9 +270,7 @@
    fonts, so the brand eyebrow uses --font-mono, the platform mono face. */
 .promo-tag, .promo-band, .promo-recap {
   --promo-gold-deep: #6E5514;
-  --promo-parchment: #F3EFE1;
   --promo-line: #D9C48A;
-  --promo-band-body: #EEE3C6;
   --promo-cta-fg: #fff;
   /* the promo family's own editorial scale — deliberately not the app's (display sizes, wide eyebrow
      tracking, tightened headings, a 14px corner vs a post's 16px) */
@@ -302,7 +300,6 @@
    contrast), which means the CTA's fill is light and its label becomes ink. */
 [data-theme="dark"] .promo-tag, [data-theme="dark"] .promo-recap {
   --promo-gold-deep: #DBBE72;
-  --promo-parchment: #1D1A12;
   --promo-line: rgba(201,168,76,.34);
   --promo-cta-fg: var(--demo-ink);
 }
@@ -402,7 +399,7 @@
       text-align: center; padding: var(--space-10) var(--space-4); color: var(--muted);
     }
 .empty-icon { font-size: var(--fs-4xl); opacity: var(--opacity-faint); margin-bottom: var(--space-3); }
-.empty-text { font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text); margin-bottom: var(--space-1); }
+.empty-text { font-size: var(--fs-body); font-weight: var(--fw-bold); color: var(--text); margin-bottom: var(--space-1); }
 .empty-sub  { font-size: var(--fs-base); opacity: var(--opacity-soft); }
 /* the same empty state inside a small pane — a dropdown, an admin preview */
 .empty-compact { padding: var(--space-6) var(--space-4); font-size: var(--fs-base); }
@@ -640,7 +637,7 @@
 .u-fs-aside-sm.u-fs-aside-sm.u-fs-aside-sm.u-fs-aside-sm.u-fs-aside-sm { font-size: var(--fs-aside-sm); }
 .u-fs-base.u-fs-base.u-fs-base.u-fs-base.u-fs-base { font-size: var(--fs-base); }
 .u-fs-display.u-fs-display.u-fs-display.u-fs-display.u-fs-display { font-size: var(--fs-display); }
-.u-fs-lg.u-fs-lg.u-fs-lg.u-fs-lg.u-fs-lg { font-size: var(--fs-lg); }
+.u-fs-body.u-fs-body.u-fs-body.u-fs-body.u-fs-body { font-size: var(--fs-body); }
 .u-fs-md.u-fs-md.u-fs-md.u-fs-md.u-fs-md { font-size: var(--fs-md); }
 .u-fs-sm.u-fs-sm.u-fs-sm.u-fs-sm.u-fs-sm { font-size: var(--fs-sm); }
 .u-fs-xl.u-fs-xl.u-fs-xl.u-fs-xl.u-fs-xl { font-size: var(--fs-xl); }

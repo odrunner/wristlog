@@ -92,7 +92,7 @@ def family(pat, exclude=()):
     return out
 TYPE_STYLES = [
     ('display', '--fs-4xl', '--lh-tight', 700), ('title', '--fs-2xl', '--lh-tight', 700),
-    ('title-sm', '--fs-xl', '--lh-tight', 700), ('lead', '--fs-lg', '--lh-snug', 600),
+    ('title-sm', '--fs-xl', '--lh-tight', 700), ('lead', '--fs-body', '--lh-snug', 600),
     ('body', '--fs-body', '--lh-body', 400), ('body-app', '--fs-base', '--lh-body', 400),
     ('meta', '--fs-sm', '--lh-snug', 400), ('caption', '--fs-xs', '--lh-snug', 400),
     ('eyebrow', '--fs-2xs', '--lh-none', 600), ('input', '--fs-input', '--lh-snug', 400),
