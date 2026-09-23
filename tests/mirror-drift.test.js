@@ -59,6 +59,7 @@ const VERBATIM = [
   'resolveExperiment', 'experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric',
   'parseTgTrialKey', 'tgTrialKnobs', 'resolveTgKnob',
   'shouldNudgeEnhance', 'orderCommentsForDisplay',
+  'experimentInfoSections', 'EXP_OWNER_AUDIENCE', 'EXP_STATUS_AUDIENCE',
 ];
 
 const ADAPTED = [

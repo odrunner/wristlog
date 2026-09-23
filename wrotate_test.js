@@ -3906,6 +3906,42 @@ export function experimentSortRank(status) {
   return { running: 0, won: 1, killed: 2, archived: 3 }[status] ?? 4;
 }
 
+// Admin → Experiments: what an experiment actually TESTS. The card answers "how is
+// it doing" — status, arms, lift, verdict — but never what the treatment changes or
+// who decides it, and the hypothesis column was never rendered anywhere. With eight
+// rows and three owners you forget what you set running. Pure text, the caller
+// escapes it: three sections in plain language, no dates (those are locale work the
+// renderer already does).
+export const EXP_OWNER_AUDIENCE = {
+  sql: 'Each user lands in a group at login and stays there (hash of user id + key).',
+  server: 'The group is picked server-side at the moment the message goes out, so only users who were really eligible get counted.',
+  weekly_review: 'A measurement setting: the treatment arm runs the client with one knob changed.',
+};
+export const EXP_STATUS_AUDIENCE = {
+  draft: 'Not started — nobody is assigned yet.',
+  won: 'Rolled out: everyone gets the treatment now.',
+  killed: 'Killed: everyone is back on control.',
+  archived: 'Archived: decided, and no longer served to anyone.',
+};
+export function experimentInfoSections(x, metricLabels) {
+  const lbl = k => (metricLabels && metricLabels[k]) || k || '—';
+  const pct = x.rollout_pct == null ? NaN : Number(x.rollout_pct);   // a missing % is not 0%
+  const split = Number.isFinite(pct) ? `${pct}% treatment / ${100 - pct}% control.` : '';
+  const state = EXP_STATUS_AUDIENCE[x.status] || split;
+  const audience = [state, EXP_OWNER_AUDIENCE[x.owner] || EXP_OWNER_AUDIENCE.sql].filter(Boolean).join(' ');
+  // Knob trials are judged by the Sunday accuracy loop, not the nightly SQL judge,
+  // and on a different metric with a different ladder (scripts/accuracy_loop.py) —
+  // quoting the row's own gates for them would be wrong.
+  const judged = x.owner === 'weekly_review'
+    ? 'The Sunday accuracy loop compares wrong readings out of converged sessions between the two arms. It keeps the setting at p < 0.05, reverts it at p < 0.20, and says nothing until each arm has 60 converged sessions and 15 users. Three weeks without an answer and it gives up.'
+    : `The nightly judge (06:00 UTC) rolls this out when “${lbl(x.metric_key)}” is at least ${x.min_lift_pct}% higher in treatment with p < 0.05, once each arm has ${x.min_users_per_arm} users and it has run ${x.min_days} days. It kills the experiment if “${lbl(x.guardrail_metric_key)}” drops more than ${x.max_guardrail_drop_pct}% at the same time.`;
+  return [
+    { h: 'What we’re testing', body: String(x.hypothesis || '').trim() || 'No hypothesis was recorded for this experiment.' },
+    { h: 'Who’s in it', body: audience },
+    { h: 'How it gets judged', body: judged },
+  ];
+}
+
 export function fmtExperimentMetric(ev, arm) {
   const a = ev && ev[arm];
   if (!a) return '—';

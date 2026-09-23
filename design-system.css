@@ -483,6 +483,9 @@
 .adm-panel-head { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); }
 .adm-panel-note { margin-top: var(--space-1-5); }
 .adm-panel-row { display: contents; }
+/* admin: an experiment card's name, which opens the "what does this test" modal */
+.adm-exp-name { background: none; border: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.adm-exp-name:hover { color: var(--gold); }
 
 /* ── Generated: roles and single-purpose classes ── */
 /* Written by scripts/design-system/inline_to_classes.py + roles_pass.py. The name repeats so a class

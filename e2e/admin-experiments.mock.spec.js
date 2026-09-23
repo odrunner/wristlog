@@ -70,3 +70,77 @@ test('a row with no evaluation yet renders "not evaluated", and only running row
   await expect(runningRow.locator('button', { hasText: 'Refresh' })).toHaveCount(1);
   await expect(draftRow.locator('button', { hasText: 'Refresh' })).toHaveCount(0);
 });
+
+// The ⓘ modal: clicking a card's name says what the experiment tests, who is in it
+// and how it gets judged — all from the row already on the page, no extra request.
+test('clicking an experiment name opens a modal explaining what it tests', async ({ page }) => {
+  const knob = {
+    key: 'tgknob_stabwin_8', name: 'tg_stabwin = 8 vs live 6', status: 'running', rollout_pct: 50,
+    metric_key: 'tg_bad_lock', guardrail_metric_key: 'active_days', owner: 'weekly_review',
+    min_lift_pct: 10, min_users_per_arm: 15, min_days: 7, max_guardrail_drop_pct: 5, decision: null,
+    hypothesis: 'A longer stability window rejects the wobbly locks.', started_at: '2026-09-20T08:00:00Z',
+    eval: null, decisions: [],
+  };
+  await mockSupabase(page);
+  let listCalls = 0;
+  await page.route('**/rest/v1/rpc/admin_experiments_list*', r => { listCalls++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ ...ROW, owner: 'sql', hypothesis: 'Compact cards get more logs.', started_at: '2026-09-01T08:00:00Z' }, knob]) }); });
+  await page.route('**/rest/v1/experiment_metrics*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'log_created', label: 'Logged a wear / post', kind: 'rate' }, { key: 'active_days', label: 'Active days per user', kind: 'mean' }]) }));
+  await injectSession(page, { id: ADMIN_ID, email: 'admin@wrotate.com', aud: 'authenticated' });
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await page.evaluate(async (id) => { currentUser = { id }; await loadAdminExperiments(); }, ADMIN_ID);
+  const callsAfterRender = listCalls;
+
+  const modal = page.locator('#adm-exp-info-modal');
+  await expect(modal).toHaveClass(/hidden/);
+  // Same reason as the spec above: the admin section is display:none because
+  // loadAdminExperiments() was called directly, so dispatch the click rather than
+  // waiting for visibility — the onclick attribute is still what runs.
+  await page.locator('.adm-exp-card', { hasText: 'Compact feed cards' }).locator('.adm-exp-name').dispatchEvent('click');
+  await expect(modal).not.toHaveClass(/hidden/);
+  await expect(page.locator('#adm-exp-info-title')).toHaveText('Compact feed cards');
+  await expect(page.locator('#adm-exp-info-sub')).toContainText('feed_compact');
+  // Hypothesis, the split, the arm rule, and gates quoted by metric name.
+  await expect(modal).toContainText('Compact cards get more logs.');
+  await expect(modal).toContainText('20% treatment / 80% control.');
+  await expect(modal).toContainText('at login');
+  await expect(modal).toContainText('“Logged a wear / post”');
+  await expect(modal).toContainText('inconclusive');
+  expect(listCalls).toBe(callsAfterRender);   // nothing refetched to open it
+
+  // Escape closes it (the shared overlay map), and a knob trial names the Sunday loop.
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveClass(/hidden/);
+  await page.locator('.adm-exp-card', { hasText: 'tg_stabwin' }).locator('.adm-exp-name').dispatchEvent('click');
+  await expect(modal).toContainText('Sunday');
+  await expect(modal).toContainText('measurement setting');
+  await expect(modal).not.toContainText('06:00 UTC');
+  await expect(modal).toContainText('not evaluated');
+});
+
+// An archived experiment is the one you've most forgotten, so its line in the
+// collapsed list opens the same modal.
+test('an archived experiment explains itself too', async ({ page }) => {
+  const rows = [{
+    key: 'tgknob_gatemaxrej_0p5', name: 'tg_gatemaxrej = 0.5', status: 'archived', rollout_pct: 0,
+    metric_key: 'log_created', guardrail_metric_key: 'active_days', owner: 'weekly_review',
+    min_lift_pct: 10, min_users_per_arm: 15, min_days: 7, max_guardrail_drop_pct: 5,
+    hypothesis: 'Blocking convergence while the σ-gate rejects half the windows catches bad locks.',
+    decided_at: '2026-08-23T00:00:00Z', decision: 'manual', eval: null, decisions: [],
+  }];
+  await mockSupabase(page);
+  await page.route('**/rest/v1/rpc/admin_experiments_list*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) }));
+  await page.route('**/rest/v1/experiment_metrics*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'log_created', label: 'Logged a wear / post', kind: 'rate' }]) }));
+  await injectSession(page, { id: ADMIN_ID, email: 'admin@wrotate.com', aud: 'authenticated' });
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await page.evaluate(async (id) => { currentUser = { id }; await loadAdminExperiments(); }, ADMIN_ID);
+
+  await page.locator('#adm-exp-archived .adm-exp-name').dispatchEvent('click');
+  const modal = page.locator('#adm-exp-info-modal');
+  await expect(modal).not.toHaveClass(/hidden/);
+  await expect(modal).toContainText('σ-gate');
+  await expect(modal).toContainText('Archived');
+  await expect(modal).not.toContainText('treatment / ');      // a decided row shows its state, not a split
+  await expect(modal).toContainText(/decided \d/);   // locale-formatted, so just assert it is there
+});

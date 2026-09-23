@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=41c21ebf">
+  <link rel="stylesheet" href="/design-system.css?v=b6aabad4">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -6091,6 +6091,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ ADMIN EXPERIMENT INFO MODAL ════ -->
+<div id="adm-exp-info-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="adm-exp-info-title">
+  <div class="modal u-maxw-105">
+    <div class="modal-title u-mb-2" id="adm-exp-info-title">Experiment</div>
+    <div class="text-caption u-ff-font-mono u-wb-break-all u-mb-4" id="adm-exp-info-sub"></div>
+    <div id="adm-exp-info-body"></div>
+    <div class="modal-actions u-mt-4">
+      <button class="btn btn-ghost" onclick="closeAdminExpInfo()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ USERNAME PROMPT MODAL ════ -->
 <div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
   <div class="modal u-maxw-95">
@@ -8255,7 +8267,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.20.13';
+const APP_VERSION = '22.21.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12284,6 +12296,42 @@ function knobTrialProgressHtml(arms) {
           </div>
           <div class="caption-xs adm-panel-note">Live, provisional: measurements since each user joined an arm, against the minimum the Sunday judge needs per arm. Sunday re-counts from session logs, so its numbers can differ slightly.</div>
         </div>`;
+}
+
+// Admin → Experiments: what an experiment actually TESTS. The card answers "how is
+// it doing" — status, arms, lift, verdict — but never what the treatment changes or
+// who decides it, and the hypothesis column was never rendered anywhere. With eight
+// rows and three owners you forget what you set running. Pure text, the caller
+// escapes it: three sections in plain language, no dates (those are locale work the
+// renderer already does).
+const EXP_OWNER_AUDIENCE = {
+  sql: 'Each user lands in a group at login and stays there (hash of user id + key).',
+  server: 'The group is picked server-side at the moment the message goes out, so only users who were really eligible get counted.',
+  weekly_review: 'A measurement setting: the treatment arm runs the client with one knob changed.',
+};
+const EXP_STATUS_AUDIENCE = {
+  draft: 'Not started — nobody is assigned yet.',
+  won: 'Rolled out: everyone gets the treatment now.',
+  killed: 'Killed: everyone is back on control.',
+  archived: 'Archived: decided, and no longer served to anyone.',
+};
+function experimentInfoSections(x, metricLabels) {
+  const lbl = k => (metricLabels && metricLabels[k]) || k || '—';
+  const pct = x.rollout_pct == null ? NaN : Number(x.rollout_pct);   // a missing % is not 0%
+  const split = Number.isFinite(pct) ? `${pct}% treatment / ${100 - pct}% control.` : '';
+  const state = EXP_STATUS_AUDIENCE[x.status] || split;
+  const audience = [state, EXP_OWNER_AUDIENCE[x.owner] || EXP_OWNER_AUDIENCE.sql].filter(Boolean).join(' ');
+  // Knob trials are judged by the Sunday accuracy loop, not the nightly SQL judge,
+  // and on a different metric with a different ladder (scripts/accuracy_loop.py) —
+  // quoting the row's own gates for them would be wrong.
+  const judged = x.owner === 'weekly_review'
+    ? 'The Sunday accuracy loop compares wrong readings out of converged sessions between the two arms. It keeps the setting at p < 0.05, reverts it at p < 0.20, and says nothing until each arm has 60 converged sessions and 15 users. Three weeks without an answer and it gives up.'
+    : `The nightly judge (06:00 UTC) rolls this out when “${lbl(x.metric_key)}” is at least ${x.min_lift_pct}% higher in treatment with p < 0.05, once each arm has ${x.min_users_per_arm} users and it has run ${x.min_days} days. It kills the experiment if “${lbl(x.guardrail_metric_key)}” drops more than ${x.max_guardrail_drop_pct}% at the same time.`;
+  return [
+    { h: 'What we’re testing', body: String(x.hypothesis || '').trim() || 'No hypothesis was recorded for this experiment.' },
+    { h: 'Who’s in it', body: audience },
+    { h: 'How it gets judged', body: judged },
+  ];
 }
 
 // ── Social cache ─────────────────────────────────────────────────────────────
@@ -19372,6 +19420,8 @@ async function loadAdminExperiments() {
   if (metrics.error) toast('Metrics failed: ' + metrics.error.message, 'error');
   const sel = document.getElementById('adm-exp-metric');
   if (sel && metrics.data) sel.innerHTML = metrics.data.map(m => `<option value="${escAttr(m.key)}">${escHtml(m.label)}</option>`).join('');
+  // Same fetch feeds the info modal, so it can name a metric instead of its key.
+  if (metrics.data) _expMetricLabels = Object.fromEntries(metrics.data.map(m => [m.key, m.label]));
   _adminExps = (data || []).slice().sort((a, b) => experimentSortRank(a.status) - experimentSortRank(b.status));
   if (!_adminExps.length) { el.innerHTML = '<div class="text-muted">No experiments yet.</div>'; return; }
   // Archived rows are history, not work: one muted line at the bottom, expanded on tap.
@@ -19379,7 +19429,7 @@ async function loadAdminExperiments() {
   const archivedHtml = archived.length ? `<div class="u-mt-1">
         <button class="btn btn-ghost btn-sm u-c-muted" onclick="adminExpToggleArchived()">${archived.length} archived</button>
         <div id="adm-exp-archived" class="text-meta u-pt-1 u-pr-1-5 u-pb-0 u-pl-1-5" style="display:none;">
-          ${archived.map(x => `<div class="u-pt-0-5 u-pr-0 u-pb-0-5 u-pl-0">${escHtml(x.name)} <span class="u-ff-font-mono u-fs-xs">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
+          ${archived.map(x => `<div class="u-pt-0-5 u-pr-0 u-pb-0-5 u-pl-0"><button class="adm-exp-name" data-key="${escAttr(x.key)}" onclick="adminExpInfo(this.dataset.key)" title="What this experiment tested">${escHtml(x.name)}</button> <span class="u-ff-font-mono u-fs-xs">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
         </div></div>` : '';
   // Stacked cards (not a table) so it fits a phone: identity → metrics grid → verdict → actions row.
   const cell = (label, val) => `<div><div class="text-caption-xs u-tt-uppercase u-ls-tight">${label}</div><div>${val}</div></div>`;
@@ -19407,7 +19457,7 @@ async function loadAdminExperiments() {
       actions.push(b('Log', `adminExpToggleLog(this.dataset.key)`));
       return `<div class="adm-exp-card u-bd-0p5px-solid-border u-r- u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-mb-3">
         <div class="u-justify-space-between u-items-flex-start u-gap-2-5 u-fw--wrap u-d-flex">
-          <div class="u-minw-0"><div class="u-fw-medium">${escHtml(x.name)}</div>
+          <div class="u-minw-0"><button class="adm-exp-name u-fw-medium" data-key="${escAttr(x.key)}" onclick="adminExpInfo(this.dataset.key)" title="What this experiment tests">${escHtml(x.name)} <span class="text-muted">ⓘ</span></button>
             <div class="text-caption u-ff-font-mono u-wb-break-all">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></div>
           <div style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};white-space:nowrap;">${escHtml(x.status)}${x.decision ? ` <span class="text-muted">(${escHtml(x.decision)})</span>` : ''}${x.owner === 'weekly_review' ? ` <span class="text-muted">· knob trial, judged Sundays</span>` : ''}</div>
         </div>
@@ -19436,6 +19486,36 @@ function adminExpToggleArchived() {
 function adminExpToggleLog(key) {
   const r = document.getElementById('adm-exp-log-' + key);
   if (r) r.style.display = r.style.display === 'none' ? '' : 'none';
+}
+
+// Admin → Experiments: the ⓘ on a card's name. Every field it shows is already in
+// _adminExps — `hypothesis` has always come back from admin_experiments_list() and
+// was never rendered — so this opens with no request.
+let _expMetricLabels = {};
+function adminExpInfo(key) {
+  const x = _adminExps.find(e => e.key === key);
+  if (!x) return;
+  document.getElementById('adm-exp-info-title').textContent = x.name;
+  document.getElementById('adm-exp-info-sub').textContent = `${x.key} · ${x.metric_key}`;
+  const ev = x.eval;
+  const verdict = ev
+    ? (ev.verdict || experimentVerdict(ev, { min_users_per_arm: x.min_users_per_arm, min_days: x.min_days, min_lift_pct: x.min_lift_pct, max_guardrail_drop_pct: x.max_guardrail_drop_pct }))
+    : 'not evaluated';
+  const day = t => t ? new Date(t).toLocaleDateString() : null;
+  const standing = [
+    x.status + (x.decision ? ` (${x.decision})` : ''),
+    day(x.started_at) ? `started ${day(x.started_at)}` : 'not started',
+    day(x.decided_at) ? `decided ${day(x.decided_at)}` : null,
+    `last read: ${verdict}`,
+  ].filter(Boolean).join(' · ');
+  const sections = experimentInfoSections(x, _expMetricLabels)
+    .concat([{ h: 'Where it stands', body: standing }]);
+  document.getElementById('adm-exp-info-body').innerHTML = sections.map(s =>
+    `<div class="stack-3"><div class="text-caption-xs u-tt-uppercase u-ls-tight">${escHtml(s.h)}</div><div class="text-body">${escHtml(s.body)}</div></div>`).join('');
+  document.getElementById('adm-exp-info-modal').classList.remove('hidden');
+}
+function closeAdminExpInfo() {
+  document.getElementById('adm-exp-info-modal').classList.add('hidden');
 }
 async function adminExpAction(key, status) {
   let pct = null;
@@ -31982,6 +32062,7 @@ const _overlayCloseMap = {
   'report-modal':        closeReport,
   'login-prompt-modal':  closeLoginPrompt,
   'admin-user-modal':    closeAdminUserModal,
+  'adm-exp-info-modal':  closeAdminExpInfo,
   'update-prices-modal': closeUpdatePrices,
   'username-prompt-modal': () => document.getElementById('username-prompt-modal').classList.add('hidden'),
   // Added 2026-08-13 (audit U2). These four carry role="dialog" but were missing
