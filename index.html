@@ -179,7 +179,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=aecc08e2">
+  <link rel="stylesheet" href="/design-system.css?v=56b37f6e">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -295,7 +295,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── AUTH / LANDING SCREEN ── */
     /* The element carries data-theme="light", so design-system.css supplies
        the light palette here regardless of the app theme. */
-    #auth-screen {
+    .auth-screen {
       position: fixed; inset: 0; z-index: var(--z-auth);
       background: var(--bg);
       color: var(--text);
@@ -305,7 +305,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding: calc(var(--space-4) + env(safe-area-inset-top, 0px)) var(--space-5) var(--space-4);
     }
     /* ── Landing Page ── */
-    #auth-screen { overflow-y:auto; }
+    .auth-screen { overflow-y:auto; }
     .landing-inner { max-width:var(--size-130); margin:0 auto; }
     .landing-logo { display:flex; align-items:center; gap:var(--space-2); justify-content:center; margin-bottom:var(--space-3); }
     .landing-logo span { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--gold-text); }
@@ -332,8 +332,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .landing-feature:last-child { border-right:none; }
       .landing-feat-num { font-size:var(--fs-4xl); margin-bottom:var(--space-2); }
     }
-    #login-prompt-modal .modal { text-align:center; }
-    #login-prompt-modal .btn-google, #login-prompt-modal .btn-apple { margin-bottom:var(--space-2-5); }
+    .login-prompt-modal .modal { text-align:center; }
+    .login-prompt-modal .btn-google, .login-prompt-modal .btn-apple { margin-bottom:var(--space-2-5); }
     .auth-logo {
       font-size: var(--fs-3xl); font-weight: var(--fw-heavy); color: var(--gold-text);
       letter-spacing: var(--ls-tight); margin-bottom: var(--space-1-5);
@@ -535,7 +535,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .friend-icon-btn.fi-none    { color:var(--muted);  border-color:var(--border); }
     .friend-icon-btn.fi-pending { color:var(--gold-text);   border-color:var(--gold); }
     .friend-icon-btn.fi-friends { color:var(--vis-friends);       border-color:var(--vis-friends); }
-    #friend-popover {
+    .friend-popover {
       position:fixed; background:var(--surface); border:1px solid var(--border);
       border-radius: var(--radius); padding:var(--space-4) var(--space-4) var(--space-3-5);
       width:min(var(--size-80), calc(100vw - var(--size-8)));
@@ -591,26 +591,26 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     /* Dotted-underline inputs in watch & wishlist modals */
-    #watch-modal input[type=text],
-    #watch-modal input[type=number],
-    #watch-modal input[type=date],
-    #watch-modal select,
-    #watch-modal textarea,
-    #wishlist-modal input[type=text],
-    #wishlist-modal input[type=number],
-    #wishlist-modal input[type=date],
-    #wishlist-modal select,
-    #wishlist-modal textarea {
+    .watch-modal input[type=text],
+    .watch-modal input[type=number],
+    .watch-modal input[type=date],
+    .watch-modal select,
+    .watch-modal textarea,
+    .wishlist-modal input[type=text],
+    .wishlist-modal input[type=number],
+    .wishlist-modal input[type=date],
+    .wishlist-modal select,
+    .wishlist-modal textarea {
       background: transparent !important; border: none !important;
       border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
       padding: var(--space-1) 0 !important; font-size: var(--fs-md); color: var(--text);
     }
-    #watch-modal input:focus,
-    #watch-modal select:focus,
-    #watch-modal textarea:focus,
-    #wishlist-modal input:focus,
-    #wishlist-modal select:focus,
-    #wishlist-modal textarea:focus {
+    .watch-modal input:focus,
+    .watch-modal select:focus,
+    .watch-modal textarea:focus,
+    .wishlist-modal input:focus,
+    .wishlist-modal select:focus,
+    .wishlist-modal textarea:focus {
       outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
     }
 
@@ -688,13 +688,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── BRAND SELECT ── */
     .brand-ac-wrap { position: relative; }
     /* Brand display input — matches the dotted-underline inline-edit style */
-    #w-brand-display, #wl-brand-display {
+    .w-brand-display, .wl-brand-display {
       background: transparent !important; border: none !important;
       border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
       padding: var(--space-1) 0 !important; font-size: var(--fs-md); color: var(--text);
       width: auto !important; max-width: 100%;
     }
-    #w-brand-display:focus, #wl-brand-display:focus {
+    .w-brand-display:focus, .wl-brand-display:focus {
       outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
     }
     .brand-ac-list { position: absolute; left: 0; right: 0; top: calc(100% + var(--space-0-5));
@@ -830,13 +830,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--space-4); }
 
-    #page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
-    #admin-tab-models table { font-size:var(--fs-base); }
-    #admin-tab-models th { font-weight:var(--fw-semibold); font-size:var(--fs-xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); padding:var(--space-1-5) var(--space-1-5) var(--space-1-5) 0; }
-    #admin-tab-models td { padding:var(--space-2) var(--space-1-5) var(--space-2) 0; vertical-align:middle; }
-    #admin-tab-models .chip { font-size:var(--fs-sm); padding:var(--space-1) var(--space-2-5); }
-    #admin-tab-models input[type=text] { padding:var(--space-2) var(--space-2-5); font-size:var(--fs-base); }
-    #admin-tab-models .adm-models-bar input[type=text] { width:auto; }
+    .page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
+    .admin-tab-models table { font-size:var(--fs-base); }
+    .admin-tab-models th { font-weight:var(--fw-semibold); font-size:var(--fs-xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); padding:var(--space-1-5) var(--space-1-5) var(--space-1-5) 0; }
+    .admin-tab-models td { padding:var(--space-2) var(--space-1-5) var(--space-2) 0; vertical-align:middle; }
+    .admin-tab-models .chip { font-size:var(--fs-sm); padding:var(--space-1) var(--space-2-5); }
+    .admin-tab-models input[type=text] { padding:var(--space-2) var(--space-2-5); font-size:var(--fs-base); }
+    .admin-tab-models .adm-models-bar input[type=text] { width:auto; }
     .watch-card {
       position: relative;
       background: var(--surface);
@@ -943,10 +943,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* A/B: enhance_nudge — muted "add the missing specs" affordance on a grid card */
     .enh-chip { font-family: inherit; font-size: var(--fs-2xs); color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: var(--space-0-5) var(--space-1-5); margin-top: var(--space-1-5); white-space: nowrap; letter-spacing: var(--ls-snug); cursor: pointer; line-height: inherit; }
     .enh-chip:hover { border-color: var(--gold); color: var(--gold-text); }
-    #enhance-nudge-card { display: flex; align-items: center; gap: var(--space-2-5); flex-wrap: wrap; padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-3-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-    #enhance-nudge-card .enh-nudge-copy { flex: 1; min-width: var(--size-50); }
-    #enhance-nudge-card .enh-nudge-title { font-size: var(--fs-base); }
-    #enhance-nudge-card .enh-nudge-body { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-0-5); }
+    .enhance-nudge-card { display: flex; align-items: center; gap: var(--space-2-5); flex-wrap: wrap; padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-3-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .enhance-nudge-card .enh-nudge-copy { flex: 1; min-width: var(--size-50); }
+    .enhance-nudge-card .enh-nudge-title { font-size: var(--fs-base); }
+    .enhance-nudge-card .enh-nudge-body { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-0-5); }
 
     /* ── WATCH TYPE TAG PICKER (Edit Watch modal) ── */
     .watch-tag-picker      { display: flex; flex-wrap: wrap; gap: var(--space-1-5); }
@@ -1107,8 +1107,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       overflow-x: hidden;
     }
 
-    #watch-modal > .modal > .modal-actions,
-    #wishlist-modal > .modal > .modal-actions { position:sticky; bottom:calc(-1 * var(--size-7)); margin-left:calc(-1 * var(--space-7)); margin-right:calc(-1 * var(--space-7)); margin-bottom:calc(-1 * var(--space-7)); margin-top:var(--space-4); padding:var(--space-4) var(--space-7); background:var(--surface); border-top:1px solid var(--border); z-index:var(--z-raised); }
+    .watch-modal > .modal > .modal-actions,
+    .wishlist-modal > .modal > .modal-actions { position:sticky; bottom:calc(-1 * var(--size-7)); margin-left:calc(-1 * var(--space-7)); margin-right:calc(-1 * var(--space-7)); margin-bottom:calc(-1 * var(--space-7)); margin-top:var(--space-4); padding:var(--space-4) var(--space-7); background:var(--surface); border-top:1px solid var(--border); z-index:var(--z-raised); }
 
     /* ── STATS PAGE ── */
     .stats-row {
@@ -1460,8 +1460,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.rest::after { content:''; position:absolute; bottom:var(--size-1); left:50%; transform:translateX(-50%); width:var(--size-1); height:var(--size-1); border-radius:var(--radius-round); background:var(--muted); opacity:var(--opacity-soft); }
     .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:calc(-1 * var(--space-2)) 0 var(--space-3); }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
-    #streak-calendar-modal { align-items: flex-start; }
-    #streak-calendar-modal .modal { margin-top: calc(env(safe-area-inset-top, 0px) + var(--space-16)); }
+    .streak-calendar-modal { align-items: flex-start; }
+    .streak-calendar-modal .modal { margin-top: calc(env(safe-area-inset-top, 0px) + var(--space-16)); }
     .dow-cell { background:var(--surface2); border-radius:var(--radius-btn); padding:var(--space-2-5) var(--space-1-5); text-align:center; border:1px solid transparent; min-width:0; overflow:hidden; }
     .dow-cell.today-col { border-color:var(--gold); }
     .dow-day-name { font-size:var(--fs-2xs); font-weight:var(--fw-bold); text-transform:uppercase; letter-spacing:var(--ls-tight); color:var(--muted); }
@@ -1606,7 +1606,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Main: pad bottom for tab bar */
       main { padding: var(--space-4) var(--space-3-5) calc(var(--nav-h) + var(--space-7)); --page-gutter: var(--space-3-5); }
       .modal { border-radius: var(--radius-lg); max-height: 88vh; max-width: var(--size-105); padding: var(--space-6) var(--space-4) var(--space-5); }
-      #watch-preview-modal .modal { max-width: var(--size-90); }
+      .watch-preview-modal .modal { max-width: var(--size-90); }
 
       /* Prevent horizontal overflow in modal rows */
       .url-row { flex-wrap: wrap; }
@@ -1635,13 +1635,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Collection header: Share and Enhance drop to icon-only too, so the row
          still fits at 390px (e2e/collection-gallery.mock.spec.js) — with both
          labels the six buttons needed 406px. */
-      #coll-share-btn, #coll-enhance-all-btn { padding: var(--space-2) var(--space-2) !important; }
-      #coll-share-btn .wl-actions-text, #coll-enhance-all-btn .wl-actions-text { display: none; }
+      .coll-share-btn, .coll-enhance-all-btn { padding: var(--space-2) var(--space-2) !important; }
+      .coll-share-btn .wl-actions-text, .coll-enhance-all-btn .wl-actions-text { display: none; }
       /* Share-selection bars (Collection + Wishlist): Select all / Clear /
          Shared links / Cancel drop to icons so the six controls stay on ONE
          row at 390px (e2e/collection-share.mock.spec.js). With labels the row
          needed ~490px. */
-      #coll-select-bar, #wl-select-bar { gap: var(--space-1-5); padding: var(--space-2) var(--space-2); }
+      .coll-select-bar, .wl-select-bar { gap: var(--space-1-5); padding: var(--space-2) var(--space-2); }
       .sel-bar-btn { padding: var(--space-1-5) var(--space-2); }
       .sel-bar-btn .sel-bar-text { display: none; }
       /* Collection sort bar: Rank + three sorts + Post Pics needed 421px in
@@ -1651,8 +1651,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1) var(--space-2); }
       .coll-rank-chip .coll-rank-text { display: none; }
       .coll-rank-chip + .coll-sort-chip { margin-left: var(--space-0-5); }
-      #wishlist-modal .modal-actions { gap: var(--space-1); }
-      #wishlist-modal .modal-actions .btn { padding: var(--space-2-5) var(--space-2); font-size: var(--fs-sm); }
+      .wishlist-modal .modal-actions { gap: var(--space-1); }
+      .wishlist-modal .modal-actions .btn { padding: var(--space-2-5) var(--space-2); font-size: var(--fs-sm); }
       .feed-edit-btn, .btn-icon { min-height: var(--size-10); min-width: var(--size-10); display: inline-flex; align-items: center; justify-content: center; }
       /* Height only for the feed actions. min-width:40px pinned every icon-only
          button at 40px, so the ink between the like/comment/share icons was
@@ -1744,7 +1744,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-meta       { font-size: var(--fs-sm); color: var(--muted); }
 
     /* Feed column — mobile-width centered on desktop */
-    #page-feed { max-width: var(--size-120); margin-left: auto; margin-right: auto; }
+    .page-feed { max-width: var(--size-120); margin-left: auto; margin-right: auto; }
 
     /* Hero photo */
     .feed-card-photo { width: 100%; aspect-ratio: 4/5; max-height: var(--size-130); overflow: hidden; background: var(--surface2); }
@@ -2306,7 +2306,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        box instead of bleeding out of it (the preview is inside main, which
        defines the gutter the band cancels), and the feed background makes the
        tag's notches — which are painted in var(--bg) — read correctly. */
-    #promo-preview {
+    .promo-preview {
       --page-gutter: 0px;
       background: var(--bg); border-radius: var(--radius-btn); padding: var(--space-3);
     }
@@ -2602,16 +2602,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        once the feed's own Post button has scrolled out of view, so there are
        never two Post buttons on screen. --header-h is measured in JS so it
        clears the sticky header at every breakpoint (and the iOS safe area). */
-    #feed-post-fab { position:fixed; top:calc(var(--header-h) + var(--size-2-5)); right:var(--size-4); z-index:var(--z-fab);
+    .feed-post-fab { position:fixed; top:calc(var(--header-h) + var(--size-2-5)); right:var(--size-4); z-index:var(--z-fab);
       width:var(--size-12); height:var(--size-12); border-radius:var(--radius-round); background:var(--gold); color:var(--black);
       border:none; cursor:pointer; display:none; align-items:center; justify-content:center;
       box-shadow:var(--shadow-3); transition:background var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
-    #feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
-    #feed-post-fab:hover { background:var(--gold-lt); box-shadow:var(--shadow-3); transform:translateY(-1px); }
+    .feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
+    .feed-post-fab:hover { background:var(--gold-lt); box-shadow:var(--shadow-3); transform:translateY(-1px); }
     /* On wide screens the feed is a 470px centred column — hug its right edge
        rather than the far side of the viewport. */
     @media (min-width: 641px) {
-      #feed-post-fab { right: max(var(--size-4), calc(50vw - var(--size-120) / 2 - var(--size-16))); }
+      .feed-post-fab { right: max(var(--size-4), calc(50vw - var(--size-120) / 2 - var(--size-16))); }
     }
     /* "You're all caught up" divider — hairline rules either side of a label,
        marking the point below which nothing is new since the last visit. */
@@ -2627,12 +2627,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-chip:hover { box-shadow:var(--ring); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
     .streak-chip.streak-chip-atrisk { color:var(--watch-gold); }
-    #theme-btn { width:var(--size-8); height:var(--size-8); border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
+    .theme-btn { width:var(--size-8); height:var(--size-8); border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), color var(--dur-fast); }
-    #theme-btn:hover { box-shadow:var(--ring); color:var(--text); }
-    #admin-nav-btn { width:var(--size-8); height:var(--size-8); border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted); opacity:var(--opacity-dim); padding:0; margin-left:var(--space-0-5); align-self:center;
+    .theme-btn:hover { box-shadow:var(--ring); color:var(--text); }
+    .admin-nav-btn { width:var(--size-8); height:var(--size-8); border-radius:var(--radius-round); background:none; border:none; cursor:pointer; color:var(--muted); opacity:var(--opacity-dim); padding:0; margin-left:var(--space-0-5); align-self:center;
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow var(--dur-fast), opacity var(--dur-fast), color var(--dur-fast); }
-    #admin-nav-btn:hover { box-shadow:var(--ring); opacity:1; color:var(--text); }
+    .admin-nav-btn:hover { box-shadow:var(--ring); opacity:1; color:var(--text); }
     .bell-badge { position:absolute; top:var(--size-0-5); right:var(--size-0-5); min-width:var(--size-4); height:var(--size-4); border-radius:var(--radius-btn);
       background:var(--danger); color:var(--white); font-size:var(--fs-2xs); font-weight:var(--fw-bold);
       display:flex; align-items:center; justify-content:center; padding:0 var(--space-1); pointer-events:none; }
@@ -2656,7 +2656,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-time { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-0-5); }
 
     /* ── WELCOME ONBOARDING ─────────────────────── */
-    #welcome-modal { background:color-mix(in srgb, var(--bg) 97%, transparent); backdrop-filter:none; }
+    .welcome-modal { background:color-mix(in srgb, var(--bg) 97%, transparent); backdrop-filter:none; }
     .welcome-step.hidden { display:none; }
     .welcome-dot { width:var(--size-2); height:var(--size-2); border-radius:var(--radius-round); background:var(--border); transition:background var(--dur-base); }
     .welcome-dot.active { background:var(--gold); }
@@ -2727,7 +2727,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <noscript><div class="u-pt-12 u-pr-6 u-pb-12 u-pl-6 u-ta-center u-ff-font-sans u-c-muted"><p class="u-fs-xl u-fw-bold u-mb-2">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
-<div id="auth-screen" data-theme="light">
+<div id="auth-screen" class="auth-screen" data-theme="light">
   <div class="landing-inner">
     <!-- Logo -->
     <div class="landing-logo">
@@ -2790,7 +2790,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
         Continue with Apple
       </button>
-      <button class="btn-demo u-bd-none u-r- u-fs-md u-cur-pointer u-ff-inherit u-mt-1 u-fw-medium u-ls-snug" onclick="bootDemoMode()" style="background: linear-gradient(135deg,var(--demo-gold),var(--demo-gold-deep));color: var(--white);padding: var(--space-2-5) var(--space-5);">
+      <button class="btn-demo u-bd-none u-r- u-fs-md u-cur-pointer u-ff-inherit u-mt-1 u-fw-medium u-ls-snug u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep u-c-white u-pt-2-5 u-pr-5 u-pb-2-5 u-pl-5" onclick="bootDemoMode()">
         Explore Without an Account
       </button>
     </div>
@@ -2800,10 +2800,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Dev-only anonymous login -->
-    <div id="dev-login-wrap" class="u-mt-2 u-gap-1-5" style="display:none;justify-content: center;">
-      <button onclick="devLogin()" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit" style="background: none;color: var(--muted);padding: var(--space-1-5) var(--space-3);">testuser</button>
-      <button onclick="devLogin(true)" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit" style="background: none;color: var(--muted);padding: var(--space-1-5) var(--space-3);">testuser2</button>
-      <button onclick="devLogin('official')" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit" style="background: none;color: var(--muted);padding: var(--space-1-5) var(--space-3);">official</button>
+    <div id="dev-login-wrap" class="u-mt-2 u-gap-1-5 u-justify-center" style="display:none;">
+      <button onclick="devLogin()" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit u-bg-none u-c-muted u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3">testuser</button>
+      <button onclick="devLogin(true)" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit u-bg-none u-c-muted u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3">testuser2</button>
+      <button onclick="devLogin('official')" class="u-bd-1px-dashed-border u-r-btn u-fs-xs u-cur-pointer u-ff-inherit u-bg-none u-c-muted u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3">official</button>
     </div>
   </div>
 </div>
@@ -2812,10 +2812,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ UPDATE PRICES MODAL ════ -->
 <div id="update-prices-modal" class="overlay hidden" role="dialog" aria-modal="true">
-  <div class="modal" style="max-width:var(--size-140);padding:var(--space-6);">
+  <div class="modal u-maxw-140 u-pt-6 u-pr-6 u-pb-6 u-pl-6">
     <div class="modal-title row-between">
       <span>Update Market Prices</span>
-      <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:var(--space-1) var(--space-2);">Close</button>
+      <button class="btn btn-ghost u-pt-1 u-pr-2 u-pb-1 u-pl-2" onclick="closeUpdatePrices()">Close</button>
     </div>
     <div id="update-prices-status" class="u-fs-sm u-c-muted u-mb-3">Loading...</div>
     <div id="update-prices-body" class="u-maxh-65vh" style="overflow-y:auto;overflow-x:hidden;"></div>
@@ -2828,7 +2828,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ WHAT'S NEW MODAL ════ -->
 <div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
-  <div class="modal" style="max-width:var(--size-110);">
+  <div class="modal u-maxw-110">
     <div class="modal-title row" id="whats-new-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
@@ -3113,18 +3113,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="body-muted">Hardened input escaping, query timeouts prevent hung requests, debounced saves reduce data writes, and graceful session expiry handling.</div>
       </div>
     </div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="closeWhatsNew()">Close</button>
     </div>
   </div>
 </div>
 
 <!-- ════ STREAK CALENDAR MODAL ════ -->
-<div id="streak-calendar-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="streak-calendar-title">
-  <div class="modal" style="max-width:var(--size-95);">
+<div id="streak-calendar-modal" class="overlay hidden streak-calendar-modal" role="dialog" aria-modal="true" aria-labelledby="streak-calendar-title">
+  <div class="modal u-maxw-95">
     <div class="modal-title" id="streak-calendar-title">Streak Calendar</div>
     <div id="streak-calendar-body"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="closeStreakCalendar()">Close</button>
     </div>
   </div>
@@ -3132,7 +3132,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
-  <div class="modal" style="max-width:var(--size-90);text-align:center;padding:var(--space-8) var(--space-7);">
+  <div class="modal u-maxw-90 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-5">Anniversary</div>
     <div id="anniversary-watch-img" class="stack-5"></div>
     <div id="anniversary-modal-title" class="u-fs-xl u-fw-bold u-c-text u-lh-body u-mb-1-5"></div>
@@ -3145,13 +3145,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ REVIEW PROMPT MODAL ════ -->
 <!-- After adding a watch (A/B follow_suggest): the members who own that same model. -->
 <div id="follow-sugg-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="follow-sugg-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="follow-sugg" data-surface="add">
       <div class="eyebrow stack-1-5">You're in good company</div>
       <div class="modal-title u-mb-3-5" id="follow-sugg-modal-title"></div>
       <div class="follow-sugg-row" id="follow-sugg-modal-row"></div>
     </div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="dismissFollowSuggest('add')">Close</button>
     </div>
   </div>
@@ -3159,7 +3159,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Push benefit card (2.6 provisional → prominent). Shown once, at the next wear log or kept
      reading while notifications still deliver quietly; Turn on spends the one-shot OS dialog. -->
 <div id="push-ask-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-ask-title">
-  <div class="modal" style="max-width:var(--size-85);text-align:center;padding:var(--space-8) var(--space-7);">
+  <div class="modal u-maxw-85 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-4">Reminders</div>
     <div id="push-ask-title" class="u-fs-xl u-fw-bold u-c-text u-mb-2">Get the 5pm nudge on your lock screen</div>
     <div class="u-fs-base u-c-muted u-lh-body u-mb-6">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
@@ -3170,7 +3170,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 <div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
-  <div class="modal" style="max-width:var(--size-85);text-align:center;padding:var(--space-8) var(--space-7);position:relative;">
+  <div class="modal u-maxw-85 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7" style="position:relative;">
     <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" class="btn-plain u-fs-2xl u-lh-none u-pt-1 u-pr-2 u-pb-1 u-pl-2" style="display:none;position:absolute;top:var(--size-2-5);right:var(--size-2-5);">&times;</button>
     <!-- Step 1: Enjoying WRotate? -->
     <div id="review-step-ask">
@@ -3209,7 +3209,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ MEASURE HELP MODAL ════ -->
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
-  <div class="modal" style="max-width:var(--size-95);padding:var(--space-8) var(--space-7);">
+  <div class="modal u-maxw-95 u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-5">How to Measure</div>
     <div id="msr-help-title" class="u-fs-xl u-fw-bold u-c-text u-mb-5">Measure Your Watch's Accuracy</div>
     <div class="u-fd-column u-gap-4 u-mb-6" style="display:flex;">
@@ -3240,28 +3240,28 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
-  <div class="modal" style="max-width:var(--size-100);">
+  <div class="modal u-maxw-100">
     <div class="modal-title" id="followers-modal-title">Followers</div>
     <div id="followers-list" class="u-maxh-55vh u-mt-0 u-mr-calc-1-1 u-mb-0 u-ml-calc-1-1" style="overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="closeFollowersModal()">Close</button>
     </div>
   </div>
 </div>
 
 <div id="following-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="following-modal-title">
-  <div class="modal" style="max-width:var(--size-100);">
+  <div class="modal u-maxw-100">
     <div class="modal-title" id="following-modal-title">Following</div>
     <div id="following-modal-list" class="u-maxh-55vh u-mt-0 u-mr-calc-1-1 u-mb-0 u-ml-calc-1-1" style="overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="closeFollowingModal()">Close</button>
     </div>
   </div>
 </div>
 
 <!-- ════ WELCOME ONBOARDING MODAL ════ -->
-<div id="welcome-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title">
-  <div class="modal" style="max-width:var(--size-95);text-align:center;">
+<div id="welcome-modal" class="overlay hidden welcome-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title">
+  <div class="modal u-maxw-95 u-ta-center">
     <div class="welcome-step" id="ws-1">
       <div class="u-mb-3 u-justify-center" style="display:flex;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
       <div class="modal-title u-fs-2xl" id="welcome-modal-title">Welcome to WRotate</div>
@@ -3368,7 +3368,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ EULA GATE (for existing users who haven't accepted) ════ -->
 <div id="eula-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="eula-modal-title" style="z-index:var(--z-modal-high);">
-  <div class="modal" style="max-width:var(--size-105);text-align:center;">
+  <div class="modal u-maxw-105 u-ta-center">
     <div class="modal-title u-fs-xl" id="eula-modal-title">Terms of Use</div>
     <div class="u-c-muted u-fs-base u-lh-body u-mt-2 u-mr-0 u-mb-4 u-ml-0 u-maxh-65 u-ta-left u-pt-0 u-pr-2 u-pb-0 u-pl-2" style="overflow-y:auto;">
       <p class="stack-2">We've added Terms of Use to keep our community safe. By continuing, you agree to:</p>
@@ -3389,15 +3389,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<div id="login-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" style="z-index:var(--z-modal-high);">
-  <div class="modal" style="max-width:var(--size-90);">
-    <div class="modal-title u-fs-xl" style="margin-bottom: var(--space-1);">Sign in to continue</div>
-    <p class="text-secondary" style="margin-bottom: var(--space-5);">Create a free account to start tracking your watches.</p>
-    <button class="btn-google u-w-100pct" onclick="closeLoginPrompt();signInWithGoogle()" style="margin-bottom: var(--space-2-5);">
+<div id="login-prompt-modal" class="overlay hidden login-prompt-modal" role="dialog" aria-modal="true" style="z-index:var(--z-modal-high);">
+  <div class="modal u-maxw-90">
+    <div class="modal-title u-fs-xl u-mb-1">Sign in to continue</div>
+    <p class="text-secondary u-mb-5">Create a free account to start tracking your watches.</p>
+    <button class="btn-google u-w-100pct u-mb-2-5" onclick="closeLoginPrompt();signInWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
       Continue with Google
     </button>
-    <button class="btn-apple u-w-100pct" onclick="closeLoginPrompt();signInWithApple()" style="margin-bottom: var(--space-2-5);">
+    <button class="btn-apple u-w-100pct u-mb-2-5" onclick="closeLoginPrompt();signInWithApple()">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
       Continue with Apple
     </button>
@@ -3414,7 +3414,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
       </svg>W<span class="logo-r">rotate</span>
     </button>
-    <button id="admin-nav-btn" onclick="showAdminPage()" title="Admin" style="display:none;" aria-label="Admin portal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button id="admin-nav-btn" class="admin-nav-btn" onclick="showAdminPage()" title="Admin" style="display:none;" aria-label="Admin portal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <nav aria-label="Main navigation">
       <button class="active" aria-current="page" data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
       <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
@@ -3427,7 +3427,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="msr-badge" class="msr-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg><span id="msr-badge-time"></span></span>
-      <button id="theme-btn" aria-label="Toggle theme" onclick="cycleTheme()" title="Toggle theme"></button>
+      <button id="theme-btn" class="theme-btn" aria-label="Toggle theme" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
@@ -3449,7 +3449,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="offline-banner" class="offline-banner hidden" role="status" aria-live="polite">Offline — changes will sync when back online</div>
 
 <!-- Floating Post button: fixed top-right over the feed, shown on scroll. -->
-<button id="feed-post-fab" onclick="openNewPost()" title="New Post" aria-label="New Post"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+<button id="feed-post-fab" class="feed-post-fab" onclick="openNewPost()" title="New Post" aria-label="New Post"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 
 <main id="main-content" tabindex="-1">
 
@@ -3468,8 +3468,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="reminder-banner-body">
       <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
       <div class="u-gap-2 u-mt-2 u-fw--wrap" style="display:flex;">
-        <button class="btn btn-primary u-minh-9" id="logagain-yes" style="padding: var(--space-1) var(--space-3-5);">Log it</button>
-        <button class="btn u-minh-9" id="logagain-other" style="padding: var(--space-1) var(--space-3-5);" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+        <button class="btn btn-primary u-minh-9 u-pt-1 u-pr-3-5 u-pb-1 u-pl-3-5" id="logagain-yes">Log it</button>
+        <button class="btn u-minh-9 u-pt-1 u-pr-3-5 u-pb-1 u-pl-3-5" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
@@ -3528,15 +3528,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div class="row">
-        <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
-        <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button id="coll-view-btn" class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary btn-md u-gap-1-5 u-ws-nowrap" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="coll-enhance-all-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding: var(--space-2) var(--space-3);font-size: var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
-        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;padding:var(--space-2) var(--space-3);font-size:var(--fs-md);">$</button>
-        <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding: var(--space-2) var(--space-3);font-size: var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="coll-enhance-all-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-enhance-all-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
+        <button id="coll-update-prices-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-md" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;">$</button>
+        <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
-    <div id="coll-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r-" style="display:none;gap: var(--space-2);padding: var(--space-2) var(--space-3);">
+    <div id="coll-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r- coll-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
       <span id="coll-select-count" class="u-fs-base u-fw-semibold">0 selected</span>
       <button id="coll-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="coll-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
@@ -3551,11 +3551,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <!-- ════ FEED PAGE ════ -->
-  <div id="page-feed" class="page active">
+  <div id="page-feed" class="page active page-feed">
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
-      <div class="u-gap-2" style="display:flex;margin-left: auto;">
+      <div class="u-gap-2 u-ml-auto" style="display:flex;">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
         <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
@@ -3571,7 +3571,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ PROFILE PAGE ════ -->
   <div id="page-profile" class="page">
     <div class="stack-4">
-      <button class="btn btn-ghost" onclick="goBackFromProfile()" style="padding:var(--space-1-5) var(--space-3);">← Back</button>
+      <button class="btn btn-ghost u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="goBackFromProfile()">← Back</button>
     </div>
     <div id="profile-page-content">
       <div class="empty">Loading…</div>
@@ -3579,7 +3579,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <!-- ════ CLUBS PAGE ════ -->
-  <div id="page-model" class="page">
+  <div id="page-model" class="page page-model">
     <div id="model-page-content">
       <div class="empty">Loading…</div>
     </div>
@@ -3603,14 +3603,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-clubs" class="page">
     <div class="u-items-center u-justify-space-between u-mb-4" style="display:flex;">
       <h1 class="u-fs-xl u-fw-bold">Clubs</h1>
-      <button class="btn btn-primary" style="padding:var(--space-1-5) var(--space-3-5);" onclick="openCreateClub()">+ Create</button>
+      <button class="btn btn-primary u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
   </div>
 
   <div id="page-club-detail" class="page">
     <div class="stack-4">
-      <button class="btn btn-ghost" onclick="goBackFromClub()" style="padding:var(--space-1-5) var(--space-3);">&#8592; Back</button>
+      <button class="btn btn-ghost u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="goBackFromClub()">&#8592; Back</button>
     </div>
     <div id="club-detail-content">
       <div class="empty">Loading&#8230;</div>
@@ -3640,7 +3640,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Tab: Featured -->
-    <div id="admin-tab-models" class="admin-tab" role="tabpanel" style="display:none;">
+    <div id="admin-tab-models" class="admin-tab admin-tab-models" role="tabpanel" style="display:none;">
       <div class="adm-models-bar u-gap-2 u-items-center u-mb-2-5 u-fw--wrap" style="display:flex;">
         <input type="text" id="adm-merge-src" placeholder="merge: src slug" class="u-flex-1 u-minw-30">
         <input type="text" id="adm-merge-dst" placeholder="into: dst slug" class="u-flex-1 u-minw-30">
@@ -3649,7 +3649,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
         <span id="adm-enrich-status" class="caption"></span>
       </div>
-      <div id="admin-models-list" style="font-size:var(--fs-base);">Loading…</div>
+      <div id="admin-models-list" class="u-fs-base">Loading…</div>
     </div>
     <div id="admin-tab-featured" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="eyebrow stack-3">Featured posts</div>
@@ -3807,7 +3807,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <input type="text" class="broadcast-image-caption" data-idx="0" placeholder="Image caption (optional)" oninput="updateBroadcastPreview()" aria-label="Image 1 caption">
           </div>
         </div>
-        <button class="btn btn-ghost u-mb-2-5" onclick="addBroadcastImageSlot()" id="broadcast-add-image-btn" style="font-size: var(--fs-sm);">+ Add another image</button>
+        <button class="btn btn-ghost u-mb-2-5 u-fs-sm" onclick="addBroadcastImageSlot()" id="broadcast-add-image-btn">+ Add another image</button>
 
         <!-- Preview -->
         <div class="draft-form-row">
@@ -3950,7 +3950,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
         <div class="draft-form-row">
           <label id="promo-preview-label">Card preview</label>
-          <div id="promo-preview" aria-labelledby="promo-preview-label" class="u-maxw-120"></div>
+          <div id="promo-preview" aria-labelledby="promo-preview-label" class="u-maxw-120 promo-preview"></div>
         </div>
       </div>
 
@@ -5021,14 +5021,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="wl-actions">
         <!-- One icon cycles list → folders → gallery → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
-        <button id="wl-view-btn" class="btn btn-ghost" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;padding:var(--space-2);"></button>
-        <button class="btn btn-ghost" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually" style="padding:var(--space-2);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn btn-primary u-gap-1-5" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding: var(--space-2) var(--space-3);font-size: var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;padding: var(--space-2) var(--space-3);font-size: var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
-        <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;padding: var(--space-2) var(--space-3);font-size: var(--fs-base);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="wl-view-btn" class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;"></button>
+        <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
+        <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
-    <div id="wl-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r-" style="display:none;gap: var(--space-2);padding: var(--space-2) var(--space-3);">
+    <div id="wl-select-bar" class="u-items-center u-fw--wrap u-mb-3 u-bg-surface u-bd-1px-solid-border u-r- wl-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
       <span id="wl-select-count" class="u-fs-base u-fw-semibold">0 selected</span>
       <button id="wl-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
       <button id="wl-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
@@ -5103,24 +5103,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </main>
 
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
-<div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
+<div id="watch-modal" class="overlay hidden watch-modal" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
     <div class="row-between">
-      <div class="modal-title" id="watch-modal-title" style="margin-bottom:0;">Add Watch</div>
-      <button class="btn-icon u-lh-none" onclick="closeWatchModal()" aria-label="Close" style="font-size: var(--fs-2xl);color: var(--muted);padding: var(--space-1) var(--space-1-5);">&times;</button>
+      <div class="modal-title u-mb-0" id="watch-modal-title">Add Watch</div>
+      <button class="btn-icon u-lh-none u-fs-2xl u-c-muted u-pt-1 u-pr-1-5 u-pb-1 u-pl-1-5" onclick="closeWatchModal()" aria-label="Close">&times;</button>
     </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
-      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" class="btn-plain u-lh-none" style="color: inherit;font-size: var(--fs-xl);padding: 0 0 0 var(--space-2);">&times;</button>
+      <button aria-label="Dismiss" onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" class="btn-plain u-lh-none u-c-inherit u-fs-xl u-pt-0 u-pr-0 u-pb-0 u-pl-2">&times;</button>
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;">
-      <div id="edit-id-name" class="u-fw-medium u-lh-snug" style="font-size: var(--fs-md);color: var(--text);"></div>
-      <div id="edit-id-sub" class="u-lh-snug" style="font-size: var(--fs-sm);color: var(--muted);margin-top: var(--space-px);"></div>
-      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" class="u-ff-inherit u-cur-pointer" style="margin-top: var(--space-1-5);background: transparent;border: 0.5px solid var(--border);color: var(--muted);font-size: var(--fs-xs);padding: var(--space-1) var(--space-2-5);border-radius: var(--radius-sm);">Add photo</button>
-      <div style="border-bottom:0.5px solid var(--border);margin-top:var(--space-2-5);margin-bottom:var(--space-3);"></div>
+      <div id="edit-id-name" class="u-fw-medium u-lh-snug u-fs-md u-c-text"></div>
+      <div id="edit-id-sub" class="u-lh-snug u-fs-sm u-c-muted u-mt-px"></div>
+      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" class="u-ff-inherit u-cur-pointer u-mt-1-5 u-bg-transparent u-bd-0p5px-solid-border u-c-muted u-fs-xs u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
+      <div class="u-bdb-0p5px-solid-border u-mt-2-5 u-mb-3"></div>
     </div>
-    <div id="wm-also-owned" class="u-cur-pointer" style="display:none;margin: 0 0 var(--space-3);padding: var(--space-2-5) var(--space-3);border: 0.5px solid var(--border);border-radius: var(--radius-btn);font-size: var(--fs-base);" role="button" tabindex="0"></div>
+    <div id="wm-also-owned" class="u-cur-pointer u-mt-0 u-mr-0 u-mb-3 u-ml-0 u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-border u-r-btn u-fs-base" style="display:none;" role="button" tabindex="0"></div>
     <!-- Photo state (hidden) -->
     <div id="w-img-area" style="display:none;">
       <img id="w-img-preview" src="" alt="" style="display:none;">
@@ -5134,7 +5134,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-story')">
         <span class="modal-section-hdr-label">The Story</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-story" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-story" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-story">▶</span>
       </button>
       <div class="modal-section-body" id="sec-story">
@@ -5146,7 +5146,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-essentials')">
         <span class="modal-section-hdr-label">Essentials</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-essentials" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-essentials" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-essentials">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-essentials">
@@ -5154,7 +5154,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="form-group">
             <label for="w-brand-display">Brand *</label>
             <div class="brand-ac-wrap">
-              <input type="text" id="w-brand-display" placeholder="Type to search brands…"
+              <input type="text" id="w-brand-display" class="w-brand-display" placeholder="Type to search brands…"
                 autocomplete="off"
                 oninput="onBrandInput(this.value);autoSizeInput(this)"
                 onfocus="onBrandFocus()"
@@ -5199,7 +5199,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-condition')">
         <span class="modal-section-hdr-label">Docs &amp; Warranty</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-condition" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-condition" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-condition">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-condition">
@@ -5246,7 +5246,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-market')">
         <span class="modal-section-hdr-label">Value</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-market" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-market" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
@@ -5259,7 +5259,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-tags')">
         <span class="modal-section-hdr-label">Type</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-gap-1 u-items-center" id="sum-sec-tags" style="overflow:hidden;display:flex;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-gap-1 u-items-center u-fs-xs u-c-muted u-ml-2" id="sum-sec-tags" style="overflow:hidden;display:flex;"></span>
         <span class="modal-section-chevron" id="chv-sec-tags">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-tags">
@@ -5272,12 +5272,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-specs')">
         <span class="modal-section-hdr-label">Specs</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-specs" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-specs" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-specs">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-specs">
         <!-- Movement -->
-        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow" style="font-size: var(--fs-2xs);color: var(--muted);margin-bottom: var(--space-2);">Movement</div>
+        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow u-fs-2xs u-c-muted u-mb-2">Movement</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-movement-type">Type</label>
@@ -5309,7 +5309,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </select>
         </div>
         <!-- Case -->
-        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow" style="font-size: var(--fs-2xs);color: var(--muted);margin-top: var(--space-3-5);margin-bottom: var(--space-2);">Case</div>
+        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow u-fs-2xs u-c-muted u-mt-3-5 u-mb-2">Case</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-case-diameter">Diameter</label>
@@ -5335,7 +5335,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="text" id="w-case-material" maxlength="80">
         </div>
         <!-- Glass & Water -->
-        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow" style="font-size: var(--fs-2xs);color: var(--muted);margin-top: var(--space-3-5);margin-bottom: var(--space-2);">Glass &amp; Water</div>
+        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow u-fs-2xs u-c-muted u-mt-3-5 u-mb-2">Glass &amp; Water</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-crystal-type">Crystal</label>
@@ -5347,7 +5347,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
         <!-- Provenance -->
-        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow" style="font-size: var(--fs-2xs);color: var(--muted);margin-top: var(--space-3-5);margin-bottom: var(--space-2);">Provenance</div>
+        <div class="u-fw-medium u-tt-uppercase u-ls-eyebrow u-fs-2xs u-c-muted u-mt-3-5 u-mb-2">Provenance</div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-origin">Origin</label>
@@ -5374,12 +5374,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-straps')">
         <span class="modal-section-hdr-label">Straps</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-straps" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-straps" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-straps">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-straps">
         <div id="strap-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:var(--space-2);">+ Add Strap</button>
+        <button type="button" class="btn btn-ghost btn-sm u-mt-2" id="add-strap-btn" onclick="showAddStrapRow()">+ Add Strap</button>
         <div id="add-strap-row" class="add-strap-row hidden">
           <input type="text" id="strap-name-input" aria-label="Strap name" placeholder="Name (e.g. Black Rubber)" maxlength="60">
           <input type="text" id="strap-mat-input" aria-label="Strap material" placeholder="Material (optional)" maxlength="40">
@@ -5393,12 +5393,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-receipts')">
         <span class="modal-section-hdr-label">Receipts</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-receipts" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-receipts" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-receipts">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-receipts">
         <div id="edit-receipts-list"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:var(--space-2);">+ Upload Receipt</button>
+        <button type="button" class="btn btn-ghost btn-sm u-mt-2" onclick="addReceiptFromEdit()">+ Upload Receipt</button>
       </div>
     </div>
 
@@ -5406,31 +5406,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section" id="sec-accuracy-wrap" style="display:none;">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-accuracy')">
         <span class="modal-section-hdr-label">Accuracy</span>
-        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1" id="sum-sec-accuracy" style="overflow:hidden;font-size: var(--fs-xs);color: var(--muted);margin-left: var(--space-2);"></span>
+        <span class="modal-section-summary u-fw-normal u-ls-0 u-to-ellipsis u-ws-nowrap u-flex-1 u-fs-xs u-c-muted u-ml-2" id="sum-sec-accuracy" style="overflow:hidden;"></span>
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
         <!-- Manual entry form -->
         <div class="stack-2-5" id="tg-manual-entry">
-          <div class="u-tt-uppercase u-ls-tight" style="font-size: var(--fs-sm);color: var(--muted);margin-bottom: var(--space-1-5);">Manual Entry</div>
-          <div class="u-cols-1fr-1fr u-gap-2" style="display:grid;margin-bottom: var(--space-2);">
+          <div class="u-tt-uppercase u-ls-tight u-fs-sm u-c-muted u-mb-1-5">Manual Entry</div>
+          <div class="u-cols-1fr-1fr u-gap-2 u-mb-2" style="display:grid;">
             <div>
               <label for="tg-rate-input" class="caption-xs">Rate (s/day) *</label>
-              <input type="number" id="tg-rate-input" step="0.1" placeholder="" class="u-w-100pct" style="padding: var(--space-1-5) var(--space-2);border-radius: var(--radius-btn);border: 1px solid var(--border);background: var(--surface);color: var(--text);font-size: var(--fs-base);">
+              <input type="number" id="tg-rate-input" step="0.1" placeholder="" class="u-w-100pct u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface u-c-text u-fs-base">
             </div>
             <div>
               <label for="tg-be-input" class="caption-xs">Beat Error (ms)</label>
-              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" class="u-w-100pct" style="padding: var(--space-1-5) var(--space-2);border-radius: var(--radius-btn);border: 1px solid var(--border);background: var(--surface);color: var(--text);font-size: var(--fs-base);">
+              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" class="u-w-100pct u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface u-c-text u-fs-base">
             </div>
           </div>
-          <div class="u-cols-1fr-1fr u-gap-2" style="display:grid;margin-bottom: var(--space-2);">
+          <div class="u-cols-1fr-1fr u-gap-2 u-mb-2" style="display:grid;">
             <div>
               <label for="tg-amplitude-input" class="caption-xs">Amplitude (°)</label>
-              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" class="u-w-100pct" style="padding: var(--space-1-5) var(--space-2);border-radius: var(--radius-btn);border: 1px solid var(--border);background: var(--surface);color: var(--text);font-size: var(--fs-base);">
+              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" class="u-w-100pct u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface u-c-text u-fs-base">
             </div>
             <div>
               <label for="tg-bph-select" class="caption-xs">BPH</label>
-              <select id="tg-bph-select" class="u-w-100pct" style="color: var(--text);font-size: var(--fs-base);">
+              <select id="tg-bph-select" class="u-w-100pct u-c-text u-fs-base">
                 <option value="18000">18,000</option>
                 <option value="19800">19,800</option>
                 <option value="21600">21,600</option>
@@ -5442,19 +5442,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="stack-2">
             <label for="tg-notes-input" class="caption-xs">Notes</label>
-            <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" class="u-w-100pct" style="padding: var(--space-1-5) var(--space-2);border-radius: var(--radius-btn);border: 1px solid var(--border);background: var(--surface);color: var(--text);font-size: var(--fs-base);">
+            <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" class="u-w-100pct u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface u-c-text u-fs-base">
           </div>
           <button class="btn btn-primary btn-sm btn-block" onclick="saveTimegrapherManual()">Save Reading</button>
         </div>
         <!-- History list -->
-        <div id="tg-history-list" style="margin-top:var(--space-2);"></div>
+        <div id="tg-history-list" class="u-mt-2"></div>
       </div>
     </div>
 
-    <div class="modal-actions u-fw--nowrap" style="gap: var(--space-1-5);">
+    <div class="modal-actions u-fw--nowrap u-gap-1-5">
       <button id="save-watch-btn" class="btn btn-primary btn-grow" onclick="saveWatch()">Save</button>
-      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap" style="display:none;background: var(--badge-bg);border: 0.5px solid var(--badge-border);color: var(--badge-accent);font-size: var(--fs-sm);padding: var(--space-2-5) var(--space-3);border-radius: var(--radius-btn);">⭐ Enhance</button>
-      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap" style="display:none;background: var(--badge-bg);border: 0.5px solid var(--badge-border);color: var(--badge-accent);font-size: var(--fs-sm);padding: var(--space-2-5) var(--space-3);border-radius: var(--radius-btn);">$ Value</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-badge-accent u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">⭐ Enhance</button>
+      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-badge-accent u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
@@ -5466,11 +5466,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ RECEIPTS MODAL ════ -->
 <div id="receipts-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="receipts-modal-title">
-  <div class="modal" style="max-width:var(--size-120);">
+  <div class="modal u-maxw-120">
     <div class="modal-title" id="receipts-modal-title">Receipts &amp; Documents</div>
     <div id="receipts-watch-name" class="u-c-muted u-fs-base u-mb-4"></div>
     <div id="receipts-list"></div>
-    <div class="modal-actions" style="margin-top:var(--space-5);">
+    <div class="modal-actions u-mt-5">
       <button class="btn btn-primary" onclick="addReceipt()">+ Upload Receipt</button>
       <button class="btn btn-ghost"   onclick="closeReceiptsModal()">Close</button>
     </div>
@@ -5479,7 +5479,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ DELETE CONFIRM MODAL ════ -->
 <div id="del-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="del-modal-title">
-  <div class="modal" style="max-width:var(--size-90);">
+  <div class="modal u-maxw-90">
     <div class="modal-title" id="del-modal-title">Delete Watch?</div>
     <p class="u-c-muted u-fs-md u-mb-5 u-lh-body">
       This will permanently remove the watch and <strong>all its wear logs</strong>. This cannot be undone.
@@ -5493,7 +5493,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ GENERIC CONFIRM MODAL ════ -->
 <div id="confirm-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
-  <div class="modal" style="max-width:var(--size-90);">
+  <div class="modal u-maxw-90">
     <div class="modal-title" id="confirm-modal-title">Are you sure?</div>
     <p id="confirm-msg" class="u-c-muted u-fs-md u-mb-5 u-lh-body"></p>
     <div class="modal-actions">
@@ -5506,7 +5506,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
 <div id="photo-paste-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="photo-paste-modal-title">
-  <div class="modal" style="max-width:var(--size-80);">
+  <div class="modal u-maxw-80">
     <div class="modal-title" id="photo-paste-modal-title">Add Photo</div>
     <div id="photo-drop-zone"
          style="border:2px dashed var(--border);border-radius:var(--radius);padding:var(--space-7) var(--space-4) var(--space-5);text-align:center;transition:border-color var(--dur-fast);"
@@ -5527,20 +5527,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ADD FLOW V2 SHEET ════ -->
 <div id="af2-sheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="af2-sheet-title">
-  <div class="modal" style="max-width:var(--size-120);">
+  <div class="modal u-maxw-120">
     <div class="modal-title row" id="af2-sheet-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--badge-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="af2-title-text" class="grow">Identifying Watches</span>
       <span id="af2-progress-chip" class="text-caption" style="display:none;"></span>
     </div>
     <div id="af2-rows" class="u-maxh-60vh" style="overflow-y:auto;"></div>
-    <div id="af2-footer" class="modal-actions" style="margin-top:var(--space-4);"></div>
+    <div id="af2-footer" class="modal-actions u-mt-4"></div>
   </div>
 </div>
 
 <!-- ════ ADD FLOW V2 DEBUG PREVIEW ════ -->
 <div id="af2-debug-sheet" class="overlay hidden" role="dialog" aria-modal="true">
-  <div class="modal" style="max-width:var(--size-120);">
+  <div class="modal u-maxw-120">
     <div class="modal-title row-between">
       <span>Add Flow V2 — State Preview</span>
       <button type="button" aria-label="Close" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" class="btn-plain u-fs-xl u-pt-0 u-pr-0-5 u-pb-0 u-pl-0-5 u-lh-none">&times;</button>
@@ -5551,40 +5551,40 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ENHANCE ALL MODAL ════ -->
 <div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
-  <div class="modal" style="max-width:var(--size-120);">
+  <div class="modal u-maxw-120">
     <div class="modal-title row" id="enhance-all-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance Collection Data
     </div>
     <div id="enhance-all-list" class="u-maxh-60vh" style="overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button id="enhance-all-close-btn" class="btn btn-ghost" onclick="closeEnhanceAll()">Close</button>
-      <button id="enhance-all-save-all-btn" class="btn btn-primary" style="display:none;font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3-5);" onclick="saveAllEnhanceResults()">Save All</button>
+      <button id="enhance-all-save-all-btn" class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" style="display:none;" onclick="saveAllEnhanceResults()">Save All</button>
     </div>
   </div>
 </div>
 
 <!-- ════ BATCH VALUE CHECK MODAL ════ -->
 <div id="value-check-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="value-check-modal-title">
-  <div class="modal" style="max-width:var(--size-120);">
+  <div class="modal u-maxw-120">
     <div class="modal-title row" id="value-check-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Market Value Check
     </div>
     <div id="value-check-list" class="u-maxh-60vh" style="overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button id="value-check-close-btn" class="btn btn-ghost" onclick="closeValueCheck()">Close</button>
-      <button id="value-check-save-all-btn" class="btn btn-primary" style="display:none;font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3-5);" onclick="saveAllValueResults()">Save All</button>
+      <button id="value-check-save-all-btn" class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3-5 u-pb-1-5 u-pl-3-5" style="display:none;" onclick="saveAllValueResults()">Save All</button>
     </div>
   </div>
 </div>
 
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
 <div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="snap-match-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title row" id="snap-match-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Which watch is this?
     </div>
     <div id="snap-match-list" class="u-maxh-50vh" style="overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="closeSnapMatch()">Cancel</button>
     </div>
   </div>
@@ -5592,7 +5592,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ WISHLIST "ADD FROM PHOTO" LOADING OVERLAY ════ -->
 <div id="wl-photo-loading" class="overlay hidden" role="status" aria-live="polite" style="z-index:var(--z-toast);">
-  <div class="modal" style="max-width:var(--size-70);text-align:center;padding:var(--space-6) var(--space-6);">
+  <div class="modal u-maxw-70 u-ta-center u-pt-6 u-pr-6 u-pb-6 u-pl-6">
     <span class="spinner u-w-8 u-h-8 u-bd-3px-solid-border u-bdtc-gold u-r-round u-anim-spin-p7s-linear-infinite" style="display:inline-block;"></span>
     <div class="u-mt-3-5 u-fs-md u-fw-semibold">Identifying watch…</div>
     <div class="u-mt-1 u-fs-sm u-c-muted">Reading the dial and finding a match</div>
@@ -5600,23 +5600,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
-<div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
+<div id="wishlist-modal" class="overlay hidden wishlist-modal" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
   <div class="modal">
     <div class="row-between">
-      <div class="modal-title" id="wishlist-modal-title" style="margin-bottom:0;">Add to Wishlist</div>
-      <button class="btn-icon u-lh-none" onclick="closeWishlistModal()" aria-label="Close" style="font-size: var(--fs-2xl);color: var(--muted);padding: var(--space-1) var(--space-1-5);">&times;</button>
+      <div class="modal-title u-mb-0" id="wishlist-modal-title">Add to Wishlist</div>
+      <button class="btn-icon u-lh-none u-fs-2xl u-c-muted u-pt-1 u-pr-1-5 u-pb-1 u-pl-1-5" onclick="closeWishlistModal()" aria-label="Close">&times;</button>
     </div>
     <!-- Photo (hidden state) -->
     <div id="wl-img-preview" style="display:none;">
       <img id="wl-img-el" src="" alt="" style="display:none;">
     </div>
-    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" class="u-ff-inherit u-cur-pointer" style="margin-top: var(--space-1-5);margin-bottom: var(--space-2-5);background: transparent;border: 0.5px solid var(--border);color: var(--muted);font-size: var(--fs-xs);padding: var(--space-1) var(--space-2-5);border-radius: var(--radius-sm);">Add photo</button>
+    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" class="u-ff-inherit u-cur-pointer u-mt-1-5 u-mb-2-5 u-bg-transparent u-bd-0p5px-solid-border u-c-muted u-fs-xs u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
 
     <div class="form-row">
       <div class="form-group">
         <label for="wl-brand-display">Brand *</label>
         <div class="brand-ac-wrap">
-          <input type="text" id="wl-brand-display" placeholder="Type to search brands…"
+          <input type="text" id="wl-brand-display" class="wl-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
             oninput="onWlBrandInput(this.value);autoSizeInput(this)"
             onfocus="onWlBrandFocus()"
@@ -5660,7 +5660,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- No inline flex-wrap: an inline style beats the @media(max-width:640px)
          `.modal-actions { flex-wrap: wrap }` rule, which pushed the delete button
          off the right edge on phones. -->
-    <div class="modal-actions" style="gap:var(--space-1-5);">
+    <div class="modal-actions u-gap-1-5">
       <button class="btn btn-primary btn-grow" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
       <button id="wl-move-btn" class="btn btn-ghost u-ws-nowrap" onclick="moveWishlistToCollection()" style="display:none;">Move to Collection</button>
@@ -5696,7 +5696,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WATCH PREVIEW (read-only, from feed / other user profile) ════ -->
-<div id="watch-preview-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-preview-modal-title">
+<div id="watch-preview-modal" class="overlay hidden watch-preview-modal" role="dialog" aria-modal="true" aria-labelledby="watch-preview-modal-title">
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="u-items-flex-start u-gap-3 u-mb-2" style="display:flex;">
@@ -5708,7 +5708,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="wpm-ref-row"></div>
     <div id="wpm-fields" class="u-maxh-50vh" style="overflow-y:auto;"></div>
     <div id="wpm-model-row"></div>
-    <div class="modal-actions wpm-actions u-fd-row" style="gap: var(--space-2);">
+    <div class="modal-actions wpm-actions u-fd-row u-gap-2">
       <button class="btn btn-primary btn-grow" onclick="addPreviewedWatchToWishlist()">+ Wishlist</button>
       <button class="btn btn-ghost btn-grow" onclick="closeWatchPreview()">Close</button>
     </div>
@@ -5717,7 +5717,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ WISHLIST DELETE CONFIRM ════ -->
 <div id="del-wl-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="del-wl-modal-title">
-  <div class="modal" style="max-width:var(--size-90);">
+  <div class="modal u-maxw-90">
     <div class="modal-title" id="del-wl-modal-title">Delete from Wishlist?</div>
     <p class="u-c-muted u-fs-md u-mb-5 u-lh-body">
       This will permanently delete the item from your wishlist. This cannot be undone.
@@ -5786,7 +5786,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
 <div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="discover-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title row" id="discover-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
     <div class="form-group stack-4">
       <input type="text" id="discover-search" aria-label="Search people" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
@@ -5797,7 +5797,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="eyebrow eyebrow-muted stack-2-5">People You Follow</div>
       <div id="following-list"></div>
     </div>
-    <div class="modal-actions" style="margin-top:var(--space-5);">
+    <div class="modal-actions u-mt-5">
       <button class="btn btn-ghost u-gap-1-5" onclick="shareApp()" style="display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="u-shrink-0"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
       <button class="btn btn-ghost" onclick="closeDiscover()">Close</button>
     </div>
@@ -5806,7 +5806,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ CLUB INVITE MEMBERS MODAL ════ -->
 <div id="club-invite-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="club-invite-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title" id="club-invite-modal-title">Invite Members</div>
     <div class="form-group stack-4">
       <input type="text" id="club-invite-search" aria-label="Search people to invite" placeholder="Search by name or username…"
@@ -5814,7 +5814,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="club-invite-results"></div>
     <div id="club-pending-invites"></div>
-    <div class="modal-actions" style="margin-top:var(--space-5);">
+    <div class="modal-actions u-mt-5">
       <button class="btn btn-ghost" onclick="closeClubInviteModal()">Close</button>
     </div>
   </div>
@@ -5829,7 +5829,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ NEW POST MODAL ════ -->
 <div id="new-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-post-modal-title">
-  <div class="modal" style="max-width:var(--size-100);">
+  <div class="modal u-maxw-100">
     <div class="modal-title row" id="new-post-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
       <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
@@ -5889,10 +5889,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Auto-prompt after a good-quality (converged) measurement. "Share to feed"
      posts the result directly (public), bypassing the composer. -->
 <div id="msr-share-popup" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-share-popup-title">
-  <div class="modal" style="max-width:var(--size-85);text-align:center;">
+  <div class="modal u-maxw-85 u-ta-center">
     <div class="modal-title u-justify-center" id="msr-share-popup-title">Share to feed?</div>
     <div id="msr-share-popup-msg" class="u-fs-md u-c-text u-mt-1-5 u-mr-0 u-mb-4 u-ml-0 u-lh-body"></div>
-    <div class="modal-actions u-fd-column" style="gap: var(--space-2);">
+    <div class="modal-actions u-fd-column u-gap-2">
       <button id="msr-share-popup-confirm" class="btn btn-primary btn-block">Share to feed</button>
       <button class="btn btn-ghost btn-block u-c-muted" onclick="dismissMsrSharePopup()">Not now</button>
     </div>
@@ -5901,7 +5901,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ EDIT POST MODAL ════ -->
 <div id="edit-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-post-modal-title">
-  <div class="modal" style="max-width:var(--size-100);">
+  <div class="modal u-maxw-100">
     <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
       <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
@@ -5973,14 +5973,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ DELETE ACCOUNT MODAL ════ -->
 <div id="delete-account-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-account-modal-title">
-  <div class="modal" style="max-width:var(--size-95);text-align:center;">
+  <div class="modal u-maxw-95 u-ta-center">
     <div id="da-step-1" class="del-acct-step">
       <div class="u-mb-2 u-justify-center" style="display:flex;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div class="modal-title text-danger" id="delete-account-modal-title">Delete Account?</div>
       <p class="u-c-muted u-fs-md u-lh-body u-mt-2 u-mr-0 u-mb-5 u-ml-0">
         This will permanently erase <strong class="u-c-text">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong class="u-c-text">This cannot be undone.</strong>
       </p>
-      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white" style="padding: var(--space-2-5);" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
@@ -5989,7 +5989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <p class="u-c-muted u-fs-md u-lh-body u-mt-2 u-mr-0 u-mb-5 u-ml-0">
         Every watch, every wear log, every wishlist item — <strong class="u-c-text">gone forever.</strong> There is no way to recover this data.
       </p>
-      <button id="da-final-btn" class="btn btn-block u-mb-2-5 u-bg-danger-fill u-c-white u-fw-bold" style="padding: var(--space-2-5);" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button id="da-final-btn" class="btn btn-block u-mb-2-5 u-bg-danger-fill u-c-white u-fw-bold u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteAccount()">Permanently Delete Everything</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteAccount()">Cancel</button>
     </div>
   </div>
@@ -5997,7 +5997,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ REC SETTINGS MODAL ════ -->
 <div id="rec-settings-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rec-settings-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title row-between" id="rec-settings-modal-title">
       <span>Pick Settings</span>
       <button type="button" class="btn-ghost u-bg-none u-bd-none u-fs-xl u-cur-pointer u-c-muted" aria-label="Close" onclick="closeRecSettings()">&times;</button>
@@ -6008,13 +6008,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ DELETE CLUB MODAL ════ -->
 <div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-club-modal-title">
-  <div class="modal" style="max-width:var(--size-95);text-align:center;">
+  <div class="modal u-maxw-95 u-ta-center">
     <div id="dc-step-1">
       <div class="u-mb-2 u-justify-center" style="display:flex;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div class="modal-title text-danger" id="delete-club-modal-title">Delete this club?</div>
       <p id="dc-club-name" class="u-fw-bold u-mt-1 u-mr-0 u-mb-3 u-ml-0"></p>
       <p class="u-c-muted u-fs-md u-lh-body u-mb-5">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong class="u-c-text">This cannot be undone.</strong></p>
-      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white" style="padding: var(--space-2-5);" onclick="deleteClub()">Yes, Delete This Club</button>
+      <button class="btn btn-block u-mb-2-5 u-bg-danger u-c-white u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost btn-block" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -6025,7 +6025,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="mention-ac" class="mention-ac" role="listbox"></div>
 
 <div id="feedback-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title row" id="feedback-modal-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span id="fb-modal-title-text">Send Feedback</span></div>
     <div id="fb-request-hint" class="u-fs-sm u-c-muted u-mb-2 u-lh-body" style="display:none;">We&#8217;ll check the brand and add it automatically &#8212; usually within a few minutes.</div>
     <div id="fb-type-picker" class="u-gap-2 u-mb-2" style="display:flex;">
@@ -6045,7 +6045,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ REPORT MODAL ════ -->
 <div id="report-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
-  <div class="modal" style="max-width:var(--size-95);">
+  <div class="modal u-maxw-95">
     <div class="modal-title row" id="report-modal-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report
     </div>
@@ -6079,12 +6079,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ADMIN USER DETAIL MODAL ════ -->
 <div id="admin-user-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
-  <div class="modal" style="max-width:var(--size-105);">
+  <div class="modal u-maxw-105">
     <div class="modal-title row" id="admin-user-modal-title">User Detail</div>
     <div id="admin-user-modal-body" class="u-maxh-70vh u-mt-0 u-mr-calc-1-1 u-mb-0 u-ml-calc-1-1 u-pt-0 u-pr-1 u-pb-0 u-pl-1" style="overflow-y:auto;">
       <div class="note-md">Loading…</div>
     </div>
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-ghost" onclick="viewUserProfile(window._adminDetailUserId);closeAdminUserModal()">View Profile</button>
       <button class="btn btn-ghost" onclick="closeAdminUserModal()">Close</button>
     </div>
@@ -6093,7 +6093,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ USERNAME PROMPT MODAL ════ -->
 <div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
-  <div class="modal" style="max-width:var(--size-95);">
+  <div class="modal u-maxw-95">
     <div class="u-ta-center u-mb-3"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <div class="modal-title u-ta-center u-fs-xl" id="username-prompt-title">Set up your profile</div>
     <p class="u-c-muted u-fs-md u-lh-body u-ta-center u-mt-1-5 u-mr-0 u-mb-4 u-ml-0">Add your name and pick a username so others can find you. You can always change these later.</p>
@@ -6200,7 +6200,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="modal-actions" style="margin-top:var(--space-4);">
+    <div class="modal-actions u-mt-4">
       <button class="btn btn-primary" onclick="saveLog()">Log This Wear</button>
       <button class="btn btn-ghost"   onclick="closeTrackModal()">Cancel</button>
     </div>
@@ -6208,7 +6208,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-log-modal-title">
-  <div class="modal" style="max-width:var(--size-95);">
+  <div class="modal u-maxw-95">
     <div class="modal-title row" id="edit-log-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
     <div class="form-group">
       <label for="edit-log-date">Date</label>
@@ -6244,7 +6244,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="create-club-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="create-club-modal-title">
-  <div class="modal" style="max-width:var(--size-100);">
+  <div class="modal u-maxw-100">
     <div class="modal-title" id="create-club-modal-title">Create a Club</div>
     <div class="form-group">
       <label for="cc-name" class="form-label">Club Name *</label>
@@ -6270,10 +6270,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal u-bdc-badge-border" style="position:relative;max-width: var(--size-130);background: var(--badge-bg);"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:var(--z-modal-top);"><div class="modal u-bdc-badge-border" style="position:relative;max-width: var(--size-90);background: var(--badge-bg);"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal u-bdc-badge-border u-maxw-130 u-bg-badge-bg" style="position:relative;"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:var(--z-modal-top);"><div class="modal u-bdc-badge-border u-maxw-90 u-bg-badge-bg" style="position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
 <div id="badge-reveal-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="badge-reveal-title">
-  <div class="modal u-bdc-badge-border" style="max-width: var(--size-85);background: var(--badge-bg);text-align: center;">
+  <div class="modal u-bdc-badge-border u-maxw-85 u-bg-badge-bg u-ta-center">
     <div class="modal-title u-justify-center u-c-badge-text" id="badge-reveal-title">🎉 <span id="badge-reveal-count"></span></div>
     <div id="badge-reveal-medallions" class="u-gap-1-5 u-fw--wrap u-justify-center u-mt-3 u-mr-0 u-mb-1-5 u-ml-0" style="display:flex;"></div>
     <div id="badge-reveal-names" class="u-fs-base u-c-badge-text u-op-soft u-mb-4 u-lh-body"></div>
@@ -6285,7 +6285,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="fact-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fact-modal-title">
-  <div class="modal" style="max-width:var(--size-90);">
+  <div class="modal u-maxw-90">
     <div class="modal-title u-justify-center" id="fact-modal-title">Did you know?</div>
     <div id="fact-modal-eyebrow" class="u-fs-xs u-fw-bold u-ls-eyebrow u-tt-uppercase u-c-gold-text u-mt-2 u-mr-0 u-mb-1-5 u-ml-0 u-ta-center"></div>
     <div id="fact-modal-card" class="u-mb-3-5"></div>
@@ -6779,7 +6779,7 @@ function _drainBadgeToast() {
     el.innerHTML = `<div class="u-items-center u-gap-3 u-cur-pointer" style="display:flex;" onclick="openBadgeWall()">
       ${badgeMedallionSvg(b, 56, true)}
       <div><div class="u-fs-base u-fw-semibold u-c-badge-text">${escHtml(b.name)}</div>
-      <div style="font-size:var(--fs-sm);color:${cc.stroke};margin-top:var(--space-0-5);">${escHtml(b.flavor)}</div></div>
+      <div class="u-fs-sm u-mt-0-5" style="color:${cc.stroke};">${escHtml(b.flavor)}</div></div>
     </div>`;
   } else {
     const medallions = batch.map(b => badgeMedallionSvg(b, 44, true)).join('');
@@ -7492,7 +7492,7 @@ function badgeWallProfileSection() {
       <div class="u-gap-2 u-fw--wrap u-justify-center u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="display:flex;">
         ${previewCards}${lockedPreview}
       </div>
-      <button class="btn btn-ghost btn-block u-mt-2" style="font-size: var(--fs-sm);padding: var(--space-1-5);" onclick="openBadgeWall()">View All Badges</button>
+      <button class="btn btn-ghost btn-block u-mt-2 u-fs-sm u-pt-1-5 u-pr-1-5 u-pb-1-5 u-pl-1-5" onclick="openBadgeWall()">View All Badges</button>
     </div>`;
 }
 // ── END BADGE SYSTEM ──────────────────────────────────────────────────────
@@ -8255,7 +8255,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.18.34';
+const APP_VERSION = '22.18.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9284,7 +9284,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           </div>
           <div class="toggle-row" id="push-setting-row" style="display:none;">
             <span class="toggle-label">Push notifications <span id="push-setting-state" class="u-c-muted u-fw-normal u-fs-base"></span></span>
-            <button id="push-setting-btn" class="btn btn-ghost btn-sm" style="padding:var(--space-1) var(--space-3);">Turn on</button>
+            <button id="push-setting-btn" class="btn btn-ghost btn-sm u-pt-1 u-pr-3 u-pb-1 u-pl-3">Turn on</button>
           </div>
           <div class="u-fs-sm u-c-muted u-mt-3 u-mr-0 u-mb-2-5 u-ml-0 u-bdt-1px-solid-border u-pt-3">Sharing</div>
           <div class="toggle-row">
@@ -9439,7 +9439,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-card">
         <div class="profile-page-section-title">Posts</div>
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
-        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost btn-block u-mt-2" style="font-size: var(--fs-sm);padding: var(--space-1-5);" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost btn-block u-mt-2 u-fs-sm u-pt-1-5 u-pr-1-5 u-pb-1-5 u-pl-1-5" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
@@ -10026,6 +10026,7 @@ function openFriendPopover(anchorEl, userId) {
 
   const popover = document.createElement('div');
   popover.id = 'friend-popover';
+  popover.className = 'friend-popover';        /* the rule selects the class; the id is for JS */
   popover.innerHTML = renderFriendPopoverContent(userId, req);
 
   document.body.appendChild(backdrop);
@@ -14963,7 +14964,7 @@ function showFeedLoadMoreButton() {
   const s = document.getElementById('feed-load-sentinel');
   if (!s) return;
   if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
-  s.innerHTML = '<button class="btn btn-ghost" style="padding:var(--space-2) var(--space-4);" onclick="loadMoreFeed()">Load more</button>';
+  s.innerHTML = '<button class="btn btn-ghost u-pt-2 u-pr-4 u-pb-2 u-pl-4" onclick="loadMoreFeed()">Load more</button>';
 }
 
 // ── Floating "Post" button ────────────────────────────────────────────────
@@ -16015,7 +16016,7 @@ function renderEpWatchDisplay() {
     const w = effectiveWatch;
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-sm u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div style="width:var(--size-8);height:var(--size-8);border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="u-w-8 u-h-8 u-r-sm u-shrink-0 u-items-center u-justify-center u-fs-2xs u-fw-bold" style="display:flex;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     display.innerHTML = `<div class="watch-suggestion u-mt-1">
       ${thumb}
       <div class="grow-clip"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
@@ -16103,7 +16104,7 @@ function toggleEpWatchPicker() {
       const isSel = w.id === currentWatchId;
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);font-size:var(--fs-3xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar u-w-8 u-h-8 u-fs-3xs" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div class="grow-clip">
@@ -16698,7 +16699,7 @@ function renderNpWatchDisplay() {
   if (w) {
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-sm u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div style="width:var(--size-8);height:var(--size-8);border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="u-w-8 u-h-8 u-r-sm u-shrink-0 u-items-center u-justify-center u-fs-2xs u-fw-bold" style="display:flex;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     el.innerHTML = `<div class="watch-suggestion u-bg-mix-success-8 u-bdc-mix-success-25">
       ${thumb}
       <div class="u-flex-1 u-minw-0 u-fs-base"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
@@ -16796,7 +16797,7 @@ function toggleNpWatchPicker() {
       const isSel = w.id === npIdentifiedWatchId;
       const thumb = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);font-size:var(--fs-3xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar u-w-8 u-h-8 u-fs-3xs" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:var(--space-2) var(--space-2);">
         ${thumb}
         <div class="grow-clip">
@@ -18121,7 +18122,7 @@ function renderRecSettingsBody() {
     const included = !excluded.has(w.id);
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-sm u-of-cover" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);font-size:var(--fs-2xs);border-radius:var(--radius-sm);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar u-w-8 u-h-8 u-fs-2xs u-r-sm" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     return `<div class="toggle-row u-gap-2-5">
       ${thumb}
       <div class="grow-clip">
@@ -19525,7 +19526,7 @@ async function loadAdminReports() {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(1000), 10000);
-  if (error) { el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0"><div class="u-c-danger-text u-fs-base u-mb-3">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:var(--fs-sm);">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0"><div class="u-c-danger-text u-fs-base u-mb-3">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost u-fs-sm" onclick="loadAdminReports()">↻ Retry</button></div>`; return; }
   _adminReportsData = data || [];
 
   // Fetch profiles for reporters and reported users
@@ -19600,7 +19601,7 @@ function renderReportCard(r) {
     <div class="fb-card" style="margin-bottom:var(--space-3);padding:var(--space-3);border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? 'var(--success)' : 'var(--muted)'};">
       <div class="u-justify-space-between u-items-center u-mb-1" style="display:flex;">
         <span class="fb-type-badge u-tt-capitalize">${escHtml(r.reason)}</span>
-        <span style="font-size:var(--fs-sm);${statusCls};font-weight:var(--fw-semibold);text-transform:uppercase;">${r.status}</span>
+        <span class="u-fs-sm u-fw-semibold u-tt-uppercase" style="${statusCls};">${r.status}</span>
       </div>
       <div class="u-fs-sm u-c-muted u-mb-1">
         ${escHtml(r.content_type)} by <strong>${escHtml(reportedName)}</strong> · reported by ${escHtml(reporterName)} · ${date}
@@ -20078,7 +20079,7 @@ async function loadAdminStats(force = false) {
   } catch(e) {
     el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0">
       <div class="u-c-danger-text u-fs-base u-mb-3">Failed to load stats: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:var(--fs-sm);">↻ Retry</button>
+      <button class="btn btn-ghost u-fs-sm" onclick="loadAdminStats()">↻ Retry</button>
     </div>`;
   }
 }
@@ -20215,7 +20216,7 @@ async function openAdminUserDetail(userId) {
   } catch(e) {
     body.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0">
       <div class="u-c-danger-text u-fs-base u-mb-3">Failed to load: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)" style="font-size:var(--fs-sm);">Retry</button>
+      <button class="btn btn-ghost u-fs-sm" data-uid="${escAttr(userId)}" onclick="openAdminUserDetail(this.dataset.uid)">Retry</button>
     </div>`;
   }
 }
@@ -20269,7 +20270,7 @@ async function renderAdminTraffic(force = false) {
     const dailyRows = (t.daily || [])
       .map(d => {
         const pct = Math.round(((Number(d.count) || 0) / dailyMax) * 100);
-        return `<div class="u-items-center u-justify-space-between u-fs-sm u-pt-1 u-pr-0 u-pb-1 u-pl-0 u-bdb-1px-solid-border u-fvn-tabular-nums" style="display:flex;"><span class="u-c-muted u-w-20 u-shrink-0">${String(d.day).slice(5)}</span><span class="grow"><span style="display:block;height:var(--size-2-5);width:${pct}%;background:var(--gold-text);border-radius:var(--radius-hair);"></span></span><span class="u-c-gold-text u-fw-semibold u-w-8 u-ta-right">${d.count}</span></div>`;
+        return `<div class="u-items-center u-justify-space-between u-fs-sm u-pt-1 u-pr-0 u-pb-1 u-pl-0 u-bdb-1px-solid-border u-fvn-tabular-nums" style="display:flex;"><span class="u-c-muted u-w-20 u-shrink-0">${String(d.day).slice(5)}</span><span class="grow"><span class="u-h-2-5 u-bg-gold-text u-r-hair" style="display:block;width:${pct}%;"></span></span><span class="u-c-gold-text u-fw-semibold u-w-8 u-ta-right">${d.count}</span></div>`;
       }).join('');
 
     const statRow = (label, value, sub) => `<div class="u-justify-space-between u-items-baseline u-fs-base u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdb-1px-solid-border" style="display:flex;"><span>${label}</span><span class="u-fw-semibold"><span class="text-gold">${value}</span>${sub ? `<span class="u-c-muted u-fs-sm u-ml-1">${sub}</span>` : ''}</span></div>`;
@@ -20325,7 +20326,7 @@ async function renderAdminTraffic(force = false) {
   } catch(e) {
     el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0">
       <div class="u-c-danger-text u-fs-base u-mb-3">Failed to load traffic: ${escHtml(e.message)}</div>
-      <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:var(--fs-sm);">↻ Retry</button>
+      <button class="btn btn-ghost u-fs-sm" onclick="renderAdminTraffic()">↻ Retry</button>
     </div>`;
   }
 }
@@ -20591,7 +20592,7 @@ function renderEmailEngagement(data) {
     // but dimmed and labelled so the list can't be misread as 15 real readers.
     const icon = e.event_type === 'clicked' ? '🔗' : e.machine ? '⟳' : '👁';
     const dim = e.machine ? 'opacity:var(--opacity-dim);' : '';
-    return `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--border);${dim}"><span>${icon} ${escHtml(masked)}${e.machine ? '<span class="u-c-muted u-fs-xs u-ml-1-5">prefetch</span>' : ''}</span><span class="caption-xs">${ago}</span></div>`;
+    return `<div class="u-justify-space-between u-fs-sm u-pt-1 u-pr-0 u-pb-1 u-pl-0 u-bdb-1px-solid-border" style="display:flex;${dim};"><span>${icon} ${escHtml(masked)}${e.machine ? '<span class="u-c-muted u-fs-xs u-ml-1-5">prefetch</span>' : ''}</span><span class="caption-xs">${ago}</span></div>`;
   }).join('');
 
   return `
@@ -20703,7 +20704,7 @@ async function loadAdminFeedback() {
     withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
   ]);
   const { data, error } = fbRes;
-  if (error) { el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0"><div class="u-c-danger-text u-fs-base u-mb-3">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:var(--fs-sm);">↻ Retry</button></div>`; return; }
+  if (error) { el.innerHTML = `<div class="u-ta-center u-pt-6 u-pr-0 u-pb-6 u-pl-0"><div class="u-c-danger-text u-fs-base u-mb-3">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost u-fs-sm" onclick="loadAdminFeedback()">↻ Retry</button></div>`; return; }
   // Normalize review-prompt feedback (app_feedback) into the same card shape
   const appFeedback = (appFbRes?.data || []).map(a => ({
     id: a.id,
@@ -21787,7 +21788,7 @@ function renderBroadcastDrafts() {
   el.innerHTML = '<div class="eyebrow eyebrow-muted stack-1">Saved Drafts <span class="u-tt-none u-fw-normal">— order here sets which sends first</span></div>' +
     drafts.map((d, i) => `<div class="u-items-center u-gap-1-5 u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-bg-surface u-r-sm u-mb-1 u-fs-base" style="display:flex;">
       <span class="u-c-muted u-fs-sm u-w-4 u-ta-right u-flex-0-0-auto">${i + 1}</span>
-      <button class="btn btn-ghost btn-grow u-to-ellipsis u-ws-nowrap u-ta-left" style="overflow:hidden;padding: var(--space-0-5) var(--space-1);" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-ghost btn-grow u-to-ellipsis u-ws-nowrap u-ta-left u-pt-0-5 u-pr-1 u-pb-0-5 u-pl-1" style="overflow:hidden;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
       <button class="btn btn-ghost" style="padding:0 var(--space-1);font-size:var(--fs-xs);line-height:var(--lh-tight);" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
       <span class="u-c-muted u-fs-sm u-ws-nowrap">${new Date(d.savedAt).toLocaleDateString()}</span>
@@ -22077,7 +22078,7 @@ function renderWatchSelector() {
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-9 u-h-9 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:var(--size-9);height:var(--size-9);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar u-w-9 u-h-9" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
@@ -22103,7 +22104,7 @@ function openTrackModal(id) {
   const thumbEl = document.getElementById('tl-watch-thumb');
   thumbEl.innerHTML = w.image
     ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-12 u-h-12 u-of-cover">`
-    : `<div style="width:var(--size-12);height:var(--size-12);display:flex;align-items:center;justify-content:center;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};font-weight:var(--fw-heavy);font-size:var(--fs-md);border-radius:var(--radius);">${initials(w.brand,w.name)}</div>`;
+    : `<div class="u-w-12 u-h-12 u-items-center u-justify-center u-fw-heavy u-fs-md u-r-" style="display:flex;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
   document.getElementById('tl-watch-brand').textContent = w.brand || '';
   document.getElementById('tl-watch-name').textContent  = w.name  || '';
 
@@ -22166,7 +22167,7 @@ function renderTrackHistory() {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-6 u-h-6 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-6);height:var(--size-6);font-size:var(--fs-3xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar u-w-6 u-h-6 u-fs-3xs u-shrink-0" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
     const strapLabel = strap ? `<div class="u-fs-xs u-c-muted u-mt-1 u-lh-snug">${escHtml(strap.name)}</div>` : '';
     return `<tr>
@@ -22950,8 +22951,8 @@ async function loadCampaigns() {
       <div class="u-items-center u-justify-space-between u-mb-2" style="display:flex;">
         <div class="u-fs-md u-fw-semibold">${escHtml(c.name)}</div>
         <div class="row">
-          <span style="font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:${statusColor};">${statusLabel}</span>
-          <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:var(--fs-sm);padding:var(--space-0-5) var(--space-2);">${toggleIcon} ${toggleLabel}</button>
+          <span class="u-fs-sm u-fw-semibold" style="color:${statusColor};">${statusLabel}</span>
+          <button class="btn btn-ghost u-fs-sm u-pt-0-5 u-pr-2 u-pb-0-5 u-pl-2" onclick="toggleCampaign('${c.id}', ${!c.is_active})">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
       <div class="u-fs-sm u-c-muted u-mb-2">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup${(c.backfill_daily || 0) > 0 ? ` · backfill ${c.backfill_daily}/day` : ''} · ${sends} sent total</div>
@@ -23316,7 +23317,7 @@ function showSnapMatchPicker(matches, file) {
     const w = m.watch;
     const thumb = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-10 u-h-10 u-r-btn u-shrink-0 u-of-cover" onerror="this.style.display='none'">`
-      : `<div style="width:var(--size-10);height:var(--size-10);border-radius:var(--radius-btn);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="u-w-10 u-h-10 u-r-btn u-shrink-0 u-items-center u-justify-center u-fs-xs u-fw-bold" style="display:flex;background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     const matchLabel = m.matchType === 'reference' ? 'Ref match' : m.matchType === 'brand+model' ? 'Model match' : 'Brand match';
     return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
       ${thumb}
@@ -23550,7 +23551,7 @@ function renderGamePair() {
     const alt = i === 0 ? gamePair.bId : gamePair.aId;
     const img = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="game-card-img" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-16);height:var(--size-16);font-size:var(--fs-lg);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar u-w-16 u-h-16 u-fs-lg" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand, w.name)}</div>`;
     el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
@@ -23624,7 +23625,7 @@ function showGameResults() {
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);font-size:var(--fs-2xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar u-w-8 u-h-8 u-fs-2xs u-shrink-0" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
@@ -24052,7 +24053,7 @@ function renderCollection(force) {
       <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
       <div class="empty-text">${watches.length === 0 ? 'No watches yet' : `No ${collTagFilter} watches`}</div>
       <div class="empty-sub">${watches.length === 0 ? 'Add your first watch — snap a photo or enter it manually.' : 'Clear the filter to see all watches'}</div>
-      ${watches.length === 0 ? `<div class="u-mt-4 u-justify-center" style="display:flex;gap: var(--space-2);"><button class="btn btn-primary" onclick="openPhotoIdentify()">Add from Photo</button><button class="btn btn-ghost" onclick="openAddWatch()">Add Manually</button></div>` : ''}
+      ${watches.length === 0 ? `<div class="u-mt-4 u-justify-center u-gap-2" style="display:flex;"><button class="btn btn-primary" onclick="openPhotoIdentify()">Add from Photo</button><button class="btn btn-ghost" onclick="openAddWatch()">Add Manually</button></div>` : ''}
     </div></div>`;
     return;
   }
@@ -24146,8 +24147,8 @@ function renderCollection(force) {
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo" aria-label="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
-          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:var(--size-12);height:var(--size-12);font-size:var(--fs-lg);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>` : '';
-          const noImgBtns = !hasImg ? `<div class="u-fd-column u-items-center" style="display:flex;gap: var(--space-1);">
+          const noImgAvatar = !hasImg ? `<div class="avatar u-w-12 u-h-12 u-fs-lg" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>` : '';
+          const noImgBtns = !hasImg ? `<div class="u-fd-column u-items-center u-gap-1" style="display:flex;">
             <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit" aria-label="Edit watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo" aria-label="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
           </div>` : '';
@@ -24247,11 +24248,11 @@ function renderCollectionList(visible, today) {
   const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market, wornToday }) => {
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-7 u-h-7 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-7);height:var(--size-7);font-size:var(--fs-2xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar u-w-7 u-h-7 u-fs-2xs u-shrink-0" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     let lastWornCell = na;
     if (lastDays !== null) {
       const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? 'var(--status-expiring)' : 'var(--danger)';
-      lastWornCell = `<span style="color:${col};font-size:var(--fs-base)">${lastDays === 0 ? 'Today' : lastDays+'d ago'}</span>`;
+      lastWornCell = `<span class="u-fs-base" style="color:${col};">${lastDays === 0 ? 'Today' : lastDays+'d ago'}</span>`;
     }
     return `<tr class="u-cur-pointer" onclick="openEditWatch('${w.id}')">
       <td><div class="u-items-center u-gap-2-5" style="display:flex;">${thumb}<div>
@@ -24455,7 +24456,7 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">
-      <button type="button" class="btn btn-primary btn-block u-bg-badge-accent u-c-white u-fw-medium" onclick="enhanceSingleWatch()" style="font-size: var(--fs-sm);padding: var(--space-2-5);">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block u-bg-badge-accent u-c-white u-fw-medium u-fs-sm u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
@@ -25239,7 +25240,7 @@ function valueGainHTML(paid, market) {
   const pct = Math.round((diff / paid) * 100);
   const sign = diff >= 0 ? '+' : '−';
   const color = diff >= 0 ? 'var(--success)' : 'var(--danger-text)';
-  return `<div class="u-mt-1-5"><div class="caption-xs">Gain vs paid</div><div style="font-size:var(--fs-base);font-weight:var(--fw-medium);color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
+  return `<div class="u-mt-1-5"><div class="caption-xs">Gain vs paid</div><div class="u-fs-base u-fw-medium" style="color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
 }
 function renderValueSection() {
   const el = document.getElementById('value-section-content');
@@ -25312,7 +25313,7 @@ function renderValueSection() {
         </div>
         <div class="u-items-baseline u-gap-2 u-mt-1" style="display:flex;">
           <span class="u-fs-2xl u-fw-medium u-c-badge-text">${fmtMoney(pending)}</span>
-          ${savedPrice ? `<span style="font-size:var(--fs-sm);color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
+          ${savedPrice ? `<span class="u-fs-sm" style="color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
         </div>
         <div class="u-gap-2 u-mt-2-5" style="display:flex;">
           <button type="button" onclick="applyPendingPrice()" class="u-flex-1 u-bg-badge-accent u-c-white u-bd-none u-fs-sm u-fw-medium u-ff-inherit u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-sm u-cur-pointer">Apply ${fmtMoney(pending)}</button>
@@ -25849,7 +25850,7 @@ function renderDowReport(fl) {
       const thumb = w
         ? (w.image
             ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-round u-of-cover" onerror="this.style.display='none'">`
-            : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);font-size:var(--fs-3xs);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`)
+            : `<div class="avatar u-w-8 u-h-8 u-fs-3xs" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`)
         : `<div class="u-fs-lg u-op-faint">○</div>`;
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
@@ -26128,7 +26129,7 @@ function recCardHTML(rec) {
           anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-14 u-h-14 u-r-btn u-of-cover" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:var(--size-14);height:var(--size-14);font-size:var(--fs-lg);border-radius:var(--radius-btn);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="avatar u-w-14 u-h-14 u-fs-lg u-r-btn" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
   const tags = [];
   if (daysSince === 999) tags.push({ text: 'Never worn', cls: '' });
   else if (daysSince >= 30) tags.push({ text: `${daysSince}d idle`, cls: '' });
@@ -26197,7 +26198,7 @@ function renderNeglectedStrip() {
   el.innerHTML = list.map(({ w, days, neverWorn }) => `
     <button data-wid="${escAttr(w.id)}" onclick="openTrackModal(this.dataset.wid); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
       style="flex:0 0 auto;display:flex;align-items:center;gap:var(--space-1-5);max-width:var(--size-55);padding:var(--space-1-5) var(--space-2-5) var(--space-1-5) var(--space-1-5);border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-pill);cursor:pointer;font-family:inherit;color:var(--text);min-height:var(--size-9);">
-      <span style="width:var(--size-6);height:var(--size-6);border-radius:var(--radius-round);background:${escAttr(DEFAULT_WATCH_COLOR)};flex-shrink:0;display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-100pct u-h-100pct u-of-cover" style="display:block;">` : ''}</span>
+      <span class="u-w-6 u-h-6 u-r-round u-shrink-0" style="background:${escAttr(DEFAULT_WATCH_COLOR)};display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-100pct u-h-100pct u-of-cover" style="display:block;">` : ''}</span>
       <span class="u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
       <span class="u-fs-xs u-c-muted u-ws-nowrap">${neverWorn ? 'never' : days + 'd'}</span>
     </button>`).join('');
@@ -26257,7 +26258,7 @@ function renderWearLeaderboard(fl) {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" ${thumbSrcAttrs(w.image)} alt="" class="u-w-8 u-h-8 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:var(--size-8);height:var(--size-8);background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar u-w-8 u-h-8" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     const share = r.pct == null ? '—' : r.pct + '%';
     const dim = r.wears === 0 ? 'opacity:var(--opacity-dim);' : '';
     // Name on its own line, stats beneath: the single-line layout truncated 4 of
@@ -26328,7 +26329,7 @@ function renderStatsRow(fl) {
   let valHtml = '';
   if (pricePaid) {
     if (hasMarket) {
-      valHtml = `<table class="u-bc-collapse u-mt-0 u-mr-auto u-mb-0 u-ml-auto"><tr><td class="u-ta-right u-pt-0 u-pr-1 u-pb-0 u-pl-0 u-ws-nowrap">Paid</td><td class="u-ta-right u-pt-0 u-pr-0 u-pb-0 u-pl-0 u-ws-nowrap">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td class="u-ta-right u-pt-0 u-pr-1 u-pb-0 u-pl-0 u-ws-nowrap">Market</td><td class="u-ta-right u-pt-0 u-pr-0 u-pb-0 u-pl-0 u-ws-nowrap">${fmtMoney(marketVal)}</td><td class="u-pt-0 u-pr-0 u-pb-0 u-pl-1 u-ws-nowrap"><span style="color:${pctColor};font-size:var(--fs-aside);">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
+      valHtml = `<table class="u-bc-collapse u-mt-0 u-mr-auto u-mb-0 u-ml-auto"><tr><td class="u-ta-right u-pt-0 u-pr-1 u-pb-0 u-pl-0 u-ws-nowrap">Paid</td><td class="u-ta-right u-pt-0 u-pr-0 u-pb-0 u-pl-0 u-ws-nowrap">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td class="u-ta-right u-pt-0 u-pr-1 u-pb-0 u-pl-0 u-ws-nowrap">Market</td><td class="u-ta-right u-pt-0 u-pr-0 u-pb-0 u-pl-0 u-ws-nowrap">${fmtMoney(marketVal)}</td><td class="u-pt-0 u-pr-0 u-pb-0 u-pl-1 u-ws-nowrap"><span class="u-fs-aside" style="color:${pctColor};">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
     } else {
       valHtml = `<div class="stat-sub u-ws-nowrap">${fmtMoney(pricePaid)}</div>`;
     }
@@ -26421,14 +26422,14 @@ function renderChUsecase(fl) {
       const color = UC_COL[k] || dsToken('--uc-other');
       const label = k[0].toUpperCase() + k.slice(1);
       return `<div class="u-items-center u-gap-3" style="display:flex;">
-        <div style="width:var(--size-2-5);height:var(--size-2-5);border-radius:var(--radius-round);background:${color};flex-shrink:0;"></div>
+        <div class="u-w-2-5 u-h-2-5 u-r-round u-shrink-0" style="background:${color};"></div>
         <div class="grow-clip">
           <div class="u-justify-space-between u-items-baseline u-mb-1" style="display:flex;">
             <span class="u-fs-base u-fw-semibold">${label}</span>
             <span class="caption">${cnt} wear${cnt!==1?'s':''} &nbsp;<strong class="u-c-text">${pct}%</strong></span>
           </div>
           <div class="u-h-1 u-r-hair u-bg-surface2" style="overflow:hidden;">
-            <div style="height:100%;border-radius:var(--radius-hair);background:${color};width:${barW}%;"></div>
+            <div class="u-h-100pct u-r-hair" style="background:${color};width:${barW}%;"></div>
           </div>
         </div>
       </div>`;
@@ -28898,7 +28899,7 @@ async function checkBatchWatchValues(ids) {
       if (statusEl) {
         statusEl.innerHTML = `<span class="text-gold-strong">${fmtMoney(mid)}</span>${rangeStr ? ' <span class="caption-xs">' + rangeStr + '</span>' : ''}`;
       }
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveValueResult(${i})">Save</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveValueResult(${i})">Save</button>`;
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
     }
@@ -29290,7 +29291,7 @@ function maybeShowEnhanceNudge(watch, surface) {
   safeLS.set(dayKey, today);
   const id = escAttr(watch.id);
   const sfc = escAttr(surface || '');
-  slot.innerHTML = `<div id="enhance-nudge-card">
+  slot.innerHTML = `<div id="enhance-nudge-card" class="enhance-nudge-card">
     <div class="enh-nudge-copy">
       <div class="enh-nudge-title"><b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
       <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
@@ -29431,7 +29432,7 @@ async function enhanceAllWatches(scopedIds) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
@@ -29458,7 +29459,7 @@ async function enhanceAllWatches(scopedIds) {
                 totalWithUpdates++;
                 const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
-                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:var(--fs-sm);padding:var(--space-1-5) var(--space-3);" onclick="saveEnhanceResult(${i})">Save</button>`;
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary u-fs-sm u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
                 if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
               }
@@ -30097,7 +30098,7 @@ async function loadShareComments(kind) {
 function shareCommentChipHtml(kind, token) {
   const th = groupCommentsByToken(_shareComments[kind]).get(token) || [];
   if (!th.length) return '';
-  return `<button class="btn btn-ghost btn-sm" style="padding:var(--space-0-5) var(--space-2);font-size:var(--fs-xs);" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
+  return `<button class="btn btn-ghost btn-sm u-pt-0-5 u-pr-2 u-pb-0-5 u-pl-2 u-fs-xs" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}',this.dataset.thread)">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
 }
 
 // The expanded thread under a link row (only when _shareThreadOpen === token).
@@ -33485,7 +33486,7 @@ async function loadTgHistory() {
     return `<div data-tg-entry data-tg-date="${isoDate}" class="u-pt-2 u-pr-0 u-pb-2 u-pl-0 u-bdb-1px-solid-border u-fs-base">
       <div class="row-between">
         <div>
-          <span style="font-weight:var(--fw-semibold);color:${rateColor};">${rateStr}</span>
+          <span class="u-fw-semibold" style="color:${rateColor};">${rateStr}</span>
           ${details ? `<span class="u-c-muted u-ml-1-5">${details}</span>` : ''}
         </div>
         <div class="row">

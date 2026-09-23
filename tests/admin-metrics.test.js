@@ -276,7 +276,7 @@ describe('Admin stats cache (sql/2026-08-15-admin-stats-cache.sql)', () => {
   it('the ↻ Refresh buttons force a recompute; tab open and Retry read the cache', () => {
     expect(html).toContain('onclick="loadAdminStats(true)">↻ Refresh');
     expect(html).toContain('onclick="renderAdminTraffic(true)">↻ Refresh');
-    expect(html).toContain('onclick="loadAdminStats()" style="font-size:var(--fs-sm);">↻ Retry');
+    expect(html).toContain('onclick="loadAdminStats()">↻ Retry');
     expect(html).toContain('const cacheArgs = { p_force: force === true };');
   });
   it('the SQL wraps exactly those RPCs and keeps the live ones unwrapped', () => {

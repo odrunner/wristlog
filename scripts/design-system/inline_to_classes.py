@@ -46,6 +46,32 @@ def slug(v):
     v = v.replace('%', 'pct').replace('.', 'p').replace('/', '-').replace(',', '-')
     v = re.sub(r'[^A-Za-z0-9-]+', '-', v).strip('-').lower()
     return re.sub(r'-+', '-', v)
+def split_decls(raw):
+    """Split a style attribute into declarations, keeping a ${...} or a quoted run intact. None when the text
+    cannot be split safely (an unclosed interpolation or quote)."""
+    out, cur, depth, quote = [], '', 0, None
+    i = 0
+    while i < len(raw):
+        c = raw[i]
+        if quote:
+            cur += c
+            if c == quote: quote = None
+        elif c in '\'"`': quote = c; cur += c
+        elif raw.startswith('${', i): 
+            j = raw.find('}', i)
+            if j == -1: return None
+            cur += raw[i:j + 1]; i = j + 1; continue
+        elif c == '(': depth += 1; cur += c
+        elif c == ')': depth -= 1; cur += c
+        elif c == ';' and depth == 0 and not quote:
+            if cur.strip(): out.append(cur.strip())
+            cur = ''
+        else: cur += c
+        i += 1
+    if quote or depth: return None
+    if cur.strip(): out.append(cur.strip())
+    return out
+
 def parts(val):
     """Split a shorthand on top-level spaces. None when the value has unbalanced brackets."""
     out, cur, depth = [], '', 0
@@ -149,9 +175,8 @@ def convert(text, fname):
                 if any(c in seg for c in ('"', "'", '=')):
                     skipped['the tag is assembled by code'] += 1; return tag
             raw = sm.group(2)
-            if '${' in raw or "'" in raw or '"' in raw or '`' in raw:        # a value built by code: splitting it is not safe
-                skipped['built by code'] += 1; return tag
-            decls = [d.strip() for d in raw.split(';') if d.strip()]
+            decls = split_decls(raw)
+            if decls is None: skipped['built by code'] += 1; return tag
             keep, add = [], []
             statics = {}
             for d in decls:
