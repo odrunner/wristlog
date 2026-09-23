@@ -3,8 +3,6 @@ import {
   buildWatchDesc,
   extractJson,
   isCacheFresh,
-  isInRateWindow,
-  mergePriceHistory,
   roundEstimate,
   salvageJson,
   utcDayStartIso,
@@ -194,43 +192,6 @@ Deno.test("isCacheFresh — future date is not treated as fresh (negative age)",
 Deno.test("utcDayStartIso — truncates to start of UTC day", () => {
   const mid = Date.parse("2026-06-01T15:42:09Z");
   assertEquals(utcDayStartIso(mid), "2026-06-01T00:00:00.000Z");
-});
-
-Deno.test("isInRateWindow — true when window_start is within today", () => {
-  assertEquals(isInRateWindow("2026-06-01T08:00:00Z", "2026-06-01T00:00:00.000Z"), true);
-});
-
-Deno.test("isInRateWindow — false for prior-day window or missing", () => {
-  assertEquals(isInRateWindow("2026-05-31T23:00:00Z", "2026-06-01T00:00:00.000Z"), false);
-  assertEquals(isInRateWindow(null, "2026-06-01T00:00:00.000Z"), false);
-});
-
-Deno.test("mergePriceHistory — appends new price and preserves prior as 'previous'", () => {
-  const watch = { market_price: 9000, market_price_date: "2026-05-01", price_history: [] };
-  const out = mergePriceHistory(watch, 9500, "2026-06-01");
-  assertEquals(out, [
-    { src: "previous", date: "2026-05-01", price: 9000 },
-    { src: "WRotate", date: "2026-06-01", price: 9500 },
-  ]);
-});
-
-Deno.test("mergePriceHistory — does not duplicate an already-recorded prior price", () => {
-  const watch = {
-    market_price: 9000,
-    market_price_date: "2026-05-01",
-    price_history: [{ src: "WRotate", date: "2026-05-01", price: 9000 }],
-  };
-  const out = mergePriceHistory(watch, 9500, "2026-06-01");
-  assertEquals(out, [
-    { src: "WRotate", date: "2026-05-01", price: 9000 },
-    { src: "WRotate", date: "2026-06-01", price: 9500 },
-  ]);
-});
-
-Deno.test("mergePriceHistory — no prior price just appends the new one", () => {
-  const watch = { market_price: null, market_price_date: null, price_history: null };
-  const out = mergePriceHistory(watch, 4200, "2026-06-01");
-  assertEquals(out, [{ src: "WRotate", date: "2026-06-01", price: 4200 }]);
 });
 
 Deno.test("roundEstimate — rounds to nearest $50", () => {

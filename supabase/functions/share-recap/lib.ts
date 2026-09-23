@@ -38,12 +38,6 @@ export function isValidPeriod(m: string | null | undefined): boolean {
   return y >= 2020 && y <= 2100;
 }
 
-export function prevPeriodOf(period: string): string {
-  const y = Number(period.slice(0, 4));
-  const m = Number(period.slice(5, 7));
-  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
-}
-
 export function monthLabel(period: string, withYear = true): string {
   const NAMES = ["January", "February", "March", "April", "May", "June",
                  "July", "August", "September", "October", "November", "December"];

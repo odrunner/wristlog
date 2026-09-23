@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeLocation, renderPostLocationHtml } from '../wrotate_test.js';
+import { normalizeLocation } from '../wrotate_test.js';
 
 // Spec: 2026-06-01-post-location-design.md
 
@@ -29,34 +29,6 @@ describe('normalizeLocation', () => {
 
   it('passes a preset through unchanged', () => {
     expect(normalizeLocation('Travel')).toBe('Travel');
-  });
-});
-
-describe('renderPostLocationHtml', () => {
-  it('renders a pinned label with a grayscale SVG pin (not the red emoji) when present', () => {
-    const out = renderPostLocationHtml('Home');
-    expect(out).toContain(' · ');
-    expect(out).toContain('Home');
-    expect(out).toContain('<svg'); // grayscale pin icon
-    expect(out).toContain('currentColor'); // inherits muted text color, not red
-    expect(out).not.toContain('📍'); // no red emoji pin
-  });
-
-  it('returns empty string when absent', () => {
-    expect(renderPostLocationHtml(null)).toBe('');
-    expect(renderPostLocationHtml('')).toBe('');
-    expect(renderPostLocationHtml('   ')).toBe('');
-  });
-
-  it('escapes HTML in the free-text location (no injection)', () => {
-    const out = renderPostLocationHtml('<script>alert(1)</script>');
-    expect(out).not.toContain('<script>alert');
-    expect(out).toContain('&lt;script&gt;');
-  });
-
-  it('normalizes the location text before rendering (trim + cap)', () => {
-    expect(renderPostLocationHtml('  Geneva  ')).toContain('Geneva');
-    expect(renderPostLocationHtml('  Geneva  ')).not.toContain('  Geneva');
   });
 });
 

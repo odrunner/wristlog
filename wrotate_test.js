@@ -171,12 +171,6 @@ export function fillCampaignTokens(text, vars, esc) {
     .replace(/\{\{fact\}\}/g, esc(vars.fact));
 }
 
-// Tokens no single pre-rendered HTML can fill. send-broadcast (cohort blasts)
-// renders once for everyone, so a body carrying these must be blocked there.
-export function unresolvedCampaignTokens(text) {
-  return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
-}
-
 // ── Login fun-fact modal ───────────────────────────────────────────────────
 // Spec: docs/superpowers/specs/2026-07-27-login-fun-fact-modal-design.md
 // Fun facts are only reachable after logging a wear, so the people who most
@@ -303,23 +297,6 @@ export function wearLeaderboard(watches, logs, cutoff) {
       rank,
     };
   });
-}
-
-export function computeStreaks(logs, today) {
-  const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
-  if (dates.length === 0) return { current: 0, best: 0, status: 'none' };
-  const present = new Set(dates);
-  let best = 1, run = 1;
-  for (let i = 1; i < dates.length; i++) {
-    if (addDaysStr(dates[i - 1], 1) === dates[i]) { run++; best = Math.max(best, run); }
-    else run = 1;
-  }
-  const latest = dates[dates.length - 1];
-  const yesterday = addDaysStr(today, -1);
-  if (latest !== today && latest !== yesterday) return { current: 0, best, status: 'none' };
-  let current = 1, cursor = latest;
-  while (present.has(addDaysStr(cursor, -1))) { current++; cursor = addDaysStr(cursor, -1); }
-  return { current, best, status: latest === today ? 'active' : 'at_risk' };
 }
 
 export function computeStreaksFrozen(logs, today, weekendEarn) {
@@ -1539,33 +1516,6 @@ export function guessOEMStrap(w) {
 }
 
 // ══════════════════════════════════════════
-//  BOX & PAPERS HTML (pure formatter)
-// ══════════════════════════════════════════
-
-export function boxPapersHTML(w) {
-  const b = w.hasBox, p = w.hasPapers;
-  if (!b && !p) return '';
-  if (b === 'yes' && p === 'yes')
-    return `<div class="bp-indicator"><span class="bp-item-yes">Box &amp; Papers</span></div>`;
-  const parts = [];
-  if      (b === 'yes') parts.push(`<span class="bp-item-yes">Box</span>`);
-  else if (b === 'no')  parts.push(`<span class="bp-item-no">No Box</span>`);
-  if      (p === 'yes') parts.push(`<span class="bp-item-yes">Papers</span>`);
-  else if (p === 'no')  parts.push(`<span class="bp-item-no">No Papers</span>`);
-  return parts.length ? `<div class="bp-indicator">${parts.join('<span style="color:var(--border)"> · </span>')}</div>` : '';
-}
-
-// ══════════════════════════════════════════
-//  WARRANTY BADGE HTML (pure formatter)
-// ══════════════════════════════════════════
-
-export function warrantyBadgeHTML(w, today = new Date()) {
-  const ws = warrantyStatus(w, today);
-  if (!ws) return '';
-  return `<div class="warranty-badge ${ws.cls}">${ws.text}</div>`;
-}
-
-// ══════════════════════════════════════════
 //  MARKET PRICE ROW HTML (pure formatter)
 // ══════════════════════════════════════════
 
@@ -2121,18 +2071,6 @@ export function computeTgResults(ticks, bph) {
 }
 
 // ══════════════════════════════════════════
-//  BUCKET-RATIO INTERPOLATION (rate from pair deviations)
-// ══════════════════════════════════════════
-
-export function computeMedianRate(rates) {
-  if (rates.length < 10) return null;
-  const sorted = [...rates].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  return Math.round(median * 10) / 10;
-}
-
-// ══════════════════════════════════════════
 //  ROBUST RATE (quality v2) — stability-gated rate from cumulative-dev stream
 // ══════════════════════════════════════════
 
@@ -2379,8 +2317,6 @@ export function sanitizeImageUrl(url, baseUrl) {
   return null;
 }
 
-export function isBase64(str) { return !!(str && str.startsWith('data:')); }
-
 export function storagePathFrom(url) {
   if (!url) return null;
   const marker = '/storage/v1/object/public/media/';
@@ -2557,17 +2493,6 @@ export function decodeAuthUser(raw) {
 }
 export function decodeAuthUserId(raw) {
   return decodeAuthUser(raw)?.id || null;
-}
-
-// ══════════════════════════════════════════
-//  DEVICE CLASSIFICATION
-// ══════════════════════════════════════════
-
-export function classifyDevice(ua) {
-  if (!ua) return 'unknown';
-  if (/Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return 'mobile';
-  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
-  return 'desktop';
 }
 
 // ══════════════════════════════════════════
@@ -2942,13 +2867,6 @@ export function normalizeLocation(v) {
 // Grayscale location-pin icon (inherits currentColor — i.e. the muted meta text
 // color — so it blends in instead of the attention-grabbing red 📍 emoji).
 const LOCATION_PIN_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
-
-// Render the pinned location label appended to a post's meta line.
-// Returns '' when absent so it can be concatenated unconditionally.
-export function renderPostLocationHtml(location) {
-  const loc = normalizeLocation(location);
-  return loc ? ' · ' + LOCATION_PIN_SVG + ' ' + escHtml(loc) : '';
-}
 
 export function badgePostPlan(newlyEarned, context, postId) {
   const notable = (newlyEarned || []).filter(b => b && b.category !== 'onboarding' && !b.isHidden).map(b => b.ref);

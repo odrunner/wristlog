@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeImageUrl, isBase64, storagePathFrom } from '../wrotate_test.js';
+import { sanitizeImageUrl, storagePathFrom } from '../wrotate_test.js';
 
 describe('sanitizeImageUrl', () => {
   const base = 'https://example.com/app';
@@ -40,22 +40,6 @@ describe('sanitizeImageUrl', () => {
 
   it('blocks bare filenames', () => {
     expect(sanitizeImageUrl('watch.jpg', base)).toBeNull();
-  });
-});
-
-describe('isBase64', () => {
-  it('returns true for data URLs', () => {
-    expect(isBase64('data:image/png;base64,abc123')).toBe(true);
-  });
-
-  it('returns false for regular URLs', () => {
-    expect(isBase64('https://example.com/img.jpg')).toBe(false);
-  });
-
-  it('returns false for null/undefined/empty', () => {
-    expect(isBase64(null)).toBe(false);
-    expect(isBase64(undefined)).toBe(false);
-    expect(isBase64('')).toBe(false);
   });
 });
 

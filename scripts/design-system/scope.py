@@ -33,7 +33,7 @@ def _html(lines, start_rx, end_rx):
 
 def feed(lines):
     fns = ['renderFeed', 'renderFeedCard', 'feedStaleHtml', 'feedCaughtUpHtml', 'renderCommentBody', 'fetchComments',
-           'toggleComments', 'renderPostLocationHtml', 'showFeedLoadMoreButton', 'mountFeedLoadMoreSentinel',
+           'toggleComments', 'showFeedLoadMoreButton', 'mountFeedLoadMoreSentinel',
            'refreshFeedCard', 'toggleFeedMenu']
     return _functions(lines, fns) | _css(lines, re.compile(r'[.#](?:feed|comment|comments)[\w-]*'))
 

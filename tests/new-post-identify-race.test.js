@@ -63,7 +63,7 @@ describe('New Post wires the identify race guard', () => {
   });
 
   it('an explicit pick from the picker drops the in-flight handle, so Post never waits on a result it would ignore', () => {
-    for (const fn of ['function selectNpWatch(', 'function clearNpWatch(']) {
+    for (const fn of ['function selectNpWatch(']) {
       const i = html.indexOf(fn);
       expect(i).toBeGreaterThan(-1);
       expect(html.slice(i, i + 300)).toMatch(/_npIdentifyInFlight\s*=\s*null/);

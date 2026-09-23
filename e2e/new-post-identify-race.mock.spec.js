@@ -186,8 +186,9 @@ test.describe('New Post identify race (mocked)', () => {
     const inserts = await captureLogInserts(page);
     await openComposerWithPhoto(page);
 
-    // User deliberately clears the tag while identification is still running.
-    await page.evaluate(() => clearNpWatch());
+    // User deliberately picks "No watch" while identification is still running
+    // (the picker's No-watch option calls selectNpWatch(null)).
+    await page.evaluate(() => selectNpWatch(null));
     const t0 = Date.now();
     await page.locator('#new-post-modal .btn-primary').click();
 

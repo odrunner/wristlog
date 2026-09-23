@@ -1627,19 +1627,23 @@ test.describe('Post location (mocked)', () => {
   });
 
   test('renders the pinned location label on a post meta line', async ({ page }) => {
-    // Exercise the shipped render helper in-browser (deterministic; independent
-    // of feed visibility/following filtering). SAMPLE_LOGS log-001 has 'Travel'.
-    const html = await page.evaluate(() => renderPostLocationHtml('Travel'));
+    // Render log-001's feed card through the real renderer with the location
+    // swapped (deterministic; independent of feed visibility/following filtering).
+    await waitForLog(page, 'log-001');
+    const card = (loc) => page.evaluate((loc) => {
+      const item = feedItems.find(i => i.id === 'log-001');
+      return renderFeedCard({ ...item, location: loc });
+    }, loc);
+    const html = await card('Travel');
     expect(html).toContain('Travel');
-    expect(html).toContain('<svg'); // grayscale pin, not the red 📍 emoji
+    expect(html).toContain(await page.evaluate(() => LOCATION_PIN_SVG)); // grayscale pin, not the red 📍 emoji
     expect(html).not.toContain('📍');
-    // Absent location renders nothing.
-    const empty = await page.evaluate(() => renderPostLocationHtml(null));
-    expect(empty).toBe('');
+    // Absent location renders no pin.
+    expect(await card(null)).not.toContain(await page.evaluate(() => LOCATION_PIN_SVG));
     // Free text is HTML-escaped (no injection through the feed).
-    const escaped = await page.evaluate(() => renderPostLocationHtml('<b>x</b>'));
-    expect(escaped).not.toContain('<b>');
-    expect(escaped).toContain('&lt;b&gt;');
+    const escaped = await card('<b>x</b>');
+    expect(escaped).not.toContain('<b>x</b>');
+    expect(escaped).toContain('&lt;b&gt;x&lt;/b&gt;');
   });
 
   test('edit-post prefills the location from the stored value', async ({ page }) => {

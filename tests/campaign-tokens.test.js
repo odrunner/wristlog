@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fillCampaignTokens, unresolvedCampaignTokens } from '../wrotate_test.js';
+import { fillCampaignTokens } from '../wrotate_test.js';
 
 // Matches escHtml in index.html.
 const esc = (s) => String(s)
@@ -22,7 +22,7 @@ describe('fillCampaignTokens', () => {
     expect(out).toBe(
       'Hi Ozgur · Rolex Explorer 40 · your Rolex Explorer 40 · ' +
       'The applied hour markers are crafted from 18k white gold.');
-    expect(unresolvedCampaignTokens(out)).toEqual([]);
+    expect(out).not.toMatch(/\{\{\w+\}\}/); // no token left unfilled
   });
 
   it('substitutes {{watchPhrase}} whole, never as {{watch}} + "Phrase}}"', () => {
@@ -54,24 +54,5 @@ describe('fillCampaignTokens', () => {
     expect(fillCampaignTokens('', SAMPLE, raw)).toBe('');
     expect(fillCampaignTokens(null, SAMPLE, raw)).toBe('');
     expect(fillCampaignTokens(undefined, SAMPLE, raw)).toBe('');
-  });
-});
-
-describe('unresolvedCampaignTokens', () => {
-  it('reports the per-recipient tokens a cohort blast cannot fill', () => {
-    expect(unresolvedCampaignTokens('A fun fact about {{watchPhrase}}: {{fact}}'))
-      .toEqual(['{{watchPhrase}}', '{{fact}}']);
-  });
-
-  it('deduplicates repeats', () => {
-    expect(unresolvedCampaignTokens('{{watch}} {{watch}}')).toEqual(['{{watch}}']);
-  });
-
-  it('ignores {{name}} — send-broadcast copy has always been written without it', () => {
-    expect(unresolvedCampaignTokens('Hi {{name}}, welcome back')).toEqual([]);
-  });
-
-  it('passes clean copy', () => {
-    expect(unresolvedCampaignTokens('Hi there, we shipped a few things')).toEqual([]);
   });
 });

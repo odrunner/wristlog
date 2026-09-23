@@ -6725,23 +6725,6 @@ function onboardingChecklistState(earnedRefs, opts = {}) {
   return { steps, doneCount, total: steps.length, complete, visible };
 }
 
-function computeStreaks(logs, today) {
-  const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
-  if (dates.length === 0) return { current: 0, best: 0, status: 'none' };
-  const present = new Set(dates);
-  let best = 1, run = 1;
-  for (let i = 1; i < dates.length; i++) {
-    if (addDaysStr(dates[i - 1], 1) === dates[i]) { run++; best = Math.max(best, run); }
-    else run = 1;
-  }
-  const latest = dates[dates.length - 1];
-  const yesterday = addDaysStr(today, -1);
-  if (latest !== today && latest !== yesterday) return { current: 0, best, status: 'none' };
-  let current = 1, cursor = latest;
-  while (present.has(addDaysStr(cursor, -1))) { current++; cursor = addDaysStr(cursor, -1); }
-  return { current, best, status: latest === today ? 'active' : 'at_risk' };
-}
-
 function computeStreaksFrozen(logs, today, weekendEarn) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none', frozen: [], freezes: 2, restDays: [] };
@@ -7959,7 +7942,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.04.37';
+const APP_VERSION = '23.04.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8185,13 +8168,6 @@ function normalizeLocation(v) {
 // Grayscale location-pin icon (inherits currentColor — i.e. the muted meta text
 // color — so it blends in instead of the attention-grabbing red 📍 emoji).
 const LOCATION_PIN_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-va-1px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
-
-// Render the pinned location label appended to a post's meta line.
-// Returns '' when absent so it can be concatenated unconditionally.
-function renderPostLocationHtml(location) {
-  const loc = normalizeLocation(location);
-  return loc ? ' · ' + LOCATION_PIN_SVG + ' ' + escHtml(loc) : '';
-}
 
 // ── Content filtering ────────────────────────────────────────────────
 const _objPatterns = [
@@ -16549,12 +16525,6 @@ function selectNpWatch(watchId) {
   renderNpWatchDisplay();
 }
 
-function clearNpWatch() {
-  npIdentifiedWatchId = null;
-  _npIdentifyInFlight = null;
-  renderNpWatchDisplay();
-}
-
 function dismissNpWatchSuggestion() {
   _npIdentifyNote = null;
   _npIdentifyFile = null;
@@ -19899,12 +19869,6 @@ async function openAdminUserDetail(userId) {
 }
 
 // ── Admin Traffic Stats ───────────────────────────────────────────────────
-function classifyDevice(ua) {
-  if (!ua) return 'unknown';
-  if (/Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return 'mobile';
-  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
-  return 'desktop';
-}
 
 async function renderAdminTraffic(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
@@ -22091,12 +22055,6 @@ function fillCampaignSubject(text) {
 // Body lands inside HTML — escape the values, like personalizeBody().
 function fillCampaignBody(text) {
   return fillCampaignTokens(text, _campaignSampleVars || CAMPAIGN_FALLBACK_FACT, escHtml);
-}
-
-// Tokens run-campaign fills per recipient. Any other surface that sends this
-// copy to real users has to be blocked, or they receive the literal braces.
-function unresolvedCampaignTokens(text) {
-  return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
 }
 
 // ── Admin Promos tab ─────────────────────────────────────────────────────
@@ -26671,9 +26629,6 @@ async function deleteStorageFile(path) {
   const { error } = await db.storage.from('media').remove(paths);
   if (error) console.error('[WristLog] storage delete:', error.message);
 }
-
-// Check if a string is a base64 data-URL
-function isBase64(str) { return str && str.startsWith('data:'); }
 
 // Extract the storage path from a Supabase Storage public URL
 function storagePathFrom(url) {
@@ -32384,7 +32339,7 @@ let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
-let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
+let _msrCachedBucketRate = null; // bucket-median rate from the last rate update
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
 let _msrPzSig = null;      // piezo: smoothed real signal strength (engine periodicity×SNR, 0..1)
 let _msrLastAmp = null;    // tg: last computed amplitude (degrees)
@@ -33120,14 +33075,6 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
     else if (bars === 2) { label.textContent = 'FAIR'; label.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)'; }
     else { label.textContent = ''; }
   }
-}
-
-function computeMedianRate(rates) {
-  if (rates.length < 10) return null;
-  const sorted = [...rates].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  return Math.round(median * 10) / 10;
 }
 
 // tg core: draw the folded (averaged) beat as a readable scope into a rect —

@@ -9,7 +9,6 @@ import {
   isRecapViewable,
   isValidPeriod,
   monthLabel,
-  prevPeriodOf,
 } from "./lib.ts";
 
 const owned = (...ids: string[]) => new Set(ids);
@@ -32,12 +31,6 @@ Deno.test("isValidPeriod rejects anything malformed or out of range", () => {
   ) {
     assertEquals(isValidPeriod(bad as string), false, `should reject ${bad}`);
   }
-});
-
-Deno.test("prevPeriodOf steps back a month, rolling the year", () => {
-  assertEquals(prevPeriodOf("2026-07"), "2026-06");
-  assertEquals(prevPeriodOf("2026-01"), "2025-12");
-  assertEquals(prevPeriodOf("2026-10"), "2026-09");
 });
 
 Deno.test("monthLabel renders with and without the year", () => {
