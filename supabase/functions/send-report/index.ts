@@ -5,6 +5,7 @@ import {
   buildEmailFields,
   extractBearerToken,
   hasRequiredFields,
+  recipientsAllowed,
 } from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -41,6 +42,9 @@ serve(async (req) => {
     return new Response("Missing to, subject, or html", { status: 400 });
   }
   const { to, subject, html } = payload;
+  if (!recipientsAllowed(to)) {
+    return new Response("Forbidden recipient", { status: 403 });
+  }
 
   const fields = buildEmailFields(to, subject, html);
   const result = await sendEmail({

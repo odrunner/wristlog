@@ -4,6 +4,7 @@ import {
   extractBearerToken,
   FROM_EMAIL,
   hasRequiredFields,
+  recipientsAllowed,
 } from "./lib.ts";
 
 Deno.test("extractBearerToken — strips the Bearer prefix", () => {
@@ -67,4 +68,25 @@ Deno.test("buildEmailFields — honors a custom from address", () => {
 
 Deno.test("FROM_EMAIL — unchanged sender identity", () => {
   assertEquals(FROM_EMAIL, "WRotate <notifications@wrotate.com>");
+});
+
+// ---- recipientsAllowed (SEC-23-2: no open relay) ----
+
+Deno.test("recipientsAllowed — the report inbox passes, any case/whitespace", () => {
+  assertEquals(recipientsAllowed("ozgurdogan@gmail.com"), true);
+  assertEquals(recipientsAllowed(" OzgurDogan@Gmail.com "), true);
+  assertEquals(recipientsAllowed(["ozgurdogan@gmail.com"]), true);
+});
+
+Deno.test("recipientsAllowed — any other address is refused", () => {
+  assertEquals(recipientsAllowed("victim@example.com"), false);
+  assertEquals(recipientsAllowed(["ozgurdogan@gmail.com", "victim@example.com"]), false);
+});
+
+Deno.test("recipientsAllowed — empty, non-string and nested values are refused", () => {
+  assertEquals(recipientsAllowed([]), false);
+  assertEquals(recipientsAllowed(null), false);
+  assertEquals(recipientsAllowed(42), false);
+  assertEquals(recipientsAllowed([["ozgurdogan@gmail.com"]]), false);
+  assertEquals(recipientsAllowed({ to: "ozgurdogan@gmail.com" }), false);
 });
