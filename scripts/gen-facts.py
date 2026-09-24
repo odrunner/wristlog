@@ -15,8 +15,16 @@ def db(sql):
     t = r.stdout
     return json.loads(t[t.index('['):t.rindex(']') + 1]) if '"rows"' in t else []
 
-cmd = db("select command from cron.job where jobname = 'send-measure-reminders-hourly';")[0]['command']
-secret = re.search(r"'x-campaign-secret'\s*,\s*'([^']+)'", cmd).group(1)
+def campaign_secret():
+    """x-campaign-secret, from ~/.config/wrotate/supabase.env (it lives in Vault
+    server-side since 2026-09-24; cron commands no longer carry it)."""
+    p = pathlib.Path.home() / '.config/wrotate/supabase.env'
+    for line in p.read_text().splitlines():
+        if line.startswith('CAMPAIGN_TRIGGER_SECRET='):
+            return line.split('=', 1)[1].strip().strip('"')
+    raise SystemExit(f'CAMPAIGN_TRIGGER_SECRET missing from {p}')
+
+secret = campaign_secret()
 rows = db(f"""select m.id, m.brand, m.name, (select count(*) from watch_facts f where f.model_key = m.facts_key) n
               from watch_models m where not m.is_auto and m.merged_into is null and m.facts_key is not null
               order by m.brand, m.name;""")

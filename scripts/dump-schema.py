@@ -14,6 +14,7 @@ bulk-read pattern that caused the 2026-08-13 outage.
 Usage: python3 scripts/dump-schema.py
 """
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -188,5 +189,16 @@ if rows:
     for r in rows:
         parts.append(r["def"])
 
-OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
+def scrub(text: str) -> str:
+    """Strip credentials that live inside trigger/function definitions before
+    the dump is written — the repo is public. The 2026-08-13 dump published the
+    service-role JWT and the campaign secret this way (audit SEC-1/SEC-23-5).
+    tests/no-committed-secrets.test.js fails on anything that slips through."""
+    text = re.sub(r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", "<redacted-jwt>", text)
+    text = re.sub(r"sb_secret_[A-Za-z0-9_-]+", "sb_secret_<redacted>", text)
+    text = re.sub(r"""(x-campaign-secret['"]?\s*[:,]\s*['"])[^'"]+""", r"\1<redacted>", text, flags=re.I)
+    return text
+
+
+OUT.write_text(scrub("\n".join(parts)) + "\n", encoding="utf-8")
 print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size:,} bytes, {len(OUT.read_text().splitlines()):,} lines)")

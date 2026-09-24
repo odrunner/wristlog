@@ -16,7 +16,7 @@ Follow-up audit comparing against the March 21 findings. One new edge function (
 
 | # | Finding | Severity | Details |
 |---|---------|----------|---------|
-| **C1** | **Supabase access token hardcoded in CLAUDE.md, committed to repo** | **CRITICAL** | `CLAUDE.md` (line 10 and 35) contains the literal Supabase management access token: `sbp_8a584a9301c54cb5cab436b5cee1632f531a32b6`. This file is NOT in `.gitignore` and is tracked by git. The repo is hosted on GitHub (`odrunner/wristlog`). This token grants full management access to the Supabase project — it can deploy edge functions, modify database settings, and access secrets. **Anyone with repo access (or if the repo is public) can use this token to take full control of the Supabase project.** Immediate action: (1) rotate the token in Supabase dashboard, (2) add `CLAUDE.md` to `.gitignore`, (3) remove it from git history with `git filter-repo` or BFG Repo-Cleaner, (4) store the token in a local-only file or environment variable instead. |
+| **C1** | **Supabase access token hardcoded in CLAUDE.md, committed to repo** | **CRITICAL** | `CLAUDE.md` (line 10 and 35) contains the literal Supabase management access token: `sbp_<redacted>`. This file is NOT in `.gitignore` and is tracked by git. The repo is hosted on GitHub (`odrunner/wristlog`). This token grants full management access to the Supabase project — it can deploy edge functions, modify database settings, and access secrets. **Anyone with repo access (or if the repo is public) can use this token to take full control of the Supabase project.** Immediate action: (1) rotate the token in Supabase dashboard, (2) add `CLAUDE.md` to `.gitignore`, (3) remove it from git history with `git filter-repo` or BFG Repo-Cleaner, (4) store the token in a local-only file or environment variable instead. |
 
 ---
 
@@ -89,7 +89,7 @@ All items marked FIXED in the March 21 audit remain fixed:
 
 | # | Finding | Severity | Details |
 |---|---------|----------|---------|
-| C1 | **Supabase management access token in CLAUDE.md** | **CRITICAL** | See top of report. `sbp_8a584a9301c54cb5cab436b5cee1632f531a32b6` is hardcoded in a file that is committed to the GitHub repository. This is a project management token — not the anon key — and grants full administrative access to the Supabase project. |
+| C1 | **Supabase management access token in CLAUDE.md** | **CRITICAL** | See top of report. `sbp_<redacted>` is hardcoded in a file that is committed to the GitHub repository. This is a project management token — not the anon key — and grants full administrative access to the Supabase project. |
 
 ### Medium
 

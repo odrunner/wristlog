@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the LLM family write-up (identify-watch mode:model) for curated watch
 models that have no enrichment yet. Auth = the x-campaign-secret the pg_cron
-jobs already use (read from cron.job). Sequential; ~30-60 s per model.
+jobs already use (from ~/.config/wrotate/supabase.env). Sequential; ~30-60 s per model.
 Usage: python3 scripts/enrich-models.py [--all] [--only "Rolex Submariner"] [--limit N]"""
 import json, re, subprocess, sys, time, urllib.request, pathlib
 
@@ -17,8 +17,16 @@ def db(sql):
     t = r.stdout
     return json.loads(t[t.index('['):t.rindex(']') + 1]) if '"rows"' in t else []
 
-cmd = db("select command from cron.job where jobname = 'send-measure-reminders-hourly';")[0]['command']
-secret = re.search(r"'x-campaign-secret'\s*,\s*'([^']+)'", cmd).group(1)
+def campaign_secret():
+    """x-campaign-secret, from ~/.config/wrotate/supabase.env (it lives in Vault
+    server-side since 2026-09-24; cron commands no longer carry it)."""
+    p = pathlib.Path.home() / '.config/wrotate/supabase.env'
+    for line in p.read_text().splitlines():
+        if line.startswith('CAMPAIGN_TRIGGER_SECRET='):
+            return line.split('=', 1)[1].strip().strip('"')
+    raise SystemExit(f'CAMPAIGN_TRIGGER_SECRET missing from {p}')
+
+secret = campaign_secret()
 where = "not is_auto and merged_into is null" + ("" if REDO else " and enriched_at is null")
 rows = db(f"select id, brand, name from watch_models where {where} order by brand, name;")
 if ONLY: rows = [r for r in rows if f"{r['brand']} {r['name']}" == ONLY]
