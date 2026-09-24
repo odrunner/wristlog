@@ -204,3 +204,31 @@ describe('No escaped-user-text inside handler JS strings (SEC-8)', () => {
     expect(html.split("'${escHtml(").length - 1).toBe(0);
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-3: two feed-card fields reached every viewer's
+// page raw. logs.use_case is free text (custom occasions) and was rendered
+// unescaped in .feed-meta; logs.id is client-chosen TEXT rendered raw in ~35
+// attributes/handlers. The DB now pins both (sql/2026-09-24-sec-feed-xss-checks.sql:
+// id ~ [A-Za-z0-9_-]{1,64}, use_case without < > " `), and the meta line escapes.
+describe('Feed card fields from logs are escaped (SEC-23-3)', () => {
+  it('use_case in the feed meta line goes through escHtml', () => {
+    const i = html.indexOf('const metaParts = [');
+    expect(i).toBeGreaterThan(-1);
+    const block = html.slice(i, html.indexOf('].filter(Boolean)', i));
+    expect(block).toContain('escHtml(item.use_case)');
+    expect(block).not.toMatch(/\? item\.use_case :/);
+  });
+});
+
+// ── Audit 2026-09-23 SEC-23-4: reporters flag through flag_content(), never a
+// direct UPDATE — the permissive "Reporter can flag" policies that allowed it
+// were dropped (sql/2026-09-24-sec-flag-content-rpc.sql).
+describe('Report flow flags via RPC (SEC-23-4)', () => {
+  it('submitReport calls flag_content and does not update moderation_status directly', () => {
+    const i = html.indexOf("from('content_reports').insert(");
+    expect(i).toBeGreaterThan(-1);
+    const block = html.slice(i, html.indexOf('renderFeed();', i));
+    expect(block).toContain("db.rpc('flag_content'");
+    expect(block).not.toContain("update({ moderation_status: 'flagged' })");
+  });
+});

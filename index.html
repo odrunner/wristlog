@@ -7926,7 +7926,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.17.35';
+const APP_VERSION = '24.06.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14673,7 +14673,7 @@ function renderFeedCard(item) {
   const _loc = normalizeLocation(item.location);
   const metaParts = [
     formatFeedDate(item.date, item.created_at),
-    item.use_case && item.use_case !== 'unspecified' && item.use_case !== 'badge' ? item.use_case : '',
+    item.use_case && item.use_case !== 'unspecified' && item.use_case !== 'badge' ? escHtml(item.use_case) : '',
     _loc ? LOCATION_PIN_SVG + ' ' + escHtml(_loc) : ''
   ].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
@@ -15375,10 +15375,11 @@ async function submitReport() {
     return;
   }
 
-  // Immediately flag the content
-  const table = contentType === 'comment' ? 'comments' : 'logs';
-  const { error: flagErr } = await db.from(table).update({ moderation_status: 'flagged' }).eq('id', contentId);
-  if (flagErr) console.error('[submitReport] flag update failed:', flagErr.message);
+  // Immediately flag the content — via RPC: non-owners have no UPDATE path on
+  // logs/comments (audit SEC-23-4); flag_content() only sets NULL -> 'flagged'
+  // and requires the report inserted above.
+  const { error: flagErr } = await db.rpc('flag_content', { p_type: contentType, p_id: contentId });
+  if (flagErr) console.error('[submitReport] flag failed:', flagErr.message);
 
   // Update local state
   if (contentType === 'log') {
