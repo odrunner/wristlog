@@ -15,7 +15,7 @@ class PushManager: NSObject, UNUserNotificationCenterDelegate {
 
     // Supabase config — same as web app
     private let supabaseURL = "https://api.wrotate.com"
-    private let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
+    private let supabaseKey = "sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz"
 
     private override init() { super.init() }
 
