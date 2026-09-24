@@ -66,7 +66,7 @@ Deno.test("buildIssueBody — full record renders all fields", () => {
   assertStringIncludes(body, "**Browser:** Safari");
   assertStringIncludes(body, "**Submitted:** 2026-05-30T10:00:00Z");
   assertStringIncludes(body, "Steps to reproduce...");
-  assertStringIncludes(body, "auto-bug");
+  assertEquals(body.includes("auto-bug"), false);
 });
 
 Deno.test("buildIssueBody — fallbacks for missing fields", () => {
@@ -91,7 +91,8 @@ Deno.test("buildIssuePayload — assembles title, body, labels", () => {
     "2026-06-01T00:00:00Z",
   );
   assertEquals(payload.title, "[Bug Feedback] Crash");
-  assertEquals(payload.labels, ["auto-bug"]);
+  // never a label that starts automation (auto-fix pipeline removed, SEC-23-1)
+  assertEquals(payload.labels, ["bug"]);
   assertStringIncludes(payload.body, "**Reporter:** Jane");
   assertStringIncludes(payload.body, "boom");
 });

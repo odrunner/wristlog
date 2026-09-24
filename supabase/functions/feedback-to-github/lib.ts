@@ -32,10 +32,11 @@ export function resolveUsername(profile: ProfileRow | null | undefined): string 
 }
 
 /**
- * Neutralize untrusted user text before it lands in a GitHub issue. The issue
- * carries an `auto-bug` label that triggers automated codegen, so user feedback
- * is a prompt-injection vector: strip code-fence breakouts and cap length so it
- * can't escape the fenced block or smuggle in a wall of instructions.
+ * Neutralize untrusted user text before it lands in a GitHub issue (public
+ * repo): strip code-fence breakouts and cap length so it can't escape the
+ * fenced block. Issues are labelled plain `bug` — the `auto-bug` label used to
+ * start an Actions job that ran Claude Code with write access over this text
+ * (removed 2026-09-24, audit SEC-23-1). Never re-add an automatic trigger label.
  */
 export function sanitizeIssueText(text: string | null | undefined, maxLen = 5000): string {
   let t = String(text ?? "");
@@ -85,7 +86,7 @@ export function buildIssueBody(
     ``,
     `---`,
     ``,
-    `_Auto-created from in-app feedback. The \`auto-bug\` label will trigger Claude Code to analyze and attempt a fix._`,
+    `_Auto-created from in-app feedback._`,
   ].join("\n");
 }
 
@@ -98,6 +99,6 @@ export function buildIssuePayload(
   return {
     title: buildIssueTitle(record),
     body: buildIssueBody(record, username, nowIso),
-    labels: ["auto-bug"],
+    labels: ["bug"],
   };
 }
