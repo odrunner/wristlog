@@ -144,7 +144,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         if (!s || !s.access_token || !s.user || !s.user.id) return;
         if (!s.expires_at || s.expires_at * 1000 - Date.now() < 60000) return; // needs a refresh first — leave it to the SDK
         var EARLY_URL = 'https://api.wrotate.com';
-        var EARLY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+        var EARLY_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
         var send = function (url, init) {
           return fetch(url, init)
             .then(function (r) { return r.ok ? r.json().then(function (d) { return { data: d, error: null }; }) : { data: null, error: { message: 'early feed HTTP ' + r.status } }; })
@@ -6103,7 +6103,7 @@ function afterBootGate(fn) {
 //  which is unreliable in this environment and causes bad_oauth_state errors.
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://api.wrotate.com';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     flowType: 'implicit',      // token returned in URL hash — no server-side exchange needed
@@ -7926,7 +7926,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.07.24';
+const APP_VERSION = '24.07.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
