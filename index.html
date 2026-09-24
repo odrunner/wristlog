@@ -7926,7 +7926,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.08.54';
+const APP_VERSION = '23.17.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19282,7 +19282,7 @@ async function loadAdminStats(force = false) {
     // One parallel batch (was four sequential awaits — the three slowest RPCs
     // each cost a full round-trip before the next started). 20 s, not 10: on a
     // cold cache these recompute concurrently on a 2-vCPU instance.
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes] = await withTimeout(Promise.all([
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes] = await withTimeout(Promise.all([
       // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
       db.rpc('admin_dod_counts', cacheArgs),
       // Fun-fact engagement + generation (totals + last-24h deltas)
@@ -19295,6 +19295,8 @@ async function loadAdminStats(force = false) {
       db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
       db.rpc('admin_feature_event_stats', { p_event: 'identify_outcome', p_key: 'outcome' }),
       db.rpc('admin_collection_share_stats'),
+      db.rpc('admin_feature_event_stats', { p_event: 'np_identify_outcome', p_key: 'outcome' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'snap_identify_outcome', p_key: 'outcome' }),
     ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
@@ -19527,6 +19529,18 @@ async function loadAdminStats(force = false) {
       return statRow(label, n, null,
         u + ' user' + (u === 1 ? '' : 's') + ' · ' + h24 + ' (24h)' + inlineDelta(h24 - p24, false));
     };
+    // Wear-tracking recognition: which collection watch is in the photo. Match rate
+    // counts only runs that got an answer (errors and skipped runs excluded).
+    const recogRow = (label, res) => {
+      const st = (res && res.data) || {};
+      const by = st.by_source || {};
+      const n = (k) => Number(by[k]) || 0;
+      const hit = n('matched') + n('multiple');
+      const answered = hit + n('no_match') + n('no_watches_found');
+      const parts = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, v]) => escHtml(k.replace(/_/g, ' ')) + ' ' + (Number(v) || 0));
+      if (answered) parts.unshift(Math.round(hit / answered * 100) + '% matched');
+      return statRow(label, Number(st.events_total) || 0, Number(st.events_24h) || 0, parts.join(' · '));
+    };
 
     window._adminTableSort = window._adminTableSort || {};
     window._adminUserLists = { 'admin-users': profileList, 'admin-internal': internalList };
@@ -19635,6 +19649,8 @@ async function loadAdminStats(force = false) {
         ${statRow('Identify outcomes', Number(ido.events_total) || 0, Number(ido.events_24h) || 0,
           ['accepted', 'edited', 'rejected', 'failed'].filter(k => idoBy[k]).map(k => k + ' ' + idoBy[k]).join(' · '))}
         ${statRow('Identify accept rate', idoDecided ? Math.round((Number(idoBy.accepted) || 0) / idoDecided * 100) + '%' : '—', null, 'accepted / (accepted + edited + rejected)')}
+        ${recogRow('Wear recognition — posts', npIdoRes)}
+        ${recogRow('Wear recognition — Snap to Track', snapIdoRes)}
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
@@ -22700,6 +22716,15 @@ async function runCampaignNow() {
 }
 
 // ── SNAP TO TRACK ─────────────────────────────────────────────────────────
+// Did the photo resolve to a watch in the collection? Same shape as
+// logNpIdentifyOutcome, counted on the admin Usage tab.
+function logSnapIdentifyOutcome(outcome, extra) {
+  if (!currentUser || _isDemoMode) return;
+  const meta = { outcome, ...(extra || {}) };
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'snap_identify_outcome', meta }).then(() => {});
+  if (window.posthog) posthog.capture('snap_identify_outcome', meta);
+}
+
 function snapToTrack() {
   if (!currentUser) { toast('Sign in to use Snap to Track', 'error'); return; }
   if (!watches.length) { toast('Add watches to your collection first', 'error'); return; }
@@ -22722,15 +22747,17 @@ function snapToTrack() {
       });
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `API error ${resp.status}`); }
       const data = await resp.json();
-      if (!data.watches || data.watches.length === 0) { toast('No watch identified — try a clearer shot', 'error'); resetSnapStatus(); return; }
+      if (!data.watches || data.watches.length === 0) { logSnapIdentifyOutcome('no_watches_found'); toast('No watch identified — try a clearer shot', 'error'); resetSnapStatus(); return; }
       const matches = matchIdentifiedToCollection(data.watches);
-      if (matches.length === 0) { toast('Watch not found in your collection', 'error'); resetSnapStatus(); return; }
+      if (matches.length === 0) { logSnapIdentifyOutcome('no_match'); toast('Watch not found in your collection', 'error'); resetSnapStatus(); return; }
+      logSnapIdentifyOutcome(matches.length === 1 ? 'matched' : 'multiple', { match_count: matches.length });
       if (window.posthog) posthog.capture('snap_to_track_matched', { match_count: matches.length });
       if (matches.length === 1) { openTrackWithSnap(matches[0].watch.id, file); resetSnapStatus(); return; }
       showSnapMatchPicker(matches, file);
       resetSnapStatus();
     } catch (e) {
       console.error('[WRotate] Snap to track error:', e);
+      logSnapIdentifyOutcome('error', { msg: String(e && e.message || e).slice(0, 120) });
       toast('Identification failed: ' + (e.message || 'Unknown error'), 'error');
       resetSnapStatus();
     }
