@@ -7,6 +7,7 @@ import {
   buildCommentEmail, EMAIL_WINDOW_MS, hashIp, IP_LIMIT, IP_WINDOW_MS, isHoneypotTripped, isRateLimited,
   type PublicComment, rateKeys, resolveIp, type ShareKind, TOKEN_LIMIT, TOKEN_WINDOW_MS, validateComment, windowStartIso,
 } from "./share-comments-lib.ts";
+import { serviceKey } from "./keys.ts";
 
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 
@@ -104,7 +105,7 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
       const { data: au } = await db.auth.admin.getUserById(share.user_id);
       const to = au?.user?.email as string | undefined;
       if (to) {
-        const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+        const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
         const sig = await hmacSign(share.user_id, "share_comments", unsubKey);
         const { subject, html } = buildCommentEmail(
           kind, { name: v.name, body: v.body }, share.label,

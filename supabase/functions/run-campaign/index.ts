@@ -40,14 +40,15 @@ import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
 import { sendBatch } from "../_shared/mailer.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = serviceKey();
 // Unsubscribe links are signed with a dedicated secret when one is set, falling
 // back to the service-role key so nothing changes until it is. The verifier
 // (email-unsubscribe) accepts both, so rotating the service-role key no longer
 // invalidates links already sitting in inboxes. See audit S4.
-const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || SUPABASE_SERVICE_ROLE_KEY;
+const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";

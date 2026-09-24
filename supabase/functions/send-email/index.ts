@@ -24,6 +24,7 @@ import {
   shouldFetchCommentBody,
   TYPE_TO_CATEGORY,
 } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
@@ -49,11 +50,11 @@ serve(async (req) => {
     // body. A forged POST with a known notification id could otherwise email an
     // arbitrary user about an arbitrary actor/type.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = serviceKey();
     // Unsubscribe links use a dedicated secret when set, else the service-role
     // key. The verifier accepts both, so rotating the service-role key does not
     // invalidate links already delivered. See audit S4.
-    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || supabaseKey;
+    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: dbRecord, error: verifyError } = await supabase

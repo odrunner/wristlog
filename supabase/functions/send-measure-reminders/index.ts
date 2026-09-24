@@ -24,12 +24,13 @@ import {
   createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
 } from "./lib.ts";
 import type { MeasureTarget, RemeasureD7Target } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SERVICE_KEY = serviceKey();
 // Same fallback chain as send-wear-reminders (audit S4): dedicated unsubscribe secret when
 // set, else the service-role key; email-unsubscribe verifies both.
-const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || SERVICE_KEY;
+const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";

@@ -112,17 +112,17 @@ Deno.test("renderPage — embeds title and body", () => {
 // already delivered, and a broken unsubscribe is a compliance problem. A dedicated
 // secret decouples them; the verifier accepts both so there is no flag day.
 
-Deno.test("unsubscribeKeys — prefers the dedicated secret, keeps the fallback", () => {
+Deno.test("unsubscribeKeys — only the dedicated secret (service-role fallback dropped, SEC-23-5)", () => {
   const env: Record<string, string> = {
     UNSUBSCRIBE_HMAC_SECRET: "dedicated",
     SUPABASE_SERVICE_ROLE_KEY: "service",
   };
-  assertEquals(unsubscribeKeys((k) => env[k]), ["dedicated", "service"]);
+  assertEquals(unsubscribeKeys((k) => env[k]), ["dedicated"]);
 });
 
-Deno.test("unsubscribeKeys — before the secret is set, behaviour is unchanged", () => {
+Deno.test("unsubscribeKeys — without the secret nothing verifies (fails closed)", () => {
   const env: Record<string, string> = { SUPABASE_SERVICE_ROLE_KEY: "service" };
-  assertEquals(unsubscribeKeys((k) => env[k]), ["service"]);
+  assertEquals(unsubscribeKeys((k) => env[k]), []);
 });
 
 Deno.test("verifyHmacAny — a link signed with the OLD key still works after the switch", async () => {

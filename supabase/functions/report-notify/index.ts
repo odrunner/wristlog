@@ -12,6 +12,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/mailer.ts";
 import { buildHtmlBody, buildSubject, esc, profileName } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
@@ -28,7 +29,7 @@ serve(async (req) => {
 
     // Webhook verification: confirm record exists in database
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = serviceKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: verifyRecord, error: verifyError } = await supabase

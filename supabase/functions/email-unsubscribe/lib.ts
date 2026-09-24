@@ -46,19 +46,16 @@ export async function verifyHmac(uid: string, cat: string, sig: string, key: str
 }
 
 /**
- * Resolve the unsubscribe signing key, newest first.
+ * Resolve the unsubscribe verification keys.
  *
- * Links used to be signed with SUPABASE_SERVICE_ROLE_KEY. Rotating that key — a
- * routine security action — would silently invalidate the unsubscribe link in every
- * email already delivered, and a broken unsubscribe is a compliance problem rather
- * than a cosmetic one. UNSUBSCRIBE_HMAC_SECRET decouples the two.
- *
- * Signing always uses keys[0]. Verification accepts ANY of them, so the changeover
- * needs no flag day: set the secret and links already in inboxes keep working via
- * the service-role fallback. Drop the fallback once those emails have aged out.
+ * Links were signed with SUPABASE_SERVICE_ROLE_KEY until 2026-08-15, then with
+ * UNSUBSCRIBE_HMAC_SECRET. The service-role fallback was dropped 2026-09-24
+ * (audit SEC-23-5): that key leaked publicly, so accepting it let anyone forge
+ * an unsubscribe for any user; pre-08-15 emails have aged out. A list is kept
+ * so a future rotation can add the previous secret for a grace period.
  */
 export function unsubscribeKeys(env: (k: string) => string | undefined): string[] {
-  return [env("UNSUBSCRIBE_HMAC_SECRET"), env("SUPABASE_SERVICE_ROLE_KEY")]
+  return [env("UNSUBSCRIBE_HMAC_SECRET")]
     .filter((k): k is string => !!k);
 }
 

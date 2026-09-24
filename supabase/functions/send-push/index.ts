@@ -25,6 +25,7 @@ import {
   resolveActorName,
   stripPemArmor,
 } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 // APNs configuration
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
@@ -121,7 +122,7 @@ serve(async (req) => {
     // body. A forged POST with a known notification id could otherwise push to an
     // arbitrary user about an arbitrary actor/type.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = serviceKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: dbRecord, error: verifyError } = await supabase

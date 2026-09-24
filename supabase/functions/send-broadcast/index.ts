@@ -60,6 +60,7 @@ import {
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
@@ -142,11 +143,11 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseServiceKey = serviceKey();
     // Unsubscribe links use a dedicated secret when set, else the service-role
     // key. The verifier accepts both, so rotating the service-role key does not
     // invalidate links already delivered. See audit S4.
-    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || supabaseServiceKey;
+    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
 
     const body = await req.json();
     const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority, first_batch } = body;
@@ -511,7 +512,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   // Unsubscribe links use a dedicated secret when set, else the service-role key.
   // The verifier accepts both, so rotating the service-role key does not invalidate
   // links already delivered. See audit S4.
-  const drainUnsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || serviceKey;
+  const drainUnsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
   // Reap claims from crashed drains: anything 'sending' for >15 min goes back
   // to pending. A healthy drain finishes a wave in well under a minute.
   await supabase.from("broadcast_queue")

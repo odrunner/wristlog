@@ -20,6 +20,7 @@ import {
   timestampWithinTolerance,
   type SnsEnvelope,
 } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const WEBHOOK_TOKEN = Deno.env.get("SES_WEBHOOK_TOKEN") ?? "";
 const TOPIC_ARN = Deno.env.get("SES_SNS_TOPIC_ARN") ?? "";
@@ -120,7 +121,7 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      serviceKey(),
     );
     const { error } = await supabase
       .from("email_events")

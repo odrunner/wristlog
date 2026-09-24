@@ -29,6 +29,7 @@ import {
   watchesHeading,
   wishlistCardsHtml,
 } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -115,7 +116,7 @@ serve(async (req) => {
   const imgMode = url.searchParams.get("img") === "1";
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabaseKey = serviceKey();
   const db = createClient(supabaseUrl, supabaseKey);
 
   // A comment from the page: validated, rate-limited, stored, then the owner is

@@ -13,14 +13,15 @@ import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
 } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SERVICE_KEY = serviceKey();
 // Unsubscribe links are signed with a dedicated secret when one is set, falling
 // back to the service-role key so nothing changes until it is. The verifier
 // (email-unsubscribe) accepts both, so rotating the service-role key no longer
 // invalidates links already sitting in inboxes. See audit S4.
-const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || SERVICE_KEY;
+const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";

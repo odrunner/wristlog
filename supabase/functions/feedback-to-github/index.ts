@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildIssuePayload, isBugReport, resolveUsername } from "./lib.ts";
+import { serviceKey } from "../_shared/keys.ts";
 
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT") ?? "";
 const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wristlog";
@@ -32,7 +33,7 @@ serve(async (req) => {
     // anyone with a known feedback id inject arbitrary text into an auto-bug issue
     // (which triggers automated codegen). Pulling the stored row closes that.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseKey = serviceKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: dbRecord, error: verifyError } = await supabase

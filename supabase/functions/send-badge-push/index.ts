@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { apnsHost, buildBadgePushMessage, createAPNsJWT, sendPush } from "./lib.ts";
+import { serviceKey, publishableKey } from "../_shared/keys.ts";
 
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
@@ -44,8 +45,8 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const anonKey = publishableKey();
+    const svcKey = serviceKey();
 
     // Identify the caller from their token (they can only push to themselves).
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -63,7 +64,7 @@ serve(async (req) => {
       return json({ skipped: "no badges" }, 200);
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(supabaseUrl, svcKey);
     const { data: tokens } = await admin
       .from("device_tokens")
       .select("token")
