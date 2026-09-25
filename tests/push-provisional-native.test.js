@@ -88,6 +88,6 @@ describe('version stamping for the build carrying this change', () => {
     const marketing = pbxproj.match(/MARKETING_VERSION = ([\d.]+);/)[1];
     const injected = webView.match(/let fallbackAppVersion = "([\d.]+)"/)[1];
     expect(injected).toBe(marketing);
-    expect(marketing).toBe('2.8');
+    expect(marketing).toBe('2.9');
   });
 });
