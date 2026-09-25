@@ -68,3 +68,8 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.save_watches(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.save_watches(jsonb) TO authenticated;
 NOTIFY pgrst, 'reload schema';
+
+-- Step 2 (after c6627ae went live; the pending-sync queue persists on-device,
+-- so an old open tab's refused upsert re-syncs through save_watches on reload):
+REVOKE SELECT ON public.watches FROM authenticated;
+GRANT SELECT (id, user_id, brand, name, ref, purchase_date, color, image, url, tags, straps, has_box, has_papers, elo_rating, created_at, watch_privacy, movement, year_range, movement_type, caliber, case_material, case_diameter, case_length, case_thickness, weight, water_resistance, crystal_type, gender, origin, description, background, functions, bph, model_id) ON public.watches TO authenticated;
