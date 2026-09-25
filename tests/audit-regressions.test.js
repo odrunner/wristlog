@@ -232,3 +232,23 @@ describe('Report flow flags via RPC (SEC-23-4)', () => {
     expect(block).not.toContain("update({ moderation_status: 'flagged' })");
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-23: login CSRF. detectSessionInUrl adopts any
+// #access_token in the URL, so a crafted link could sign a visitor into the
+// attacker's account. A guard before createClient drops URL tokens unless this
+// browser started an OAuth sign-in (marker set by signInWithGoogle/Apple).
+describe('URL-token sign-in requires a sign-in this browser started (SEC-23-23)', () => {
+  it('the guard runs before the Supabase client is created', () => {
+    const guard = html.indexOf("localStorage.getItem('wr_oauth_started')");
+    const client = html.indexOf('const db = supabase.createClient(');
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(client);
+  });
+
+  it('every web OAuth entry point sets the marker', () => {
+    const oauthCalls = html.split('db.auth.signInWithOAuth(').length - 1;
+    const markers = html.split("safeLS.set('wr_oauth_started'").length - 1;
+    expect(oauthCalls).toBeGreaterThan(0);
+    expect(markers).toBe(oauthCalls);
+  });
+});

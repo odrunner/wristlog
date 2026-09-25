@@ -87,7 +87,12 @@ struct ContentView: View {
                     arguments: ["u": username], in: nil, in: .page, completionHandler: nil)
                 return
             }
-            webViewRef?.load(URLRequest(url: target))
+            // Drop any fragment: a link carrying #access_token=… would otherwise
+            // sign the user into whoever minted it (login CSRF, audit SEC-23-23).
+            // The page refuses such tokens too; this keeps them out of the WebView.
+            var clean = URLComponents(url: target, resolvingAgainstBaseURL: false)
+            clean?.fragment = nil
+            webViewRef?.load(URLRequest(url: clean?.url ?? target))
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             lastBackgrounded = Date()

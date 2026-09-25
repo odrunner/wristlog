@@ -6104,6 +6104,22 @@ function afterBootGate(fn) {
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://api.wrotate.com';
 const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
+// Login-CSRF guard (audit SEC-23-23). detectSessionInUrl signs in whatever
+// session a URL fragment carries, so a crafted link (or tracked email link)
+// could sign a visitor into someone else's account and capture what they add.
+// Accept URL tokens only if THIS browser started an OAuth sign-in in the last
+// 15 minutes (signInWithGoogle/Apple set the marker); otherwise drop them before
+// supabase-js reads the URL. Native iOS sign-in uses setSession, not the URL.
+(function () {
+  try {
+    if (!/(^|[#&])(access_token|refresh_token)=/.test(location.hash)) return;
+    var started = +(localStorage.getItem('wr_oauth_started') || 0);
+    localStorage.removeItem('wr_oauth_started');
+    if (!(started && Date.now() - started < 15 * 60 * 1000)) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  } catch (e) {}
+})();
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     flowType: 'implicit',      // token returned in URL hash — no server-side exchange needed
@@ -7393,6 +7409,7 @@ function exitDemoMode() {
 
 async function signInWithGoogle() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'google' });
+  safeLS.set('wr_oauth_started', String(Date.now())); // login-CSRF guard marker (see createClient)
   trackVisit({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin' });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
@@ -7406,6 +7423,7 @@ async function signInWithGoogle() {
 
 async function signInWithApple() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'apple' });
+  safeLS.set('wr_oauth_started', String(Date.now())); // login-CSRF guard marker (see createClient)
   trackVisit({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin' });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
@@ -7926,7 +7944,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.21.45';
+const APP_VERSION = '24.21.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
