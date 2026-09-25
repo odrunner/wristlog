@@ -13,11 +13,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/mailer.ts";
 import { buildEmailHtml, buildSubject, esc, providerFromEmail } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { isFresh, triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
 serve(async (req) => {
   try {
+    // Only our own DB trigger may call this (it sends the Vault secret), and
+    // only the stored row is trusted — never the request body (audit SEC-23-19).
+    if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
     const body = await req.json();
     const record = body.record;
 
@@ -30,14 +36,19 @@ serve(async (req) => {
     const supabaseKey = serviceKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: verifyRecord, error: verifyError } = await supabase
+    const { data: row, error: verifyError } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, display_name, username, created_at")
       .eq("id", record.id)
       .maybeSingle();
-    if (verifyError || !verifyRecord) {
+    if (verifyError || !row) {
       console.warn(`[new-user-alert] Record ${record.id} not found in profiles table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
+    // One alert per signup: a replayed id of an old profile sends nothing.
+    if (!isFresh(row.created_at, Date.now())) {
+      return new Response(JSON.stringify({ skipped: true, reason: "not a new profile" }), { status: 200 });
     }
 
     if (!ADMIN_EMAIL) {
@@ -48,7 +59,7 @@ serve(async (req) => {
     // Get the user's email from auth.users
     let userEmail = "Unknown";
     try {
-      const { data: authUser } = await supabase.auth.admin.getUserById(record.id);
+      const { data: authUser } = await supabase.auth.admin.getUserById(row.id);
       if (authUser?.user?.email) {
         userEmail = authUser.user.email;
       }
@@ -59,9 +70,9 @@ serve(async (req) => {
     // Determine sign-in provider from email
     const provider = providerFromEmail(userEmail);
 
-    const displayName = esc(record.display_name || "Not set");
-    const username = esc(record.username || "Not set");
-    const createdAt = record.created_at || new Date().toISOString();
+    const displayName = esc(row.display_name || "Not set");
+    const username = esc(row.username || "Not set");
+    const createdAt = esc(String(row.created_at));
 
     // Count total users for context
     const { count } = await supabase

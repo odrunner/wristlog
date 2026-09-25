@@ -13,11 +13,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/mailer.ts";
 import { buildHtmlBody, buildSubject, esc, profileName } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { isFresh, triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
 serve(async (req) => {
   try {
+    // Only our own DB trigger may call this (it sends the Vault secret), and
+    // only the stored row is trusted — never the request body (audit SEC-23-19).
+    if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
     const body = await req.json();
 
     const record = body.record;
@@ -32,14 +38,19 @@ serve(async (req) => {
     const supabaseKey = serviceKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: verifyRecord, error: verifyError } = await supabase
+    const { data: row, error: verifyError } = await supabase
       .from("content_reports")
-      .select("id")
+      .select("id, reporter_id, reported_user_id, content_type, content_id, reason, details, created_at")
       .eq("id", record.id)
       .maybeSingle();
-    if (verifyError || !verifyRecord) {
+    if (verifyError || !row) {
       console.warn(`[report-notify] Record ${record.id} not found in content_reports table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
+    // One alert per report: a replayed id of an old report sends nothing.
+    if (!isFresh(row.created_at, Date.now())) {
+      return new Response(JSON.stringify({ skipped: true, reason: "not a new report" }), { status: 200 });
     }
 
     if (!ADMIN_EMAIL) {
@@ -49,16 +60,16 @@ serve(async (req) => {
 
     // Look up reporter and reported user
     const [{ data: reporter }, { data: reported }] = await Promise.all([
-      supabase.from("profiles").select("username, display_name").eq("id", record.reporter_id).single(),
-      supabase.from("profiles").select("username, display_name").eq("id", record.reported_user_id).single(),
+      supabase.from("profiles").select("username, display_name").eq("id", row.reporter_id).single(),
+      supabase.from("profiles").select("username, display_name").eq("id", row.reported_user_id).single(),
     ]);
 
     const reporterName = esc(profileName(reporter));
     const reportedRawName = profileName(reported);
     const reportedName = esc(reportedRawName);
 
-    const subject = buildSubject(record, reportedRawName);
-    const htmlBody = buildHtmlBody(record, reporterName, reportedName);
+    const subject = buildSubject(row, reportedRawName).replace(/[\r\n]+/g, " ");
+    const htmlBody = buildHtmlBody(row, reporterName, reportedName);
 
     const result = await sendEmail({
       from: "WRotate Reports <reports@wrotate.com>",
