@@ -59,19 +59,32 @@ struct ContentView: View {
             // sees the tap. Fire the wrapper ourselves so the click is recorded.
             if unwrapped != nil { recordTrackedClick(url) }
             let target = unwrapped ?? url
-            guard let host = target.host, host.hasSuffix("wrotate.com") else { return }
+            // Exact hosts, https only — a suffix match also accepted look-alike
+            // domains ending in "wrotate.com" (audit SEC-23-6).
+            guard target.scheme == "https", let host = target.host,
+                  Self.appLinkHosts.contains(host) else { return }
             // /open — app is already open, nothing to do
             if target.path == "/open" || target.path == "/open.html" { return }
-            // Deep link to specific post or collection
+            // Deep link to specific post or collection. Values from the link are
+            // passed as ARGUMENTS, never spliced into the script text: a crafted
+            // id/u used to break out of the quotes and run arbitrary JS in the
+            // signed-in page (audit SEC-23-6). The format checks are a second
+            // fence — log ids are pinned to this pattern in the DB (logs_id_format).
             let components = URLComponents(url: target, resolvingAgainstBaseURL: false)
             if let postId = components?.queryItems?.first(where: { $0.name == "id" })?.value,
-               (target.path.contains("share-post") || target.path.hasPrefix("/p/")) {
-                webViewRef?.evaluateJavaScript("if(typeof scrollToPost==='function') scrollToPost('\(postId)');", completionHandler: nil)
+               target.path.contains("share-post") || target.path.hasPrefix("/p/"),
+               Self.matches(postId, #"^[A-Za-z0-9_-]{1,64}$"#) {
+                webViewRef?.callAsyncJavaScript(
+                    "if (typeof scrollToPost === 'function') scrollToPost(id);",
+                    arguments: ["id": postId], in: nil, in: .page, completionHandler: nil)
                 return
             }
             if let username = components?.queryItems?.first(where: { $0.name == "u" })?.value,
-               target.path.contains("share-collection") {
-                webViewRef?.evaluateJavaScript("if(typeof viewUserByUsername==='function') viewUserByUsername('\(username)');", completionHandler: nil)
+               target.path.contains("share-collection"),
+               Self.matches(username, #"^[A-Za-z0-9_.-]{1,40}$"#) {
+                webViewRef?.callAsyncJavaScript(
+                    "if (typeof viewUserByUsername === 'function') viewUserByUsername(u);",
+                    arguments: ["u": username], in: nil, in: .page, completionHandler: nil)
                 return
             }
             webViewRef?.load(URLRequest(url: target))
@@ -98,6 +111,13 @@ struct ContentView: View {
             // and then wiped, and nothing re-fired afterwards. Let didFinish drain.
             if !isLoading, !reloading { drainPending() }
         }
+    }
+
+    /// Hosts whose links the app routes itself (click.wrotate.com is unwrapped first).
+    static let appLinkHosts: Set<String> = ["wrotate.com", "www.wrotate.com", "api.wrotate.com"]
+
+    static func matches(_ value: String, _ pattern: String) -> Bool {
+        value.range(of: pattern, options: .regularExpression) != nil
     }
 
     /// Unwrap an email click-tracking link back to its real destination.
@@ -130,7 +150,7 @@ struct ContentView: View {
         guard segments.count > destinationIndex,
               let decoded = segments[destinationIndex].removingPercentEncoding,
               let destination = URL(string: decoded),
-              destination.scheme == "https" || destination.scheme == "http"
+              destination.scheme == "https"
         else { return nil }
         return destination
     }
