@@ -25,3 +25,9 @@ CREATE POLICY receipts_owner_update ON storage.objects FOR UPDATE TO authenticat
 DROP POLICY IF EXISTS receipts_owner_delete ON storage.objects;
 CREATE POLICY receipts_owner_delete ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'receipts' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+
+-- Migration done 2026-09-25 (after d76d0ff went live): the 5 existing receipts
+-- (4 owners, 1.5 MB) were moved server-side media/receipts/… → receipts/<uid>/
+-- <watch>/<id>.<ext> via POST /storage/v1/object/move (destinationBucket), each
+-- verified, then their watches.receipts entries rewritten {data: public URL} →
+-- {path}. Old public links now 400; 0 receipt objects left in `media`.
