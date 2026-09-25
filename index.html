@@ -6,7 +6,7 @@
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and measure accuracy with the built-in timegrapher. AI-powered watch identification, market values, cost-per-wear stats, social feed, and clubs.">
   <meta name="robots" content="index, follow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js@4.4.0/ https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/ https://accounts.google.com https://us-assets.i.posthog.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; media-src 'self' https://api.wrotate.com https://*.supabase.co https: blob:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://accounts.google.com wss://api.wrotate.com https://wttr.in https://us.i.posthog.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js@4.4.0/ https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/ https://accounts.google.com https://us-assets.i.posthog.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; media-src 'self' https://api.wrotate.com https://*.supabase.co https: blob:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://accounts.google.com wss://api.wrotate.com https://wttr.in https://us.i.posthog.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
   <link rel="canonical" href="https://wrotate.com/">
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -7944,7 +7944,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.29';
+const APP_VERSION = '25.08.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26288,50 +26288,17 @@ async function fetchWatchImage(watchId) {
   if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Fetching…'; }
 
   try {
-    // ── Step 1: Fetch page HTML via CORS proxy ──────────────────────────────
-    let pageHtml = '';
-    const pageProxies = [
-      `https://corsproxy.io/?${encodeURIComponent(w.url)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(w.url)}`
-    ];
-    for (const p of pageProxies) {
-      try {
-        const r = await fetch(p, { signal: AbortSignal.timeout(12000) });
-        if (r.ok) { pageHtml = await r.text(); break; }
-      } catch (_) {}
-    }
-    if (!pageHtml) throw new Error('all proxies failed');
-
-    const doc = new DOMParser().parseFromString(pageHtml, 'text/html');
-
-    // ── Step 2: Find best image URL ─────────────────────────────────────────
-    // 2a. Try og/twitter meta tags first (sanitize to block javascript:/data: schemes)
-    let imgUrl = sanitizeImageUrl(
-      doc.querySelector('meta[property="og:image"]')?.content ||
-      doc.querySelector('meta[name="og:image"]')?.content    ||
-      doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content,
-      w.url
-    );
-
-    // 2b. Fallback: scan <img> tags for product images
-    if (!imgUrl) {
-      const watchDomain = new URL(w.url).hostname.replace(/^www\./, '');
-      const candidates = [...doc.querySelectorAll('img')]
-        .flatMap(i => [
-          i.getAttribute('src'),
-          i.getAttribute('data-src'),
-          i.getAttribute('data-lazy-src'),
-          i.getAttribute('data-original')
-        ])
-        .map(s => sanitizeImageUrl(s, w.url))
-        .filter(s => s &&
-                     !/\.(svg|gif)(\?|$)/i.test(s) &&
-                     !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
-      // Prefer images from same root domain (handles CDN subdomains)
-      const sameDomain = candidates.filter(s => s.includes(watchDomain));
-      imgUrl = sameDomain[0] || candidates[0] || null;
-    }
+    // ── Steps 1-2: find the photo on the page, server-side ─────────────────
+    // search-watch-image scans the page (og:image, then product <img>s) behind
+    // the shared outbound-fetch guard. It replaced third-party CORS proxies
+    // (corsproxy.io / allorigins) that saw every URL and whose HTML was
+    // trusted (audit 2026-09-23 L5).
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/search-watch-image`, {
+      method: 'POST',
+      body: JSON.stringify({ brand: w.brand || '', model: w.name || '', reference: w.ref || '', productUrl: w.url }),
+    });
+    const found = resp.ok ? await resp.json() : null;
+    const imgUrl = sanitizeImageUrl(found?.imageUrl, w.url);
 
     if (!imgUrl) {
       toast('No image found on that page', 'error');
@@ -26432,10 +26399,15 @@ function sanitizePromoHtml(html) {
 // Fetch an image URL (direct then via proxy) and return { blob, directUrl }
 // blob is available when we could fetch the bytes; directUrl when only <img> can load it
 async function fetchImageBlobOrUrl(url) {
-  const sources = [url, `https://corsproxy.io/?${encodeURIComponent(url)}`];
-  for (const src of sources) {
+  // Direct first; then our own fetch-image function (signed-in only), which
+  // replaced the corsproxy.io hop for hosts that block cross-origin reads.
+  const attempts = [
+    () => fetch(url, { signal: AbortSignal.timeout(12000) }),
+    () => authedFetch(`${SUPABASE_URL}/functions/v1/fetch-image`, { method: 'POST', body: JSON.stringify({ url }) }, 15000),
+  ];
+  for (const attempt of attempts) {
     try {
-      const r = await fetch(src, { signal: AbortSignal.timeout(12000) });
+      const r = await attempt();
       if (r.ok) {
         const b = await r.blob();
         if (b.type.startsWith('image/') && b.size > 500) return { blob: b };

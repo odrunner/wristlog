@@ -314,3 +314,13 @@ describe('CSP script-src pins CDN packages; CDN scripts use SRI (SEC-23-25)', ()
     });
   }
 });
+
+// ── Audit 2026-09-23 low tail (L5): no third-party CORS proxies. They saw every
+// watch URL and their responses were trusted; page scans go through
+// search-watch-image and image bytes through fetch-image (own, guarded).
+describe('No third-party CORS proxies (L5)', () => {
+  it('index.html never calls corsproxy.io / allorigins and the CSP does not allow them', () => {
+    const code = html.replace(/\/\/[^\n]*/g, '');   // ignore comments
+    expect(code).not.toMatch(/https:\/\/corsproxy\.io|api\.allorigins\.win/);
+  });
+});
