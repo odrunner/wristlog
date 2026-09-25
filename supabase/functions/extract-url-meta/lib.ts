@@ -1,3 +1,4 @@
+import { isSafeFetchUrl, resolvesToPrivate, type Resolver } from "../_shared/ssrf.ts";
 // extract-url-meta — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
 
@@ -79,7 +80,8 @@ export function validateUrl(url: unknown): UrlValidation {
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     return { ok: false, error: "Only http/https URLs allowed" };
   }
-  if (isBlockedHost(parsed.hostname)) {
+  // Shared guard: IPv6 spellings, ports, credentials, internal names too (SEC-23-20).
+  if (isBlockedHost(parsed.hostname) || !isSafeFetchUrl(parsed.href)) {
     return { ok: false, error: "Private/internal URLs not allowed" };
   }
   return { ok: true, parsed };
@@ -106,9 +108,13 @@ export async function fetchFollowingSafeRedirects(
   startUrl: string,
   maxHops = 5,
   fetchImpl: typeof fetch = fetch,
+  resolver?: Resolver,   // when given, every hop's host must not resolve inside (index passes DNS)
 ): Promise<Response> {
   let current = startUrl;
   for (let hop = 0; hop <= maxHops; hop++) {
+    if (resolver && await resolvesToPrivate(new URL(current).hostname, resolver)) {
+      throw new Error("Blocked redirect to disallowed host: resolves to a private address");
+    }
     const res = await fetchImpl(current, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; WRotateBot/1.0)",

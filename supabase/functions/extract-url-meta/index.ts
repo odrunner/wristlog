@@ -6,6 +6,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { absolutizeImageUrl, extractMeta, fetchFollowingSafeRedirects, validateUrl } from "./lib.ts";
+import { denoResolver, readTextCapped } from "../_shared/ssrf.ts";
 import { serviceKey } from "../_shared/keys.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request) => {
     // up-front validateUrl() check was bypassable: a public URL could 302 to
     // 169.254.169.254 or localhost and the fetch would follow it (2026-07-19
     // audit, Low S-9). Every hop is re-checked against the same blocklist.
-    const pageRes = await fetchFollowingSafeRedirects(url);
+    const pageRes = await fetchFollowingSafeRedirects(url, 5, fetch, denoResolver);
 
     if (!pageRes.ok) {
       return jsonResponse(
@@ -79,7 +80,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const html = await pageRes.text();
+    const html = await readTextCapped(pageRes, 2_000_000); // meta tags live in <head>
     const meta = extractMeta(html);
 
     // Make relative image URLs absolute

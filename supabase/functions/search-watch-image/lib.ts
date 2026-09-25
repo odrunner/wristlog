@@ -76,40 +76,9 @@ export function isPrivateIPv4(host: string): boolean {
   return false;
 }
 
-function isPrivateIPv6(host: string): boolean {
-  let h = host.toLowerCase();
-  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
-  if (h === "::1" || h === "::") return true;                    // loopback / unspecified
-  if (h.startsWith("fe80") || h.startsWith("fe9") || h.startsWith("fea") || h.startsWith("feb")) return true; // link-local
-  if (/^f[cd][0-9a-f]{2}:/.test(h)) return true;                 // unique local fc00::/7
-  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped
-  if (mapped) return isPrivateIPv4(mapped[1]);
-  return false;
-}
-
-export function isSafeFetchUrl(urlStr: string): boolean {
-  let u: URL;
-  try {
-    u = new URL(urlStr);
-  } catch {
-    return false;
-  }
-  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-  if (u.username || u.password) return false;                    // no creds in URL
-  if (u.port && u.port !== "80" && u.port !== "443") return false;
-
-  const host = u.hostname.toLowerCase().replace(/\.$/, "");      // strip trailing dot
-  if (!host) return false;
-  if (host === "localhost" || host.endsWith(".localhost")) return false;
-  if (host.endsWith(".local") || host.endsWith(".internal") ||
-      host.endsWith(".lan") || host.endsWith(".home") || host.endsWith(".corp")) return false;
-  if (host === "metadata.google.internal") return false;
-
-  if (ipv4ToOctets(host) && isPrivateIPv4(host)) return false;
-  if (host.includes(":") && isPrivateIPv6(host)) return false;
-
-  return true;
-}
+// Delegates to the shared guard (_shared/ssrf.ts), which also decodes every
+// IPv6 spelling of an internal address (audit SEC-23-20).
+export { isSafeFetchUrl } from "../_shared/ssrf.ts";
 
 // True if a candidate image URL looks like a real product image (not an
 // SVG/GIF and not matching the bad-keyword blocklist).

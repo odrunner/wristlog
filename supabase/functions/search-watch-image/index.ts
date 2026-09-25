@@ -17,6 +17,7 @@ import {
   looksLikeProductUrl,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { readTextCapped, safeFetch } from "../_shared/ssrf.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = serviceKey();
@@ -38,9 +39,9 @@ const BROWSER_HEADERS: Record<string, string> = {
  */
 async function validateImageUrl(url: string): Promise<boolean> {
   if (!isLikelyProductImage(url)) return false;
-  if (!isSafeFetchUrl(url)) return false; // SSRF guard
+  if (!isSafeFetchUrl(url)) return false; // SSRF guard (safeFetch re-checks every hop + DNS)
   try {
-    const resp = await fetch(url, {
+    const resp = await safeFetch(url, {
       method: "HEAD",
       signal: AbortSignal.timeout(5000),
       headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
@@ -62,13 +63,14 @@ async function validateImageUrl(url: string): Promise<boolean> {
 async function scrapePageForImage(pageUrl: string): Promise<{ imageUrl: string; sourceUrl: string } | null> {
   if (!isSafeFetchUrl(pageUrl)) return null; // SSRF guard
   try {
-    const resp = await fetch(pageUrl, {
+    // safeFetch: redirects are followed one hop at a time, each re-checked
+    // (URL + DNS); the page is read up to 3 MB — enough for any product page.
+    const resp = await safeFetch(pageUrl, {
       signal: AbortSignal.timeout(10000),
       headers: BROWSER_HEADERS,
-      redirect: "follow",
     });
     if (!resp.ok) return null;
-    const html = await resp.text();
+    const html = await readTextCapped(resp, 3_000_000);
     const candidates = extractImages(html, pageUrl);
     for (const imgUrl of candidates.slice(0, 10)) {
       if (await validateImageUrl(imgUrl)) {
