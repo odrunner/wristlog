@@ -7944,7 +7944,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.00';
+const APP_VERSION = '25.08.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19241,8 +19241,8 @@ function renderReportCard(r) {
 
 async function adminConfirmRemoval(reportId, contentType, contentId) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
-  const table = contentType === 'comment' ? 'comments' : 'logs';
-  const { error: modErr } = await db.from(table).update({ moderation_status: 'removed' }).eq('id', contentId);
+  // admin_set_moderation(): users have no UPDATE on moderation_status (SEC-23-22).
+  const { error: modErr } = await db.rpc('admin_set_moderation', { p_type: contentType, p_id: contentId, p_status: 'removed' });
   if (modErr) { toast('Failed to remove content: ' + modErr.message, 'error'); return; }
   const { error: repErr } = await db.from('content_reports').update({ status: 'actioned', actioned_at: new Date().toISOString() }).eq('id', reportId);
   if (repErr) { toast('Content removed but report update failed', 'error'); }
@@ -19254,8 +19254,7 @@ async function adminConfirmRemoval(reportId, contentType, contentId) {
 
 async function adminRestoreContent(reportId, contentType, contentId) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
-  const table = contentType === 'comment' ? 'comments' : 'logs';
-  const { error: modErr } = await db.from(table).update({ moderation_status: null }).eq('id', contentId);
+  const { error: modErr } = await db.rpc('admin_set_moderation', { p_type: contentType, p_id: contentId, p_status: null });
   if (modErr) { toast('Failed to restore content: ' + modErr.message, 'error'); return; }
   const { error: repErr } = await db.from('content_reports').update({ status: 'dismissed' }).eq('id', reportId);
   if (repErr) { toast('Content restored but report update failed', 'error'); }

@@ -289,3 +289,12 @@ describe('Share profile link respects privacy (SEC-23-16)', () => {
     expect(body).toContain('myProfile[field] = value');
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-22: moderation_status is not user-updatable on
+// logs/comments; the admin panel changes it through admin_set_moderation().
+describe('Moderation changes go through the admin RPC (SEC-23-22)', () => {
+  it('no client code updates moderation_status directly', () => {
+    expect(html).not.toMatch(/\.update\(\{\s*moderation_status/);
+    expect(html.split("db.rpc('admin_set_moderation'").length - 1).toBe(2);
+  });
+});
