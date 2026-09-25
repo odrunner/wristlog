@@ -25,6 +25,7 @@ import {
   TYPE_TO_CATEGORY,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
@@ -37,6 +38,11 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
 }
 
 serve(async (req) => {
+  // Called only by our DB trigger (webhook_with_secret), which sends the
+  // Vault-held secret; a replayed or forged call is refused (audit L8).
+  if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
   try {
     const payload = await req.json();
 

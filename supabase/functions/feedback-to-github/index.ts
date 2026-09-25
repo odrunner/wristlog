@@ -12,11 +12,17 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildIssuePayload, isBugReport, resolveUsername } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT") ?? "";
 const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wristlog";
 
 serve(async (req) => {
+  // Called only by our DB trigger (webhook_with_secret), which sends the
+  // Vault-held secret; a replayed or forged call is refused (audit L8).
+  if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
   try {
     const body = await req.json();
 

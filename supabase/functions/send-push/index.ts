@@ -26,6 +26,7 @@ import {
   stripPemArmor,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 // APNs configuration
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
@@ -107,6 +108,11 @@ async function sendPush(
 }
 
 serve(async (req) => {
+  // Called only by our DB trigger (webhook_with_secret), which sends the
+  // Vault-held secret; a replayed or forged call is refused (audit L8).
+  if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
   try {
     const body = await req.json();
 
