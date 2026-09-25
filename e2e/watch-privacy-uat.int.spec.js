@@ -49,7 +49,7 @@ async function setFixturePrivacy(page, value) {
 async function readFixture(page) {
   return page.evaluate(async (id) => {
     const { data, error } = await db
-      .from('watches').select('id, brand, name, price, watch_privacy').eq('id', id);
+      .from('watches').select('id, brand, name, watch_privacy').eq('id', id);
     return { rows: data || [], error: error?.message || null };
   }, FIXTURE_WATCH_ID);
 }
@@ -77,6 +77,13 @@ test.describe('Friends-only watch privacy (S2 regression)', () => {
     console.log('[friend] rows:', JSON.stringify(api.rows));
     expect(api.rows.length).toBe(1);
     expect(api.rows[0].name).toContain(FIXTURE_NAME);
+  });
+
+  test('friend sees the watch but not its price (audit 2026-09-23 SEC-23-8)', async ({ page }) => {
+    await devLogin(page, true);
+    const { error } = await page.evaluate(async (id) =>
+      db.from('watches').select('price').eq('id', id), FIXTURE_WATCH_ID);
+    expect(error?.message || '').toMatch(/permission denied/);
   });
 
   test('stranger cannot see it — the leak, closed', async ({ page }) => {
