@@ -52,7 +52,22 @@ from datetime import datetime, timedelta, timezone
 BASE_URL = "https://api.wrotate.com"
 ANON_KEY = "sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz"
 AUTH_EMAIL = "test@wrotate.com"
-AUTH_PASS = "wrotate-test-2026"
+def _test_account_password():
+    """~/.config/wrotate/test-account.env (WROTATE_TEST_PASS=…), then the env var.
+    No literal fallback: the old password sat in this public repo (rotated 2026-09-25)."""
+    import os as _os
+    try:
+        with open(_os.path.expanduser("~/.config/wrotate/test-account.env")) as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("WROTATE_TEST_PASS="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return _os.environ.get("WROTATE_TEST_PASS", "")
+
+
+AUTH_PASS = _test_account_password()
 REPORT_TO = "ozgurdogan@gmail.com"
 
 ADMIN_KEY_FILE = os.path.expanduser("~/.config/anthropic/wrotate-admin.env")

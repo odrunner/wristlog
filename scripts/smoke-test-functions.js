@@ -3,10 +3,22 @@
 // Hits each function with a real request and checks the response status.
 // Usage: node scripts/smoke-test-functions.js
 
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 const SUPABASE_URL = 'https://api.wrotate.com';
 const ANON_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
 const TEST_EMAIL = 'test@wrotate.com';
-const TEST_PASS = 'wrotate-test-2026';
+// Password from ~/.config/wrotate/test-account.env (WROTATE_TEST_PASS=…) or the
+// env var — never a literal (the old one was public; rotated 2026-09-25).
+const TEST_PASS = process.env.WROTATE_TEST_PASS || (() => {
+  try {
+    const f = readFileSync(join(homedir(), '.config/wrotate/test-account.env'), 'utf8');
+    const m = f.match(/^WROTATE_TEST_PASS=["']?([^"'\n]+)/m);
+    return m ? m[1].trim() : '';
+  } catch { return ''; }
+})();
 
 // 1x1 white PNG for identify-watch test
 const TINY_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';

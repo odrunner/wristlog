@@ -23,8 +23,8 @@ ANON_KEY = "sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz"
 AUTH_EMAIL = "test@wrotate.com"
 # Test-account password. Was hardcoded in four checked-in scripts (2026-07-19
 # audit, Low S-8). Reads ~/.config/wrotate/test-account.env first (KEY=VALUE),
-# then the WROTATE_TEST_PASS env var, and only then falls back to the historical
-# literal so a machine without the file keeps working.
+# then the WROTATE_TEST_PASS env var. No literal fallback since the 2026-09-25
+# rotation (the old one sat in this public repo) — missing config fails sign-in loudly.
 def _test_account_password():
     import os as _os
     p = _os.path.expanduser("~/.config/wrotate/test-account.env")
@@ -36,7 +36,7 @@ def _test_account_password():
                     return line.split("=", 1)[1].strip().strip('"').strip("'")
     except OSError:
         pass
-    return _os.environ.get("WROTATE_TEST_PASS", "wrotate-test-2026")
+    return _os.environ.get("WROTATE_TEST_PASS", "")
 
 
 AUTH_PASS = _test_account_password()

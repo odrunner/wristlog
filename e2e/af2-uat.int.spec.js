@@ -36,7 +36,7 @@ async function devLogin(page) {
   } else {
     // Log in programmatically
     await page.evaluate(async () => {
-      await db.auth.signInWithPassword({ email: 'test@wrotate.com', password: 'wrotate-test-2026' });
+      await db.auth.signInWithPassword(window.__DEV_CREDS__); // from gitignored dev-config.js
       location.reload();
     });
   }

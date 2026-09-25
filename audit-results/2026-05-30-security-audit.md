@@ -74,8 +74,8 @@ None confirmed fixed this session. (No regressions observed either.)
 - **Fix:** Apply the `sanitizeHtml()` helper from `send-broadcast` to `html` before the Resend call.
 
 ### N44 — `dev-config.js` contains a real `official@wrotate.com` password 🔴 NEW
-- **Location:** `dev-config.js:4` — `window.__OFFICIAL_CREDS__ = { email: 'official@wrotate.com', password: 'Dgnwrotate12' };`
-- **Evidence:** The file is gitignored and **not** tracked (good), and is loaded only via `<script src="dev-config.js" onerror>` (index.html:81) so it is absent in production. However it sits in plaintext on the Mac Mini dev host alongside two test-account passwords (`wrotate-test-2026`).
+- **Location:** `dev-config.js:4` — `window.__OFFICIAL_CREDS__ = { email: 'official@wrotate.com', password: '<redacted>' };`
+- **Evidence:** The file is gitignored and **not** tracked (good), and is loaded only via `<script src="dev-config.js" onerror>` (index.html:81) so it is absent in production. However it sits in plaintext on the Mac Mini dev host alongside two test-account passwords (`<redacted — rotated 2026-09-25>`).
 - **Risk:** LOW (not committed, not deployed) but `official@wrotate.com` reads like a non-throwaway brand account, unlike `test`/`test2`. If the Mac Mini is compromised this is a real account takeover. Test creds are lower-impact.
 - **Fix:** Confirm `official@wrotate.com` is a disposable account; if it has any real privileges, rotate the password and remove it from `dev-config.js`. Consider sourcing all dev creds from an env file outside the repo working tree.
 

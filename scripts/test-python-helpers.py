@@ -96,9 +96,11 @@ class TestAccountPassword(unittest.TestCase):
         self.addCleanup(os.environ.pop, "WROTATE_TEST_PASS", None)
         self.assertEqual(self._fn("/nonexistent/x.env")(), "from-env")
 
-    def test_falls_back_to_the_literal_so_existing_machines_keep_working(self):
+    def test_no_literal_fallback_after_rotation(self):
+        # The old password was public in this repo; a missing config must not
+        # silently fall back to anything (audit SEC-23-9, rotated 2026-09-25).
         os.environ.pop("WROTATE_TEST_PASS", None)
-        self.assertEqual(self._fn("/nonexistent/x.env")(), "wrotate-test-2026")
+        self.assertEqual(self._fn("/nonexistent/x.env")(), "")
 
 
 
