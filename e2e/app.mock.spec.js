@@ -172,8 +172,8 @@ test.describe('Track page (mocked)', () => {
   // track yet" — the root cause of the parallel-load flake. This drives the race
   // deterministically by delaying the watches response.
   test('selector populates when navigating to Track before data loads', async ({ page }) => {
-    await page.route('**/rest/v1/watches*', async (route) => {
-      if (route.request().method() === 'GET') {
+    await page.route('**/rest/v1/rpc/my_watches*', async (route) => {
+      {
         await new Promise((r) => setTimeout(r, 1500)); // resolve AFTER navigation
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SAMPLE_WATCHES) });
       }

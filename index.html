@@ -7684,7 +7684,7 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph,model_id').eq('user_id', uid).range(0, 9999)),
+    _q(db.rpc('my_watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph,model_id').range(0, 9999)),
     // .range(): PostgREST caps an unbounded select at 1000 rows silently. A
     // truncated log set would quietly re-rank the Most Worn leaderboard rather
     // than fail, so ask for a bound well above the current max (422/user).
@@ -7871,7 +7871,11 @@ async function cloudSync() {
   _syncInFlight = true;
   const upsert = async (table, rows) => {
     if (!rows.length) return true;
-    const { error } = await db.from(table).upsert(rows, { onConflict: 'id' });
+    // Watches save through save_watches(): the private columns (price,
+    // insurance, receipts) aren't table-readable, which a plain upsert needs.
+    const { error } = table === 'watches'
+      ? await db.rpc('save_watches', { p_rows: rows })
+      : await db.from(table).upsert(rows, { onConflict: 'id' });
     if (error) { console.error(`[WristLog] cloudSync ${table} error:`, error.message, error); return false; }
     return true;
   };
@@ -7915,7 +7919,7 @@ async function cloudSync() {
         .filter(id => eloRatings[id] !== undefined)
         .map(id => ({ id, user_id: currentUser.id, elo_rating: eloRatings[id] }));
       if (eloUpdates.length) {
-        const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
+        const { error } = await db.rpc('save_watches', { p_rows: eloUpdates });
         if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
         else clearSynced('elo', snap);
       } else {
@@ -7944,7 +7948,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.34';
+const APP_VERSION = '25.08.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27875,7 +27879,7 @@ async function af2Confirm(idx) {
     };
     watches.push(watchData);
     save();
-    const { error } = await db.from('watches').upsert([watchToRow(watchData)], { onConflict: 'id' });
+    const { error } = await db.rpc('save_watches', { p_rows: [watchToRow(watchData)] });
     if (error) {
       console.error('[WRotate] af2 add DB error:', error);
       watches.splice(watches.indexOf(watchData), 1);
@@ -27954,7 +27958,7 @@ async function af2RunEnhance(idx) {
     if (data.productUrl && !watchObj.url) { watchObj.url = data.productUrl; filled++; }
     if (filled > 0) {
       save();
-      const { error } = await db.from('watches').upsert([watchToRow(watchObj)], { onConflict: 'id' });
+      const { error } = await db.rpc('save_watches', { p_rows: [watchToRow(watchObj)] });
       if (error) console.error('[WRotate] af2 enhance DB save error:', error);
     }
 
@@ -28015,7 +28019,7 @@ async function af2RunPrice(idx) {
       watchObj.marketPrice = mid;
       watchObj.marketPriceDate = todayStr();
       save();
-      const { error } = await db.from('watches').upsert([watchToRow(watchObj)], { onConflict: 'id' });
+      const { error } = await db.rpc('save_watches', { p_rows: [watchToRow(watchObj)] });
       if (error) console.error('[WRotate] af2 price DB save error:', error);
       w._af2Price = mid;
       w.price = watchObj.price ? Number(watchObj.price) : null;

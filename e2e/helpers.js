@@ -87,6 +87,14 @@ export async function mockSupabase(page, opts = {}) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) });
   });
 
+  // Own collection loads/saves through RPCs (private columns aren't table-readable).
+  await page.route('**/rest/v1/rpc/my_watches*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(watches) }));
+  await page.route('**/rest/v1/rpc/save_watches*', route => {
+    let n = 0; try { n = (JSON.parse(route.request().postData() || '{}').p_rows || []).length; } catch { /* 0 */ }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(n) });
+  });
+
   // ── REST API: watches, logs, wishlist ──
   await page.route('**/rest/v1/watches*', route => {
     if (route.request().method() === 'GET') {

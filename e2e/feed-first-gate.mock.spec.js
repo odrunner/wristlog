@@ -18,7 +18,7 @@ const POSTS = [1, 2, 3].map(i => ({
 }));
 const LOGS = '**/rest/v1/logs*';
 const isFeedQuery = url => url.includes('select=id%2Cuser_id');   // FEED_LOG_COLS; loadUserData's logs read selects id,watch_id,…
-const DEFERRED = ['/rest/v1/watches', '/rest/v1/wishlist', '/rest/v1/brands', '/rpc/my_profile', '/rpc/get_experiments', '/rest/v1/follow_requests'];
+const DEFERRED = ['/rpc/my_watches', '/rest/v1/wishlist', '/rest/v1/brands', '/rpc/my_profile', '/rpc/get_experiments', '/rest/v1/follow_requests'];
 
 async function start(page) {
   await injectSession(page);
@@ -47,7 +47,7 @@ test('a feed that never answers cannot hold the rest of boot past 3 s', async ({
   const { seen, done, release } = await start(page);
   await page.waitForTimeout(1500);
   expect(seen).toEqual([]);
-  await expect.poll(() => seen.includes('/rest/v1/watches'), { timeout: 4000 }).toBe(true);
+  await expect.poll(() => seen.includes('/rpc/my_watches'), { timeout: 4000 }).toBe(true);
   release();
   await done();
 });
@@ -57,7 +57,7 @@ test('leaving the Feed tab lets the rest of boot go at once', async ({ page }) =
   await page.waitForTimeout(400);
   expect(seen).toEqual([]);
   await page.click('nav button[data-page="collection"]');
-  await expect.poll(() => seen.includes('/rest/v1/watches'), { timeout: 1500 }).toBe(true);
+  await expect.poll(() => seen.includes('/rpc/my_watches'), { timeout: 1500 }).toBe(true);
   release();
   await done();
 });
