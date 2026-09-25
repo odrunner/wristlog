@@ -53,8 +53,13 @@ export function isRecapViewable(
 ): boolean {
   if (profErr || !profile) return false;
   const privacy = profile.profile_privacy || "public";
-  const collVis = profile.collection_visibility || "public";
-  return privacy === "public" && collVis !== "private";
+  // Match the app (viewUserProfile): missing/unknown visibility means
+  // 'followers', and a logged-out viewer is nobody's follower — so only an
+  // explicitly public collection has a public page (audit SEC-23-16; this used
+  // to block 'private' only, exposing followers/close-friends collections).
+  const v = profile.collection_visibility;
+  const collVis = v === "public" || v === "followers" || v === "friends" || v === "private" ? v : "followers";
+  return privacy === "public" && collVis === "public";
 }
 
 function addDays(dateStr: string, delta: number): string {

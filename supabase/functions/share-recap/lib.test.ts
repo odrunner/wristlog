@@ -39,9 +39,11 @@ Deno.test("monthLabel renders with and without the year", () => {
   assertEquals(monthLabel("2026-12"), "December 2026");
 });
 
-Deno.test("isRecapViewable requires a public profile and a non-private collection", () => {
+Deno.test("isRecapViewable requires a public profile and a public collection", () => {
   assertEquals(isRecapViewable({ profile_privacy: "public", collection_visibility: "public" }, null), true);
-  assertEquals(isRecapViewable({}, null), true, "absent fields default to public");
+  assertEquals(isRecapViewable({}, null), false, "absent visibility = followers, as in the app");
+  assertEquals(isRecapViewable({ collection_visibility: "followers" }, null), false);
+  assertEquals(isRecapViewable({ collection_visibility: "friends" }, null), false);
   assertEquals(isRecapViewable({ profile_privacy: "private" }, null), false);
   assertEquals(isRecapViewable({ collection_visibility: "private" }, null), false);
   assertEquals(isRecapViewable(null, null), false);

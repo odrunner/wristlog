@@ -35,9 +35,14 @@ Deno.test("initials — collapses extra whitespace", () => {
   assertEquals(initials("  Grand   Seiko  ", ""), "GS");
 });
 
-Deno.test("isCollectionViewable — public profile + default visibility is viewable", () => {
-  assertEquals(isCollectionViewable({}, null), true);
+Deno.test("isCollectionViewable — public profile + public collection is viewable", () => {
   assertEquals(isCollectionViewable({ profile_privacy: "public", collection_visibility: "public" }, null), true);
+  assertEquals(isCollectionViewable({ collection_visibility: "public" }, null), true, "absent profile_privacy = public");
+});
+
+Deno.test("isCollectionViewable — missing/unknown collection visibility means followers (not public)", () => {
+  assertEquals(isCollectionViewable({}, null), false);
+  assertEquals(isCollectionViewable({ collection_visibility: "friends_only" }, null), false);
 });
 
 Deno.test("isCollectionViewable — null/missing profile or error is not viewable", () => {
@@ -51,8 +56,9 @@ Deno.test("isCollectionViewable — non-public profile or private collection is 
   assertEquals(isCollectionViewable({ collection_visibility: "private" }, null), false);
 });
 
-Deno.test("isCollectionViewable — followers-only collection still viewable (only 'private' blocks)", () => {
-  assertEquals(isCollectionViewable({ collection_visibility: "followers" }, null), true);
+Deno.test("isCollectionViewable — followers / close-friends collections are not public (SEC-23-16)", () => {
+  assertEquals(isCollectionViewable({ collection_visibility: "followers" }, null), false);
+  assertEquals(isCollectionViewable({ collection_visibility: "friends" }, null), false);
 });
 
 Deno.test("computeWearCounts — counts unique (watch, date) pairs", () => {
