@@ -59,14 +59,14 @@ Deno.test("isRateLimited — no row is not limited", () => {
 });
 
 // ---- resolveIp ----
-Deno.test("resolveIp — first entry of x-forwarded-for, trimmed", () => {
-  const headers = new Map([["x-forwarded-for", "  1.2.3.4 , 5.6.7.8"]]);
-  assertEquals(resolveIp((n) => headers.get(n) ?? null), "1.2.3.4");
+Deno.test("resolveIp — prefers cf-connecting-ip over a caller-written x-forwarded-for", () => {
+  const headers = new Map([["cf-connecting-ip", "9.9.9.9"], ["x-forwarded-for", "1.2.3.4"]]);
+  assertEquals(resolveIp((n) => headers.get(n) ?? null), "9.9.9.9");
 });
 
-Deno.test("resolveIp — falls back to cf-connecting-ip", () => {
-  const headers = new Map([["cf-connecting-ip", "9.9.9.9"]]);
-  assertEquals(resolveIp((n) => headers.get(n) ?? null), "9.9.9.9");
+Deno.test("resolveIp — falls back to the first x-forwarded-for entry, trimmed", () => {
+  const headers = new Map([["x-forwarded-for", "  1.2.3.4 , 5.6.7.8"]]);
+  assertEquals(resolveIp((n) => headers.get(n) ?? null), "1.2.3.4");
 });
 
 Deno.test("resolveIp — 'unknown' when no headers present", () => {

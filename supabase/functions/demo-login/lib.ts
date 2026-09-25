@@ -24,11 +24,21 @@ export function isRateLimited(rl: RateRow, windowStartIso: string, limit = RATE_
 
 // Resolve the client IP from forwarding headers, falling back to "unknown".
 // `headerGet` mirrors Headers.get (returns string | null).
+// cf-connecting-ip first: Cloudflare sets it to the real client, while the
+// first x-forwarded-for entry is whatever the caller wrote (audit SEC-23-18).
 export function resolveIp(headerGet: (name: string) => string | null): string {
-  return headerGet("x-forwarded-for")?.split(",")[0]?.trim()
-    || headerGet("cf-connecting-ip")
+  return headerGet("cf-connecting-ip")?.trim()
+    || headerGet("x-forwarded-for")?.split(",")[0]?.trim()
     || "unknown";
 }
+
+// All demo sign-ins come from this function's own IP, and Supabase Auth caps
+// password sign-ins per IP — so one caller hammering the button could lock
+// every visitor out. A global cap below that keeps the demo answering "busy"
+// instead. Real peak: 12 logins in 5 minutes (2026-09-25).
+export const GLOBAL_LIMIT = 25;
+export const GLOBAL_WINDOW_MS = 5 * 60 * 1000;
+export const GLOBAL_KEY = "demo-login:all";
 
 // Rate-limit row key for an IP.
 export function rateKey(ip: string): string {
