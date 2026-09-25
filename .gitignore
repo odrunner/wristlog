@@ -53,3 +53,6 @@ docs/design/design-system/
 
 # Pages build output (scripts/build-site.sh)
 _site/
+
+# local dev server allowlist (scripts/dev-site.mjs)
+.devsite/
