@@ -17,6 +17,7 @@ import {
   utcDayStartIso,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { clampText, isDemoUser } from "../_shared/ai-guard.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
@@ -53,7 +54,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { brand, model, reference, condition, year, watch_id, source } = await req.json();
+    // Audit SEC-23-18: the shared demo account never valued anything (0 calls in
+    // 30 days) and anyone can enter it, so it gets no paid lookups; every field
+    // that reaches the prompt is clamped.
+    if (isDemoUser(user)) {
+      return new Response(JSON.stringify({ error: "demo", message: "Price lookups need an account — sign up to use them." }), {
+        status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    const body = await req.json();
+    const brand = clampText(body.brand), model = clampText(body.model), reference = clampText(body.reference, 60);
+    const condition = clampText(body.condition, 40), year = clampText(body.year, 20);
+    const watch_id = clampText(body.watch_id, 64), source = clampText(body.source, 40);
 
     if (!brand) {
       return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
@@ -91,10 +103,17 @@ Deno.serve(async (req: Request) => {
     const DAILY_LIMIT = 40;
     const todayStartIso = utcDayStartIso(Date.now());
     const rlKey = `watch-value:${user.id}`;
-    const { data: rlCount } = await supabase.rpc("bump_rate_limit", {
+    const { data: rlCount, error: rlErr } = await supabase.rpc("bump_rate_limit", {
       p_user: user.id, p_fn: rlKey, p_window_floor: todayStartIso, p_now: todayStartIso,
     });
-    if (typeof rlCount === "number" && rlCount > DAILY_LIMIT) {
+    // Fail closed: an unknown count must not mean unlimited paid lookups.
+    if (rlErr || typeof rlCount !== "number") {
+      console.error("[watch-value] rate limit check failed:", rlErr?.message);
+      return new Response(JSON.stringify({ error: "busy", message: "Try again in a moment." }), {
+        status: 503, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    if (rlCount > DAILY_LIMIT) {
       return new Response(JSON.stringify({ error: "daily_limit", message: "Price lookups are limited to once per day. Try again tomorrow." }), {
         status: 429, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });

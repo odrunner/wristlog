@@ -23,6 +23,7 @@ import {
   stripDataUriPrefix,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { isDemoUser, oversized, sanitizeCollection } from "../_shared/ai-guard.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
@@ -55,6 +56,7 @@ Deno.serve(async (req: Request) => {
   const opsProvided = req.headers.get("x-campaign-secret") ?? "";
   let user: { id: string } | null = null;
   let viaOpsSecret = false;
+  let isDemo = false;
   if (opsSecret && opsProvided === opsSecret) {
     viaOpsSecret = true;
     const { data: admin } = await supabase.from("profiles").select("id").eq("is_admin", true).limit(1).maybeSingle();
@@ -78,11 +80,13 @@ Deno.serve(async (req: Request) => {
       });
     }
     user = jwtUser;
+    isDemo = isDemoUser(jwtUser);
   }
 
   // ── Rate limiting: 100 requests per rolling 1-hour window (atomic via RPC) ──
   // The prior read-then-update let concurrent requests slip past the cap.
-  const RATE_LIMIT = 100;
+  // The shared demo account (anyone can enter it) gets a small allowance.
+  const RATE_LIMIT = isDemo ? 10 : 100;
   const WINDOW_MS = 60 * 60 * 1000;
   const now = new Date();
   const windowFloor = new Date(now.getTime() - WINDOW_MS);
@@ -108,8 +112,11 @@ Deno.serve(async (req: Request) => {
       );
     }
   } catch (rlErr) {
+    // Fail closed: every call spends paid AI, so an unknown count is a refusal.
     console.error("[identify-watch] Rate limit check error:", rlErr);
-    // Fail open: allow the request if rate limit check fails
+    return new Response(JSON.stringify({ error: "Busy — try again in a moment." }), {
+      status: 503, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
   }
 
   const t0 = Date.now();
@@ -131,7 +138,21 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection, mode, watchInfo, commit, modelInfo, modelId } = await req.json();
+    const { image, collection: rawCollection, mode, watchInfo, commit, modelInfo, modelId } = await req.json();
+    // Bound what reaches the prompt (audit SEC-23-18): the owned-watch list is
+    // trimmed, anything else oversized is refused.
+    const collection = sanitizeCollection(rawCollection);
+    if (oversized(watchInfo, 4000) || oversized(modelInfo, 50000) ||
+        (typeof image === "string" && image.length > 10_000_000)) {
+      return new Response(JSON.stringify({ error: "Request too large" }), {
+        status: 413, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    if (isDemo && !["identify", "detect"].includes(normalizeMode(mode))) {
+      return new Response(JSON.stringify({ error: "Not available in the demo — sign up to use it." }), {
+        status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
     loggedMode = normalizeMode(mode);
     loggedHasCollection = hasCollectionFn(collection);
 
