@@ -170,6 +170,13 @@ struct WebView: UIViewRepresentable {
                                 window.webkit.messageHandlers.auth.postMessage({
                                     event: 'SIGNED_OUT'
                                 });
+                            } else if (event === 'TOKEN_REFRESHED' && session) {
+                                // Keeps native's copy current so sign-out can delete
+                                // this device's push token as the user (RLS).
+                                window.webkit.messageHandlers.auth.postMessage({
+                                    event: 'TOKEN_REFRESHED',
+                                    accessToken: session.access_token
+                                });
                             }
                         });
                         // Check current session
@@ -412,6 +419,8 @@ struct WebView: UIViewRepresentable {
             if event == "SIGNED_IN", let userId = body["userId"] as? String {
                 let accessToken = body["accessToken"] as? String
                 PushManager.shared.handleSignIn(userId: userId, accessToken: accessToken)
+            } else if event == "TOKEN_REFRESHED", let token = body["accessToken"] as? String {
+                PushManager.shared.updateAccessToken(token)
             } else if event == "SIGNED_OUT" {
                 PushManager.shared.handleSignOut()
             } else if event == "BADGE_UPDATE" {

@@ -80,12 +80,21 @@ class PushManager: NSObject, UNUserNotificationCenterDelegate {
         requestPermissionAndRegister(full: false)
     }
 
-    // Called when user signs out
+    // Called when the page's session token is refreshed (hourly).
+    func updateAccessToken(_ token: String) {
+        userAccessToken = token
+    }
+
+    // Called when user signs out. The delete must run AS the user: device_tokens
+    // RLS is own-rows-only, so the old publishable-key request matched nothing and
+    // the signed-out account kept receiving pushes on this device (audit SEC-23-24).
+    // The access token stays valid until it expires even after sign-out.
     func handleSignOut() {
-        if let token = deviceToken, let userId = currentUserId {
-            deleteToken(userId: userId, token: token)
+        if let token = deviceToken, let userId = currentUserId, let access = userAccessToken {
+            deleteToken(userId: userId, token: token, accessToken: access)
         }
         currentUserId = nil
+        userAccessToken = nil
     }
 
     // Maps an OS authorization status to the string the web layer expects.
@@ -175,14 +184,14 @@ class PushManager: NSObject, UNUserNotificationCenterDelegate {
         }.resume()
     }
 
-    private func deleteToken(userId: String, token: String) {
+    private func deleteToken(userId: String, token: String, accessToken: String) {
         let encodedToken = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token
         guard let url = URL(string: "\(supabaseURL)/rest/v1/device_tokens?user_id=eq.\(userId)&token=eq.\(encodedToken)") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
         URLSession.shared.dataTask(with: request) { _, _, error in
             if let error = error {
