@@ -48,7 +48,7 @@ serve(async (req) => {
 
     if (deleteError) {
       console.error('[delete-user] Failed:', deleteError);
-      return new Response(JSON.stringify({ error: deleteError.message }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: 'Could not delete the account — please try again.' }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 
     console.log(`[delete-user] Deleted auth user: ${user.id}`);
@@ -56,6 +56,6 @@ serve(async (req) => {
 
   } catch (err) {
     console.error('[delete-user] Error:', err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: 'Something went wrong — please try again.' }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
 });

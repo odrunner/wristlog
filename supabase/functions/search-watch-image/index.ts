@@ -210,7 +210,7 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error("[search-watch-image] Error:", err);
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+      JSON.stringify({ error: "Something went wrong — please try again." }),
       { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     );
   }

@@ -135,6 +135,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {
     console.error("[ses-webhook] Error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return new Response(JSON.stringify({ error: "internal error" }), { status: 500 });
   }
 });

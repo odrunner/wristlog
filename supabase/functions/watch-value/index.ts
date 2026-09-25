@@ -166,10 +166,10 @@ Rules:
         // every hang and buys nothing, because Gemini never recovers after ~35s.
         const geminiTimer = setTimeout(() => geminiAbort.abort(), 35000);
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
             signal: geminiAbort.signal,
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
@@ -298,6 +298,6 @@ Rules:
     });
   } catch (err) {
     console.error("[watch-value] Error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Something went wrong — please try again." }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
 });

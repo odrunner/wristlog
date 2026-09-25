@@ -221,8 +221,8 @@ Deno.serve(async (req: Request) => {
           const ac = new AbortController();
           const timer = setTimeout(() => ac.abort(), 60000);
           const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
-            { method: "POST", headers: { "Content-Type": "application/json" }, signal: ac.signal,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
+            { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY }, signal: ac.signal,
               body: JSON.stringify({
                 contents: [{ parts: [{ text: modelPrompt }] }],
                 tools: [{ google_search: {} }],
@@ -304,10 +304,10 @@ Deno.serve(async (req: Request) => {
           const geminiTimer = setTimeout(() => geminiAbort.abort(), 45000);
 
           const geminiResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
               signal: geminiAbort.signal,
               body: JSON.stringify({
                 contents: [{ parts }],
@@ -419,10 +419,10 @@ Deno.serve(async (req: Request) => {
           const abort = new AbortController();
           const timer = setTimeout(() => abort.abort(), 45000);
           const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
               signal: abort.signal,
               body: JSON.stringify({
                 contents: [{ parts }],
@@ -616,10 +616,10 @@ Deno.serve(async (req: Request) => {
         const geminiAbort = new AbortController();
         const geminiTimer = setTimeout(() => geminiAbort.abort(), 60000);
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
             signal: geminiAbort.signal,
             body: JSON.stringify({
               contents: [{
@@ -712,7 +712,7 @@ Deno.serve(async (req: Request) => {
     console.error("[identify-watch] Error:", err);
     await logAttempt(null, `exception:${(err as Error).message?.slice(0, 100) || "unknown"}`);
     return new Response(
-      JSON.stringify({ error: (err as Error).message || "Internal error" }),
+      JSON.stringify({ error: "Something went wrong — please try again." }),
       { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     );
   }
