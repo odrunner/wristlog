@@ -111,8 +111,10 @@ struct WebView: UIViewRepresentable {
                 return
             }
 
-            // Allow Google OAuth intermediate pages (account chooser, consent)
-            if host.hasSuffix("google.com") || host.hasSuffix("googleapis.com") {
+            // Allow Google OAuth intermediate pages (account chooser, consent).
+            // Dot-anchored: a bare suffix match also allowed look-alike domains.
+            if host == "google.com" || host.hasSuffix(".google.com")
+                || host == "googleapis.com" || host.hasSuffix(".googleapis.com") {
                 decisionHandler(.allow)
                 return
             }
@@ -322,10 +324,22 @@ struct WebView: UIViewRepresentable {
 
         // MARK: JS → Native message handler
 
+        /// Origins allowed to use the JS → native bridge (main frame, https only).
+        static let bridgeHosts: Set<String> = ["wrotate.com", "www.wrotate.com"]
+
         func userContentController(
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
+            // Only the wrotate.com page itself may drive native code. Handlers are
+            // registered for every frame, so without this an iframe, or any page the
+            // WebView navigated to (Google pages, api.wrotate.com documents), could
+            // start the microphone or bind this device's push token to another
+            // account (audit SEC-23-12).
+            let origin = message.frameInfo.securityOrigin
+            guard message.frameInfo.isMainFrame, origin.protocol == "https",
+                  Self.bridgeHosts.contains(origin.host) else { return }
+
             // Route timegrapher messages to its bridge
             if message.name == "timegrapher" {
                 if let body = message.body as? [String: Any] {

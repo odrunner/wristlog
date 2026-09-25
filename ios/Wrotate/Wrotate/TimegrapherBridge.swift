@@ -1,4 +1,5 @@
 import WebKit
+import AVFoundation
 
 /// Bridges JS ↔ Native for the timegrapher feature.
 /// JS sends:   window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: 28800, sensitivity: 50 })
@@ -257,8 +258,13 @@ class TimegrapherBridge {
 
     private func stopPiezo() {
         UIApplication.shared.isIdleTimerDisabled = false
+        // Raw samples go to the page only from an external (piezo) input. From the
+        // built-in mic they are ~12 s of room audio — never hand that to page script
+        // (audit SEC-23-12). Read the route before stop() deactivates the session.
+        let fromBuiltInMic = AVAudioSession.sharedInstance().currentRoute.inputs
+            .contains { $0.portType == .builtInMic }
         let r = piezo.stop()
-        if let cap = piezo.exportRawCapture() {
+        if !fromBuiltInMic, let cap = piezo.exportRawCapture() {
             sendToJS(["event": "rawCapture", "b64": cap.b64, "rate": cap.rate, "n": cap.n, "bph": piezoBph])
         }
         sendToJS(["event": "stopped", "rate": r.rate as Any, "beatError": r.beatError as Any, "tickCount": r.tickCount])
