@@ -7944,7 +7944,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.07.28';
+const APP_VERSION = '25.07.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9298,6 +9298,20 @@ function toggleProfileEdit() {
 async function sharePublicProfile() {
   const uname = myProfile?.username;
   if (!uname) return;
+  // The share page only shows a Public profile + Public collection (missing
+  // visibility counts as Followers, as everywhere else). Say so instead of
+  // handing out a link that opens "Private". No await on the public path:
+  // iOS drops navigator.share once the tap gesture is spent.
+  const colVis = ['public', 'followers', 'friends', 'private'].includes(myProfile.collection_visibility)
+    ? myProfile.collection_visibility : 'followers';
+  const profileOpen = (myProfile.profile_privacy || 'public') === 'public';
+  if (!profileOpen || colVis !== 'public') {
+    const what = !profileOpen ? 'Your profile isn’t public' : 'Your collection isn’t public';
+    const go = await showConfirm(`${what}, so this link would open a “Private” page. Set it to Public in Privacy to share it with anyone.`,
+      { title: 'Link won’t show your collection', confirmLabel: 'Open Privacy', danger: false });
+    if (go) openPrivacySection();
+    return;
+  }
   const url = `https://api.wrotate.com/functions/v1/share-collection?u=${encodeURIComponent(uname)}`;
   const title = `${myProfile?.display_name || uname}'s Watch Collection — WRotate`;
   if (navigator.share) {
@@ -9309,6 +9323,12 @@ async function sharePublicProfile() {
   } else {
     _fallbackCopyText(url, 'Collection link copied!');
   }
+}
+
+function openPrivacySection() {
+  const body = document.getElementById('prv-section');
+  if (body && body.classList.contains('collapsed')) toggleProfSection('prv-section', 'prv-collapse');
+  document.getElementById('prv-profile-chips')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function _fallbackCopyText(text, msg = 'Link copied!') {
@@ -17598,7 +17618,7 @@ async function savePrivacyField(field, value) {
   if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('profiles').update({ [field]: value }).eq('id', currentUser.id);
-  if (!error && window.myProfile) window.myProfile[field] = value;
+  if (!error && myProfile) myProfile[field] = value; // `let` binding — window.myProfile is undefined
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 

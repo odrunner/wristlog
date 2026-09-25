@@ -268,3 +268,24 @@ describe('Admin panel renders user-controlled report/profile fields safely (SEC-
     expect(html).not.toContain("${p.collection_visibility || 'public'} collection");
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-16 follow-up: the username share page shows only a
+// Public profile + Public collection, so sharePublicProfile warns instead of
+// sending a link that opens "Private". It reads myProfile — which the privacy
+// chips must actually update (they wrote to window.myProfile, undefined for a
+// `let` binding, so the cache went stale after every change).
+describe('Share profile link respects privacy (SEC-23-16)', () => {
+  it('sharePublicProfile checks profile + collection visibility before sharing', () => {
+    const i = html.indexOf('async function sharePublicProfile()');
+    const body = html.slice(i, html.indexOf('\n}\n', i));
+    expect(body).toContain("colVis !== 'public'");
+    expect(body).toContain('profileOpen');
+  });
+
+  it('savePrivacyField updates the real myProfile binding', () => {
+    const i = html.indexOf('async function savePrivacyField(');
+    const body = html.slice(i, html.indexOf('\n}\n', i));
+    expect(body).not.toContain('window.myProfile');
+    expect(body).toContain('myProfile[field] = value');
+  });
+});
