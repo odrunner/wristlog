@@ -17618,7 +17618,7 @@ async function savePrivacyField(field, value) {
   if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('profiles').update({ [field]: value }).eq('id', currentUser.id);
-  if (!error && myProfile) myProfile[field] = value; // `let` binding — window.myProfile is undefined
+  if (!error && myProfile) myProfile[field] = value; // the `let` binding, not a window property
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
