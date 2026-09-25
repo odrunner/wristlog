@@ -4,7 +4,7 @@
 //
 // Required Supabase secrets (set via `supabase secrets set`):
 //   GITHUB_PAT         — fine-grained GitHub PAT with Issues write permission
-//   GITHUB_REPO        — e.g. "odrunner/wristlog"
+//   GITHUB_REPO        — "odrunner/wrotate-feedback" (PRIVATE since 2026-09-25; the app repo is public)
 //   SUPABASE_URL       — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY — auto-provided
 
@@ -15,7 +15,7 @@ import { serviceKey } from "../_shared/keys.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT") ?? "";
-const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wristlog";
+const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wrotate-feedback";
 
 serve(async (req) => {
   // Called only by our DB trigger (webhook_with_secret), which sends the
