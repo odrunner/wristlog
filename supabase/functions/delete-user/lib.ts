@@ -9,3 +9,13 @@
 export function hasAuthHeader(authHeader: string | null | undefined): boolean {
   return !!authHeader;
 }
+
+// Shared accounts that must never be deleted through this endpoint. The demo
+// account is signed into by anyone ("Explore Without an Account" → demo-login),
+// so without this any visitor could delete it — and its showcase data — for
+// everyone (audit SEC-23-18). There are no backups to restore it from.
+export const UNDELETABLE_EMAILS = ["demo@wrotate.com"];
+
+export function isUndeletable(email: string | null | undefined): boolean {
+  return !!email && UNDELETABLE_EMAILS.includes(email.trim().toLowerCase());
+}

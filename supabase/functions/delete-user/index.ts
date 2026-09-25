@@ -6,7 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { hasAuthHeader } from "./lib.ts";
+import { hasAuthHeader, isUndeletable } from "./lib.ts";
 import { serviceKey, publishableKey } from "../_shared/keys.ts";
 
 const CORS_HEADERS = {
@@ -37,6 +37,10 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    if (isUndeletable(user.email)) {
+      return new Response(JSON.stringify({ error: 'This account cannot be deleted' }), { status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
