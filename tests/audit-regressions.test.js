@@ -298,3 +298,19 @@ describe('Moderation changes go through the admin RPC (SEC-23-22)', () => {
     expect(html.split("db.rpc('admin_set_moderation'").length - 1).toBe(2);
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-25: every page allows scripts only from the exact
+// CDN package paths it loads (not all of cdn.jsdelivr.net, which serves any npm
+// package), and CDN scripts carry an integrity hash.
+describe('CSP script-src pins CDN packages; CDN scripts use SRI (SEC-23-25)', () => {
+  for (const f of ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html']) {
+    it(f, () => {
+      const src = readFileSync(join(root, f), 'utf8');
+      const scriptSrc = src.match(/script-src ([^;"]+)/)[1];
+      expect(scriptSrc.split(/\s+/)).not.toContain('https://cdn.jsdelivr.net');
+      for (const tag of src.match(/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net[^>]*>/g) || []) {
+        expect(tag).toMatch(/integrity="sha384-/);
+      }
+    });
+  }
+});
