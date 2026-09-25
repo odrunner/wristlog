@@ -8,7 +8,7 @@
 // Deploy with --no-verify-jwt (auth is handled here).
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { apnsHost, buildBadgePushMessage, createAPNsJWT, sendPush } from "./lib.ts";
 import { serviceKey, publishableKey } from "../_shared/keys.ts";
 

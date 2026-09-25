@@ -9,7 +9,7 @@
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — auto-provided
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { X509Certificate } from "https://esm.sh/@peculiar/x509@1.11.0";
 import {
   buildCanonicalString,

@@ -13,7 +13,7 @@
 // straps, box/papers, insurance and receipts are not even selected.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { handleCommentPost, loadComments } from "../_shared/share-comments.ts";
 import { commentsSectionHtml } from "../_shared/share-comments-lib.ts";
 import {

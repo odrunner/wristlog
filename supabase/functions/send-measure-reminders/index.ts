@@ -14,7 +14,7 @@
 // or assigning.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { sendEmail } from "../_shared/mailer.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";

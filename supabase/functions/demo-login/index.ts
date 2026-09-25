@@ -5,7 +5,7 @@
 // Rate limited: 5 requests per IP per 10-minute window.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { GLOBAL_KEY, GLOBAL_LIMIT, GLOBAL_WINDOW_MS, RATE_LIMIT, RATE_WINDOW_MS, hashIp, rateKey, resolveIp } from "./lib.ts";
 import { serviceKey, publishableKey } from "../_shared/keys.ts";
 

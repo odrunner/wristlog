@@ -7,7 +7,7 @@
 //   If none finds an image, client falls back to cropping user's original photo.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
   buildBrandSiteUrls,
   buildFallbackBrandUrl,

@@ -3,7 +3,7 @@
 // GET /share-collection?u=<username>&img=1 → SVG og:image of collection grid
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
   avatarInnerHtml,
   buildCollectionOg,
