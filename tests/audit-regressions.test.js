@@ -252,3 +252,19 @@ describe('URL-token sign-in requires a sign-in this browser started (SEC-23-23)'
     expect(markers).toBe(oauthCalls);
   });
 });
+
+// ── Audit 2026-09-23 SEC-23-10: admin-panel XSS. A report's content_id (free
+// text chosen by the reporter) went raw into onclick handlers in the Reports
+// tab, and a user's own collection_visibility went raw into Admin → Users.
+describe('Admin panel renders user-controlled report/profile fields safely (SEC-23-10)', () => {
+  it('report action buttons pass ids through data attributes', () => {
+    expect(html).not.toContain("adminConfirmRemoval('${r.id}'");
+    expect(html).not.toContain("adminRestoreContent('${r.id}'");
+    expect(html).toContain('adminConfirmRemoval(this.dataset.rid,this.dataset.ctype,this.dataset.cid)');
+  });
+
+  it('the user-detail privacy line escapes both settings', () => {
+    expect(html).toContain("${escHtml(p.collection_visibility || 'public')} collection");
+    expect(html).not.toContain("${p.collection_visibility || 'public'} collection");
+  });
+});

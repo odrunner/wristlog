@@ -7944,7 +7944,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.05.43';
+const APP_VERSION = '25.07.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19203,7 +19203,7 @@ function renderReportCard(r) {
     <div class="fb-card" style="margin-bottom:var(--space-3);padding:var(--space-3);border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? 'var(--success)' : 'var(--muted)'};">
       <div class="row-between u-mb-1">
         <span class="fb-type-badge u-tt-capitalize">${escHtml(r.reason)}</span>
-        <span class="u-fs-sm u-fw-semibold u-tt-uppercase" style="${statusCls};">${r.status}</span>
+        <span class="u-fs-sm u-fw-semibold u-tt-uppercase" style="${statusCls};">${escHtml(r.status)}</span>
       </div>
       <div class="text-meta u-mb-1">
         ${escHtml(r.content_type)} by <strong>${escHtml(reportedName)}</strong> · reported by ${escHtml(reporterName)} · ${date}
@@ -19212,8 +19212,8 @@ function renderReportCard(r) {
       ${contentPreview}
       ${r.status === 'pending' ? `
         <div class="u-gap-1-5 u-mt-2 u-d-flex">
-          <button class="btn btn-primary btn-xs" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
-          <button class="btn btn-ghost btn-xs" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
+          <button class="btn btn-primary btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminConfirmRemoval(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Confirm Removal</button>
+          <button class="btn btn-ghost btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminRestoreContent(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Restore</button>
           <button class="btn btn-ghost btn-xs u-c-danger-text" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
@@ -19777,7 +19777,7 @@ async function openAdminUserDetail(userId) {
         <div>
           <div class="u-fw-bold u-fs-body">${escHtml(name)}</div>
           <div class="caption">@${escHtml(p.username || '—')}</div>
-          <div class="caption-xs">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
+          <div class="caption-xs">${escHtml(p.profile_privacy || 'public')} profile · ${escHtml(p.collection_visibility || 'public')} collection</div>
           ${p.is_suspended ? '<div class="u-fs-xs u-c-danger-text u-fw-semibold">SUSPENDED</div>' : ''}
         </div>
       </div>
