@@ -482,6 +482,18 @@ def _svc_headers(key):
     return [f"apikey: {key}", f"Authorization: Bearer {key}", "Content-Type: application/json", "Prefer: return=representation"]
 
 
+def verified_session_users():
+    """session_id -> user_id from measurement_sessions (service key; own-rows RLS
+    otherwise). None when the key is missing, and then nothing is filtered."""
+    url, key = _service_env()
+    if not (url and key):
+        return None
+    rows = fetch_paginated(
+        f"/rest/v1/measurement_sessions?created_at=gte.{RELEASE_DATE}T00:00:00&select=session_id,user_id&order=created_at.asc",
+        _svc_headers(key))
+    return {r["session_id"]: r["user_id"] for r in rows if r.get("session_id")}
+
+
 def svc_call(url, key, path, method="GET", body=None):
     return curl(f"{url}{path}", _svc_headers(key), method, body)
 
@@ -642,6 +654,13 @@ def main():
         s = sess[sid]; s["msgs"].append(r.get("messages", "") or "")
         if s["t"] is None: s["t"] = r.get("created_at", "")
 
+    # Only sessions the DB attributed to their signed-in user count. Tick logs are
+    # writable without an account, so a forged summary could name any user_id and
+    # steer the knob trials; capture_measurement_session() records a measurement
+    # only when that user_id is the caller (audit SEC-23-17, 2026-09-25). Every
+    # external summary since the tg era matched on that date (5,249 / 5,249).
+    verified = verified_session_users()
+
     now = datetime.now(timezone.utc)
     wk_cut = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
     pw_cut = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%S")
@@ -652,6 +671,7 @@ def main():
         if "psBE=" not in blob and "[TGALGO" not in blob: continue
         a = analyze(blob)
         if not a["uid"] or a["uid"] in internal: continue
+        if verified is not None and verified.get(sid) != a["uid"]: continue
         a["v2"] = prov2_stats(blob)
         a["t"] = s["t"]
         cum.append(a)
