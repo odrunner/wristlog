@@ -7948,7 +7948,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.09.09';
+const APP_VERSION = '25.15.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25164,6 +25164,8 @@ function confirmDelete() {
   // Cleanup Storage files (watch image + receipts + log photos)
   if (w?.image) { const p = storagePathFrom(w.image); if (p) deleteStorageFile(p); }
   (w?.receipts || []).forEach(r => { if (r.data) { const p = storagePathFrom(r.data); if (p) deleteStorageFile(p); } });
+  const privatePaths = (w?.receipts || []).map(r => r.path).filter(Boolean);
+  if (privatePaths.length) db.storage.from('receipts').remove(privatePaths);
   const watchLogs = logsForWatch(id);
   watchLogs.filter(l => l.photoUrl).forEach(l => { const p = storagePathFrom(l.photoUrl); if (p) deleteStorageFile(p); });
   if (currentUser) {
@@ -26598,6 +26600,25 @@ async function uploadFile(blob, path, contentType) {
   return urlData.publicUrl;
 }
 
+// Receipts live in the private `receipts` bucket (<uid>/<watch>/<id>.<ext>) and
+// are read through signed URLs, cached until shortly before they expire.
+const _receiptUrlCache = {};
+async function uploadReceipt(blob, path, contentType) {
+  if (!ALLOWED_FILE_TYPES.includes(contentType)) throw new Error('File type not allowed: ' + contentType);
+  const { error } = await db.storage.from('receipts').upload(path, blob, { upsert: true, contentType });
+  if (error) throw new Error('Upload failed: ' + error.message);
+}
+async function signReceiptUrls(receipts) {
+  const now = Date.now();
+  const paths = (receipts || []).map(r => r.path).filter(p => p && !(_receiptUrlCache[p]?.exp > now));
+  if (!paths.length) return;
+  const { data, error } = await db.storage.from('receipts').createSignedUrls(paths, 3600);
+  if (error) { console.error('[receipts] sign:', error.message); return; }
+  for (const d of data || []) {
+    if (d.signedUrl) _receiptUrlCache[d.path] = { url: d.signedUrl, exp: now + 55 * 60 * 1000 };
+  }
+}
+
 // Delete a file from Supabase Storage (and its _thumb / _card siblings, if that folder has them)
 async function deleteStorageFile(path) {
   const paths = [path, thumbPathFor(path), cardPathFor(path)].filter(Boolean);
@@ -27115,7 +27136,16 @@ function viewReceipt(watchId, receiptId) {
   if (!w) return;
   const r = (w.receipts || []).find(x => x.id === receiptId);
   if (!r) return;
-  // If Storage URL, open directly in new tab
+  // Private receipt: open the signed URL fetched when the list rendered
+  // (fetched here as a fallback — popup blockers may then need a second tap).
+  if (r.path) {
+    const cached = _receiptUrlCache[r.path];
+    if (cached && cached.exp > Date.now()) { window.open(cached.url, '_blank'); return; }
+    toast('Opening receipt…');
+    signReceiptUrls([r]).then(() => { const c = _receiptUrlCache[r.path]; if (c) window.open(c.url, '_blank'); });
+    return;
+  }
+  // Legacy public Storage URL (not yet moved to the private bucket)
   if (r.data && r.data.startsWith('https://')) {
     window.open(r.data, '_blank');
     return;
@@ -27142,6 +27172,7 @@ function renderEditReceiptsList(w) {
     el.innerHTML = `<div class="note">No receipts yet.</div>`;
     return;
   }
+  signReceiptUrls(receipts);   // prefetch so View opens synchronously
   el.innerHTML = `<div class="receipt-list">${receipts.map(r => {
     const isPdf = r.type === 'application/pdf';
     const icon  = isPdf ? 'PDF' : 'IMG';
@@ -27169,7 +27200,9 @@ function removeReceiptFromEdit(watchId, receiptId, btn) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
-  if (receipt?.data) {
+  if (receipt?.path) {
+    db.storage.from('receipts').remove([receipt.path]).then(({ error }) => { if (error) console.error('[receipts] delete:', error.message); });
+  } else if (receipt?.data) {
     const p = storagePathFrom(receipt.data);
     if (p) deleteStorageFile(p);
   }
@@ -27198,11 +27231,12 @@ function addReceiptFromEdit() {
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       let data;
       if (currentUser) {
+        // Private bucket, read back through short-lived signed URLs (audit
+        // 2026-09-23: receipts used to be public URLs in the media bucket).
         const ext = isPdf ? 'pdf' : 'jpg';
-        const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
-        data = isPdf
-          ? await uploadFile(file, path, 'application/pdf')
-          : await uploadImage(file, path);
+        const path = `${currentUser.id}/${wId}/${rId}.${ext}`;
+        await uploadReceipt(isPdf ? file : await blobToResizedBlob(file), path, isPdf ? 'application/pdf' : 'image/jpeg');
+        return { id: rId, name: file.name, type: file.type || 'image/jpeg', path, addedDate: todayStr() };
       } else {
         if (isPdf) {
           data = await new Promise((res, rej) => {
