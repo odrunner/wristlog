@@ -10,7 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
-import { buildIssuePayload, isBugReport, resolveUsername } from "./lib.ts";
+import { buildIssuePayload, isBugReport } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 
@@ -60,24 +60,7 @@ serve(async (req) => {
       );
     }
 
-    // Look up username for context (optional, non-blocking)
-    let username = "anonymous";
-    if (dbRecord.user_id) {
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, display_name")
-          .eq("id", dbRecord.user_id)
-          .single();
-
-        username = resolveUsername(profile);
-      } catch {
-        // Non-critical — proceed with "anonymous"
-      }
-    }
-
-    // Build GitHub Issue (from the trusted DB row, with details sanitized in lib)
-    const issuePayload = buildIssuePayload(dbRecord, username, new Date().toISOString());
+    const issuePayload = buildIssuePayload(dbRecord, "", new Date().toISOString());
 
     // Create GitHub Issue via REST API
     const response = await fetch(

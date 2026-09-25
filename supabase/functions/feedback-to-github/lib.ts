@@ -71,7 +71,8 @@ export function buildIssueBody(
   return [
     `## Bug Report from User Feedback`,
     ``,
-    `**Reporter:** ${sanitizeInline(username)}`,
+    // No reporter name: this repo is public. Look the id up in Admin → Feedback.
+    `**Feedback id:** ${sanitizeInline(record.id) || "unknown"}`,
     `**App Version:** ${sanitizeInline(record.app_version) || "unknown"}`,
     `**Browser:** ${sanitizeInline(record.browser) || "unknown"}`,
     `**Submitted:** ${sanitizeInline(record.created_at) || nowIso}`,
