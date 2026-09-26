@@ -7,6 +7,7 @@ const swSource = readFileSync(resolve(__dirname, '..', 'sw.js'), 'utf8');
 const CURRENT_CACHE = swSource.match(/const CACHE = '([^']+)'/)[1];
 // The stylesheet URL carries its content hash (scripts/ds-stamp.mjs); read it like the cache name.
 const DS_URL = swSource.match(/'(\/design-system\.css\?v=[0-9a-f]{8})'/)[1];
+const MP_URL = swSource.match(/'(\/model-page\.js\?v=[0-9a-f]{8})'/)[1];
 const PREV_CACHE = CURRENT_CACHE.replace(/(\d+)$/, (_, n) => String(Number(n) - 1));
 
 // ── Mock Service Worker globals ──────────────────────────────────────────
@@ -92,7 +93,7 @@ describe('sw.js install', () => {
 
     expect(event.waitUntil).toHaveBeenCalled();
     expect(globalThis.caches.open).toHaveBeenCalledWith(CURRENT_CACHE);
-    expect(mockCache.addAll).toHaveBeenCalledWith(['/', DS_URL, '/model-page.js', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
+    expect(mockCache.addAll).toHaveBeenCalledWith(['/', DS_URL, MP_URL, '/manifest.json', '/icon.svg', '/profile/', '/p/']);
   });
 
   it('stores the fetched shell under /index.html too instead of downloading it twice', async () => {

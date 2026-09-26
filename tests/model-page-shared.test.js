@@ -30,8 +30,8 @@ describe('model-page.js helpers mirror wrotate_test.js', () => {
   }
   it('index.html loads the shared renderer and no longer carries its own copy', () => {
     const idx = readFileSync('index.html', 'utf8');
-    expect(idx).toContain('<script src="/model-page.js"></script>');
+    expect(idx).toMatch(/<script src="\/model-page\.js\?v=[0-9a-f]{8}"><\/script>/);
     expect(idx.includes('function renderModelPage(el, ctx, h)')).toBe(false);
-    expect(readFileSync('sw.js', 'utf8')).toContain("'/model-page.js'");
+    expect(readFileSync('sw.js', 'utf8')).toMatch(/'\/model-page\.js\?v=[0-9a-f]{8}'/);
   });
 });

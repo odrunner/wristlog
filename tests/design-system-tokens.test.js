@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect } from 'vitest';
 import { EMAIL_RANGES } from '../scripts/ds-count.mjs';
-import { STAMPED, dsHash, stamp } from '../scripts/ds-stamp.mjs';
+import { STAMPED, dsHash, stamp, MP_STAMPED, mpHash, stampMp } from '../scripts/ds-stamp.mjs';
 
 // The design tokens used to be copy-pasted into index.html, p/index.html and
 // profile/index.html, plus a fourth inline copy under #auth-screen. r.html had
@@ -475,6 +475,14 @@ describe('sw.js', () => {
     const src = readFileSync(join(root, file), 'utf8');
     expect(src).toContain(DS_URL);
     expect(stamp(src, dsHash())).toBe(src);
+  });
+
+  // Same trap for the shared model-page renderer (2026-09-26): new page + cached old model-page.js drew
+  // the old tabbed layout from the new model_stats shape ("±undefined s/d") until a hard refresh.
+  it.each(MP_STAMPED)('%s loads model-page.js by its current content hash (else: node scripts/ds-stamp.mjs)', (file) => {
+    const src = readFileSync(join(root, file), 'utf8');
+    expect(src).toContain(`/model-page.js?v=${mpHash()}`);
+    expect(stampMp(src, mpHash())).toBe(src);
   });
 
   // The branch started at v1042. A bump is what makes activate() purge the old
