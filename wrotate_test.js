@@ -3878,48 +3878,6 @@ export function shouldNudgeEnhance(watch, { seen, lastNudgeDay, today } = {}) {
 //  MODEL PAGE — community numbers (model_stats RPC) rendering helpers
 // ══════════════════════════════════════════
 
-// SVG path for a single-series sparkline. Points are {median:number}; the
-// x-axis is evenly spaced. Returns '' for fewer than 2 points.
-export function sparklinePath(series, w = 120, h = 32, pad = 2) {
-  const pts = (series || []).map(p => Number(p.median)).filter(v => Number.isFinite(v));
-  if (pts.length < 2) return '';
-  const min = Math.min(...pts), max = Math.max(...pts);
-  const span = max - min || 1;
-  const stepX = (w - pad * 2) / (pts.length - 1);
-  return pts.map((v, i) => {
-    const x = pad + i * stepX;
-    const y = pad + (h - pad * 2) * (1 - (v - min) / span);
-    return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-}
-
-// "▲ 12% since Apr" style summary for the value series; null when no trend.
-export function valueTrendSummary(series) {
-  const s = (series || []).filter(p => Number.isFinite(Number(p.median)));
-  if (s.length < 2) return null;
-  const first = Number(s[0].median), last = Number(s[s.length - 1].median);
-  if (!first) return null;
-  const pct = Math.round(((last - first) / first) * 100);
-  const [y, m] = String(s[0].ym || '').split('-');
-  const mon = m ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-US', { month: 'short' }) : '';
-  const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '▶';
-  return { pct, arrow, text: `${arrow} ${Math.abs(pct)}% since ${mon}`.trim(), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
-}
-
-// Wear Index copy: 1.0 = worn exactly its fair share of the owner's rotation.
-export function wearIndexPhrase(index, pctRank) {
-  const x = Number(index);
-  if (!Number.isFinite(x)) return '';
-  let line;
-  if (x >= 2)        line = `Owners reach for it more than ${x >= 3 ? 'three' : 'twice'}${x >= 3 ? ' times' : ''} its share of their rotation`;
-  else if (x >= 1.3) line = 'Owners wear it well above its share of their rotation';
-  else if (x >= 0.8) line = 'Owners wear it about as much as the rest of their collection';
-  else if (x >= 0.5) line = 'Owners wear it less than its share of their rotation';
-  else               line = 'Mostly a safe queen — rarely leaves the box';
-  const rank = (pctRank != null && Number.isFinite(Number(pctRank))) ? ` · worn more than ${Math.round(Number(pctRank))}% of models on WRotate` : '';
-  return line + rank;
-}
-
 // Rate phrasing shared by the accuracy tile and the "yours vs community" line.
 export function fmtRate(r) {
   const x = Number(r);
@@ -3929,21 +3887,6 @@ export function fmtRate(r) {
   return `${mag === '0.0' ? '' : x > 0 ? '+' : '-'}${mag} s/d`;
 }
 
-// Bar heights for the tiny histograms/strips on the model page: percent of the
-// tallest bar; zero bars get a 4% stub, any real count at least 12% so a single
-// example never looks like nothing.
-export function barPcts(counts) {
-  const arr = (counts || []).map(n => Math.max(0, Number(n) || 0));
-  const max = Math.max(0, ...arr);
-  return arr.map(n => (max > 0 && n > 0) ? Math.max(12, Math.round((n / max) * 100)) : 4);
-}
-
-// Tone by relative height: the mode is gold, its shoulders gold-dim, the rest flat.
-export function histTone(pct) {
-  const p = Number(pct) || 0;
-  return p >= 75 ? 'gold' : p >= 35 ? 'dim' : 'flat';
-}
-
 // Which fun fact leads the teaser band today — rotates daily, stable within a day.
 export function featuredFactIndex(count, now = new Date()) {
   const n = Number(count) || 0;
@@ -3951,6 +3894,47 @@ export function featuredFactIndex(count, now = new Date()) {
   const start = new Date(now.getFullYear(), 0, 0);
   const day = Math.floor((now - start) / 86400000);
   return day % n;
+}
+
+// The model page's members' strip: one dot per member (their typical rate),
+// the viewer's own last reading, the median. Domain grows from ±5 to cover the
+// values, capped at ±30 s/d (outliers pin to the edge, flagged `clamped`);
+// ticks every 5 s/d for a span up to 25, else every 10. Dots that would
+// overlap (< 3% apart) stack into up to four rows.
+export function rateStrip(members, you, med) {
+  const vals = (members || []).map(Number).filter(Number.isFinite);
+  const y = (you == null || you === '') ? NaN : Number(you);
+  const all = Number.isFinite(y) ? vals.concat(y) : vals;
+  if (!all.length) return null;
+  const lo0 = Math.max(-30, Math.min(-5, ...all)), hi0 = Math.min(30, Math.max(5, ...all));
+  const step = hi0 - lo0 <= 25 ? 5 : 10;
+  const lo = Math.floor(lo0 / step) * step, hi = Math.ceil(hi0 / step) * step;
+  const pct = v => Math.round(((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * 1000) / 10;
+  const ticks = [];
+  for (let t = lo; t <= hi; t += step) ticks.push({ v: t, pct: pct(t) });
+  const rows = [];
+  const dots = vals.slice().sort((a, b) => a - b).map(v => {
+    const p = pct(v);
+    let r = 0;
+    while (r < 3 && rows[r] != null && p - rows[r] < 3) r++;
+    rows[r] = p;
+    return { v, pct: p, row: r, clamped: v < lo || v > hi };
+  });
+  const m = (med == null || med === '') ? NaN : Number(med);
+  return { lo, hi, step, ticks, dots, you: Number.isFinite(y) ? pct(y) : null, med: Number.isFinite(m) ? pct(m) : null };
+}
+
+// "Measured 3 days ago" on the model page's your-watch card.
+export function agoText(iso, now = new Date()) {
+  const t = Date.parse(iso || '');
+  if (!Number.isFinite(t)) return '';
+  const d = Math.floor((now - t) / 86400000);
+  if (d <= 0) return 'today';
+  if (d === 1) return 'yesterday';
+  if (d < 14) return `${d} days ago`;
+  if (d < 60) return `${Math.round(d / 7)} weeks ago`;
+  if (d < 730) return `${Math.round(d / 30)} months ago`;
+  return `${Math.round(d / 365)} years ago`;
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).

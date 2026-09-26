@@ -46,7 +46,7 @@
     let ctx = null;
     const el = document.getElementById('model-page-content');
     function show(id) { for (const x of ['loading', 'notfound']) document.getElementById(x).style.display = x === id ? '' : 'none'; }
-    function render() { ctx.tab = WRModelPage.render(el, ctx, handlers); }
+    function render() { WRModelPage.render(el, ctx, handlers); }
     const handlers = {
       back() { if (history.length > 1) history.back(); else location.href = 'https://wrotate.com'; },
       async share() {
@@ -54,7 +54,8 @@
         if (navigator.share) { try { await navigator.share({ title, url }); } catch (e) {} }
         else { try { await navigator.clipboard.writeText(url); } catch (e) {} }
       },
-      setTab(tab, scroll) { ctx.tab = tab; render(); if (scroll) { const bar = document.getElementById('mp-tabs'); if (bar) window.scrollTo({ top: bar.getBoundingClientRect().top + window.scrollY - 8, behavior: 'smooth' }); } },
+      openPost(id) { if (id) location.href = `/p/?id=${encodeURIComponent(id)}`; },
+      openProfile(uid, username) { if (username) location.href = `/profile/?u=${encodeURIComponent(username)}`; },
       openModel(id, slug) { if (slug) location.href = `/w/?m=${encodeURIComponent(slug)}`; },
       openApp() { location.href = 'https://wrotate.com'; },
     };
@@ -70,7 +71,7 @@
       document.getElementById('canonical-link').href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
       document.getElementById('og-title').content = `${m.brand} ${m.name} — WRotate`;
       if (m.hero_image) document.getElementById('og-image').content = m.hero_image;
-      ctx = { m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], tab: 'data', loggedIn: false, publicMode: true };
+      ctx = { m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], loggedIn: false, publicMode: true };
       show(null); render();
     }
     load();

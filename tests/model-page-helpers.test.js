@@ -1,61 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sparklinePath, valueTrendSummary, wearIndexPhrase, fmtRate } from '../wrotate_test.js';
-
-describe('sparklinePath', () => {
-  it('returns empty for <2 points or nothing', () => {
-    expect(sparklinePath([])).toBe('');
-    expect(sparklinePath(null)).toBe('');
-    expect(sparklinePath([{ median: 5 }])).toBe('');
-  });
-  it('maps min to bottom and max to top with even x spacing', () => {
-    const d = sparklinePath([{ median: 10 }, { median: 20 }, { median: 10 }], 120, 32, 2);
-    expect(d.startsWith('M2.0,30.0')).toBe(true);
-    expect(d).toContain('L60.0,2.0');
-    expect(d.endsWith('L118.0,30.0')).toBe(true);
-  });
-  it('handles a flat series without dividing by zero', () => {
-    expect(sparklinePath([{ median: 7 }, { median: 7 }])).toContain('L118.0,30.0');
-  });
-  it('skips non-numeric medians', () => {
-    expect(sparklinePath([{ median: 'x' }, { median: 1 }, { median: 2 }])).toContain('M2.0');
-  });
-});
-
-describe('valueTrendSummary', () => {
-  it('null for short or empty series', () => {
-    expect(valueTrendSummary([])).toBeNull();
-    expect(valueTrendSummary([{ ym: '2026-04', median: 100 }])).toBeNull();
-    expect(valueTrendSummary(null)).toBeNull();
-  });
-  it('null when the first point is zero', () => {
-    expect(valueTrendSummary([{ ym: '2026-04', median: 0 }, { ym: '2026-05', median: 5 }])).toBeNull();
-  });
-  it('reports up/down/flat with the starting month', () => {
-    expect(valueTrendSummary([{ ym: '2026-04', median: 100 }, { ym: '2026-08', median: 112 }]))
-      .toEqual({ pct: 12, arrow: '▲', text: '▲ 12% since Apr', direction: 'up' });
-    expect(valueTrendSummary([{ ym: '2026-06', median: 200 }, { ym: '2026-08', median: 150 }]).direction).toBe('down');
-    expect(valueTrendSummary([{ ym: '2026-06', median: 200 }, { ym: '2026-08', median: 200 }]).arrow).toBe('▶');
-  });
-  it('tolerates a missing ym', () => {
-    expect(valueTrendSummary([{ median: 100 }, { median: 110 }]).text).toBe('▲ 10% since');
-  });
-});
-
-describe('wearIndexPhrase', () => {
-  it('empty for non-numeric', () => { expect(wearIndexPhrase('x')).toBe(''); });
-  it('tiers by index', () => {
-    expect(wearIndexPhrase(3.2)).toContain('three times');
-    expect(wearIndexPhrase(2.2)).toContain('twice');
-    expect(wearIndexPhrase(1.5)).toContain('well above');
-    expect(wearIndexPhrase(1.0)).toContain('about as much');
-    expect(wearIndexPhrase(0.6)).toContain('less than');
-    expect(wearIndexPhrase(0.2)).toContain('safe queen');
-  });
-  it('appends the percentile rank when given', () => {
-    expect(wearIndexPhrase(2.2, 90)).toContain('worn more than 90% of models');
-    expect(wearIndexPhrase(2.2, null)).not.toContain('% of models');
-  });
-});
+import { fmtRate, featuredFactIndex, rateStrip, agoText } from '../wrotate_test.js';
 
 describe('fmtRate', () => {
   it('signs and formats', () => {
@@ -66,5 +10,74 @@ describe('fmtRate', () => {
     expect(fmtRate(-0.04)).toBe('0.0 s/d');
     expect(fmtRate(0.04)).toBe('0.0 s/d');
     expect(fmtRate('nope')).toBe('—');
+  });
+});
+
+describe('featuredFactIndex', () => {
+  it('-1 for no facts, rotates daily within range', () => {
+    expect(featuredFactIndex(0)).toBe(-1);
+    const a = featuredFactIndex(4, new Date(2026, 0, 1));
+    const b = featuredFactIndex(4, new Date(2026, 0, 2));
+    expect(a).toBeGreaterThanOrEqual(0); expect(a).toBeLessThan(4);
+    expect((a + 1) % 4).toBe(b);
+  });
+});
+
+describe('rateStrip', () => {
+  it('null with nothing to plot', () => {
+    expect(rateStrip([], null)).toBeNull();
+    expect(rateStrip(null, '')).toBeNull();
+    expect(rateStrip(['x'], undefined)).toBeNull();
+  });
+  it('the Submariner Date case: -15…+10 in steps of 5, you + median placed', () => {
+    const s = rateStrip([-11.7, -5.8, -2.8, -2, -2, 1.7, 2.1, 2.2, 5.2], 1.4, -2);
+    expect(s.lo).toBe(-15); expect(s.hi).toBe(10); expect(s.step).toBe(5);
+    expect(s.ticks.map(t => t.v)).toEqual([-15, -10, -5, 0, 5, 10]);
+    expect(s.ticks[0].pct).toBe(0); expect(s.ticks[5].pct).toBe(100);
+    expect(s.you).toBe(65.6);
+    expect(s.med).toBe(52);
+    expect(s.dots).toHaveLength(9);
+    // the two -2.0 members stack; the 2.1 / 2.2 pair stacks above 1.7
+    expect(s.dots.filter(d => d.v === -2).map(d => d.row).sort()).toEqual([0, 1]);
+    expect(s.dots.find(d => d.v === 2.2).row).toBe(2);
+    expect(s.dots.every(d => !d.clamped)).toBe(true);
+  });
+  it('a quiet cluster still gets a ±5 frame', () => {
+    const s = rateStrip([0.5, 1], null, null);
+    expect([s.lo, s.hi]).toEqual([-5, 5]);
+    expect(s.you).toBeNull(); expect(s.med).toBeNull();
+  });
+  it('wide spreads step by 10 and outliers pin to the ±30 edge', () => {
+    const s = rateStrip([-21.7, 7, 71], '9.8', '7');
+    expect(s.step).toBe(10);
+    expect([s.lo, s.hi]).toEqual([-30, 30]);
+    const out = s.dots.find(d => d.v === 71);
+    expect(out.clamped).toBe(true); expect(out.pct).toBe(100);
+    expect(s.you).toBeCloseTo(66.3, 1);
+  });
+  it('a pile of equal readings caps at the fourth row', () => {
+    const s = rateStrip([1, 1, 1, 1, 1, 1], null);
+    expect(s.dots.map(d => d.row)).toEqual([0, 1, 2, 3, 3, 3]);
+  });
+  it('the viewer alone still gets a strip', () => {
+    const s = rateStrip([], -3);
+    expect(s.dots).toEqual([]); expect(s.you).toBe(20);
+  });
+});
+
+describe('agoText', () => {
+  const now = new Date('2026-09-26T12:00:00Z');
+  it('buckets by age', () => {
+    expect(agoText('2026-09-26T08:00:00Z', now)).toBe('today');
+    expect(agoText('2026-09-27T08:00:00Z', now)).toBe('today');   // clock skew
+    expect(agoText('2026-09-25T08:00:00Z', now)).toBe('yesterday');
+    expect(agoText('2026-09-23T08:00:00Z', now)).toBe('3 days ago');
+    expect(agoText('2026-09-01T08:00:00Z', now)).toBe('4 weeks ago');
+    expect(agoText('2026-05-01T08:00:00Z', now)).toBe('5 months ago');
+    expect(agoText('2023-09-01T08:00:00Z', now)).toBe('3 years ago');
+  });
+  it('empty for missing or bad dates', () => {
+    expect(agoText(null, now)).toBe('');
+    expect(agoText('not a date', now)).toBe('');
   });
 });

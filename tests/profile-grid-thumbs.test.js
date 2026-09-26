@@ -45,10 +45,11 @@ describe('profile/index.html watch grid', () => {
 // fallback if the transform errors.
 describe('model-page.js hero image', () => {
   const shared = readFileSync(join(root, 'model-page.js'), 'utf8');
-  it('routes the hero through heroSrcAttrs (render transform + data-full fallback)', () => {
-    expect(shared).toMatch(/<img \$\{heroSrcAttrs\(heroImg\)\}/);
+  it('routes the hero and wrist shots through imgSrcAttrs (render transform + data-full fallback)', () => {
+    expect(shared).toMatch(/<img \$\{imgSrcAttrs\(heroImg, 960, 360\)\}/);
+    expect(shared).toMatch(/<img \$\{imgSrcAttrs\(p\.url, 240, 240\)\}/);
     expect(shared).toContain("'/storage/v1/render/image/public/media/'");
-    expect(shared).toContain('width=960&height=360&resize=cover');
+    expect(shared).toContain('width=${w}&height=${h}&resize=cover');
     expect(shared).toContain('data-full');
   });
   it('never embeds the raw hero URL as src', () => {

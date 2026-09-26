@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 // model-page.js is loaded by BOTH index.html and w/index.html; its pure
 // helpers are mirrored in wrotate_test.js for unit testing. Keep them
 // byte-identical (ignoring the `export` keyword and whitespace).
-const NAMES = ['sparklinePath', 'valueTrendSummary', 'wearIndexPhrase', 'fmtRate', 'barPcts', 'histTone', 'featuredFactIndex'];
+const NAMES = ['fmtRate', 'featuredFactIndex', 'rateStrip', 'agoText'];
 const shared = readFileSync('model-page.js', 'utf8');
 const mirror = readFileSync('wrotate_test.js', 'utf8');
 

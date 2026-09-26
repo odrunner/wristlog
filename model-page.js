@@ -1,27 +1,30 @@
 // WRotate — shared model (reference) page renderer. Used by the app
 // (index.html, #page-model) and the public page (w/index.html). One
 // renderer, one look; the host supplies data (ctx) and handlers (h).
-//   WRModelPage.render(el, ctx, h) -> effective tab
-//   ctx: { m, o, st, facts, tab, loggedIn, publicMode }
-//   h:   { back, share, setTab(tab, scroll), openModel(id, slug), brandExplore(brand),
-//          requestEdit(kind), openWatch(id), addToCollection(b, n), addToWishlist(b, n), openApp }
+//   WRModelPage.render(el, ctx, h)
+//   ctx: { m, o, st, facts, loggedIn, publicMode, canMeasure }
+//   h:   { back, share, openModel(id, slug), brandExplore(brand), requestEdit(kind),
+//          openWatch(id), measure(id), addToCollection(b, n), addToWishlist(b, n),
+//          openPost(id), openProfile(uid, username), follow(uid, btn), isFollowing(uid),
+//          openApp, track(event, props) }
+// One scroll, no tabs (2026-09-26 cut-down): your watch vs members → story →
+// wrist shots → owners → references / calibres / spec → more from the brand.
 (function () {
   const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const escAttr = escHtml;
 
-  // Hero images are stored as 1500 px originals (~170-245 KB) but render in a
-  // 180 px-tall box (max 480 px wide). Supabase Storage render transforms
-  // downscale on the fly — /storage/v1/render/image/public/media/…?width=960&
-  // height=360&resize=cover returns the box at 2x DPR (never upscaled; ~49 KB
-  // vs 245 KB measured). data-full carries the original: on any transform
-  // error the capture listener below swaps it back in — the same fallback
-  // pattern as index.html's initThumbFallback (both listeners are idempotent,
-  // so the pair coexists inside the app).
+  // Stored images are 1500 px originals (~170-245 KB). Supabase Storage render
+  // transforms downscale on the fly — /storage/v1/render/image/public/media/…?
+  // width=…&height=…&resize=cover returns the box at 2x DPR (never upscaled).
+  // data-full carries the original: on any transform error the capture
+  // listener below swaps it back in — the same fallback pattern as
+  // index.html's initThumbFallback (both listeners are idempotent, so the pair
+  // coexists inside the app).
   const MEDIA_MARKER = '/storage/v1/object/public/media/';
-  function heroSrcAttrs(url) {
+  function imgSrcAttrs(url, w, h) {
     if ((url || '').indexOf(MEDIA_MARKER) < 0) return `src="${escAttr(url)}"`;
     const t = url.replace(MEDIA_MARKER, '/storage/v1/render/image/public/media/')
-      + (url.indexOf('?') >= 0 ? '&' : '?') + 'width=960&height=360&resize=cover';
+      + (url.indexOf('?') >= 0 ? '&' : '?') + `width=${w}&height=${h}&resize=cover`;
     return `src="${escAttr(t)}" data-full="${escAttr(url)}"`;
   }
   document.addEventListener('error', e => {
@@ -35,61 +38,12 @@
   }, true);
 
 // ── helpers — VERBATIM mirrors of wrotate_test.js (tests/model-page-shared.test.js) ──
-function sparklinePath(series, w = 120, h = 32, pad = 2) {
-  const pts = (series || []).map(p => Number(p.median)).filter(v => Number.isFinite(v));
-  if (pts.length < 2) return '';
-  const min = Math.min(...pts), max = Math.max(...pts);
-  const span = max - min || 1;
-  const stepX = (w - pad * 2) / (pts.length - 1);
-  return pts.map((v, i) => {
-    const x = pad + i * stepX;
-    const y = pad + (h - pad * 2) * (1 - (v - min) / span);
-    return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-}
-
-function valueTrendSummary(series) {
-  const s = (series || []).filter(p => Number.isFinite(Number(p.median)));
-  if (s.length < 2) return null;
-  const first = Number(s[0].median), last = Number(s[s.length - 1].median);
-  if (!first) return null;
-  const pct = Math.round(((last - first) / first) * 100);
-  const [y, m] = String(s[0].ym || '').split('-');
-  const mon = m ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-US', { month: 'short' }) : '';
-  const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '▶';
-  return { pct, arrow, text: `${arrow} ${Math.abs(pct)}% since ${mon}`.trim(), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
-}
-
-function wearIndexPhrase(index, pctRank) {
-  const x = Number(index);
-  if (!Number.isFinite(x)) return '';
-  let line;
-  if (x >= 2)        line = `Owners reach for it more than ${x >= 3 ? 'three' : 'twice'}${x >= 3 ? ' times' : ''} its share of their rotation`;
-  else if (x >= 1.3) line = 'Owners wear it well above its share of their rotation';
-  else if (x >= 0.8) line = 'Owners wear it about as much as the rest of their collection';
-  else if (x >= 0.5) line = 'Owners wear it less than its share of their rotation';
-  else               line = 'Mostly a safe queen — rarely leaves the box';
-  const rank = (pctRank != null && Number.isFinite(Number(pctRank))) ? ` · worn more than ${Math.round(Number(pctRank))}% of models on WRotate` : '';
-  return line + rank;
-}
-
 function fmtRate(r) {
   const x = Number(r);
   if (!Number.isFinite(x)) return '—';
   // Sign derived AFTER rounding (audit F7): -0.04 used to render as "-0.0 s/d"
   const mag = Math.abs(x).toFixed(1);
   return `${mag === '0.0' ? '' : x > 0 ? '+' : '-'}${mag} s/d`;
-}
-
-function barPcts(counts) {
-  const arr = (counts || []).map(n => Math.max(0, Number(n) || 0));
-  const max = Math.max(0, ...arr);
-  return arr.map(n => (max > 0 && n > 0) ? Math.max(12, Math.round((n / max) * 100)) : 4);
-}
-
-function histTone(pct) {
-  const p = Number(pct) || 0;
-  return p >= 75 ? 'gold' : p >= 35 ? 'dim' : 'flat';
 }
 
 function featuredFactIndex(count, now = new Date()) {
@@ -100,40 +54,81 @@ function featuredFactIndex(count, now = new Date()) {
   return day % n;
 }
 
+function rateStrip(members, you, med) {
+  const vals = (members || []).map(Number).filter(Number.isFinite);
+  const y = (you == null || you === '') ? NaN : Number(you);
+  const all = Number.isFinite(y) ? vals.concat(y) : vals;
+  if (!all.length) return null;
+  const lo0 = Math.max(-30, Math.min(-5, ...all)), hi0 = Math.min(30, Math.max(5, ...all));
+  const step = hi0 - lo0 <= 25 ? 5 : 10;
+  const lo = Math.floor(lo0 / step) * step, hi = Math.ceil(hi0 / step) * step;
+  const pct = v => Math.round(((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * 1000) / 10;
+  const ticks = [];
+  for (let t = lo; t <= hi; t += step) ticks.push({ v: t, pct: pct(t) });
+  const rows = [];
+  const dots = vals.slice().sort((a, b) => a - b).map(v => {
+    const p = pct(v);
+    let r = 0;
+    while (r < 3 && rows[r] != null && p - rows[r] < 3) r++;
+    rows[r] = p;
+    return { v, pct: p, row: r, clamped: v < lo || v > hi };
+  });
+  const m = (med == null || med === '') ? NaN : Number(med);
+  return { lo, hi, step, ticks, dots, you: Number.isFinite(y) ? pct(y) : null, med: Number.isFinite(m) ? pct(m) : null };
+}
 
-function mpBars(counts, h, gap, radius, tone) {
-  const pcts = barPcts(counts);
-  return `<div class="u-d-flex u-items-flex-end" style="gap:${gap}px;height:${h}px;">${pcts.map((p, i) =>
-    `<div class="mp-tone-${(Number(counts[i]) || 0) === 0 ? 'flat' : (tone ? tone(p, i) : (histTone(p) === 'flat' ? 'dim' : histTone(p)))}" style="flex:1;height:${p}%;border-radius:${radius};" title="${Number(counts[i]) || 0}"></div>`).join('')}</div>`;
+function agoText(iso, now = new Date()) {
+  const t = Date.parse(iso || '');
+  if (!Number.isFinite(t)) return '';
+  const d = Math.floor((now - t) / 86400000);
+  if (d <= 0) return 'today';
+  if (d === 1) return 'yesterday';
+  if (d < 14) return `${d} days ago`;
+  if (d < 60) return `${Math.round(d / 7)} weeks ago`;
+  if (d < 730) return `${Math.round(d / 30)} months ago`;
+  return `${Math.round(d / 365)} years ago`;
+}
+
+
+const minus = v => String(v).replace('-', '−');
+const rateNum = r => minus(fmtRate(r).replace(' s/d', ''));
+const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : (many || one + 's')}`;
+
+// The members' strip: one dot per member (their typical reading), a dashed
+// median line, and the viewer's own last reading as a gold marker.
+function stripHtml(s) {
+  const tick = (t, i) => `<span class="mp-tick${i === 0 ? ' first' : i === s.ticks.length - 1 ? ' last' : ''}" style="left:${t.pct}%;">${t.v > 0 ? '+' + t.v : minus(t.v)}</span>`;
+  return `<div class="mp-strip" aria-hidden="true">
+      <div class="mp-axis"></div>
+      ${s.med != null ? `<div class="mp-med" style="left:${s.med}%;"></div>` : ''}
+      ${s.dots.map(d => `<div class="mp-dot r${d.row}" style="left:${d.pct}%;"></div>`).join('')}
+      ${s.you != null ? `<div class="mp-you" style="left:${s.you}%;"></div>` : ''}
+    </div>
+    <div class="mp-ticks">${s.ticks.map(tick).join('')}</div>`;
 }
 
 function renderModelPage(el, ctx, h) {
   const { m, o, st, facts } = ctx;
-  if (el._mpHistoryOpenFor && el._mpHistoryOpenFor !== (m.id || m.slug)) el._mpHistoryOpenFor = null;
-  let tab = ctx.tab;
+  const key = m.id || m.slug;
+  if (el._mpHistoryOpenFor && el._mpHistoryOpenFor !== key) el._mpHistoryOpenFor = null;
   const loggedIn = !!ctx.loggedIn, publicMode = !!ctx.publicMode;
   const sp = m.specs || {};
-  const nz = v => v == null ? '' : String(v);
-  const minus = v => String(v).replace('-', '−');
   const owners = (st.owners ?? o.total_owners) || 0;
   const mine = st.mine || [];
   const isOwner = mine.length > 0;
-  const tabs = [];
-  const hasData = !!(st.wear_share || st.accuracy || (st.wear_weeks || []).some(n => n > 0));
-  if (hasData) tabs.push(['data', 'Data']);
-  tabs.push(['specs', 'Specs']);
-  tabs.push(['owners', 'Owners']);
-  if (!tabs.some(t => t[0] === tab)) tab = tabs[0][0];
+  const refs = Array.isArray(m.refs_by_era) ? m.refs_by_era : [];
+  const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
 
   // ── Hero ──
   const heroImg = m.hero_image || (st.photos || [])[0] || '';
-  const refs = Array.isArray(m.refs_by_era) ? m.refs_by_era : [];
   const ref = (refs.length ? refs[refs.length - 1].reference : '') || st.top_ref || '';
-  const captionBits = [sp.type ? sp.type.replace(/ watch$/i, '') : '', sp.size, sp.water_resistance,
-    (st.specs_agg || {}).movement_type ? st.specs_agg.movement_type.v : '',
+  const agg = st.specs_agg || {};
+  const captionBits = [sp.type ? sp.type.replace(/ watch$/i, '') : '', sp.size || (agg.case_diameter ? agg.case_diameter.v : ''),
+    sp.water_resistance || (agg.water_resistance ? agg.water_resistance.v : ''),
+    agg.movement_type ? agg.movement_type.v : '',
     (o.era_min && o.era_max && o.era_min !== o.era_max) ? `${o.era_min}–${o.era_max}` : ''].filter(Boolean);
   const hero = `<div class="u-h-45 u-bg-surface2" style="position:relative;overflow:hidden;">
-    ${heroImg ? `<img ${heroSrcAttrs(heroImg)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
+    ${heroImg ? `<img ${imgSrcAttrs(heroImg, 960, 360)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
     <div class="u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct" style="position:absolute;inset:0;pointer-events:none;"></div>
     <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
@@ -141,253 +136,306 @@ function renderModelPage(el, ctx, h) {
     </div>
     <div style="position:absolute;left:var(--size-4);bottom:var(--size-3-5);right:var(--size-4);pointer-events:none;">
       <div class="u-fs-2xs u-fw-semibold u-ls-wide u-tt-uppercase u-c-gold-lt">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
-      <div class="u-fs-3xl u-fw-semibold u-ls-display u-c-white u-mt-1 u-mr-0 u-mb-1-5 u-ml-0 u-lh-tight">${escHtml(m.name)}</div>
+      <h1 class="mp-title">${escHtml(m.name)}</h1>
       <div class="u-fs-xs u-c-mix-white-70">${escHtml(captionBits.join(' · '))}</div>
     </div>
   </div>${m.hero_image && m.hero_credit ? `<div class="u-fs-3xs u-c-muted u-ta-right u-pt-1 u-pr-2-5 u-pb-0 u-pl-2-5 u-bg-bg">${escHtml(m.hero_credit)}</div>` : ''}`;
 
-  // ── Stat grid (2×2) ──
-  const cells = [];
-  if (st.accuracy) {
-    const a = st.accuracy;
-    cells.push(`<div class="mp-cell"><div class="l">Median rate</div>
-      <div class="v">${escHtml(minus(nz(a.med_rate)))}<span class="text-caption u-fw-normal"> s/d</span></div>
-      <div class="u-mt-1-5">${mpBars(a.hist || [], 16, 2, '0')}</div>
-      <div class="f">${a.n_sessions} measurements · ${a.n_measurers} members</div></div>`);
-  } else {
-    cells.push(`<div class="mp-cell"><div class="l">Owners</div><div class="v">${owners}</div><div class="f">${st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate'}</div></div>`);
-  }
-  if (st.value) {
-    const v = st.value, trend = valueTrendSummary(v.series), path = sparklinePath(v.series, 120, 16, 1);
-    cells.push(`<div class="mp-cell"><div class="l">Median value</div>
-      <div class="v">$${Number(v.median_now).toLocaleString()}</div>
-      <div class="u-h-4 u-mt-1-5" style="position:relative;overflow:hidden;">${path ? `<svg data-tile-spark width="100%" height="16" viewBox="0 0 120 16" preserveAspectRatio="none" class="u-d-block"><title>${escHtml((v.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title><path d="${path} L118,16 L2,16 Z" fill="var(--gold-dim)" stroke="none"/><path d="${path}" fill="none" stroke="var(--gold)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>` : `<div class="u-bg-linear-gradient-to-top-gold-dim-transparent" style="position:absolute;inset:0;"></div>`}</div>
-      <div class="f" style="color:${trend && trend.direction === 'down' ? 'var(--danger)' : trend ? 'var(--success)' : 'var(--muted)'};">${trend ? escHtml(trend.text) + ' · ' : ''}${v.n_contributors} valuations</div></div>`);
-  } else {
-    cells.push(`<div class="mp-cell"><div class="l">Wishlisted</div><div class="v">${st.wishlisted || 0}</div><div class="f">members want one</div></div>`);
-  }
-  const wr = st.wears || {};
-  const strip = st.wear_strip || [];
-  cells.push(`<div class="mp-cell"><div class="l">Wears / 90 days</div><div class="v">${wr.w90 || 0}</div>
-    <div class="u-cols-repeat-15-1fr u-gap-0-5 u-mt-1-5 u-d-grid">${(strip.length ? strip : Array(15).fill(0)).map(n => `<div class="mp-tone-${n >= 2 ? 'gold' : n === 1 ? 'dim' : 'flat'}" style="aspect-ratio:1;" title="${n} wear${n === 1 ? '' : 's'}"></div>`).join('')}</div>
-    <div class="f">by ${wr.wearers90 || 0} of ${owners} owners</div></div>`);
-  if (st.cost_per_wear) {
-    const c = st.cost_per_wear;
-    const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
-    cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v u-c-gold-text">${cpwTxt}</div>
-      <div class="row-tight u-h-4 u-mt-1-5"><div class="u-flex-1 u-h-1 u-r-hair u-bg-surface2" style="position:relative;overflow:hidden;"><div class="u-bg-gold" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;"></div></div><span class="u-fs-3xs u-c-muted">${Number(c.wears).toLocaleString()} wears</span></div>
-      <div class="f">per logged wear · ${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} with price + wears</div></div>`);
-  } else {
-    cells.push(`<div class="mp-cell"><div class="l">${st.accuracy ? 'Owners' : 'Wears all-time'}</div><div class="v">${st.accuracy ? owners : (wr.all_time || 0)}</div><div class="f">${st.accuracy ? (st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate') : 'logged by members'}</div></div>`);
-  }
-  const grid = `<div class="u-cols-1fr-1fr u-gap-px u-bg-border u-d-grid">${cells.join('')}</div>`;
+  const desc = m.description && m.history ? `<p class="mp-desc">${escHtml(m.description)}</p>` : '';
+  const solo = isOwner && owners <= 1 ? `<div class="mp-solo">You're the only member with one</div>` : '';
 
-  // ── Story block (lore above the fold): history + fact pull-quote ──
-  const key = m.id || m.slug;
+  // ── Your watch / how they run ──
+  // Model-level readings when >= 3 members measured one; else the same
+  // calibre across every model (model_stats decides, floors included).
+  const acc = st.accuracy, cal = st.caliber;
+  const pool = acc || cal;
+  const calLabel = cal ? String(cal.key || '').toUpperCase() : '';
+  const me = isOwner ? mine[0] : null;
+  const myRate = me && me.last_rate != null ? Number(me.last_rate) : null;
+  let yours = '';
+  if (me || pool) {
+    const s = pool ? rateStrip(pool.members, myRate, pool.med) : null;
+    const within = pool ? (pool.members || []).filter(v => Math.abs(Number(v)) <= 5).length : 0;
+    let head, big, sub;
+    if (me) {
+      const refBits = [me.ref, me.caliber ? `cal. ${me.caliber}` : ''].filter(Boolean).join(' · ');
+      head = `<div class="mp-yours-top"><div class="mp-eyebrow">Your ${escHtml(m.name)}</div>${refBits ? `<div class="mp-yours-ref">${escHtml(refBits)}</div>` : ''}</div>`;
+      if (myRate != null) {
+        big = `<div class="mp-rate"><span class="mp-rate-v">${rateNum(myRate)}</span><span class="mp-rate-u">s/day</span></div>`;
+        const when = agoText(me.last_at);
+        sub = [when ? `Measured ${when}` : '', me.last_amp ? `${me.last_amp}° amplitude` : ''].filter(Boolean).join(' · ');
+      } else {
+        big = `<div class="mp-rate-none">Not measured yet</div>`;
+        sub = pool ? 'Measure it to see where it sits among members’ watches.' : '';
+      }
+    } else {
+      head = `<div class="mp-eyebrow">${acc ? 'How they run' : `How calibre ${escHtml(calLabel)} runs`}</div>`;
+      big = `<div class="mp-rate"><span class="mp-rate-v">${rateNum(pool.med)}</span><span class="mp-rate-u">s/day median</span></div>`;
+      sub = `${plural(pool.n_members, 'member')} measured ${acc ? 'theirs' : 'one'} · ${within} of ${pool.n_members} within ±5 s/d`;
+    }
+    const legend = pool ? `<div class="mp-legend">
+        <div class="mp-legend-row"><span class="mp-key-dot"></span><span>${acc
+          ? `${plural(pool.n_members, 'member')}’ ${escHtml(m.name)} · median <b>${rateNum(pool.med)}</b> s/d`
+          : `${plural(pool.n_members, 'member')}’ calibre ${escHtml(calLabel)} watches · median <b>${rateNum(pool.med)}</b> s/d`}</span></div>
+        ${myRate != null ? `<div class="mp-legend-row"><span class="mp-key-you"></span><span>Your watch</span></div>` : ''}
+      </div>
+      <div class="mp-note">Each dot is one member’s typical reading.${acc ? '' : ` Not enough members have measured a ${escHtml(m.name)} yet, so this compares the movement inside — ${plural(cal.n_models, 'model')} on WRotate.`}</div>`
+      : `<div class="mp-note">Once 3 members have measured one, you’ll see how yours compares.</div>`;
+    yours = `<section class="mp-yours" id="mp-yours">${head}${big}${sub ? `<div class="mp-note">${escHtml(sub)}</div>` : ''}${s ? stripHtml(s) : ''}${legend}</section>`;
+  }
+
+  // ── Story: history + fact pull-quote ──
   if (el._mpFactFor !== key) { el._mpFactFor = key; el._mpFactIdx = featuredFactIndex(facts.length); }
   const fi = facts.length ? ((el._mpFactIdx || 0) % facts.length) : -1;
   const storyText = (m.history || m.description || '').trim();
   const histOpen = el._mpHistoryOpenFor === key;
-  let band = '';
+  let story = '';
   if (storyText || fi >= 0) {
-    band = `<div id="mp-story" class="u-pt-4 u-pr-4 u-pb-3-5 u-pl-4 u-bdb-1px-solid-border u-bg-bg">
-      ${storyText ? `<div class="mp-hrow stack-2"><div class="mp-h u-c-gold-text">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
-        <div id="mp-history" style="font-size:var(--fs-md);line-height:var(--lh-body);color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
-        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" class="u-mt-0-5 u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-fs-sm u-fw-semibold u-c-gold-text u-cur-pointer" style="display:none;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
-      ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:var(--space-1);">
+    story = `<section id="mp-story" class="mp-sec">
+      ${storyText ? `<h2 class="mp-sec-h mp-sec-gap">The story</h2>
+        <div id="mp-history" class="mp-history${histOpen ? ' open' : ''}">${escHtml(storyText)}</div>
+        <button type="button" id="mp-history-toggle" data-mp="history" class="mp-link hidden">${histOpen ? 'Less' : 'Read the full history'}</button>` : ''}
+      ${fi >= 0 ? `<div class="mp-quote mp-fact${storyText ? ' mp-fact-gap' : ''}">
         ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" class="mp-fact-nav">‹</button>` : ''}
-        <div class="u-flex-1 u-minw-0 u-pt-1 u-pr-0 u-pb-1 u-pl-3 u-bdl-2px-solid-gold">
-          <div id="mp-fact-kicker" class="u-fs-2xs u-fw-semibold u-ls-eyebrow u-tt-uppercase u-c-gold-text u-mb-1">Fun fact · ${fi + 1} of ${facts.length}</div>
-          <div id="mp-fact-body" class="u-fs-sm u-lh-snug u-c-text u-tw-pretty u-boxor-vertical u-clamp-4 u-d-webkit-box" style="overflow:hidden;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
+        <div class="u-flex-1 u-minw-0">
+          <div id="mp-fact-kicker" class="mp-eyebrow">Fun fact · ${fi + 1} of ${facts.length}</div>
+          <div id="mp-fact-body" class="mp-fact-body">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
         </div>
         ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" class="mp-fact-nav">›</button>` : ''}
       </div>` : ''}
-    </div>`;
+    </section>`;
   }
 
-  // ── Tabs ──
-  const tabBar = `<div id="mp-tabs" role="tablist" class="u-bdb-1px-solid-border u-bg-bg u-d-flex">${tabs.map(([k, label]) =>
-    `<button class="mp-tab" role="tab" id="mp-tab-${k}" aria-selected="${tab === k}" aria-controls="mp-panel" data-mp="tab" data-tab="${k}">${label}</button>`).join('')}</div>`;
+  // ── Wrist shots (public posts) ──
+  const shots = (st.shots || []).slice(0, 6);
+  const shotsHtml = shots.length ? `<section class="mp-sec" id="mp-shots">
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><span class="mp-sub">${plural(st.shots_total || shots.length, 'photo')}</span></div>
+      <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-mp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
+    </section>` : '';
 
-  // ── Panels ──
-  const H = (t, right = '') => `<div class="mp-hrow stack-2-5"><div class="mp-h">${t}</div>${right ? `<div class="row-tight">${right}</div>` : ''}</div>`;
-  const sect = (inner, first) => `<div style="${first ? '' : 'border-top:1px solid var(--border);padding-top:var(--space-4);'}">${inner}</div>`;
-  let panel = '';
-  if (tab === 'data') {
-    const parts = [];
-    if (st.wear_share) {
-      const w = st.wear_share, b = w.bench || {};
-      const rows = [['This model', w.share, true], [`All ${m.brand}`, b.brand, false], [b.type_label ? b.type_label.replace(/ watch$/i, ' watches') : '', b.type, false], ['Every model', b.all, false]].filter(r => r[0] && r[1] != null);
-      const max = Math.max(...rows.map(r => Number(r[1]) || 0), 1);
-      const ret = w.retention || [];
-      const retMax = Math.max(...ret.map(r => Number(r.share) || 0), 1);
-      parts.push(`<div class="panel u-bdt-2px-solid-gold u-pt-4 u-pr-4 u-pb-4 u-pl-4">
-        <div class="mp-hrow stack-3"><div class="mp-h u-c-gold-text">Wear share</div><span class="mp-badge">WRotate exclusive</span></div>
-        <div class="mp-big"><span class="u-fs-4xl u-fw-semibold u-lh-none">${Number(w.index).toFixed(1)}×</span><span class="text-meta u-lh-snug">its fair share of<br>owners' wrist time</span></div>
-        <div class="text-meta u-lh-body u-mt-2-5">Owners give it <span class="u-c-text u-fw-medium">${w.share}%</span> of their logged wears, against <span class="u-c-text u-fw-medium">${w.fair}%</span> if they rotated their collections evenly.</div>
-        <div class="u-fd-column u-gap-2 u-mt-3-5 u-mr-0 u-mb-1 u-ml-0 u-d-flex">${rows.map(([label, val, me]) => `<div class="row">
-          <span style="width:var(--size-20);flex:none;font-size:var(--fs-2xs);color:${me ? 'var(--text)' : 'var(--muted)'};">${escHtml(label)}</span>
-          <div class="u-flex-1 u-h-2 u-bg-surface2 u-r-pill" style="overflow:hidden;"><div style="width:${Math.round(100 * Number(val) / max)}%;height:100%;background:${me ? 'var(--gold)' : label === 'Every model' ? 'var(--border)' : 'var(--gold-dim)'};border-radius:var(--radius-pill);"></div></div>
-          <span style="width:var(--size-7);flex:none;text-align:right;font-size:var(--fs-2xs);${me ? 'font-weight:var(--fw-semibold);color:var(--gold-text);' : 'color:var(--muted);'}">${val}%</span></div>`).join('')}</div>
-        ${ret.length ? `<div class="u-bdt-1px-solid-border u-mt-3-5 u-pt-3-5">
-          <div class="mp-hrow stack-2-5"><div class="mp-h u-fs-2xs u-ls-tight">Does it last</div><div style="font-size:var(--fs-2xs);color:${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'var(--success)' : 'var(--muted)'};">${Number(ret[ret.length - 1].share) >= Number(ret[0].share) * .8 ? 'holds up' : 'fades'}</div></div>
-          <div class="u-items-flex-end u-gap-1-5 u-h-10 u-d-flex">${ret.map((r, i) => `<div style="flex:1;height:${Math.round(100 * Number(r.share) / retMax)}%;background:${i === ret.length - 1 ? 'var(--gold-dim)' : 'var(--gold)'};border-radius:var(--radius-hair) var(--radius-hair) 0 0;"></div>`).join('')}</div>
-          <div class="u-gap-1-5 u-mt-1-5 u-fs-3xs u-c-muted u-d-flex">${ret.map(r => `<span class="u-flex-1 u-ta-center">${escHtml(r.bucket)} · ${r.share}%</span>`).join('')}</div></div>` : ''}
-        <div class="row u-mt-3-5 u-pt-3 u-bdt-1px-solid-border">
-          ${w.pct_rank != null ? `<span class="u-fs-2xs u-fw-semibold u-c-black u-bg-gold u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5">Top ${Math.max(1, 100 - Math.round(w.pct_rank))}%</span>` : ''}
-          <span class="text-caption">of ${Number(w.n_models).toLocaleString()} models · ${Number(w.wears).toLocaleString()} wears from ${w.n_owners} collections</span></div>
-      </div>`);
-    }
-    if (st.accuracy) {
-      const a = st.accuracy;
-      parts.push(sect(H('Rate distribution', `<span class="mp-meta">s/day · ${a.n_sessions} readings</span><span class="mp-badge">Exclusive</span>`) +
-        `<div class="u-pb-1-5 u-bdb-1px-solid-border">${mpBars(a.hist || [], 70, 2, '0')}</div>
-        <div class="text-caption-xs u-justify-space-between u-mt-1-5 u-d-flex"><span>${minus(String(a.hist_min))}</span><span class="text-gold">${escHtml(minus(nz(a.med_rate)))} median</span><span>+${a.hist_max}</span></div>
-        <div class="u-gap-2-5 u-mt-3 u-d-flex">
-          ${a.med_amp ? `<div class="mp-card grow"><div class="l">Amplitude</div><div class="v">${a.med_amp}°</div></div>` : ''}
-          <div class="mp-card grow"><div class="l">Drift</div><div class="v">±${a.med_abs_rate} s/d</div></div>
-          <div class="mp-card grow"><div class="l">Members</div><div class="v">${a.n_measurers}</div></div>
-        </div>`, !parts.length));
-    }
-    const wk = st.wear_weeks || [];
-    if (wk.some(n => n > 0)) {
-      const total = wk.reduce((x, y) => x + (Number(y) || 0), 0);
-      const peak = wk.indexOf(Math.max(...wk));
-      parts.push(sect(H('Wear pattern', `<span class="mp-meta">12 weeks</span><span class="mp-badge">Exclusive</span>`) +
-        mpBars(wk, 44, 3, '2px') + `<div class="text-caption-xs u-mt-1-5">${total} wears over 12 weeks · busiest ${peak >= 10 ? 'in the last fortnight' : `${11 - peak} week${11 - peak === 1 ? '' : 's'} ago`}.</div>`, !parts.length));
-    }
-    panel = `<div class="mp-stack">${parts.join('')}</div>`;
-  } else if (tab === 'specs') {
-    const agg = st.specs_agg || {};
-    const labels = [['caliber', 'Caliber'], ['case_diameter', 'Case ⌀'], ['case_material', 'Material'], ['movement_type', 'Movement'], ['year_range', 'Produced'], ['water_resistance', 'Water res.']];
-    const mv = labels.filter(([k]) => agg[k]);
-    const refRows = [['Type', sp.type], ['Size', sp.size], ['Water resistance', sp.water_resistance], ['Movement', sp.movement], ['Materials', sp.materials]].filter(r => r[1]);
-    const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
-    const parts = [];
-    if (refRows.length) parts.push(`<div><div class="mp-h stack-2-5">Reference spec</div>
-        <div class="u-cols-auto-1fr u-gap-0-3 u-fs-sm u-d-grid">${refRows.map(([l, v], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span class="u-c-muted u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${l}</span><span class="u-c-text u-pt-2 u-pr-0 u-pb-2 u-pl-0 u-ta-right" style="${bt};">${escHtml(v)}</span>`; }).join('')}</div></div>`);
-    if (refs.length) parts.push(sect(`<div class="mp-h stack-1-5">References by era</div>${refs.map(r => `<div class="u-gap-2-5 u-fs-sm u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdt-1px-solid-border u-d-flex"><span class="u-minw-18 u-c-text">${escHtml(r.reference || '')}</span><span class="u-minw-20 u-c-muted">${escHtml(r.years || '')}</span><span class="text-muted">${escHtml(r.note || '')}</span></div>`).join('')}`, !parts.length));
-    if (cals.length) parts.push(sect(`<div class="mp-h stack-1-5">Calibers by era</div><div class="u-fw--wrap u-gap-1-5 u-d-flex">${cals.map(c => `<span class="u-fs-xs u-bd-1px-solid-border u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5">${escHtml(c.caliber || '')}${c.years ? ` <span class="text-muted">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>`, !parts.length));
-    if (mv.length) parts.push(sect(`<div class="row-between u-mb-2-5"><span class="mp-h u-c-gold-text">From members' watches${st.specs_gen ? ` · ${escHtml(st.specs_gen)}` : ''}</span><span class="mp-badge">Exclusive</span></div>
-        <div class="u-cols-auto-1fr-auto u-gap-0-3 u-fs-sm u-items-center u-d-grid">${mv.map(([k, label], i) => { const bt = i ? 'border-top:1px solid var(--border);' : ''; return `<span class="u-c-muted u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${label}</span><span class="u-c-text u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${escHtml(agg[k].v)}</span><span class="text-caption-xs u-pt-2 u-pr-0 u-pb-2 u-pl-0" style="${bt};">${agg[k].n} watch${agg[k].n === 1 ? '' : 'es'}</span>`; }).join('')}</div>`, !parts.length));
-    panel = parts.length ? `<div class="u-fd-column u-gap-4 u-d-flex">${parts.join('')}</div>` : `<div class="caption">No specs on file yet.</div>`;
-  } else {
-    const era = st.era || [0, 0, 0, 0, 0, 0];
-    const cards = [];
-    if (st.tenure) cards.push(['Median tenure', `${st.tenure.years} yrs`]);
-    if (st.wishlisted) cards.push(['Wishlisted', `${st.wishlisted} member${st.wishlisted === 1 ? '' : 's'}`]);
-    if (wr.all_time) cards.push(['Wears logged', Number(wr.all_time).toLocaleString()]);
-    panel = `<div class="mp-stack">
-      <div class="mp-big"><span class="u-fs-display u-fw-semibold u-lh-none">${owners}</span><span class="caption">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
-      ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span class="mp-meta">year of example</span><span class="mp-badge">Exclusive</span>`) +
-        mpBars(era, 56, 4, '2px 2px 0 0') + `<div class="text-caption-xs u-gap-1 u-mt-1-5 u-d-flex">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span class="u-flex-1 u-ta-center">${l}</span>`).join('')}</div>`) : ''}
-      <div class="u-bdt-1px-solid-border u-pt-4 u-cols-1fr-1fr u-gap-2-5 u-d-grid">${cards.map(([l, v]) => `<div class="mp-card u-pt-3 u-pr-3 u-pb-3 u-pl-3"><div class="l">${l}</div><div class="v u-fs-xl">${escHtml(v)}</div></div>`).join('')}</div>
-    </div>`;
+  // ── Owners you can follow (model_owners: names only where privacy allows) ──
+  const vis = (o.visible || []).slice(0, 5);
+  let ownersHtml = '';
+  if (vis.length || owners > 1) {
+    const row = v => {
+      const name = v.display_name || v.username || 'Member';
+      const init = escHtml(String(name).trim().charAt(0).toUpperCase() || '?');
+      const followBtn = !publicMode && loggedIn && h && h.isFollowing
+        ? (h.isFollowing(v.user_id) ? `<span class="mp-following">Following</span>`
+          : `<button type="button" class="follow-btn follow" data-mp="follow" data-uid="${escAttr(v.user_id)}">Follow</button>`) : '';
+      return `<div class="mp-owner" role="button" tabindex="0" data-mp="owner" data-uid="${escAttr(v.user_id)}" data-username="${escAttr(v.username || '')}">
+        <span class="mp-owner-av">${v.avatar_url ? `<img src="${escAttr(v.avatar_url)}" alt="">` : init}</span>
+        <span class="mp-owner-txt"><span class="mp-owner-name">${escHtml(name)}</span>${v.username ? `<span class="mp-owner-meta">@${escHtml(v.username)}</span>` : ''}</span>
+        ${followBtn}
+      </div>`;
+    };
+    ownersHtml = `<section class="mp-sec" id="mp-owners">
+      <h2 class="mp-sec-h">${plural(owners, 'member')} ${owners === 1 ? 'owns' : 'own'} one</h2>
+      <div class="mp-sub mp-sec-gap">${vis.length ? (publicMode ? 'Public collections' : 'Owners whose collections you can see') : (publicMode ? 'No public collections yet.' : 'Their collections aren’t visible to you.')}</div>
+      ${vis.length ? `<div class="mp-list">${vis.map(row).join('')}</div>` : ''}
+    </section>`;
   }
+
+  // ── References, calibres, spec ──
+  const myRefs = new Set(mine.map(w => String(w.ref || '').trim().toUpperCase()).filter(Boolean));
+  const refsHtml = refs.length ? `<section class="mp-sec" id="mp-refs">
+      <h2 class="mp-sec-h mp-sec-gap">References by era</h2>
+      <div class="mp-list">${refs.map(r => {
+        const yoursRef = myRefs.has(String(r.reference || '').trim().toUpperCase());
+        return `<div class="mp-ref${yoursRef ? ' mine' : ''}"><div class="mp-ref-top"><b>${escHtml(r.reference || '')}</b><span class="mp-sub">${escHtml(r.years || '')}</span></div>
+          ${yoursRef || r.note ? `<div class="mp-ref-note">${yoursRef ? '<span class="mp-ref-yours">Yours</span> ' : ''}${escHtml(r.note || '')}</div>` : ''}</div>`;
+      }).join('')}</div>
+      ${cals.length ? `<div class="mp-cals">${cals.map(c => `<span class="mp-cal"><b>${escHtml(c.caliber || '')}</b>${c.years ? `<span class="mp-sub">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>` : ''}
+    </section>` : '';
+  const refRows = [['Size', sp.size], ['Water resistance', sp.water_resistance], ['Movement', sp.movement], ['Materials', sp.materials]].filter(r => r[1]);
+  const aggRows = [['caliber', 'Calibre'], ['case_diameter', 'Case'], ['water_resistance', 'Water resistance'], ['movement_type', 'Movement'], ['case_material', 'Material'], ['year_range', 'Produced']]
+    .filter(([k]) => agg[k]).map(([k, l]) => [l, agg[k].v]);
+  const specRows = refRows.length ? refRows : aggRows;
+  const specHtml = specRows.length ? `<section class="mp-sec" id="mp-spec">
+      <h2 class="mp-sec-h mp-sec-gap">${refRows.length ? 'Reference spec' : 'From members’ watches'}</h2>
+      <div class="mp-specs">${specRows.map(([l, v]) => `<div class="mp-spec"><div class="l">${l}</div><div class="v">${escHtml(v)}</div></div>`).join('')}</div>
+    </section>` : '';
 
   // ── More from brand ──
   const rel = (st.related || []).slice(0, 4);
-  const more = `<div class="u-bdt-1px-solid-border u-pt-4 u-pb-5"><div class="mp-h stack-2-5">More from ${escHtml(m.brand)}</div>
-    <div class="u-fd-column u-d-flex">${rel.map(r => `<div class="mp-row" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span class="u-c-text">${escHtml(r.name)}</span><span class="caption-xs">${r.owners} owner${Number(r.owners) === 1 ? '' : 's'}</span></div>`).join('')}
-      ${publicMode ? '' : `<div class="mp-row" data-mp="brand" data-brand="${escAttr(m.brand)}"><span class="text-gold">All ${st.brand_models || rel.length + 1} ${escHtml(m.brand)} models</span><span class="caption-xs">›</span></div>`}</div></div>`;
+  const more = rel.length ? `<section class="mp-sec" id="mp-more">
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">More from ${escHtml(m.brand)}</h2>${publicMode ? '' : `<button type="button" class="mp-link" data-mp="brand" data-brand="${escAttr(m.brand)}">All ${st.brand_models || rel.length + 1} models</button>`}</div>
+      <div class="mp-rel">${rel.map(r => `<button type="button" class="mp-rel-card" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span class="mp-rel-name">${escHtml(r.name)}</span><span class="mp-sub">${plural(r.owners, 'member')}</span></button>`).join('')}</div>
+    </section>` : '';
 
   // ── Request an edit + action bar ──
-  const reqEdit = publicMode ? '' : `<div class="u-bdt-1px-solid-border u-pt-3-5 u-pr-0 u-pb-5 u-pl-0 u-justify-center u-d-flex"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span class="u-fs-xs">✎</span><span>Request an edit</span></button></div>`;
+  const reqEdit = publicMode ? '' : `<div class="mp-edit"><button class="mp-pill" data-mp="edit" data-kind="page edit"><span class="u-fs-xs">✎</span><span>Request an edit</span></button></div>`;
   const wl = st.wishlisted_by_me;
-  const actions = publicMode ? `<div class="mp-actions">
-    <button class="mp-act mp-act-primary" data-mp="app">Track yours on WRotate</button></div>` : loggedIn ? `<div class="mp-actions">
-    ${isOwner ? `<button class="mp-act mp-act-primary" data-mp="watch" data-id="${escAttr(mine[0].id)}">Open your ${escHtml(m.name)}${mine.length > 1 ? ` (${mine.length})` : ''}</button>`
-              : `<button class="mp-act mp-act-primary" data-mp="collect">Add to collection</button>`}
-    ${wl ? `<button class="mp-act mp-act-ghost" disabled>♥ On your wishlist</button>`
-         : `<button class="mp-act mp-act-ghost" data-mp="wish">♡ Add to wishlist</button>`}
-  </div>` : '';
+  let actions = '';
+  if (publicMode) {
+    actions = `<div class="mp-actions"><button class="mp-act mp-act-primary" data-mp="app">Track yours on WRotate</button></div>`;
+  } else if (loggedIn && isOwner) {
+    const n = mine.length > 1 ? ` (${mine.length})` : '';
+    actions = `<div class="mp-actions">${ctx.canMeasure
+      ? `<button class="mp-act mp-act-primary" data-mp="measure" data-id="${escAttr(me.id)}">${myRate != null ? 'Measure again' : 'Measure it'}</button>
+         <button class="mp-act mp-act-ghost" data-mp="watch" data-id="${escAttr(me.id)}">Open your watch${n}</button>`
+      : `<button class="mp-act mp-act-primary" data-mp="watch" data-id="${escAttr(me.id)}">Open your ${escHtml(m.name)}${n}</button>`}</div>`;
+  } else if (loggedIn) {
+    actions = `<div class="mp-actions">
+      <button class="mp-act mp-act-primary" data-mp="collect">I own one</button>
+      ${wl ? `<button class="mp-act mp-act-ghost" disabled>♥ On your wishlist</button>`
+           : `<button class="mp-act mp-act-ghost" data-mp="wish">♡ Want one</button>`}</div>`;
+  }
 
-  el.innerHTML = hero + band + grid + tabBar +
-    `<div id="mp-panel" role="tabpanel" class="u-pt-4 u-pr-4 u-pb-2 u-pl-4 u-fd-column u-gap-5 u-minh-105 u-d-flex">${panel}${more}${reqEdit}</div>` + actions;
+  el.innerHTML = hero + desc + solo + yours + story + shotsHtml + ownersHtml + refsHtml + specHtml + more + reqEdit + actions;
   if (!el._mpBound) {
     el._mpBound = true;
-    el.addEventListener('click', e => {
-      const t = e.target.closest('[data-mp]');
-      if (!t || !el.contains(t) || !el._mpHandlers) return;
-      const H = el._mpHandlers, d = t.dataset;
+    const act = (e, t) => {
+      const H = el._mpHandlers, d = t.dataset, c = el._mpCtx;
+      const fs = c.facts, mm = c.m, pub = !!c.publicMode;
       switch (d.mp) {
         case 'back': H.back && H.back(); break;
         case 'share': H.share && H.share(); break;
-        case 'tab': H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
         case 'fact-prev':
         case 'fact-next': {
-          if (!facts.length) break;
+          if (!fs.length) break;
           const step = d.mp === 'fact-prev' ? -1 : 1;
-          el._mpFactIdx = (((el._mpFactIdx || 0) + step) % facts.length + facts.length) % facts.length;
+          el._mpFactIdx = (((el._mpFactIdx || 0) + step) % fs.length + fs.length) % fs.length;
           const k = el.querySelector('#mp-fact-kicker'), bd = el.querySelector('#mp-fact-body');
-          if (k) k.textContent = `Fun fact · ${el._mpFactIdx + 1} of ${facts.length}`;
-          if (bd) bd.textContent = facts[el._mpFactIdx] + (publicMode ? ' …' : '');
-          if (H.track) H.track('model_fact_next', { model: m.slug, index: el._mpFactIdx, dir: step });
+          if (k) k.textContent = `Fun fact · ${el._mpFactIdx + 1} of ${fs.length}`;
+          if (bd) bd.textContent = fs[el._mpFactIdx] + (pub ? ' …' : '');
+          if (H.track) H.track('model_fact_next', { model: mm.slug, index: el._mpFactIdx, dir: step });
           break;
         }
         case 'history': {
           const hist = el.querySelector('#mp-history');
           if (!hist) break;
-          const open = el._mpHistoryOpenFor === (m.id || m.slug);
-          el._mpHistoryOpenFor = open ? null : (m.id || m.slug);
-          hist.style.webkitLineClamp = open ? '3' : 'unset';
+          const k = mm.id || mm.slug;
+          const open = el._mpHistoryOpenFor === k;
+          el._mpHistoryOpenFor = open ? null : k;
+          hist.classList.toggle('open', !open);
           t.textContent = open ? 'Read the full history' : 'Less';
-          if (!open && H.track) H.track('model_history_expand', { model: m.slug, overflowed: true });
+          if (!open && H.track) H.track('model_history_expand', { model: mm.slug, overflowed: true });
           break;
         }
         case 'model': H.openModel && H.openModel(d.id, d.slug); break;
         case 'brand': H.brandExplore && H.brandExplore(d.brand); break;
         case 'edit': H.requestEdit && H.requestEdit(d.kind); break;
         case 'watch': H.openWatch && H.openWatch(d.id); break;
-        case 'collect': H.addToCollection && H.addToCollection(m.brand, m.name); break;
-        case 'wish': H.addToWishlist && H.addToWishlist(m.brand, m.name); break;
+        case 'measure': H.measure && H.measure(d.id); break;
+        case 'post': H.openPost && H.openPost(d.id); if (H.track) H.track('model_shot_open', { model: mm.slug }); break;
+        case 'owner': H.openProfile && H.openProfile(d.uid, d.username); break;
+        case 'follow': e.stopPropagation(); H.follow && H.follow(d.uid, t); if (H.track) H.track('model_owner_follow', { model: mm.slug }); break;
+        case 'collect': H.addToCollection && H.addToCollection(mm.brand, mm.name); break;
+        case 'wish': H.addToWishlist && H.addToWishlist(mm.brand, mm.name); break;
         case 'app': H.openApp && H.openApp(); break;
       }
+    };
+    el.addEventListener('click', e => {
+      const t = e.target.closest('[data-mp]');
+      if (!t || !el.contains(t) || !el._mpHandlers) return;
+      act(e, t);
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('button, a')) return;   // native controls already click
+      const t = e.target.closest('[role="button"][data-mp]');
+      if (!t || !el.contains(t) || !el._mpHandlers) return;
+      e.preventDefault();
+      act(e, t);
     });
   }
   el._mpHandlers = h || {};
+  el._mpCtx = ctx;
   // Show the expand toggle only when the clamped paragraph actually overflows.
   requestAnimationFrame(() => {
     const hist = el.querySelector('#mp-history'), tg = el.querySelector('#mp-history-toggle');
-    if (hist && tg) tg.style.display = (histOpen || hist.scrollHeight > hist.clientHeight + 1) ? '' : 'none';
+    if (hist && tg) tg.classList.toggle('hidden', !(histOpen || hist.scrollHeight > hist.clientHeight + 1));
   });
-  return tab;
 }
 
 
   const CSS = `
-    /* Reference (model) page — 2a design, 390px */
-    #page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
-    .mp-tone-gold { background: var(--gold); } .mp-tone-dim { background: var(--gold-dim); } .mp-tone-flat { background: var(--surface2); }
-    .mp-tab { flex:1; text-align:center; padding:var(--space-3) 0; font-size:var(--fs-sm); cursor:pointer; color:var(--muted); font-weight:var(--fw-normal); border-bottom:2px solid transparent; background:none; border-top:0; border-left:0; border-right:0; font-family:inherit; }
-    .mp-tab:hover { background: var(--surface2); }
-    .mp-tab[aria-selected="true"] { color:var(--gold-text); font-weight:var(--fw-semibold); border-bottom-color:var(--gold); }
-    .mp-badge { font-size:var(--fs-3xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--gold-text); background:var(--gold-dim); border-radius:var(--radius-pill); padding:var(--space-1) var(--space-2); white-space:nowrap; }
-    .mp-h { font-size:var(--fs-2xs); font-weight:var(--fw-semibold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
-    .mp-cell { background:var(--surface); padding:var(--space-3-5) var(--space-3-5); }
-    .mp-cell .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--muted); }
-    .mp-cell .v { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--text); margin:var(--space-1) 0 var(--space-0-5); }
-    .mp-cell .f { font-size:var(--fs-2xs); color:var(--muted); margin-top:var(--space-1-5); }
-    .mp-quote button:hover { background: var(--surface2); border-radius: var(--radius-sm); }
-    .mp-row { display:flex; justify-content:space-between; align-items:center; padding:var(--space-2-5) 0; border-bottom:1px solid var(--border); font-size:var(--fs-sm); cursor:pointer; }
-    .mp-row:hover { background: var(--surface2); }
-    .mp-row:last-child { border-bottom:0; }
+    /* Reference (model) page — one scroll, 390px column (cut-down 2026-09-26) */
+    #page-model { max-width: var(--size-120); margin: 0 auto; padding: 0 0 var(--space-2); }
+    .mp-title { font-size: var(--fs-3xl); font-weight: var(--fw-semibold); letter-spacing: var(--ls-display); line-height: var(--lh-tight); color: var(--white); margin: var(--space-1) 0 var(--space-1-5); }
+    .mp-desc { margin: 0; padding: var(--space-3-5) var(--space-4) 0; font-size: var(--fs-base); line-height: var(--lh-snug); color: var(--muted); }
+    .mp-solo { display: inline-block; margin: var(--space-3) var(--space-4) 0; padding: var(--space-1-5) var(--space-3); border-radius: var(--radius-pill); background: var(--gold-dim); color: var(--gold-text); font-size: var(--fs-base); font-weight: var(--fw-semibold); }
+    .mp-sec { padding: var(--space-6) var(--space-4) 0; }
+    .mp-sec-h { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); }
+    .mp-sec-gap { margin-bottom: var(--space-2-5); }
+    .mp-sec-hrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-2-5); }
+    .mp-sub { font-size: var(--fs-sm); color: var(--muted); }
+    .mp-eyebrow { font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
+    .mp-link { background: none; border: 0; padding: var(--space-1) 0; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--gold-text); cursor: pointer; }
+    /* your watch / how they run */
+    .mp-yours { margin: var(--space-4) var(--space-4) 0; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .mp-yours-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+    .mp-yours-ref { font-size: var(--fs-sm); color: var(--muted); text-align: right; }
+    .mp-rate { display: flex; align-items: baseline; gap: var(--space-1-5); margin-top: var(--space-1-5); }
+    .mp-rate-v { font-size: var(--fs-4xl); font-weight: var(--fw-bold); line-height: var(--lh-tight); letter-spacing: var(--ls-display); color: var(--text); }
+    .mp-rate-u { font-size: var(--fs-body); color: var(--muted); }
+    .mp-rate-none { margin-top: var(--space-1-5); font-size: var(--fs-xl); font-weight: var(--fw-semibold); color: var(--text); }
+    .mp-note { margin-top: var(--space-1); font-size: var(--fs-sm); line-height: var(--lh-snug); color: var(--muted); }
+    .mp-strip { position: relative; height: var(--size-14); margin-top: var(--space-4); }
+    .mp-axis { position: absolute; left: 0; right: 0; bottom: var(--size-2); height: var(--size-px); background: var(--border); }
+    .mp-med { position: absolute; top: 0; bottom: var(--size-2); border-left: 1px dashed var(--muted); }
+    .mp-dot { position: absolute; width: var(--size-2); height: var(--size-2); margin-left: calc(-1 * var(--size-1)); border-radius: var(--radius-round); background: var(--muted); }
+    .mp-dot.r0 { bottom: var(--size-3); } .mp-dot.r1 { bottom: var(--size-5); } .mp-dot.r2 { bottom: var(--size-7); } .mp-dot.r3 { bottom: var(--size-9); }
+    .mp-you { position: absolute; bottom: 0; box-sizing: border-box; width: var(--size-4); height: var(--size-4); margin-left: calc(-1 * var(--size-2)); border-radius: var(--radius-round); border: 2px solid var(--surface); background: var(--gold); box-shadow: var(--shadow-1); }
+    .mp-ticks { position: relative; height: var(--size-4); margin-top: var(--space-1); font-size: var(--fs-2xs); color: var(--muted); }
+    .mp-tick { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+    .mp-tick.first { transform: none; } .mp-tick.last { transform: translateX(-100%); }
+    .mp-legend { display: flex; flex-direction: column; gap: var(--space-1-5); margin-top: var(--space-3); font-size: var(--fs-base); color: var(--text); }
+    .mp-legend-row { display: flex; align-items: flex-start; gap: var(--space-2); }
+    .mp-key-dot { flex: none; width: var(--size-2); height: var(--size-2); margin: var(--space-1-5) var(--space-0-5) 0; border-radius: var(--radius-round); background: var(--muted); }
+    .mp-key-you { flex: none; width: var(--size-3); height: var(--size-3); margin-top: var(--space-1); border-radius: var(--radius-round); background: var(--gold); }
+    /* story */
+    .mp-history { font-size: var(--fs-md); line-height: var(--lh-body); color: var(--text); text-wrap: pretty; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+    .mp-history.open { -webkit-line-clamp: unset; }
+    .mp-fact { display: flex; align-items: flex-start; gap: var(--space-1); padding: var(--space-3) var(--space-1); border-radius: var(--radius); background: var(--gold-dim); }
+    .mp-fact-gap { margin-top: var(--space-3-5); }
+    .mp-fact > .u-flex-1 { padding: var(--space-1) var(--space-1); }
+    .mp-fact-body { margin-top: var(--space-1); font-size: var(--fs-md); line-height: var(--lh-snug); color: var(--text); text-wrap: pretty; }
+    .mp-fact-nav { flex: none; width: var(--size-9); min-height: var(--size-11); display: flex; align-items: center; justify-content: center; background: none; border: 0; color: var(--gold-text); font-size: var(--fs-xl); cursor: pointer; font-family: inherit; border-radius: var(--radius-sm); }
+    .mp-fact-nav:hover { background: var(--gold-dim); }
+    /* wrist shots */
+    .mp-shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+    .mp-shot { display: block; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2); cursor: pointer; }
+    .mp-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    /* owners */
+    .mp-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .mp-owner { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2-5) var(--space-3); border-bottom: 1px solid var(--border); cursor: pointer; }
+    .mp-owner:last-child { border-bottom: 0; }
+    .mp-owner:hover { background: var(--surface2); }
+    .mp-owner-av { flex: none; width: var(--size-10); height: var(--size-10); border-radius: var(--radius-round); overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface2); color: var(--muted); font-weight: var(--fw-bold); }
+    .mp-owner-av img { width: 100%; height: 100%; object-fit: cover; }
+    .mp-owner-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .mp-owner-name { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-owner-meta { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-following { font-size: var(--fs-sm); color: var(--muted); }
+    /* references, calibres, spec */
+    .mp-ref { padding: var(--space-2-5) var(--space-3-5); border-bottom: 1px solid var(--border); font-size: var(--fs-md); }
+    .mp-ref:last-child { border-bottom: 0; }
+    .mp-ref.mine { background: var(--gold-dim); }
+    .mp-ref-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+    .mp-ref-note { font-size: var(--fs-sm); color: var(--muted); }
+    .mp-ref-yours { font-weight: var(--fw-semibold); color: var(--gold-text); }
+    .mp-cals { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-top: var(--space-2-5); }
+    .mp-cal { display: inline-flex; flex-direction: column; align-items: center; padding: var(--space-1-5) var(--space-3); border-radius: var(--radius-sm); background: var(--surface2); font-size: var(--fs-base); }
+    .mp-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+    .mp-spec { padding: var(--space-2-5) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .mp-spec .l { font-size: var(--fs-sm); color: var(--muted); }
+    .mp-spec .v { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text); }
+    /* more from brand */
+    .mp-rel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+    .mp-rel-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-0-5); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-family: inherit; text-align: left; cursor: pointer; }
+    .mp-rel-card:hover { border-color: var(--gold); }
+    .mp-rel-name { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text); }
+    .mp-edit { display: flex; justify-content: center; padding: var(--space-5) 0; }
     .mp-pill { display:inline-flex; align-items:center; gap:var(--space-1-5); font-size:var(--fs-xs); font-weight:var(--fw-medium); color:var(--muted); border:1px solid var(--border); border-radius:var(--radius-pill); padding:var(--space-1-5) var(--space-3); cursor:pointer; background:none; font-family:inherit; }
     .mp-pill:hover { color:var(--gold-text); border-color:var(--gold); }
-    .mp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:var(--space-2-5) var(--space-3); }
-    .mp-card .l { font-size:var(--fs-2xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); }
-    .mp-card .v { font-size:var(--fs-body); font-weight:var(--fw-semibold); color:var(--text); margin-top:var(--space-1); }
-    .mp-act { flex:1; text-align:center; font-size:var(--fs-base); border-radius:var(--radius-btn); padding:var(--space-3); cursor:pointer; font-family:inherit; }
-    /* page components — each decision once, values are tokens (2026-09-22) */
+    /* action bar */
     .mp-actions { position:sticky; bottom:0; display:flex; gap:var(--space-2); padding:var(--space-3) var(--space-4) var(--space-5); border-top:1px solid var(--border); background:var(--bg); }
+    .mp-act { flex:1; min-height: var(--size-11); text-align:center; font-size:var(--fs-base); border-radius:var(--radius-btn); padding:var(--space-3); cursor:pointer; font-family:inherit; }
     .mp-act-primary { font-weight:var(--fw-semibold); color:var(--black); background:var(--gold); border:0; }
     .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
     .mp-act-ghost:disabled { color:var(--muted); }
-    .mp-fact-nav { flex:none; width:var(--size-9); min-height:var(--size-11); display:flex; align-items:center; justify-content:center; background:none; border:0; color:var(--gold-text); font-size:var(--fs-xl); cursor:pointer; font-family:inherit; }
-    .mp-hrow { display:flex; justify-content:space-between; align-items:baseline; }
-    .mp-big { display:flex; align-items:baseline; gap:var(--space-2); }
-    .mp-stack { display:flex; flex-direction:column; gap:var(--space-5); }
-    .mp-meta { font-size:var(--fs-2xs); color:var(--muted); }
   `;
   function injectStyles() {
     if (document.getElementById('wr-model-page-css')) return;
@@ -396,6 +444,6 @@ function renderModelPage(el, ctx, h) {
   }
   window.WRModelPage = {
     render(el, ctx, h) { injectStyles(); return renderModelPage(el, ctx, h); },
-    sparklinePath, valueTrendSummary, wearIndexPhrase, fmtRate, barPcts, histTone, featuredFactIndex,
+    fmtRate, featuredFactIndex, rateStrip, agoText,
   };
 })();

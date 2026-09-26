@@ -7948,7 +7948,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.15.10';
+const APP_VERSION = '26.09.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24476,8 +24476,7 @@ function goBackFromModel() {
   requestAnimationFrame(() => window.scrollTo(0, restoreY));
 }
 
-let modelPageTab = 'data';
-let _mpCtx = null; // last render inputs, for tab switches without refetch
+let _mpCtx = null; // last render inputs, for re-renders without refetch
 
 async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
@@ -24497,31 +24496,23 @@ async function loadAndRenderModel(modelId, owners) {
   }
   if (modelPageId !== modelId) return;
   _mpCtx = { modelId, m, o: oRes.data || { total_owners: 0, visible: [] }, st: sRes.data || {}, facts };
-  const st = _mpCtx.st;
-  const hasData = !!(st.wear_share || st.accuracy || (st.wear_weeks || []).some(n => n > 0));
-  modelPageTab = hasData ? 'data' : 'specs';
   renderModelPage();
 }
 
 function renderModelPage() {
   if (!_mpCtx) return;
   const el = document.getElementById('model-page-content');
-  modelPageTab = WRModelPage.render(el, { ..._mpCtx, tab: modelPageTab, loggedIn: !!currentUser, publicMode: false }, {
-    back: goBackFromModel, share: shareModelPage, setTab: mpSwitchTab,
+  WRModelPage.render(el, { ..._mpCtx, loggedIn: !!currentUser, publicMode: false, canMeasure: _tgHasNative() }, {
+    back: goBackFromModel, share: shareModelPage,
     openModel: id => openModelPage(id), brandExplore: mpBrandExplore, requestEdit: mpRequestEdit,
     openWatch: openEditWatch, addToCollection: addModelToCollection, addToWishlist: addModelToWishlist,
+    measure: id => openPushRoute('measure', id),
+    openPost: id => scrollToFeedPost(id),
+    openProfile: uid => viewUserProfile(uid),
+    follow: (uid, btn) => followByPrivacy(uid, btn),
+    isFollowing: uid => following.has(uid),
     track: (ev, props) => { if (window.posthog) posthog.capture(ev, props); },
   });
-}
-
-function mpSwitchTab(tab, scrollToTabs) {
-  modelPageTab = tab;
-  renderModelPage();
-  if (scrollToTabs) {
-    const bar = document.getElementById('mp-tabs');
-    if (bar) window.scrollTo({ top: bar.getBoundingClientRect().top + window.scrollY - 8, behavior: 'smooth' });
-  }
-  if (window.posthog) posthog.capture('model_page_tab', { tab });
 }
 
 function mpBrandExplore(brand) {
@@ -24545,7 +24536,7 @@ function mpRequestEdit(kind) {
   const { m, modelId } = _mpCtx;
   openFeedback();
   const ta = document.getElementById('fb-desc');
-  if (ta) ta.value = `Model page — ${m.brand} ${m.name} (${kind}, tab: ${modelPageTab}, id ${modelId}):\n`;
+  if (ta) ta.value = `Model page — ${m.brand} ${m.name} (${kind}, id ${modelId}):\n`;
 }
 
 function addModelToCollection(brand, name) {
