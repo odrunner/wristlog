@@ -1,0 +1,457 @@
+[
+ {
+  "slug": "omega-x-swatch-moonswatch",
+  "brand": "Omega x Swatch",
+  "model": "MoonSwatch",
+  "page_url": "https://www.swatch.com/en-us/mission-to-the-moon-so33m100/SO33M100.html",
+  "image_url": "https://static.swatch.com/images/product/SO33M100/sa200/SO33M100_sa200_er003m.png",
+  "credit": null,
+  "ambiguous_note": "SO33M100 Mission to the Moon (the member-owned ref, the original black/grey Bioceramic). Official swatch.com packshot, 1080x1080. static.swatch.com stalls browser user agents but serves a plain client, so the pipeline's curl-UA fallback fetches it (first attempt waits out a 30s timeout)."
+ },
+ {
+  "slug": "rolex",
+  "brand": "Rolex",
+  "model": "Oyster Perpetual",
+  "page_url": "https://www.rolex.com/en-us/watches/oyster-perpetual/m126000-0001",
+  "image_url": "",
+  "browser": true,
+  "image_match": "upright-c/m126000-0001",
+  "credit": null,
+  "ambiguous_note": "Chose OP 36 ref 126000-0001 (Oystersteel, silver dial) because members own 126000 and it is still in the catalogue; 124300 (OP 41) is gone from rolex.com (its URL 404s; replaced by 134300), 114300 is long discontinued. Runners-up m134300-0001 (new OP 41, silver) and 277200 (OP 31). rolex.com blocks scripted fetches; fetched through a real Chrome session (verified 1600x2381)."
+ },
+ {
+  "slug": "apple-watch",
+  "brand": "Apple",
+  "model": "Apple Watch",
+  "page_url": "https://www.apple.com/apple-watch-series-12/",
+  "image_url": "https://www.apple.com/newsroom/images/2026/09/introducing-apple-watch-series-12-with-the-all-new-health-sensing-system/article/Apple-Watch-Series-12-Natural-Titanium-with-Milanese-Loop-260909_inline.jpg.large_2x.jpg",
+  "credit": null,
+  "ambiguous_note": "Series line -> current Apple Watch Series 12 (Sep 2026), Natural Titanium case with Milanese Loop (closest to the steel-and-bracelet rule). Clean single-watch packshot from Apple Newsroom on apple.com, 1306x1306. Runner-up: Series 12 Black Aluminum with Sport Loop (same article). The apple.com store packshot (watch-compare-series-12) is only 300px native, so it was not used."
+ },
+ {
+  "slug": "casio-duro",
+  "brand": "Casio",
+  "model": "Duro",
+  "page_url": "https://www.casio.com/us/watches/casio/product.MDV-106-1AV/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/M/md/mdv/mdv-106-1av/assets/MDV-106-1AV.png",
+  "credit": null,
+  "ambiguous_note": "MDV-106-1AV black dial on resin strap (member-owned; the only core Duro config). Direct casio.com DAM original, 2000x2000. Replaces the old browser/image_match entry in sources.json that failed ('no matching image') and whose transform rendition was an upscaled 396px thumbnail. casio.com HTML is Akamai-blocked for scripts; the /content/dam/ path is open."
+ },
+ {
+  "slug": "casio-g-shock-ga-110",
+  "brand": "Casio",
+  "model": "G-Shock GA-110",
+  "page_url": "https://www.casio.com/us/watches/gshock/product.GA-110-1B/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/G/GA/GA1/GA-110-1B/assets/GA-110-1B_Seq1.png",
+  "credit": null,
+  "ambiguous_note": "GA-110-1B (member-owned, black). Only rendition Casio hosts is 500x600 (US) / 600x600 (JP) - passes the 600px floor but is below the 1000px preference. Path found via the archived casio.com product page; image itself served from casio.com."
+ },
+ {
+  "slug": "tudor-black-bay-58",
+  "brand": "Tudor",
+  "model": "Black Bay 58",
+  "page_url": "https://www.tudorwatch.com/en/watches/black-bay-58/m7939a1a0nu-0002",
+  "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m7939a1a0nu-0002",
+  "browser": false,
+  "image_match": "upright-ob/tudor-m7939a1a0nu-0002",
+  "credit": null,
+  "ambiguous_note": "Members own M79030N / M79030B, which Tudor no longer hosts (both CDN assets 404). Chose the current Black Bay 58 M7939A1A0NU-0002 (39mm steel, black/gilt, riveted 3-link bracelet - the direct successor to M79030N). Runners-up -0001 (5-link bracelet) and M7939G1A0NRU (blue/burgundy). Unbranded upright-ob asset, 1600x1600."
+ },
+ {
+  "slug": "audemars-piguet-royal-oak-offshore",
+  "brand": "Audemars Piguet",
+  "model": "Royal Oak Offshore",
+  "page_url": "https://www.audemarspiguet.com/us/en/watch-collection/royal-oak-offshore/26420CE.OO.A127CR.01.html",
+  "image_url": "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/watch-611?wid=1500&hei=1500&fmt=png-alpha",
+  "credit": null,
+  "ambiguous_note": "Members own 26420CE / 26405CE (black ceramic). 26405CE is no longer listed; chose 26420CE.OO.A127CR.01 (43mm black ceramic, black/gold dial, alligator strap). Runner-up 26420CE.OO.A063VE.01 (green ceramic, watch-1140). AP asset id watch-611 taken from the product page; 1500x1500."
+ },
+ {
+  "slug": "audemars-piguet-royal-oak-selfwinding-chronograph",
+  "brand": "Audemars Piguet",
+  "model": "Royal Oak Selfwinding Chronograph",
+  "page_url": "https://www.audemarspiguet.com/us/en/watch-collection/royal-oak/26240ST.OO.1320ST.05.html",
+  "image_url": "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/watch-926?wid=1500&hei=1500&fmt=png-alpha",
+  "credit": null,
+  "ambiguous_note": "26331ST is gone; chose current 26240ST.OO.1320ST.05 (41mm steel, steel bracelet, blue Grande Tapisserie). Runners-up .07 (silver, watch-1070) and .08 (green, watch-876). 1500x1500."
+ },
+ {
+  "slug": "casio-world-time",
+  "brand": "Casio",
+  "model": "World Time",
+  "page_url": "https://www.casio.com/us/watches/casio/product.AE-1200WH-1AV/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/jp/ja/timepiece/product/watch/A/AE/AE1/ae-1200wh-1a/assets/AE-1200WH-1A.png",
+  "credit": null,
+  "ambiguous_note": "AE-1200WH-1A (member-owned; US page sells it as AE-1200WH-1AV). The US DAM path has no original, so the image is Casio's own JP-locale asset of the identical watch, 2000x2000."
+ },
+ {
+  "slug": "rolex-yacht-master",
+  "brand": "Rolex",
+  "model": "Yacht-Master",
+  "page_url": "https://www.rolex.com/en-us/watches/yacht-master/m126622-0002",
+  "image_url": "",
+  "browser": true,
+  "image_match": "upright-c/m126622-0002",
+  "credit": null,
+  "ambiguous_note": "Size unspecified -> Yacht-Master 40 Rolesium ref 126622-0002 (bright blue dial), so it differs from rolex-yacht-master-40 (126622-0001 slate). Runner-up 126622-0001. Chrome-session fetch verified 1600x2381."
+ },
+ {
+  "slug": "tag-heuer-aquaracer",
+  "brand": "TAG Heuer",
+  "model": "Aquaracer",
+  "page_url": "https://www.tagheuer.com/us/en/timepieces/collections/tag-heuer-aquaracer/42-mm-th31-00-cosc/WBP5110.BA0013.html",
+  "image_url": "https://www.tagheuer.com/on/demandware.static/-/Sites-tagheuer-master/default/dw2f8e5518/TAG_Heuer_Aquaracer/WBP5110.BA0013/WBP5110.BA0013_Soldier.png",
+  "credit": null,
+  "ambiguous_note": "Current Aquaracer Professional 300 Date 42mm WBP5110.BA0013 (steel, black dial, steel bracelet, TH31-00). Runner-up blue WBP5111.BA0013. tagheuer.com pages are bot-blocked; the front 'Soldier' packshot URL came from TAG Heuer's own image sitemap. 2000x3143."
+ },
+ {
+  "slug": "bulova-accutron-spaceview",
+  "brand": "Accutron",
+  "model": "Spaceview",
+  "page_url": "https://www.accutronwatch.com/us/en/product/2ES6A001.html",
+  "image_url": "https://citizenwatch.widen.net/content/u9bugmqutw/png/Spaceview+2020.png?u=41zuoe&width=1600&height=1600&quality=80&crop=false&keep=c&color=FFFFFF00",
+  "credit": null,
+  "ambiguous_note": "Accutron (the brand now selling Spaceview) Spaceview 2020 2ES6A001 - the standard steel, green-accent electrostatic model on black leather. Front packshot from the Citizen Group DAM that accutronwatch.com embeds (same DAM as the existing Bulova entries). 1600x1600. Runner-up: the 3/4 view (eop0nc0xh6)."
+ },
+ {
+  "slug": "bulova-sutton",
+  "brand": "Bulova",
+  "model": "Sutton Automatic",
+  "page_url": "https://uk.bulova.com/sutton-silver-tone-stainless-steel-watch-96a268.html",
+  "image_url": "https://uk.bulova.com/media/catalog/product/b/u/bulova_96a268_catalog.png",
+  "credit": null,
+  "ambiguous_note": "96A268 (member-owned; rectangular Sutton, silver dial, open aperture, brown leather). bulova.com/us and /global now 404 for 96A268; Bulova's official UK site still lists it. 570x1200 (long edge 1200)."
+ },
+ {
+  "slug": "casio-g-shock",
+  "brand": "Casio",
+  "model": "G-Shock 5600",
+  "page_url": "https://www.casio.com/us/watches/gshock/product.DW-5600BB-1/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/D/DW/DW5/DW-5600BB-1/us-assets/DW-5600BB-1.png",
+  "credit": null,
+  "ambiguous_note": "DW-5600BB-1 (member-owned, all-black square). Runner-up DW-5600E-1V (member-owned, but no original found on the DAM) and current DW-5600UE-1. casio.com DAM, 2000x2000."
+ },
+ {
+  "slug": "casio-vintage",
+  "brand": "Casio",
+  "model": "Vintage",
+  "page_url": "https://www.casio.com/us/watches/casio/product.A168WG-9/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/A/A1/A16/A168WG-9/assets/A168WG-9.png",
+  "credit": null,
+  "ambiguous_note": "A168WG-9 (member-owned, gold-tone). Runner-up A168W-1 (member-owned, steel) - not found on the DAM. 2000x2000."
+ },
+ {
+  "slug": "citizen-mechanical",
+  "brand": "Citizen",
+  "model": "Mechanical",
+  "page_url": "https://www.citizenwatch.com/us/en/product/NJ0150-56E",
+  "image_url": "https://citizenwatch.widen.net/content/a6jc8c860m/webp",
+  "credit": null,
+  "ambiguous_note": "NJ0150-56E ('Tsuyosa', black dial, steel bracelet; member-owned). NB1050-59H (also member-owned) is no longer on citizenwatch.com. Main packshot from the Citizen DAM the site embeds, 1204x2048."
+ },
+ {
+  "slug": "citizen-promaster-tough",
+  "brand": "Citizen",
+  "model": "Promaster Tough",
+  "page_url": "https://www.citizenwatch.com/us/en/product/BN0211-50E",
+  "image_url": "https://citizenwatch.widen.net/content/fevl3spc6x/webp",
+  "credit": null,
+  "ambiguous_note": "Member-owned BN0118-55E is no longer on citizenwatch.com (404); chose the current Promaster Tough BN0211-50E (Super Titanium-coated steel, black dial, bracelet). Runner-up BN0211-09X (green). 1303x2048."
+ },
+ {
+  "slug": "omega-de-ville",
+  "brand": "Omega",
+  "model": "De Ville",
+  "page_url": "https://www.omegawatches.com/en-us/watch-omega-de-ville-prestige-co-axial-master-chronometer-40-mm-43410402010001",
+  "image_url": "https://www.omegawatches.com/media/catalog/product/o/m/omega-de-ville-prestige-co-axial-master-chronometer-40-mm-43410402010001-99709b.png?w=1600",
+  "credit": null,
+  "ambiguous_note": "Member owns vintage 166.0161; Omega's vintage database has a page for it but the image is only a line-drawing placeholder, so used the current De Ville Prestige 40mm 434.10.40.20.10.001 (steel, steel bracelet, green dial, simple 3-hand - closest in spirit). Runner-up 434.13.40.20.03.001 (leather). 1600x1600. omegawatches.com stalls browser UAs; the pipeline's curl-UA fallback fetches it."
+ },
+ {
+  "slug": "orient-bambino",
+  "brand": "Orient",
+  "model": "Bambino",
+  "page_url": "https://orient-watch.com/en/orient/collection/classic/classic-and-simple-style/RA-AK0701S/",
+  "image_url": "https://www.orientwatchusa.com/cdn/shop/files/orient-bambino-version-8-7300933.png?v=1787001860",
+  "credit": null,
+  "ambiguous_note": "RA-AK0701S10B (Bambino Version 8, member-owned; Orient USA lists it as RA-AK0701S30B). orient-watch.com only serves a 328x492 image, so the packshot is from Orient Watch USA (Orient's own US site, as for orient-kamasu). 1600x1067."
+ },
+ {
+  "slug": "oris-big-crown-pointer-date",
+  "brand": "Oris",
+  "model": "Big Crown Pointer Date",
+  "page_url": "https://www.oris.ch/en-US/product/watch/big-crown/big-crown-pointer-date/01-754-7785-4065-07-8-20-02",
+  "image_url": "https://image.oris.ch/data/37439_0175477854065-0782002_horizontale_ds.png",
+  "credit": null,
+  "ambiguous_note": "01 754 7785 4065 (member-owned 40mm blue dial) on the steel bracelet (07 8 20 02). Runner-up the leather-strap 07 6 20 10. Oris's standard 'horizontale' packshot (watch lying at an angle), 1812x1200."
+ },
+ {
+  "slug": "patek-philippe-calatrava",
+  "brand": "Patek Philippe",
+  "model": "Calatrava",
+  "page_url": "https://www.patek.com/en/collection/calatrava/5227g-010",
+  "image_url": "https://patek-res.cloudinary.com/dfsmedia/0906caea301d42b3b8bd23bd656d1711/202401-51889",
+  "credit": null,
+  "ambiguous_note": "5227G-010 (member-owned; white gold, black dial, alligator strap) is still in the catalogue. 5296G and 5107J are gone. Packshot 1920x2691 from Patek's own Cloudinary."
+ },
+ {
+  "slug": "breitling-superocean-heritage",
+  "brand": "Breitling",
+  "model": "Superocean Heritage",
+  "page_url": "https://www.breitling.com/us-en/watches/superocean-heritage/superocean-heritage-b20-automatic-42/UB2010161C1A1/",
+  "image_url": "https://www-breitling.eu.saleor.cloud/media/products/ub2010161c1a1-soldier_cd0460b2.png",
+  "credit": null,
+  "ambiguous_note": "UB2010161C1A1 - the member-owned ref is still listed (Superocean Heritage B20 42, steel with red-gold bezel/crown, blue dial, mesh bracelet). Runner-up all-steel AB2010121B1A1 (black). Breitling's own product-image host (same as the Navitimer entry). 2100x2100."
+ },
+ {
+  "slug": "casio-edifice",
+  "brand": "Casio",
+  "model": "Edifice",
+  "page_url": "https://www.casio.com/us/watches/edifice/product.EF-527D-1AV/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/E/EF/EF5/EF-527D-1AV/assets/EF-527D-1AV_01.png",
+  "credit": null,
+  "ambiguous_note": "EF-527D-1AV (member-owned). Largest rendition Casio hosts is 500x600 - passes the 600px floor but below the 1000px preference."
+ },
+ {
+  "slug": "casio-g-shock-g-lide",
+  "brand": "Casio",
+  "model": "G-Shock G-LIDE",
+  "page_url": "https://www.casio.com/us/watches/gshock/product.GBX-100-7/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/G/GB/GBX/GBX-100-7/assets/GBX-100-7_Seq1.png",
+  "credit": null,
+  "ambiguous_note": "GBX-100-7 (member-owned, white). Largest rendition Casio hosts is 500x600 (US; JP is 600x600) - passes the floor, below the 1000px preference."
+ },
+ {
+  "slug": "casio-g-shock-ga-2100",
+  "brand": "Casio",
+  "model": "G-Shock GA-2100",
+  "page_url": "https://www.casio.com/us/watches/gshock/product.GA-2100-1A1/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/G/GA/GA2/GA-2100-1A1/us-assets/GA-2100-1A1.png",
+  "credit": null,
+  "ambiguous_note": "GA-2100-1A1 (member-owned, all-black 'CasiOak'). Runner-up GM-2100N-2A (member-owned metal-bezel version; no original found). 2000x2000."
+ },
+ {
+  "slug": "casio-protrek",
+  "brand": "Casio",
+  "model": "Pro Trek",
+  "page_url": "https://www.casio.com/us/watches/protrek/product.PRG-340-1/",
+  "image_url": "https://www.casio.com/content/dam/casio/product-info/locales/us/en/timepiece/product/watch/P/PR/PRG/prg-340-1/assets/PRG-340-1.png",
+  "credit": null,
+  "ambiguous_note": "PRT-410 is not on casio.com; chose the current core Pro Trek PRG-340-1 (black resin, triple sensor, solar). Runner-up PRW-3500-1. 2000x2000."
+ },
+ {
+  "slug": "christopher-ward-c63-sealander-gmt",
+  "brand": "Christopher Ward",
+  "model": "C63 Sealander GMT",
+  "page_url": "https://www.christopherward.com/int/watches/C63-Sealander-GMT/C63-39AGM3-S00B5-B0.html",
+  "image_url": "https://www.christopherward.com/dw/image/v2/BDWD_PRD/on/demandware.static/-/Sites-cw-master-catalog/default/dwc2211943/images/WATCHES/C63-39AGM3-S00B5-B0/C63-39AGM3-S00B5-B0_Picture_1.jpg?sw=2000&sh=2000",
+  "credit": null,
+  "ambiguous_note": "C63-39AGM3 (member-owned 39mm) in the S00B5-B0 configuration (ice-blue dial, Bader steel bracelet). Picture_1 is CW's standard front packshot on a light-grey studio background (not pure white); the other gallery shots are wrist/close-up/black-background. Other dials exist (white, black, blue/silver). Pipeline rewrites to sw=1500."
+ },
+ {
+  "slug": "citizen-eco-drive-titanium",
+  "brand": "Citizen",
+  "model": "Eco-Drive Titanium",
+  "page_url": "https://www.citizenwatch.com/us/en/product/BM6560-54H",
+  "image_url": "https://citizenwatch.widen.net/content/a2y5l5qhw7/webp",
+  "credit": null,
+  "ambiguous_note": "BM6560-54H (member-owned; titanium case and bracelet, black dial) is live on citizenwatch.com. 1165x2048."
+ },
+ {
+  "slug": "grand-seiko-elegance-collection-gmt",
+  "brand": "Grand Seiko",
+  "model": "Elegance Collection GMT",
+  "page_url": "https://www.grand-seiko.com/us-en/collections/sbgm221g",
+  "image_url": "https://www.grand-seiko.com/us-en/-/media/Images/Product--Image/All/GrandSeiko/2022/02/19/22/10/SBGM221G/SBGM221G.png",
+  "credit": null,
+  "ambiguous_note": "SBGM221 (member-owned; steel, ivory dial, leather strap). SBGM241 is no longer on grand-seiko.com. Grand Seiko's product packshot."
+ },
+ {
+  "slug": "hamilton-intra-matic-chrono",
+  "brand": "Hamilton",
+  "model": "Intra-Matic Auto Chrono",
+  "page_url": "https://www.hamiltonwatch.com/en-us/h38416711-intramatic-auto-chrono.html",
+  "image_url": "https://www.hamiltonwatch.com/media/catalog/product/h/3/h38416711.png",
+  "credit": null,
+  "ambiguous_note": "H38416711 (member-owned; 40mm steel, white panda dial, black leather strap). 2000x2000. Hamilton stalls browser UAs; pipeline's curl-UA fallback fetches it."
+ },
+ {
+  "slug": "hamilton-jazzmaster-open-heart",
+  "brand": "Hamilton",
+  "model": "Jazzmaster Open Heart Auto",
+  "page_url": "https://www.hamiltonwatch.com/en-us/h32705581-jazzmaster.html",
+  "image_url": "https://www.hamiltonwatch.com/media/catalog/product/h/3/h32705581.png",
+  "credit": null,
+  "ambiguous_note": "H32705581 (member-owned; 42mm, grey dial, leather). Hamilton marks it 'past collection' but still hosts the page. Runners-up H32705731 (black), H32705541 (blue). 2000x2000."
+ },
+ {
+  "slug": "longines-conquest-chronograph",
+  "brand": "Longines",
+  "model": "Conquest Chronograph",
+  "page_url": "https://www.longines.com/en-us/p/watch-conquest-l3-835-4-92-6",
+  "image_url": "https://api.ecom.longines.com/media/catalog/product/w/a/watch-collection-conquest-chronograph-l3-835-4-92-6-5fa0cd-hero.png",
+  "credit": null,
+  "ambiguous_note": "L3.835.4.92.6 (member-owned) - page still live. Longines hero packshot."
+ },
+ {
+  "slug": "omega-seamaster-diver-300m-chronograph",
+  "brand": "Omega",
+  "model": "Seamaster Diver 300M Chronograph",
+  "page_url": "https://www.omegawatches.com/en-us/watch-omega-seamaster-diver-300m-co-axial-master-chronometer-chronograph-44-mm-21030445103001",
+  "image_url": "https://www.omegawatches.com/media/catalog/product/o/m/omega-seamaster-diver-300m-co-axial-master-chronometer-chronograph-44-mm-21030445103001-922b75.png?w=1600",
+  "credit": null,
+  "ambiguous_note": "210.30.44.51.03.001 (member-owned; 44mm steel, blue, steel bracelet) - still listed. 1600x1600."
+ },
+ {
+  "slug": "omega-speedmaster-reduced",
+  "brand": "Omega",
+  "model": "Speedmaster Reduced",
+  "page_url": "https://www.omegawatches.com/en-us/watch-omega-speedmaster-reduced-35105000",
+  "image_url": "https://www.omegawatches.com/media/catalog/product/o/m/omega-speedmaster-reduced-35105000-f6f82a.png",
+  "credit": null,
+  "ambiguous_note": "Discontinued, but omegawatches.com still hosts an official legacy page for the Reduced 3510.50.00 (steel, black dial, steel bracelet) - the classic Reduced reference, same case/dial family as the member's 3502/3510 variants. 800x800 (below the 1000px preference)."
+ },
+ {
+  "slug": "orient-open-heart",
+  "brand": "Orient",
+  "model": "Open Heart",
+  "page_url": "https://orient-watch.com/en/orient/collection/classic/classic-and-simple-style-semi-skeleton/RA-AG0001S/",
+  "image_url": "https://www.orientwatchusa.com/cdn/shop/files/orient-bambino-open-heart-1648904.png?v=1787002575",
+  "credit": null,
+  "ambiguous_note": "RA-AG0001S10B (member-owned; rose-gold-tone case, white dial, brown leather; Orient USA lists it as RA-AG0001S30B). Image from Orient Watch USA (orient-watch.com only serves 328x492). 1600x1087."
+ },
+ {
+  "slug": "orient-triton",
+  "brand": "Orient",
+  "model": "Triton",
+  "page_url": "https://orient-watch.com/en/orient/collection/sports/others/RA-AC0K01B/",
+  "image_url": "https://www.orientwatchusa.com/cdn/shop/files/ra-ac0k01b30b-2645999.png?v=1787002214",
+  "credit": null,
+  "ambiguous_note": "AMBIGUOUS: the brief said RA-AC0L, but Orient sells RA-AC0L as the 'M-Force AC0L'; the Triton is RA-AC0K. Chose RA-AC0K01B (black dial, steel bracelet). If the family is really the AC0L, swap to https://www.orientwatchusa.com/cdn/shop/files/m-force-ac0l-9735645.png (RA-AC0L01B). 1600x1067."
+ },
+ {
+  "slug": "oris-aquis-date",
+  "brand": "Oris",
+  "model": "Aquis Date",
+  "page_url": "https://www.oris.ch/en-US/product/watch/aquis/aquis-date/01-733-7730-4157-07-8-24-05PEB",
+  "image_url": "https://image.oris.ch/data/23164_0173377304157-0782405PEB_horizontale.png",
+  "credit": null,
+  "ambiguous_note": "01 733 7730 4157 (member-owned; 43.5mm, green dial/bezel) on the steel bracelet (07 8 24 05PEB). Runner-up rubber-strap 07 4 24 64EB. Original is 906x600 (below the 1000px preference); Oris's rokka CDN offers an 1800px version but it is an upscale, so the original is used."
+ },
+ {
+  "slug": "rolex-sky-dweller",
+  "brand": "Rolex",
+  "model": "Sky-Dweller",
+  "page_url": "https://www.rolex.com/en-us/watches/sky-dweller/m336934-0007",
+  "image_url": "",
+  "browser": true,
+  "image_match": "upright-c/m336934-0007",
+  "credit": null,
+  "ambiguous_note": "Member-owned 326934 has been replaced by the 336934 (same White Rolesor, Oyster bracelet, fluted bezel). Chose 336934-0007 (black dial). Runners-up -0005 (blue), -0001 (mint green). Chrome-session fetch verified 1600x2381."
+ },
+ {
+  "slug": "seiko-king-turtle",
+  "brand": "Seiko",
+  "model": "King Turtle",
+  "page_url": "https://www.seikowatches.com/us-en/products/prospex/srpe05",
+  "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2022/02/20/02/23/SRPE39K1/SRPE39K1.png",
+  "credit": null,
+  "ambiguous_note": "SRPE39K1 (member-owned King Turtle 'Save the Ocean' manta-ray blue dial, bracelet). Its product page is gone from every seikowatches.com region, but Seiko's own media library still serves the packshot (1102x1102); page_url is the live King Turtle page SRPE05. Runner-up SRPE05K1 (green dial, silicone strap)."
+ },
+ {
+  "slug": "seiko-prospex-1968",
+  "brand": "Seiko",
+  "model": "Prospex 1968",
+  "page_url": "https://www.seikowatches.com/us-en/products/prospex/special/1968_gmt/index",
+  "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2023/02/02/11/42/SPB383J1/SPB383J1.png",
+  "credit": null,
+  "ambiguous_note": "SPB383J1 (member-owned; 1968 Diver's GMT, black, bracelet). Product page no longer resolves; image from Seiko's own media library, page_url is Seiko's 1968 GMT feature page. Runner-up SPB381J1 (non-GMT 1968 on the live 1968diver page). 1102x1102."
+ },
+ {
+  "slug": "seiko-prospex-speedtimer",
+  "brand": "Seiko",
+  "model": "Prospex Speedtimer",
+  "page_url": "https://www.seikowatches.com/us-en/products/prospex/spb513j1",
+  "image_url": "https://www.seikowatches.com/us-en/-/media/Images/Product--Image/All/Seiko/2025/07/17/21/15/SPB513J1/SPB513J1.png",
+  "credit": null,
+  "ambiguous_note": "SPB513J1 (member-owned; mechanical Speedtimer, cream dial, steel bracelet). 1102x1102."
+ },
+ {
+  "slug": "steinhart-ocean-thirty-nine",
+  "brand": "Steinhart",
+  "model": "Ocean Thirty-Nine",
+  "page_url": "https://www.steinhartwatches.de/en/ocean-one-39-nova-black.html",
+  "image_url": "https://www.steinhartwatches.de/media/catalog/product/1/_/1_frontal-1000x1000.png",
+  "credit": null,
+  "ambiguous_note": "Ocean One 39 NOVA Black (39mm steel, black dial/bezel, bracelet) - the core black Ocean 39. Runners-up Ocean 39 GMT Black-Red, Ocean One 39 NOVA Green. Product pages are Cloudflare-protected (found via a real browser) but the media file fetches directly. 1000x1000."
+ },
+ {
+  "slug": "tag-heuer-formula-1-chronograph",
+  "brand": "TAG Heuer",
+  "model": "Formula 1 Chronograph",
+  "page_url": "https://www.tagheuer.com/us/en/timepieces/collections/tag-heuer-formula-1/43-mm-quartz/CAZ101K.BA0842.html",
+  "image_url": "https://www.tagheuer.com/on/demandware.static/-/Sites-tagheuer-master/default/dw3bff8358/TAG_Heuer_Formula_1/CAZ101K.BA0842/CAZ101K.BA0842_Soldier.png",
+  "credit": null,
+  "ambiguous_note": "CAZ101K.BA0842 (member-owned; 43mm steel, blue dial, steel bracelet). Front 'Soldier' packshot, URL from TAG Heuer's image sitemap. 2000x3143."
+ },
+ {
+  "slug": "timex-expedition-scout",
+  "brand": "Timex",
+  "model": "Expedition Scout",
+  "page_url": "https://timex.com/products/expedition-scout-40mm-fabric-strap-watch-t49961",
+  "image_url": "https://timex.com/cdn/shop/files/T49961_dfeaae83-964c-4f1d-a7b7-c0114fa51ee7.png?v=1786996865",
+  "credit": null,
+  "ambiguous_note": "T49961 (member-owned; 40mm, black dial, green fabric strap). 681x1200."
+ },
+ {
+  "slug": "timex-marlin",
+  "brand": "Timex",
+  "model": "Marlin",
+  "page_url": "https://timex.com/products/marlin-1965-reissue-hand-wound-34mm-leather-strap-watch-tw2r47900",
+  "image_url": "https://timex.com/cdn/shop/files/TW2R47900.png?v=1788227030",
+  "credit": null,
+  "ambiguous_note": "Current Marlin 1965 Reissue Hand-Wound 34mm TW2R47900 (silver dial, black leather) - the original reissue. Runner-up Marlin Automatic 40mm. 1000x1200."
+ },
+ {
+  "slug": "tudor-black-bay-ceramic",
+  "brand": "Tudor",
+  "model": "Black Bay Ceramic",
+  "page_url": "https://www.tudorwatch.com/en/watches/black-bay/m79210cnu-0001",
+  "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m79210cnu-0001",
+  "browser": false,
+  "image_match": "upright-ob/tudor-m79210cnu-0001",
+  "credit": null,
+  "ambiguous_note": "M79210CNU-0001 (member-owned; 41mm black ceramic, leather/fabric strap - the only config). Unbranded upright-ob asset, 1600x1600."
+ },
+ {
+  "slug": "tudor-black-bay-chrono",
+  "brand": "Tudor",
+  "model": "Black Bay Chrono",
+  "page_url": "https://www.tudorwatch.com/en/watches/black-bay-chrono/m79360n-0011",
+  "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m79360n-0011",
+  "browser": false,
+  "image_match": "upright-ob/tudor-m79360n-0011",
+  "credit": null,
+  "ambiguous_note": "Member-owned M79360N-0002 is no longer hosted (asset 404). Chose current M79360N-0011 (black dial, 3-link steel bracelet). I could not confirm which dial -0002 was; if it was the white 'panda', use -0012 instead. 1600x1600."
+ },
+ {
+  "slug": "tudor-black-bay-pro",
+  "brand": "Tudor",
+  "model": "Black Bay Pro",
+  "page_url": "https://www.tudorwatch.com/en/watches/black-bay-pro/m79470-0004",
+  "image_url": "https://media.tudorwatch.com/image/upload/c_limit,w_1600,f_jpg/v1/catalogue/0yi5ee8b69yh3/upright-ob/tudor-m79470-0004",
+  "browser": false,
+  "image_match": "upright-ob/tudor-m79470-0004",
+  "credit": null,
+  "ambiguous_note": "M79470-0004 (member-owned; 39mm steel, opaline white dial, steel bracelet). Runner-up -0001 (black dial, bracelet). 1600x1600."
+ },
+ {
+  "slug": "audemars-piguet-royal-oak-double-balance-wheel-openworked",
+  "brand": "Audemars Piguet",
+  "model": "Royal Oak Double Balance Wheel Openworked",
+  "page_url": "https://www.audemarspiguet.com/us/en/watch-collection/royal-oak/15407ST.OO.1220ST.02.html",
+  "image_url": "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/watch-1114?wid=1500&hei=1500&fmt=png-alpha",
+  "credit": null,
+  "ambiguous_note": "15407ST (member-owned) - the current steel ref is 15407ST.OO.1220ST.02 (salmon/pink-gold-toned openworked movement). The earlier grey .01 is no longer listed. 1500x1500."
+ }
+]
