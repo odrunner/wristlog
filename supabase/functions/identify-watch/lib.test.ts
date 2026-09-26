@@ -10,6 +10,7 @@ import {
   detectMediaType,
   DETECT_PROMPT,
   extractJson,
+  stripCitations,
   factModelKey,
   hasCollection,
   ownsFactModel,
@@ -233,4 +234,20 @@ Deno.test("buildModelPrompt — includes the Wikipedia lead as grounding when pr
   assertStringIncludes(p, "Wikipedia lead paragraph");
   assertStringIncludes(p, "line of sports watches");
   assertEquals(buildModelPrompt({ brand: "Rolex", name: "Submariner" }).includes("Wikipedia lead"), false);
+});
+
+Deno.test("stripCitations removes grounding markers from every string, keeps the rest", () => {
+  const out = stripCitations({
+    description: "Successor to the King Seiko. [3, 8] Twin Quartz came in 1979.[2]",
+    history: "No markers here [not a citation].",
+    refs_by_era: [{ reference: "BN0118-55E", note: "Ray Mears [6, 17]" }],
+    specs: { size: "40mm", n: 3 },
+    empty: null,
+  });
+  assertEquals(out.description, "Successor to the King Seiko. Twin Quartz came in 1979.");
+  assertEquals(out.history, "No markers here [not a citation].");
+  assertEquals(out.refs_by_era[0].note, "Ray Mears");
+  assertEquals(out.refs_by_era[0].reference, "BN0118-55E");
+  assertEquals(out.specs, { size: "40mm", n: 3 });
+  assertEquals(out.empty, null);
 });

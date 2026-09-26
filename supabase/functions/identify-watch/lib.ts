@@ -7,6 +7,20 @@ export function extractJson(text: string) {
   return m ? JSON.parse(m[0]) : null;
 }
 
+// Google Search grounding sometimes leaves citation markers in the prose
+// ("…the King Seiko. [3, 8]"). Strip "[n]" / "[n, m]" from every string in a
+// parsed write-up (objects and arrays walked) before it is stored or shown.
+export function stripCitations<T>(v: T): T {
+  if (typeof v === "string") {
+    return v.replace(/\s*\[\d+(?:\s*,\s*\d+)*\]/g, "").trim() as unknown as T;
+  }
+  if (Array.isArray(v)) return v.map(stripCitations) as unknown as T;
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, stripCitations(x)])) as T;
+  }
+  return v;
+}
+
 // Normalize the request `mode` to one of the supported modes for logging.
 export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" | "model" {
   return mode === "detect" ? "detect"

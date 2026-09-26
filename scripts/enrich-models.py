@@ -41,7 +41,9 @@ for i, m in enumerate(rows, 1):
         with urllib.request.urlopen(req, timeout=120) as r:
             out = json.loads(r.read())
         if out.get('_stored'):
-            ok += 1; print(f"  ✓ [{i}/{len(rows)}] {label} — {len(out.get('refs_by_era') or [])} refs, {len(out.get('calibers_by_era') or [])} calibers ({time.time()-t0:.0f}s)")
+            ok += 1; u = out.get('_usage') or {}
+            print(f"  ✓ [{i}/{len(rows)}] {label} — {len(out.get('refs_by_era') or [])} refs, {len(out.get('calibers_by_era') or [])} calibers ({time.time()-t0:.0f}s)"
+                  + (f" · tokens in {u.get('input')} / out {u.get('output')} / thinking {u.get('thinking')}" if u else ''))
         else:
             fail += 1; print(f"  ! [{i}/{len(rows)}] {label} — not stored: {str(out)[:160]}")
     except Exception as e:

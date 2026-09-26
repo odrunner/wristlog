@@ -20,6 +20,7 @@ import {
   normalizeDetectCount,
   normalizeMode,
   ownsFactModel,
+  stripCitations,
   stripDataUriPrefix,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
@@ -235,9 +236,14 @@ Deno.serve(async (req: Request) => {
             const finish = cand?.finishReason || "unknown";
             const text = (cand?.content?.parts ?? []).filter((p: any) => p.text).map((p: any) => p.text).join("");
             if (finish === "RECITATION" || finish === "SAFETY") { lastErr = `blocked_${finish}`; continue; }
-            const parsed = extractJson(text);
+            const raw = extractJson(text);
+            const parsed = raw ? stripCitations(raw) : null;
             if (parsed) {
               parsed._engine = "gemini";
+              // Token counts, so the ops script can report what enrichment actually costs.
+              const u = j.usageMetadata ?? {};
+              parsed._usage = { input: u.promptTokenCount ?? null, output: u.candidatesTokenCount ?? null,
+                thinking: u.thoughtsTokenCount ?? null, tool_input: u.toolUsePromptTokenCount ?? null };
               if (storeId) {
                 const upd: Record<string, unknown> = { enriched_at: new Date().toISOString() };
                 if (typeof parsed.description === "string" && parsed.description.trim()) upd.description = parsed.description.trim();
