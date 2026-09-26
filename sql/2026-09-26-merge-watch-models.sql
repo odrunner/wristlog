@@ -1,4 +1,5 @@
--- 2026-09-26: merge duplicate watch models (reviewed list: docs/watch-models-merge-proposal-2026-09-26.md).
+-- 2026-09-26: merge duplicate watch models + rename the merged families.
+-- Reviewed list: docs/watch-models-merge-proposal-2026-09-26.md (open questions answered by the owner 2026-09-26).
 -- Runs admin_merge_watch_models() — the same path as Admin → Models → Merge — as the admin account.
 -- One transaction: any failure rolls the whole batch back.
 begin;
@@ -251,11 +252,29 @@ do $$ declare r record; begin
     ('vacheron-constantin-overseas-dual-time-cardinal-points-west', 'vacheron-constantin-overseas-dual-time'),
     ('vacheron-constantin-overseas-self-winding', 'vacheron-constantin-overseas'),
     ('vostok-konidersk', 'vostok-komandirskie'),
-    ('zenith-chronomaster-original', 'zenith-chronomaster')
+    ('zenith-chronomaster-original', 'zenith-chronomaster'),
+    ('breitling-navitimer', 'breitling-navitimer-b01-chronograph-43'),
+    ('rolex-yachtmaster', 'rolex-yacht-master'),
+    ('rolex-gmt-master-bw', 'rolex-gmt-master-ii'),
+    ('casio-gshock-dw-5600', 'casio-g-shock'),
+    ('casio-g-shock-gw5000u1jf', 'casio-g-shock'),
+    ('casio-g-shock-gw-m5610', 'casio-g-shock'),
+    ('breitling-chronomat-b31-40', 'breitling-chronomat-44'),
+    ('breguet-tradition-7037', 'breguet-tradition-5157'),
+    ('breguet-tradition-seconde-r-trograde-7097', 'breguet-tradition-5157'),
+    ('accutron-214', 'bulova-accutron-spaceview')
   ) v(src, dst) loop
     perform public.admin_merge_watch_models(
       (select id from watch_models where slug = r.src and merged_into is null),
       (select id from watch_models where slug = r.dst and merged_into is null));
   end loop;
 end $$;
+update watch_models set name = 'Navitimer' where slug = 'breitling-navitimer-b01-chronograph-43' and merged_into is null;
+update watch_models set name = 'Yacht-Master' where slug = 'rolex-yacht-master' and merged_into is null;
+update watch_models set name = 'G-Shock 5600' where slug = 'casio-g-shock' and merged_into is null;
+update watch_models set name = 'Chronomat' where slug = 'breitling-chronomat-44' and merged_into is null;
+update watch_models set name = 'Tradition' where slug = 'breguet-tradition-5157' and merged_into is null;
+update watch_models set name = 'Apple Watch Ultra' where slug = 'apple-watch-ultra-2' and merged_into is null;
+update watch_models set name = 'G-Shock Full Metal 5000' where slug = 'casio-g-shock-gmw-b5000mb-1' and merged_into is null;
+update watch_models set name = 'Speedmaster ''57' where slug = 'omega-speedmaster-57-chronograph' and merged_into is null;
 commit;

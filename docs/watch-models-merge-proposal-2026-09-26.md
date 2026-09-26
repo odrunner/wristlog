@@ -8,24 +8,25 @@
 
 **Kept separate on purpose:** lines the maker sells under their own name (Black Bay 58 / GMT / Pro / Chrono, Seamaster 300 / Aqua Terra / Planet Ocean / Diver 300M, Royal Oak Offshore / Offshore Diver, Explorer / Explorer II, Datejust / Day-Date, Submariner / Submariner Date, Air-King), complication variants with their own name (Aquanaut Travel Time, Nautilus Perpetual, Superocean Chronograph), and **anything with a different movement type** — a quartz or solar watch never joins a mechanical family, because it would distort the accuracy strip (e.g. Khaki Field Quartz, Oysterquartz, Bambino Solar, Tissot PRX quartz vs Powermatic).
 
-## Needs your call (not in the list)
+## Decided by the owner 2026-09-26
+| Case | Decision |
+|---|---|
+| Breitling Navitimer | One family: Navitimer → curated B01 43, renamed **Navitimer** |
+| Rolex Yacht-Master (size-less) | The two size-less pages merged together (**Yacht-Master**); 37/40/42 unchanged |
+| Rolex 'Gmt master bw' | → GMT-Master II |
+| Rolex Submariner skeleton | **Kept separate** (aftermarket, not a Rolex model) |
+| Casio G-Shock 5600s | DW-5600, GW-5000, GW-M5610 → generic G-Shock, renamed **G-Shock 5600** |
+| Breitling Chronomat | B31 40 → 44, renamed **Chronomat** |
+| Breguet Tradition | 7037 + 7097 → 5157, renamed **Tradition** |
+| Tissot Gentleman | **Kept separate** (movement unknown) |
+| Seiko Speedtimer | **Kept separate** (mechanical vs solar) |
+| Accutron 214 (brand Accutron) | → Bulova Accutron Spaceview |
 
-| Case | What's there | Question |
-|---|---|---|
-| Breitling Navitimer | `navitimer` (3 owners) + curated `navitimer-b01-chronograph-43` (3) | Merge into one **Navitimer** family and rename the curated one? The curated model is reference-level, which the design avoids. |
-| Rolex Yacht-Master | `yacht-master` (2), `yachtmaster` (2) — no size | Merge both into **Yacht-Master 40** (most common), or leave? |
-| Rolex 'Gmt master bw' | 1 owner, no ref | GMT-Master II 'Batgirl'/'Batman' is my guess — merge into GMT-Master II? |
-| Rolex Submariner skeleton | 1 owner, aftermarket skeleton | Merge into Submariner, or keep as its own (it isn't a Rolex model)? |
-| Casio G-Shock 5600s | generic `g-shock` (ref DW-5600) + `gshock-dw-5600`, `gw5000u1jf`, `gw-m5610` | Rename generic to **G-Shock 5600** and merge the three in? |
-| Breitling Chronomat | `chronomat-44` + `chronomat-b31-40` | One **Chronomat** family (sizes)? |
-| Breguet Tradition | three refs, no base model | Merge 7037 + 7097 into 5157 and rename **Tradition**? |
-| Tissot Gentleman | `gentleman` (movement unknown) vs `gentleman-powermatic-80-silicium` (2) | Keep separate unless you know the generic ones are automatics. |
-| Seiko Speedtimer | `prospex-speedtimer` (2) vs curated Solar Chronograph (3) | Mechanical vs solar — keep separate? |
-| Accutron (brand) vs Bulova | `accutron-214` under brand Accutron | Merge into Bulova Accutron Spaceview? |
+Also renamed after merging: Watch Ultra 2 → **Apple Watch Ultra**, GMW-B5000MB-1 → **G-Shock Full Metal 5000**, Speedmaster '57 Chronograph → **Speedmaster '57**.
 
 Also left alone: ~40 placeholder names members typed ("A", "Gj", "Hh", "Unknown", "Access Denied"). They're real watches; nothing to merge them into.
 
-## The merges (247)
+## The merges (247 below + 10 decided above)
 
 ### Apple
 
