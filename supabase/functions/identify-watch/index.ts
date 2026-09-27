@@ -186,9 +186,12 @@ Deno.serve(async (req: Request) => {
             status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
           });
         }
-        const [{ data: aliases }, { data: ws }] = await Promise.all([
+        const [{ data: aliases }, { data: ws }, { data: sibs }] = await Promise.all([
           supabase.from("watch_model_aliases").select("alias_key").eq("model_id", storeId),
           supabase.from("watches").select("ref, caliber, year_range, case_diameter, water_resistance").eq("model_id", storeId),
+          // Sibling lines with their own page: same brand, name extends this one ("Submariner" → "Submariner Date").
+          supabase.from("watch_models").select("name").eq("brand", mrow.brand).is("merged_into", null)
+            .neq("id", storeId).ilike("name", `${mrow.name.replace(/[%_]/g, "")} %`).order("is_auto").limit(15),
         ]);
         const top = (k: string) => {
           const c: Record<string, number> = {};
@@ -201,6 +204,7 @@ Deno.serve(async (req: Request) => {
           refs: [...new Set(((ws ?? []) as any[]).map(w => (w.ref ?? "").toString().trim()).filter(Boolean))],
           grounding: { calibers: top("caliber"), years: top("year_range"), diameters: top("case_diameter"), water_resistance: top("water_resistance") },
           wiki_extract: mrow.wiki_extract,
+          siblings: ((sibs ?? []) as any[]).map(r => r.name),
         };
       }
       if (!info?.brand || !info?.name) {

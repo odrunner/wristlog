@@ -112,12 +112,16 @@ export interface ModelInfo {
   refs?: string[];
   grounding?: { calibers?: string[]; years?: string[]; diameters?: string[]; water_resistance?: string[] };
   wiki_extract?: string | null;
+  // Sibling lines that have their own WRotate page (e.g. "Submariner Date" for
+  // "Submariner") — their references and calibres must stay off this page.
+  siblings?: string[];
 }
 
 export function buildModelPrompt(info: ModelInfo): string {
   const { brand, name } = info;
   const aliases = (info.aliases ?? []).filter(Boolean);
   const refs = (info.refs ?? []).filter(Boolean);
+  const siblings = (info.siblings ?? []).filter(Boolean);
   const g = info.grounding ?? {};
   const gLines = [
     g.calibers?.length ? `- Calibers members recorded: ${g.calibers.join(", ")}` : "",
@@ -128,7 +132,7 @@ export function buildModelPrompt(info: ModelInfo): string {
   return `Write the reference page for a watch MODEL FAMILY — every generation and reference of this line across its whole production history, not one specific reference.
 Brand: ${brand}
 Model family: ${name}
-${aliases.length ? `Also written as: ${aliases.join("; ")}\n` : ""}${refs.length ? `References owned by our members: ${refs.join(", ")}\n` : ""}${gLines.length ? `What our members' examples say about it:\n${gLines.join("\n")}\n` : ""}${info.wiki_extract ? `Wikipedia lead paragraph (for grounding — do not copy it):\n${info.wiki_extract.slice(0, 1500)}\n` : ""}
+${aliases.length ? `Also written as: ${aliases.join("; ")}\n` : ""}${refs.length ? `References owned by our members: ${refs.join(", ")}\n` : ""}${gLines.length ? `What our members' examples say about it:\n${gLines.join("\n")}\n` : ""}${info.wiki_extract ? `Wikipedia lead paragraph (for grounding — do not copy it):\n${info.wiki_extract.slice(0, 1500)}\n` : ""}${siblings.length ? `Separate lines with their own pages (NOT part of this family): ${siblings.join("; ")}\n` : ""}
 Search the official manufacturer website first, then watch databases and reputable histories (Hodinkee, Fratello, WatchTime, Monochrome, forum reference guides). Cover the family from its first reference to today.
 
 Return a JSON object:
@@ -143,6 +147,7 @@ Return a JSON object:
 Rules:
 - refs_by_era: 4-10 entries, oldest first, chronologically continuous; prefer references our members own where they fit, and include the current production reference. Use en dashes in year ranges.
 - calibers_by_era: 2-8 entries, oldest first.
+- If separate lines are listed above, leave out their references, calibres and history entirely, even where a source groups them with this family; a member reference that belongs to one of them is a filing mistake, not part of this family.
 - Only state facts you can verify; if a year or caliber is uncertain, say "c." or omit the entry rather than guess.
 - Do not repeat the brand name at the start of every sentence. Do not mention prices.`;
 }

@@ -245,7 +245,11 @@ function renderModelPage(el, ctx, h) {
         return `<div class="mp-ref${yoursRef ? ' mine' : ''}"><div class="mp-ref-top"><b>${escHtml(r.reference || '')}</b><span class="mp-sub">${escHtml(r.years || '')}</span></div>
           ${yoursRef || r.note ? `<div class="mp-ref-note">${yoursRef ? '<span class="mp-ref-yours">Yours</span> ' : ''}${escHtml(r.note || '')}</div>` : ''}</div>`;
       }).join('')}</div>
-      ${cals.length ? `<div class="mp-cals">${cals.map(c => `<span class="mp-cal"><b>${escHtml(c.caliber || '')}</b>${c.years ? `<span class="mp-sub">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>` : ''}
+    </section>` : '';
+  // Movements by era — its own heading, so the chips don't read as more reference numbers.
+  const calsHtml = cals.length ? `<section class="mp-sec" id="mp-cals">
+      <h2 class="mp-sec-h mp-sec-gap">Calibres by era</h2>
+      <div class="mp-cals">${cals.map(c => `<span class="mp-cal"><b>${escHtml(c.caliber || '')}</b>${c.years ? `<span class="mp-sub">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>
     </section>` : '';
   const refRows = [['Size', sp.size], ['Water resistance', sp.water_resistance], ['Movement', sp.movement], ['Materials', sp.materials]].filter(r => r[1]);
   const aggRows = [['caliber', 'Calibre'], ['case_diameter', 'Case'], ['water_resistance', 'Water resistance'], ['movement_type', 'Movement'], ['case_material', 'Material'], ['year_range', 'Produced']]
@@ -282,7 +286,7 @@ function renderModelPage(el, ctx, h) {
            : `<button class="mp-act mp-act-ghost" data-mp="wish">♡ Want one</button>`}</div>`;
   }
 
-  el.innerHTML = hero + desc + solo + yours + story + shotsHtml + ownersHtml + refsHtml + specHtml + more + reqEdit + actions;
+  el.innerHTML = hero + desc + solo + yours + story + shotsHtml + ownersHtml + refsHtml + calsHtml + specHtml + more + reqEdit + actions;
   if (!el._mpBound) {
     el._mpBound = true;
     const act = (e, t) => {
@@ -416,7 +420,7 @@ function renderModelPage(el, ctx, h) {
     .mp-ref-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
     .mp-ref-note { font-size: var(--fs-sm); color: var(--muted); }
     .mp-ref-yours { font-weight: var(--fw-semibold); color: var(--gold-text); }
-    .mp-cals { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-top: var(--space-2-5); }
+    .mp-cals { display: flex; flex-wrap: wrap; gap: var(--space-1-5); }
     .mp-cal { display: inline-flex; flex-direction: column; align-items: center; padding: var(--space-1-5) var(--space-3); border-radius: var(--radius-sm); background: var(--surface2); font-size: var(--fs-base); }
     .mp-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
     .mp-spec { padding: var(--space-2-5) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }

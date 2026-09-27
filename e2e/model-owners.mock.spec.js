@@ -108,7 +108,9 @@ test('row shows count + era, tap opens the one-scroll model page', async ({ page
   // references (yours highlighted), calibres, spec — inline, no tabs
   await expect(mp.locator('#mp-refs')).toContainText('5513');
   await expect(mp.locator('#mp-refs .mp-ref.mine')).toContainText('Yours');
-  await expect(mp.locator('#mp-refs')).toContainText('3230');
+  await expect(mp.locator('#mp-refs')).not.toContainText('3230');     // calibres have their own section
+  await expect(mp.locator('#mp-cals')).toContainText('Calibres by era');
+  await expect(mp.locator('#mp-cals')).toContainText('3230');
   await expect(mp.locator('#mp-spec')).toContainText('Reference spec');
   await expect(mp.locator('#mp-tabs')).toHaveCount(0);
   // the cut figures are gone

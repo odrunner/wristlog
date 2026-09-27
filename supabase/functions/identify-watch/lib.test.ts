@@ -251,3 +251,11 @@ Deno.test("stripCitations removes grounding markers from every string, keeps the
   assertEquals(out.specs, { size: "40mm", n: 3 });
   assertEquals(out.empty, null);
 });
+
+Deno.test("buildModelPrompt names sibling lines to exclude, and says nothing when there are none", () => {
+  const withSibs = buildModelPrompt({ brand: "Rolex", name: "Submariner", siblings: ["Submariner Date"] });
+  assertStringIncludes(withSibs, "Separate lines with their own pages (NOT part of this family): Submariner Date");
+  assertStringIncludes(withSibs, "leave out their references, calibres and history entirely");
+  const none = buildModelPrompt({ brand: "Rolex", name: "Submariner" });
+  assertEquals(none.includes("Separate lines with their own pages"), false);
+});
