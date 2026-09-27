@@ -392,16 +392,19 @@ def engine_stats(day, tag):
         return None
     params = {
         "sql": (
-            "select event_message from function_logs "
+            "select event_message from logs "
             f"where event_message like '%[{tag}]%' "
             f"order by timestamp desc limit {LOG_ROW_CAP}"
         ),
         "iso_timestamp_start": f"{day}T00:00:00Z",
         "iso_timestamp_end": f"{day}T23:59:59Z",
     }
+    # logs.all + per-source tables (function_logs) were removed 2026-09; the
+    # replacement endpoint has one unified `logs` table. The [tag] filter keeps
+    # it to the function's own lines.
     url = (
         f"https://api.supabase.com/v1/projects/{SUPABASE_PROJECT_REF}"
-        "/analytics/endpoints/logs.all?" + urllib.parse.urlencode(params)
+        "/analytics/endpoints/logs?" + urllib.parse.urlencode(params)
     )
     try:
         d = curl_json(url, headers=[f"Authorization: Bearer {token}"], retries=3)
