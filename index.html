@@ -1277,6 +1277,26 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile-url { font-size: var(--fs-sm); color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .wl-tile-url:hover { color: var(--gold-text); }
 
+    /* Collection "What-if" simulation (experiment collection_sim) */
+    .sim-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-3); padding: var(--space-2-5) var(--space-3-5); }
+    .sim-stat-lbl { font-size: var(--fs-2xs); color: var(--muted); text-transform: uppercase; letter-spacing: var(--ls-tight); }
+    .sim-stat-val { font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); }
+    .sim-stat-delta { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--muted); }
+    .sim-delta-up { color: var(--success-text); }
+    .sim-delta-down { color: var(--danger); }
+    .sim-unvalued, .sim-hint { font-size: var(--fs-sm); color: var(--muted); }
+    .sim-hint { flex-basis: 100%; }
+    .sim-grid { margin-bottom: var(--space-4); }
+    .sim-tile { cursor: pointer; }
+    .sim-tile.sim-selling { border-color: var(--danger); }
+    .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
+    .sim-tile.sim-selling .wl-tile-name { text-decoration: line-through; color: var(--muted); }
+    .sim-tile.sim-added { border-color: var(--success); }
+    .sim-tile-note { font-size: var(--fs-sm); color: var(--muted); }
+    .sim-note-selling { color: var(--danger); }
+    .sim-note-added { color: var(--success-text); }
+    .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
+
     /* ── QUICK-LOG BUTTON (collection card) ── */
     .btn-quicklog {
       background: color-mix(in srgb, var(--gold) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
@@ -7948,7 +7968,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.35';
+const APP_VERSION = '27.18.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17845,6 +17865,8 @@ let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
+let simMode  = false;                     // Collection "What-if" simulation (experiment collection_sim)
+let simState = { hidden: [], added: [] }; // loaded per-user on enter; persisted in wr_sim_<uid>
 
 // Ranking game state (shared by Collection and Wishlist — see gameMode)
 let gameMode       = 'collection'; // 'collection' | 'wishlist'
@@ -23280,6 +23302,12 @@ function renderCollSortBar() {
   const bar = document.getElementById('coll-sort-bar');
   if (!bar) return;
   if (!watches.length) { bar.innerHTML = ''; return; }
+  // What-if simulation entry (experiment collection_sim). In sim mode the bar
+  // reduces to this one active chip — sort and photo toggles would act on the
+  // grid the user isn't looking at.
+  const simChip = (currentUser && experiment('collection_sim'))
+    ? `<button class="coll-sort-chip sim-chip${simMode ? ' active' : ''}" onclick="${simMode ? 'exitCollectionSim()' : 'enterCollectionSim()'}" title="Simulate selling watches and adding from your wishlist">What-if</button>` : '';
+  if (simMode) { bar.innerHTML = `<div class="coll-sort-bar">${simChip}</div>`; return; }
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
   // Photo toggle: show if any watch has a post with a photo (cards and gallery tiles)
   const anyPostPhoto = (collView === 'grid' || collView === 'gallery') && _anyLogHasPhoto;
@@ -23298,7 +23326,7 @@ function renderCollSortBar() {
   ] : [];
   bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}${photoToggle}</div>`;
+  ).join('')}${photoToggle}${simChip}</div>`;
 }
 
 function toggleCollPhotoMode(checked) {
@@ -23618,6 +23646,7 @@ function renderCollection(force) {
   }
   syncCollViewBtn();
   renderCollSortBar();
+  if (simMode) { renderCollectionSim(); return; }
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
   const visible = collTagFilter ? watches.filter(w => (w.tags || []).includes(collTagFilter)) : watches;
@@ -23882,6 +23911,8 @@ const COLL_VIEW_ICONS = {
 function syncCollViewBtn() {
   const btn = document.getElementById('coll-view-btn');
   if (!btn) return;
+  // The sim view is neither grid nor gallery, so the toggle has nothing to say there.
+  btn.style.display = simMode ? 'none' : '';
   const next = collView === 'gallery' ? 'grid' : 'gallery';
   btn.innerHTML = COLL_VIEW_ICONS[next];
   const label = next === 'gallery' ? 'Gallery view' : 'Card view';
@@ -23895,6 +23926,138 @@ function setCollView(mode) {
 }
 function toggleCollView() {
   setCollView(collView === 'gallery' ? 'grid' : 'gallery');
+}
+
+// ══════════════════════════════════════════
+//  COLLECTION SIMULATION — "What-if" (experiment collection_sim)
+//  Temporarily mark watches as potential sales and try wishlist watches in the
+//  collection, with the hypothetical collection and its value on one screen.
+//  Entirely client-side: the scenario lives per-user in localStorage, the DB is
+//  never touched (only the sim_opened metric event is written).
+// ══════════════════════════════════════════
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function simStateFromStore(raw) {
+  const ids = (v) => Array.isArray(v) ? [...new Set(v.filter(x => typeof x === 'string' && x))] : [];
+  return { hidden: ids(raw && raw.hidden), added: ids(raw && raw.added) };
+}
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function simulatedCollection(watches, wishlist, sim) {
+  const hidden = new Set((sim && sim.hidden) || []);
+  const addedIds = new Set((sim && sim.added) || []);
+  const all = (watches || []).filter(Boolean);
+  const kept = all.filter(w => !hidden.has(w.id));
+  const selling = all.filter(w => hidden.has(w.id));
+  const added = (wishlist || []).filter(w => w && addedIds.has(w.id));
+  return { kept, selling, added, list: kept.concat(added) };
+}
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function simCollectionValue(list) {
+  const num = (v) => (v == null || v === '' ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  let total = 0, valuedCount = 0;
+  const items = (list || []).filter(Boolean);
+  items.forEach(w => {
+    const v = num(w.marketPrice) ?? num(w.price);
+    if (v == null) return;
+    valuedCount++; total += v;
+  });
+  return { total, valuedCount, unvaluedCount: items.length - valuedCount };
+}
+
+function simKey() { return currentUser ? 'wr_sim_' + currentUser.id : null; }
+function saveSimState() { const k = simKey(); if (k) safeSetJSON(k, simState); }
+function logSimOpened() {
+  if (!currentUser || _isDemoMode) return;
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'sim_opened', meta: { hidden: simState.hidden.length, added: simState.added.length } }).then(() => {});
+}
+function enterCollectionSim() {
+  if (!currentUser) return;
+  if (_collSelect) exitCollectionSelect();   // two modes on one grid — a share selection parks
+  simState = simStateFromStore(safeGetJSON(simKey(), null));
+  simMode = true;
+  logSimOpened();
+  renderCollection(true);
+}
+function exitCollectionSim() {
+  simMode = false;
+  renderCollection(true);
+}
+function resetCollectionSim() {
+  simState = { hidden: [], added: [] };
+  saveSimState();
+  renderCollection(true);
+}
+function simToggleWatch(id) {
+  simState.hidden = simState.hidden.includes(id) ? simState.hidden.filter(x => x !== id) : simState.hidden.concat(id);
+  saveSimState();
+  renderCollection(true);
+}
+function simToggleWish(id) {
+  simState.added = simState.added.includes(id) ? simState.added.filter(x => x !== id) : simState.added.concat(id);
+  saveSimState();
+  renderCollection(true);
+}
+
+// One tile for every kind of item in the sim: kept / selling collection watches,
+// wishlist watches added to the scenario, and the wishlist pool below. Same
+// markup as the gallery tiles, so the whole collection fits one screen.
+function simTileHTML(w, kind) {
+  const _wc = DEFAULT_WATCH_COLOR;
+  const imgInner = w.image
+    ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
+    : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
+  const isWish = kind === 'wish' || kind === 'added';
+  const click = isWish ? `simToggleWish('${w.id}')` : `simToggleWatch('${w.id}')`;
+  const note = kind === 'selling' ? '<div class="sim-tile-note sim-note-selling">Selling</div>'
+    : kind === 'added' ? '<div class="sim-tile-note sim-note-added">Added</div>'
+    : '';
+  const stateCls = kind === 'selling' ? ' sim-selling' : kind === 'added' ? ' sim-added' : '';
+  return `<div class="wl-tile sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" aria-label="${escAttr((w.brand||'') + ' ' + (w.name||''))}">
+    <div class="wl-tile-imglink">${imgInner}</div>
+    <div class="wl-tile-name">${escHtml(w.name)}</div>
+    ${note}
+  </div>`;
+}
+
+function renderCollectionSim() {
+  const el = document.getElementById('watches-grid');
+  const tagBar = document.getElementById('coll-tag-filter-bar');
+  if (tagBar) tagBar.innerHTML = '';
+  const shareBtn = document.getElementById('coll-share-btn');
+  if (shareBtn) shareBtn.style.display = 'none';
+  const selBar = document.getElementById('coll-select-bar');
+  if (selBar) selBar.style.display = 'none';
+  const { added, list } = simulatedCollection(watches, wishlist, simState);
+  const real = simCollectionValue(watches);
+  const sim  = simCollectionValue(list);
+  const dCount = list.length - watches.length;
+  const dVal   = sim.total - real.total;
+  const fmtDelta = (n, money) => n === 0 ? '±0' : (n > 0 ? '+' : '−') + (money ? fmtMoney(Math.abs(n)) : Math.abs(n));
+  const deltaCls = (n) => n > 0 ? ' sim-delta-up' : n < 0 ? ' sim-delta-down' : '';
+  const hidden = new Set(simState.hidden);
+  // Same order as the grid the user just left: newest purchase first.
+  const sortedAll = [...watches].sort((a, b) => {
+    if (!a.purchaseDate && !b.purchaseDate) return 0;
+    if (!a.purchaseDate) return 1;
+    if (!b.purchaseDate) return -1;
+    return b.purchaseDate.localeCompare(a.purchaseDate);
+  });
+  const tiles = sortedAll.map(w => simTileHTML(w, hidden.has(w.id) ? 'selling' : 'kept'))
+    .concat(added.map(w => simTileHTML(w, 'added'))).join('');
+  const pool = wishlist.filter(w => !simState.added.includes(w.id));
+  const unval = sim.unvaluedCount ? `<div class="sim-unvalued">${sim.unvaluedCount} without a price</div>` : '';
+  el.className = '';
+  el.innerHTML = `<div class="panel sim-bar">
+      <div class="sim-stat"><div class="sim-stat-lbl">Watches</div><div class="sim-stat-val">${list.length} <span class="sim-stat-delta${deltaCls(dCount)}">${fmtDelta(dCount)}</span></div></div>
+      <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)} <span class="sim-stat-delta${deltaCls(dVal)}">${fmtDelta(dVal, true)}</span></div>${unval}</div>
+      <span class="grow"></span>
+      <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
+      <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
+      <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
+    </div>
+    <div class="wl-gallery coll-gallery sim-grid">${tiles}</div>
+    ${pool.length ? `<div class="sim-section-title">Add from wishlist</div>
+    <div class="wl-gallery coll-gallery">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
 }
 
 function buildSwatches() {

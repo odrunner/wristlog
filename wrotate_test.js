@@ -410,6 +410,39 @@ export function nextWishlistView(v) {
 export function collViewFromStore(raw) {
   return raw === 'gallery' ? 'gallery' : 'grid';
 }
+// Collection simulation ("what-if", experiment collection_sim): the scenario is
+// persisted per-user as {hidden:[], added:[]} — watch ids marked as potential
+// sales, wishlist ids tried in the collection. Anything unexpected in storage
+// collapses to an empty scenario.
+export function simStateFromStore(raw) {
+  const ids = (v) => Array.isArray(v) ? [...new Set(v.filter(x => typeof x === 'string' && x))] : [];
+  return { hidden: ids(raw && raw.hidden), added: ids(raw && raw.added) };
+}
+// Splits the collection into kept vs selling and resolves added wishlist ids to
+// items. Ids that no longer exist are ignored, so a deleted watch or a wishlist
+// item since moved to the collection can never corrupt the scenario.
+export function simulatedCollection(watches, wishlist, sim) {
+  const hidden = new Set((sim && sim.hidden) || []);
+  const addedIds = new Set((sim && sim.added) || []);
+  const all = (watches || []).filter(Boolean);
+  const kept = all.filter(w => !hidden.has(w.id));
+  const selling = all.filter(w => hidden.has(w.id));
+  const added = (wishlist || []).filter(w => w && addedIds.has(w.id));
+  return { kept, selling, added, list: kept.concat(added) };
+}
+// Value of a (hypothetical) collection: market price when saved, else what was
+// paid — wishlist items carry the same two fields, so one rule covers both.
+export function simCollectionValue(list) {
+  const num = (v) => (v == null || v === '' ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  let total = 0, valuedCount = 0;
+  const items = (list || []).filter(Boolean);
+  items.forEach(w => {
+    const v = num(w.marketPrice) ?? num(w.price);
+    if (v == null) return;
+    valuedCount++; total += v;
+  });
+  return { total, valuedCount, unvaluedCount: items.length - valuedCount };
+}
 // Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
 // watches become folders; single-watch and blank-brand items stay standalone.
 export function groupWishlistByBrand(items) {
