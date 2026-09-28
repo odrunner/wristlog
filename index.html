@@ -1287,14 +1287,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-unvalued, .sim-hint { font-size: var(--fs-sm); color: var(--muted); }
     .sim-hint { flex-basis: 100%; }
     .sim-grid { margin-bottom: var(--space-4); }
-    .sim-tile { cursor: pointer; }
+    /* Much smaller, tighter, image-only tiles: the whole collection has to read
+       on one screen to judge how the what-if would look. */
+    .wl-gallery.sim-gallery { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--space-1-5); }
+    .sim-tile { cursor: pointer; padding: var(--space-0-5); gap: 0; }
+    .sim-tile .wl-tile-avatar { font-size: var(--fs-base); }
     .sim-tile.sim-selling { border-color: var(--danger); }
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
-    .sim-tile.sim-selling .wl-tile-name { text-decoration: line-through; color: var(--muted); }
     .sim-tile.sim-added { border-color: var(--success); }
-    .sim-tile-note { font-size: var(--fs-sm); color: var(--muted); }
-    .sim-note-selling { color: var(--danger); }
-    .sim-note-added { color: var(--success-text); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
 
     /* ── QUICK-LOG BUTTON (collection card) ── */
@@ -7968,7 +7968,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.18.13';
+const APP_VERSION = '27.18.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24008,14 +24008,13 @@ function simTileHTML(w, kind) {
     : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
   const isWish = kind === 'wish' || kind === 'added';
   const click = isWish ? `simToggleWish('${w.id}')` : `simToggleWatch('${w.id}')`;
-  const note = kind === 'selling' ? '<div class="sim-tile-note sim-note-selling">Selling</div>'
-    : kind === 'added' ? '<div class="sim-tile-note sim-note-added">Added</div>'
-    : '';
   const stateCls = kind === 'selling' ? ' sim-selling' : kind === 'added' ? ' sim-added' : '';
-  return `<div class="wl-tile sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" aria-label="${escAttr((w.brand||'') + ' ' + (w.name||''))}">
+  // Image-only: the tile is tiny so the whole collection fits one screen; the
+  // watch's name travels in the tooltip and the aria-label, its sim state in
+  // the border colour and dimming.
+  const lbl = (w.brand || '') + ' ' + (w.name || '') + (kind === 'selling' ? ' — selling' : kind === 'added' ? ' — added from wishlist' : '');
+  return `<div class="wl-tile sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${escAttr(lbl)}" aria-label="${escAttr(lbl)}">
     <div class="wl-tile-imglink">${imgInner}</div>
-    <div class="wl-tile-name">${escHtml(w.name)}</div>
-    ${note}
   </div>`;
 }
 
@@ -24055,9 +24054,9 @@ function renderCollectionSim() {
       <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
       <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
     </div>
-    <div class="wl-gallery coll-gallery sim-grid">${tiles}</div>
+    <div class="wl-gallery sim-gallery sim-grid">${tiles}</div>
     ${pool.length ? `<div class="sim-section-title">Add from wishlist</div>
-    <div class="wl-gallery coll-gallery">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
+    <div class="wl-gallery sim-gallery">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
 }
 
 function buildSwatches() {
