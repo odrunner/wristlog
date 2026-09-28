@@ -44,10 +44,11 @@ describe('wishlist elo round-trips through the row mappers', () => {
 
 import { nextWishlistView } from '../wrotate_test.js';
 describe('nextWishlistView — single view button ring', () => {
-  it('cycles list → folders → gallery → list', () => {
+  it('cycles list → folders → gallery → compact → list', () => {
     expect(nextWishlistView('list')).toBe('folders');
     expect(nextWishlistView('folders')).toBe('gallery');
-    expect(nextWishlistView('gallery')).toBe('list');
+    expect(nextWishlistView('gallery')).toBe('compact');
+    expect(nextWishlistView('compact')).toBe('list');
   });
   it('unknown/legacy values fall back to list', () => {
     expect(nextWishlistView(undefined)).toBe('list');

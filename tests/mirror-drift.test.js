@@ -33,7 +33,7 @@ const VERBATIM = [
   'badgeRevealNames', 'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
   'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
   'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
-  'nextWishlistView', 'posterUrlFor', 'rankWishlistByElo', 'rowToLog', 'rowToWatch', 'rowToWish',
+  'nextWishlistView', 'nextCollView', 'posterUrlFor', 'rankWishlistByElo', 'rowToLog', 'rowToWatch', 'rowToWish',
   'simStateFromStore', 'simulatedCollection', 'simCollectionValue',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs', 'cardPathFor', 'cardUrlFor', 'cardSrcAttrs',

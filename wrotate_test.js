@@ -399,16 +399,21 @@ export function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
 }
 export function wishlistViewFromStore(raw) {
-  return raw === 'gallery' || raw === 'folders' ? raw : 'list';
+  return raw === 'gallery' || raw === 'folders' || raw === 'compact' ? raw : 'list';
 }
-// Ring order for the single view button: list → folders → gallery → list
+// Ring order for the single view button: list → folders → gallery → compact → list
 export function nextWishlistView(v) {
-  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : 'list';
+  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : v === 'gallery' ? 'compact' : 'list';
 }
-// Collection view persisted in localStorage: 'grid' (full cards) or 'gallery'
-// (images only, same tiles as the wishlist gallery). Anything else → 'grid'.
+// Collection view persisted in localStorage: 'grid' (full cards), 'gallery'
+// (images only, same tiles as the wishlist gallery) or 'compact' (tiny
+// image-only tiles, the whole collection on one screen). Anything else → 'grid'.
 export function collViewFromStore(raw) {
-  return raw === 'gallery' ? 'gallery' : 'grid';
+  return raw === 'gallery' || raw === 'compact' ? raw : 'grid';
+}
+// Ring order for the single view button: grid → gallery → compact → grid
+export function nextCollView(v) {
+  return v === 'grid' ? 'gallery' : v === 'gallery' ? 'compact' : v === 'compact' ? 'grid' : 'gallery';
 }
 // Collection simulation ("what-if", experiment collection_sim): the scenario is
 // persisted per-user as {hidden:[], added:[]} — watch ids marked as potential

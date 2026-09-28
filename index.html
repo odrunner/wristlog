@@ -1287,11 +1287,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-unvalued, .sim-hint { font-size: var(--fs-sm); color: var(--muted); }
     .sim-hint { flex-basis: 100%; }
     .sim-grid { margin-bottom: var(--space-4); }
-    /* Much smaller, tighter, image-only tiles: the whole collection has to read
-       on one screen to judge how the what-if would look. */
-    .wl-gallery.sim-gallery { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--space-1-5); }
-    .sim-tile { cursor: pointer; padding: var(--space-0-5); gap: 0; }
-    .sim-tile .wl-tile-avatar { font-size: var(--fs-base); }
+    /* Compact tiles — much smaller, tighter, image-only, so a whole collection or
+       wishlist reads on one screen. Shared by the Collection/Wishlist 'compact'
+       views and the What-if simulation. */
+    .wl-gallery.wl-compact { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--space-1-5); }
+    .tile-compact { padding: var(--space-0-5); gap: 0; }
+    .tile-compact .wl-tile-avatar { font-size: var(--fs-base); }
+    .sim-tile { cursor: pointer; }
     .sim-tile.sim-selling { border-color: var(--danger); }
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
     .sim-tile.sim-added { border-color: var(--success); }
@@ -7968,7 +7970,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.18.37';
+const APP_VERSION = '27.19.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23310,7 +23312,7 @@ function renderCollSortBar() {
   if (simMode) { bar.innerHTML = `<div class="coll-sort-bar">${simChip}</div>`; return; }
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
   // Photo toggle: show if any watch has a post with a photo (cards and gallery tiles)
-  const anyPostPhoto = (collView === 'grid' || collView === 'gallery') && _anyLogHasPhoto;
+  const anyPostPhoto = (collView === 'grid' || collView === 'gallery' || collView === 'compact') && _anyLogHasPhoto;
   const photoToggle = anyPostPhoto
     ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
         <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
@@ -23694,10 +23696,13 @@ function renderCollection(force) {
   if (collView === 'list') {
     el.className = '';
     el.innerHTML = renderCollectionList(visible, today);  // list does its own sort
-  } else if (collView === 'gallery') {
+  } else if (collView === 'gallery' || collView === 'compact') {
     // Images only — same tiles as the wishlist gallery. Honours sort, tag
     // filter and Post Pics; ranking badges / drag-reorder are card-view only.
-    el.className = 'wl-gallery coll-gallery';
+    // 'compact' is the same grid at sim density: tiny image-only tiles, the
+    // whole collection on one screen; the name moves to the tooltip.
+    const compact = collView === 'compact';
+    el.className = compact ? 'wl-gallery coll-gallery wl-compact' : 'wl-gallery coll-gallery';
     el.innerHTML = sorted.map(w => {
       const wLogs = logsForWatch(w.id);
       const tileImg = collPhotoMode === 'post'
@@ -23711,6 +23716,11 @@ function renderCollection(force) {
       const tileBox = selecting
         ? `<input type="checkbox" class="wl-select-box coll-select-box" ${_collSelect.has(w.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleCollSelect('${w.id}')" aria-label="Select ${escAttr((w.brand||'') + ' ' + (w.name||''))}">`
         : '';
+      const fullName = (w.brand||'') + ' ' + (w.name||'');
+      if (compact) return `<div class="wl-tile tile-compact" data-id="${w.id}" title="${escAttr(fullName)}">
+        ${tileBox}
+        <div class="wl-tile-imglink" onclick="${tileClick}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" aria-label="${escAttr(fullName)}">${imgInner}</div>
+      </div>`;
       return `<div class="wl-tile" data-id="${w.id}">
         ${tileBox}
         <div class="wl-tile-imglink" onclick="${tileClick}">${imgInner}</div>
@@ -23904,19 +23914,20 @@ function setCollListSort(field) {
 }
 
 const COLL_VIEW_ICONS = {
-  // Icon shows the view you'd switch TO — the button is a single-slot toggle.
-  gallery: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
-  grid:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="12" x2="12" y2="21"/></svg>',
+  // Icon shows the view you'd switch TO — the button is a single-slot ring.
+  gallery: { label: 'Gallery view', svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  compact: { label: 'Compact view', svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="3" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="3" width="4.8" height="4.8" rx="1"/><rect x="3" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="3" y="16.2" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="16.2" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="16.2" width="4.8" height="4.8" rx="1"/></svg>' },
+  grid:    { label: 'Card view', svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="12" x2="12" y2="21"/></svg>' },
 };
 function syncCollViewBtn() {
   const btn = document.getElementById('coll-view-btn');
   if (!btn) return;
-  // The sim view is neither grid nor gallery, so the toggle has nothing to say there.
+  // The sim view is none of the ring's views, so the button has nothing to say there.
   btn.style.display = simMode ? 'none' : '';
-  const next = collView === 'gallery' ? 'grid' : 'gallery';
-  btn.innerHTML = COLL_VIEW_ICONS[next];
-  const label = next === 'gallery' ? 'Gallery view' : 'Card view';
-  btn.title = label; btn.setAttribute('aria-label', label);
+  const next = nextCollView(collView);
+  const ic = COLL_VIEW_ICONS[next];
+  btn.innerHTML = ic.svg;
+  btn.title = ic.label; btn.setAttribute('aria-label', ic.label);
   btn.dataset.view = collView;
 }
 function setCollView(mode) {
@@ -23925,7 +23936,7 @@ function setCollView(mode) {
   renderCollection(true);
 }
 function toggleCollView() {
-  setCollView(collView === 'gallery' ? 'grid' : 'gallery');
+  setCollView(nextCollView(collView));
 }
 
 // ══════════════════════════════════════════
@@ -24013,7 +24024,7 @@ function simTileHTML(w, kind) {
   // watch's name travels in the tooltip and the aria-label, its sim state in
   // the border colour and dimming.
   const lbl = (w.brand || '') + ' ' + (w.name || '') + (kind === 'selling' ? ' — selling' : kind === 'added' ? ' — added from wishlist' : '');
-  return `<div class="wl-tile sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${escAttr(lbl)}" aria-label="${escAttr(lbl)}">
+  return `<div class="wl-tile tile-compact sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${escAttr(lbl)}" aria-label="${escAttr(lbl)}">
     <div class="wl-tile-imglink">${imgInner}</div>
   </div>`;
 }
@@ -24054,9 +24065,9 @@ function renderCollectionSim() {
       <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
       <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
     </div>
-    <div class="wl-gallery sim-gallery sim-grid">${tiles}</div>
+    <div class="wl-gallery wl-compact sim-grid">${tiles}</div>
     ${pool.length ? `<div class="sim-section-title">Add from wishlist</div>
-    <div class="wl-gallery sim-gallery">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
+    <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
 }
 
 function buildSwatches() {
@@ -28939,12 +28950,17 @@ function cropWatchFromPhoto(blob, bbox, padding = 0.15) {
 // ══════════════════════════════════════════
 
 function wishlistViewFromStore(raw) {
-  return raw === 'gallery' || raw === 'folders' ? raw : 'list';
+  return raw === 'gallery' || raw === 'folders' || raw === 'compact' ? raw : 'list';
 }
-// Collection view persisted in localStorage: 'grid' (full cards) or 'gallery'
-// (images only, same tiles as the wishlist gallery). Anything else → 'grid'.
+// Collection view persisted in localStorage: 'grid' (full cards), 'gallery'
+// (images only, same tiles as the wishlist gallery) or 'compact' (tiny
+// image-only tiles, the whole collection on one screen). Anything else → 'grid'.
 function collViewFromStore(raw) {
-  return raw === 'gallery' ? 'gallery' : 'grid';
+  return raw === 'gallery' || raw === 'compact' ? raw : 'grid';
+}
+// Ring order for the single view button: grid → gallery → compact → grid
+function nextCollView(v) {
+  return v === 'grid' ? 'gallery' : v === 'gallery' ? 'compact' : v === 'compact' ? 'grid' : 'gallery';
 }
 // Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
 // watches become folders; single-watch and blank-brand items stay standalone.
@@ -29544,15 +29560,16 @@ function setWishlistView(v) {
   try { safeLS.set('wr_wishlist_view', _wishlistView); } catch (e) {}
   renderWishlist(true);
 }
-// Ring order for the single view button: list → folders → gallery → list
+// Ring order for the single view button: list → folders → gallery → compact → list
 function nextWishlistView(v) {
-  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : 'list';
+  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : v === 'gallery' ? 'compact' : 'list';
 }
 function cycleWishlistView() { setWishlistView(nextWishlistView(_wishlistView)); }
 const WL_VIEW_ICONS = {
   list:    { label: 'List view',     svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
   folders: { label: 'Brand folders', svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
   gallery: { label: 'Gallery view',  svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  compact: { label: 'Compact view',  svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="3" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="3" width="4.8" height="4.8" rx="1"/><rect x="3" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="9.6" width="4.8" height="4.8" rx="1"/><rect x="3" y="16.2" width="4.8" height="4.8" rx="1"/><rect x="9.6" y="16.2" width="4.8" height="4.8" rx="1"/><rect x="16.2" y="16.2" width="4.8" height="4.8" rx="1"/></svg>' },
 };
 // The button shows the NEXT view (what a tap gives you), same convention as the
 // Collection toggle; data-view records the CURRENT view for tests/CSS.
@@ -29661,6 +29678,29 @@ function renderWishlist(force) {
         <button class="btn btn-ghost" onclick="openAddWishlist()">Add to Wishlist</button>
       </div>
     </div>`;
+    return;
+  }
+  if (_wishlistView === 'compact') {
+    // Tiny image-only tiles — the whole wishlist on one screen. The name moves
+    // to the tooltip; privacy still shows as the tile's border colour. No
+    // drag-reorder: the tiles are too small for a handle.
+    el.className = 'wl-gallery wl-compact';
+    el.innerHTML = visible.map(w => {
+      const _wc = DEFAULT_WATCH_COLOR;
+      const imgInner = w.image
+        ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
+        : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
+      const selecting = !!_wlSelect;
+      const tileClick = selecting ? `toggleWlSelect('${w.id}')` : `openEditWishlist('${w.id}')`;
+      const box = selecting
+        ? `<input type="checkbox" class="wl-select-box" ${_wlSelect.has(w.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleWlSelect('${w.id}')" aria-label="Select ${escAttr((w.brand||'') + ' ' + (w.name||''))}">`
+        : '';
+      const fullName = (w.brand||'') + ' ' + (w.name||'');
+      return `<div class="wl-tile tile-compact" data-id="${w.id}" data-priv="${escHtml(w.wishPrivacy||'')}" title="${escAttr(fullName)}">
+        ${box}
+        <div class="wl-tile-imglink" onclick="${tileClick}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" aria-label="${escAttr(fullName)}">${imgInner}</div>
+      </div>`;
+    }).join('');
     return;
   }
   if (_wishlistView === 'gallery') {

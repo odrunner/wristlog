@@ -279,8 +279,8 @@ test.describe('Wishlist page (mocked)', () => {
     await navigateTo(page, 'wishlist');
     await expect(page.locator('#page-wishlist')).toBeVisible();
 
-    // Single view button cycles list → folders → gallery → list; the icon/label
-    // names the NEXT view (what a tap gives you), data-view the current one.
+    // Single view button cycles list → folders → gallery → compact → list; the
+    // icon/label names the NEXT view (what a tap gives you), data-view the current one.
     const vb = page.locator('#wl-view-btn');
     await expect(vb).toBeVisible();
     await expect(vb).toHaveAttribute('data-view', 'list');
@@ -291,7 +291,7 @@ test.describe('Wishlist page (mocked)', () => {
     await expect(vb).toHaveAttribute('aria-label', 'Gallery view');
     await vb.click();
     await expect(vb).toHaveAttribute('data-view', 'gallery');
-    await expect(vb).toHaveAttribute('aria-label', 'List view');
+    await expect(vb).toHaveAttribute('aria-label', 'Compact view');
 
     // Two photo tiles with names + domain URLs
     await expect(page.locator('.wl-gallery .wl-tile')).toHaveCount(2);
@@ -306,6 +306,42 @@ test.describe('Wishlist page (mocked)', () => {
 
     // Tapping the image opens the edit modal
     await page.locator('.wl-tile-imglink').first().click();
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+  });
+
+  test('compact view: tiny image-only tiles, name in tooltip, tap opens edit', async ({ page }) => {
+    const WL = [
+      { id: 'wl1', brand: 'Rolex', name: 'Submariner', url: 'https://www.rolex.com/sub', image: 'https://example.com/sub.jpg', wish_privacy: 'public', sort_order: 0 },
+      { id: 'wl2', brand: 'Omega', name: 'Speedmaster', url: 'https://omegawatches.com/speedy', image: 'https://example.com/speedy.jpg', wish_privacy: 'private', sort_order: 1 },
+    ];
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, wishlist: WL });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'wishlist');
+    await expect(page.locator('#page-wishlist')).toBeVisible();
+
+    await page.evaluate(() => setWishlistView('compact'));
+    expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('compact');
+
+    const grid = page.locator('#wishlist-grid');
+    await expect(grid).toHaveClass(/wl-compact/);
+    const tiles = grid.locator('.wl-tile');
+    await expect(tiles).toHaveCount(2);
+    await expect(tiles.first()).toHaveClass(/tile-compact/);
+    // Image-only: no names, no retailer links, no drag handles
+    await expect(grid.locator('.wl-tile-name')).toHaveCount(0);
+    await expect(grid.locator('.wl-tile-url')).toHaveCount(0);
+    await expect(grid.locator('.drag-handle')).toHaveCount(0);
+    // The name travels in the tooltip; privacy still borders the tile
+    await expect(tiles.first()).toHaveAttribute('title', 'Rolex Submariner');
+    await expect(tiles.first()).toHaveAttribute('data-priv', 'public');
+    // The view button names the NEXT view (compact → list)
+    await expect(page.locator('#wl-view-btn')).toHaveAttribute('data-view', 'compact');
+    await expect(page.locator('#wl-view-btn')).toHaveAttribute('aria-label', 'List view');
+
+    // Tapping a tile opens the edit modal
+    await tiles.first().locator('.wl-tile-imglink').click();
     await expect(page.locator('#wishlist-modal')).toBeVisible();
   });
 

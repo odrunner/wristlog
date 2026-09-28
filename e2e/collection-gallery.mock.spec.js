@@ -28,7 +28,7 @@ test.describe('collection gallery view', () => {
 
     await btn.click();
     await expect(btn).toHaveAttribute('data-view', 'gallery');
-    await expect(btn).toHaveAttribute('aria-label', 'Card view');
+    await expect(btn).toHaveAttribute('aria-label', 'Compact view');
     const grid = page.locator('#watches-grid');
     await expect(grid).toHaveClass(/wl-gallery/);
     const tiles = grid.locator('.wl-tile');
@@ -41,6 +41,8 @@ test.describe('collection gallery view', () => {
     // Tapping a tile opens Edit
     await tiles.first().locator('.wl-tile-imglink').click();
     await expect(page.locator('#watch-modal')).toBeVisible();
+    await page.locator('#watch-modal [aria-label="Close"]').click();
+    await expect(page.locator('#watch-modal')).not.toBeVisible();
 
     // Persists across reload
     await page.reload();
@@ -48,6 +50,21 @@ test.describe('collection gallery view', () => {
     await navigateTo(page, 'collection');
     await expect(page.locator('#watches-grid')).toHaveClass(/wl-gallery/);
     await expect(page.locator('#coll-view-btn')).toHaveAttribute('data-view', 'gallery');
+
+    // Next in the ring: compact — tiny image-only tiles, name in the tooltip only
+    await page.locator('#coll-view-btn').click();
+    await expect(page.locator('#coll-view-btn')).toHaveAttribute('data-view', 'compact');
+    await expect(page.locator('#coll-view-btn')).toHaveAttribute('aria-label', 'Card view');
+    await expect(page.locator('#watches-grid')).toHaveClass(/wl-compact/);
+    const cTiles = page.locator('#watches-grid .wl-tile');
+    await expect(cTiles).toHaveCount(SAMPLE_WATCHES.length);
+    await expect(cTiles.first()).toHaveClass(/tile-compact/);
+    await expect(page.locator('#watches-grid .wl-tile-name')).toHaveCount(0);
+    await expect(cTiles.first()).toHaveAttribute('title', /.+/);
+    // Tapping a compact tile still opens Edit
+    await cTiles.first().locator('.wl-tile-imglink').click();
+    await expect(page.locator('#watch-modal')).toBeVisible();
+    await page.locator('#watch-modal [aria-label="Close"]').click();
 
     // Back to cards
     await page.locator('#coll-view-btn').click();

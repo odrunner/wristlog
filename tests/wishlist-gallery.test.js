@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { wishlistViewFromStore, urlDomain } from '../wrotate_test.js';
 
 describe('wishlistViewFromStore', () => {
-  it("returns 'gallery' only for the exact string 'gallery'", () => {
+  it("returns 'gallery' / 'compact' only for the exact strings", () => {
     expect(wishlistViewFromStore('gallery')).toBe('gallery');
+    expect(wishlistViewFromStore('compact')).toBe('compact');
   });
   it("defaults to 'list' for 'list'", () => {
     expect(wishlistViewFromStore('list')).toBe('list');
