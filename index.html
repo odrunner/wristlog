@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=85013467">
+  <link rel="stylesheet" href="/design-system.css?v=7ca33db3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1298,16 +1298,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
     .sim-tile.sim-added { border-color: var(--success); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
-    /* "Recommend me (from wishlist)" — experiment wishlist_recommend. Its own
-       card (not .panel): the --ai tint marks the content as AI-generated. */
-    .rec-panel { display: block; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3-5); background: color-mix(in srgb, var(--ai) 5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ai) 40%, var(--border)); border-radius: var(--radius); }
-    .rec-panel-title { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--ai); }
-    .rec-summary { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1); }
+    /* "Recommend me (from wishlist)" — experiment wishlist_recommend. Reuses
+       the app's AI scheme (the Enhance story card): badge cream + gold-deep
+       uppercase eyebrow headings + badge body ink, all theme-aware. */
+    .rec-panel { display: block; padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-3-5); background: var(--badge-bg); border-radius: var(--radius); }
+    .rec-panel-title { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-2xs); font-weight: var(--fw-medium); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--gold-deep); }
+    .rec-summary { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--badge-text); margin-top: var(--space-1); }
     .rec-pick { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
-    .rec-pick-imgwrap { width: var(--size-12); height: var(--size-12); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); background: var(--surface); }
-    .rec-pick-avatar { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--gold-text); background: var(--gold-dim); }
+    .rec-pick-imgwrap { width: var(--size-12); height: var(--size-12); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; border: 1px solid var(--badge-border); background: var(--surface); }
+    .rec-pick-avatar { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--gold-deep); background: var(--gold-dim); }
     .rec-pick-name { font-weight: var(--fw-semibold); }
-    .rec-pick-reason { font-size: var(--fs-sm); color: var(--muted); }
+    .rec-pick-reason { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--badge-text); }
 
     /* ── QUICK-LOG BUTTON (collection card) ── */
     .btn-quicklog {
@@ -7989,7 +7990,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.01';
+const APP_VERSION = '28.16.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24199,8 +24200,7 @@ function recommendPanelHTML(source) {
     return `<div class="rec-pick">${img}<div class="grow"><div class="rec-pick-name">${escHtml(name)}</div>${p.reason ? `<div class="rec-pick-reason">${escHtml(p.reason)}</div>` : ''}</div>${action}</div>`;
   }).join('');
   if (!rows) return '';
-  const spark = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg>`;
-  return `<div class="rec-panel"><div class="row-between"><div class="rec-panel-title">${spark} AI picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
+  return `<div class="rec-panel"><div class="row-between"><div class="rec-panel-title">⭐ AI picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
 }
 
 function renderRecommendResult(source) {

@@ -86,11 +86,11 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--bg` | `#f5f5f8` | `#0b0b10` | 16 |  |
-| `--surface` | `#ffffff` | `#141419` | 71 |  |
+| `--surface` | `#ffffff` | `#141419` | 70 |  |
 | `--surface2` | `#eeeff5` | `#1c1c25` | 72 |  |
-| `--border` | `#d8d9e8` | `#272734` | 166 |  |
+| `--border` | `#d8d9e8` | `#272734` | 164 |  |
 | `--text` | `#16161e` | `#e6e6f0` | 84 |  |
-| `--muted` | `#6a6a84` | `#82829d` | 260 | #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed it. #6a6a84 clears 4.5 on all three light… |
+| `--muted` | `#6a6a84` | `#82829d` | 258 | #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed it. #6a6a84 clears 4.5 on all three light… |
 | `--overlay-bg` | `rgba(245,245,248,.96)` | `rgba(11,11,16,.94)` | 1 |  |
 
 ### Brand gold
@@ -98,7 +98,7 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
 | `--gold` | `#9a7628` | `#c9a84c` | 157 |  |
-| `--gold-text` | `#8b6719` | `var(--gold)` | 96 | Gold used as TEXT needs to be darker than gold used as a surface. #9a7628 measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the 4.5:1 WCAG AA floor. Darkening --gold itself… |
+| `--gold-text` | `#8b6719` | `var(--gold)` | 95 | Gold used as TEXT needs to be darker than gold used as a surface. #9a7628 measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the 4.5:1 WCAG AA floor. Darkening --gold itself… |
 | `--gold-lt` | `#c9a84c` | `#dbbe72` | 18 |  |
 | `--gold-dim` | `rgba(154,118,40,.12)` | `color-mix(in srgb, var(--gold) 12%, transparent)` | 24 |  |
 | `--ring` | `0 0 0 1px var(--gold)` | same | 8 | Hover / chosen outline on round header buttons and swatches. An alias of --gold, repeated in the dark block on purpose: a var() inside a custom property resolves where it is DECLARED, so an alias… |
@@ -148,7 +148,7 @@ These are not style preferences; they are the reasons the current values were ch
 |---|---|---|---|---|
 | `--watch-gold` | `#c9a84c` | same | 15 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
 | `--watch-green` | `var(--success)` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
-| `--watch-indigo` | `#818cf8` | same | 3 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
+| `--watch-indigo` | `#818cf8` | same | 2 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
 | `--watch-orange` | `var(--status-expiring)` | same | 0 | watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. |
 | `--watch-sky` | `#38bdf8` | same | 1 |  |
 | `--watch-fuchsia` | `#e879f9` | same | 0 |  |
@@ -181,9 +181,9 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Light | Dark | Uses | What it is for |
 |---|---|---|---|---|
-| `--badge-text` | `#3D2A14` | `#e7d9bd` | 3 | Badges / achievements ── warm theme; dark variants below. |
-| `--badge-bg` | `#FAEEDA` | `#221a0e` | 6 |  |
-| `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 7 |  |
+| `--badge-text` | `#3D2A14` | `#e7d9bd` | 5 | Badges / achievements ── warm theme; dark variants below. |
+| `--badge-bg` | `#FAEEDA` | `#221a0e` | 7 |  |
+| `--badge-border` | `#BA7517` | `rgba(219,190,114,.35)` | 8 |  |
 | `--badge-ink` | `#3D2A14` | same | 58 | badge medallion glyph ink — fixed dark (disc is always --white, both themes), so NOT overridden in dark like --badge-text is. |
 | `--badge-onboarding` | `#7A8B5C` | same | 2 | badge categories (BADGE_COLORS): a bezel and its ink (stroke + chip text), fixed hues, the same in both themes. Every category chip but Collection (sand) shares one neutral background,… |
 | `--badge-onboarding-ink` | `color-mix(in srgb, var(--badge-onboarding) 58%, black)` | same | 2 | badge categories (BADGE_COLORS): a bezel and its ink (stroke + chip text), fixed hues, the same in both themes. Every category chip but Collection (sand) shares one neutral background,… |
@@ -225,10 +225,10 @@ These are not style preferences; they are the reasons the current values were ch
 | `--fs-body` | `.9375rem` | 36 | The root size every em and every unsized element inherits from. Exactly 15px at the default 16px root; deliberately NOT a step of the scale below — moving it moves the whole app (and the landing… |
 | `--fs-input` | `1rem` | 4 | Text inside inputs. iOS zooms the page when a focused field is under 16px, so this is a floor, not a step: do not lower it. |
 | `--fs-3xs` | `.56rem` | 10 | Below the UI range: badge counts and chart ticks only. |
-| `--fs-2xs` | `.62rem` | 42 |  |
+| `--fs-2xs` | `.62rem` | 43 |  |
 | `--fs-xs` | `.68rem` | 61 |  |
 | `--fs-sm` | `.75rem` | 121 |  |
-| `--fs-base` | `.82rem` | 102 |  |
+| `--fs-base` | `.82rem` | 101 |  |
 | `--fs-md` | `.88rem` | 46 |  |
 | `--fs-xl` | `1.1rem` | 27 |  |
 | `--fs-2xl` | `1.3rem` | 13 |  |
@@ -244,9 +244,9 @@ These are not style preferences; they are the reasons the current values were ch
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
 | `--fw-normal` | `400` | 7 |  |
-| `--fw-medium` | `500` | 18 |  |
+| `--fw-medium` | `500` | 19 |  |
 | `--fw-semibold` | `600` | 86 |  |
-| `--fw-bold` | `700` | 93 |  |
+| `--fw-bold` | `700` | 92 |  |
 | `--fw-heavy` | `800` | 28 |  |
 
 ### Line heights
@@ -257,7 +257,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--lh-tight` | `1.2` | 18 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-compact` | `1.3` | 2 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-snug` | `1.4` | 18 | lh-none is for icons, numerals and single-line badges, never running text. |
-| `--lh-body` | `1.55` | 31 | lh-none is for icons, numerals and single-line badges, never running text. |
+| `--lh-body` | `1.55` | 33 | lh-none is for icons, numerals and single-line badges, never running text. |
 | `--lh-prose` | `1.7` | 0 | lh-none is for icons, numerals and single-line badges, never running text. |
 
 ### Letter spacing
@@ -267,8 +267,8 @@ These are not style preferences; they are the reasons the current values were ch
 | `--ls-snug` | `.02em` | 7 |  |
 | `--ls-wide` | `.16em` | 6 |  |
 | `--ls-display` | `-.02em` | 11 |  |
-| `--ls-tight` | `.04em` | 37 |  |
-| `--ls-eyebrow` | `.08em` | 17 |  |
+| `--ls-tight` | `.04em` | 36 |  |
+| `--ls-eyebrow` | `.08em` | 18 |  |
 
 ### Fonts
 
@@ -284,7 +284,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--space-1` | `.25rem` | 161 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
 | `--space-2` | `.5rem` | 155 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
 | `--space-3` | `.75rem` | 137 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
-| `--space-4` | `1rem` | 130 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
+| `--space-4` | `1rem` | 129 | Spacing is in rem, like every font size here, so it follows the reader's text-size setting. At the default 16px root: 4 / 8 / 12 / 16 / 20 / 24 / 32. |
 | `--space-5` | `1.25rem` | 68 |  |
 | `--space-6` | `1.5rem` | 27 |  |
 | `--space-7` | `1.75rem` | 11 |  |
@@ -296,7 +296,7 @@ These are not style preferences; they are the reasons the current values were ch
 | `--space-px` | `1px` | 18 | optical nudges: a border's width, an icon settling onto a baseline |
 | `--space-0-5` | `.125rem` | 95 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
 | `--space-1-5` | `.375rem` | 140 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
-| `--space-2-5` | `.625rem` | 105 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
+| `--space-2-5` | `.625rem` | 106 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
 | `--space-3-5` | `.875rem` | 75 | Half steps (2 / 6 / 10 / 14px), added 2026-09-20. The UI is built from 5-7px and 10px gaps; without these, snapping to the scale moved things by 2px+ and it added up across a card. With them… |
 
 ### Sizes (px, boxes and positions)
@@ -433,8 +433,7 @@ These are not style preferences; they are the reasons the current values were ch
 
 | Token | Value | Uses | What it is for |
 |---|---|---|---|
-| `--gold-deep` | `#6E5514` | 30 | The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. |
-| `--ai` | `var(--watch-indigo)` | 3 | AI-generated content accent (wishlist recommendations; any future AI surface) |
+| `--gold-deep` | `#6E5514` | 32 | The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. |
 
 
 ## Roles

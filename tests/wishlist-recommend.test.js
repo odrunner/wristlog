@@ -130,8 +130,10 @@ describe('index.html wiring', () => {
     expect(fn.slice(0, 2000)).toMatch(/rec-pick-imgwrap/);
     expect(fn.slice(0, 2000)).toMatch(/rec-pick-avatar/);
   });
-  it('panel uses the AI accent, not the plain panel role', () => {
-    expect(html).toMatch(/\.rec-panel \{[^}]*var\(--ai\)/);
+  it('panel reuses the Enhance AI scheme (badge cream + gold-deep eyebrow)', () => {
+    expect(html).toMatch(/\.rec-panel \{[^}]*var\(--badge-bg\)/);
+    expect(html).toMatch(/\.rec-panel-title \{[^}]*var\(--gold-deep\)/);
+    expect(html).not.toMatch(/var\(--ai\)/);
     expect(html).not.toMatch(/class="panel rec-panel"/);
   });
 });
