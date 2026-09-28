@@ -88,8 +88,9 @@ describe('simCollectionValue', () => {
 });
 
 describe('collection_sim wiring in index.html', () => {
-  it('gates the What-if entry point behind experiment("collection_sim")', () => {
-    expect(html).toMatch(/experiment\('collection_sim'\)/);
+  it('ships ungated: signed-in users get the What-if chip, no experiment branch', () => {
+    expect(html).not.toMatch(/experiment\('collection_sim'\)/);
+    expect(html).toMatch(/const simChip = currentUser\n/);
   });
   it('logs a sim_opened feature_event, never in demo mode', () => {
     expect(html).toMatch(/function logSimOpened\(\) \{\s*(?:\/\/[^\n]*\n\s*)*if \(!currentUser \|\| _isDemoMode\) return;/);

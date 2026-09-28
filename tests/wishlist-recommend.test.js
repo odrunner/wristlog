@@ -1,4 +1,4 @@
-// "Recommend me (from wishlist)" — experiment wishlist_recommend.
+// "Recommend me (from wishlist)" — shipped to everyone 2026-09-28.
 // Pure payload/cache helpers (mirrored in index.html) + wiring assertions.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
@@ -107,8 +107,9 @@ describe('recommendCacheKey', () => {
 describe('index.html wiring', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  it('gates both entry points on the wishlist_recommend experiment', () => {
-    expect(html.match(/experiment\('wishlist_recommend'\)/g)?.length).toBeGreaterThanOrEqual(2);
+  it('ships ungated: no wishlist_recommend experiment branch remains', () => {
+    expect(html).not.toMatch(/experiment\('wishlist_recommend'\)/);
+    expect(html).toMatch(/visible\.length >= 2 && !_wlSelect && currentUser/);
   });
   it('has the wishlist header button and the sim-bar button call the same flow', () => {
     expect(html).toMatch(/id="wl-rec-btn"[^>]*onclick="recommendFromWishlist\('wishlist'\)"/);

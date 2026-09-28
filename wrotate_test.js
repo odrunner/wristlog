@@ -415,7 +415,7 @@ export function collViewFromStore(raw) {
 export function nextCollView(v) {
   return v === 'grid' ? 'gallery' : v === 'gallery' ? 'compact' : v === 'compact' ? 'grid' : 'gallery';
 }
-// Collection simulation ("what-if", experiment collection_sim): the scenario is
+// Collection simulation ("what-if", shipped to everyone 2026-09-28): the scenario is
 // persisted per-user as {hidden:[], added:[]} — watch ids marked as potential
 // sales, wishlist ids tried in the collection. Anything unexpected in storage
 // collapses to an empty scenario.
@@ -448,7 +448,7 @@ export function simCollectionValue(list) {
   });
   return { total, valuedCount, unvaluedCount: items.length - valuedCount };
 }
-// "Recommend me (from wishlist)" — experiment wishlist_recommend. Compact
+// "Recommend me (from wishlist)" — shipped to everyone 2026-09-28. Compact
 // payload for the recommend-wishlist edge function: the collection with wear
 // stats (unique dates, like wearLeaderboard) plus the wishlist. Only fields the
 // prompt uses travel; the server clamps everything again.

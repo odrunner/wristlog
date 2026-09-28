@@ -1277,7 +1277,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile-url { font-size: var(--fs-sm); color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .wl-tile-url:hover { color: var(--gold-text); }
 
-    /* Collection "What-if" simulation (experiment collection_sim) */
+    /* Collection "What-if" simulation (shipped to everyone 2026-09-28) */
     .sim-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-3); padding: var(--space-2-5) var(--space-3-5); }
     .sim-stat-lbl { font-size: var(--fs-2xs); color: var(--muted); text-transform: uppercase; letter-spacing: var(--ls-tight); }
     .sim-stat-val { font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); }
@@ -1300,7 +1300,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
     .sim-tile.sim-added { border-color: var(--success); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
-    /* "Recommend me (from wishlist)" — experiment wishlist_recommend. Reuses
+    /* "Recommend me (from wishlist)" — shipped to everyone 2026-09-28. Reuses
        the app's AI scheme (the Enhance story card): badge cream + gold-deep
        uppercase eyebrow headings + badge body ink, all theme-aware. */
     .rec-panel { display: block; padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-3-5); background: var(--badge-bg); border-radius: var(--radius); }
@@ -2710,6 +2710,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">September 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">What-If Simulator</div>
+        <div class="body-muted">Tap <strong>What-if</strong> in the sort bar above your collection to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count and estimated value update against your real collection. Nothing changes for real &#8212; it&#8217;s a sandbox, and your scenario is remembered until you reset it.</div>
+      </div>
+      <div class="stack-3">
+        <div class="item-title">AI Wishlist Picks</div>
+        <div class="body-muted">Tap <strong>Recommend</strong> at the top of your Wishlist (or inside the What-if simulator) and AI ranks your wishlist against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count. You get up to three picks with a reason for each; in the simulator, tap <strong>Try it</strong> to drop a pick straight into your scenario. Needs at least two wishlist watches.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Compact View</div>
         <div class="body-muted">A third view for the <strong>Collection</strong> and <strong>Wishlist</strong> tabs: tiny photo tiles in a tight grid, so the whole collection fits on one screen &#8212; the closest thing to opening the watch box. Tap the view icon to cycle to it; tap a tile to open the watch, touch and hold to see its name. Sort, tag filter, Post Pics and sharing all still work.</div>
       </div>
@@ -4010,6 +4018,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Post Pics</div>
             <div class="help-mini-desc">Toggle <strong>Post Pics</strong> above the collection grid to swap watch photos for your latest wrist shots. Each card shows the most recent post photo for that watch. Toggle off to go back to the standard watch image.</div>
           </div>
+          <div class="help-mini-card">
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M21 3l-7 7"/><path d="M3 3l7 7"/><path d="M16 21h5v-5"/><path d="M8 21H3v-5"/><path d="M21 21l-7-7"/><path d="M3 21l7-7"/></svg> What-If Simulator</div>
+            <div class="help-mini-desc">Tap <strong>What-if</strong> in the sort bar to try changes before making them: mark watches for sale, add wishlist watches, and see the count and estimated value move against your real collection. Tap <strong>Recommend</strong> there for AI picks from your wishlist. Nothing changes for real, and your scenario is kept until you reset it.</div>
+          </div>
         </div>
       </div>
 
@@ -4054,6 +4066,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-step">
             <div class="help-step-num">6</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Get AI picks from your wishlist</div>
+              <div class="help-step-desc">Tap <strong>Recommend</strong> at the top of the Wishlist tab and AI ranks your wishlist against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count. You get up to three picks with a reason for each. Needs at least two wishlist watches; also available inside the Collection&#8217;s What-if simulator, where a pick can be dropped straight into your scenario.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">Send part of your wishlist to a dealer</div>
               <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. Add a note first if you want &#8212; who it&#8217;s for, sizes, budget, anything &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never your price, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how many times it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
@@ -7992,7 +8011,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.21';
+const APP_VERSION = '28.16.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17889,7 +17908,7 @@ let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
-let simMode  = false;                     // Collection "What-if" simulation (experiment collection_sim)
+let simMode  = false;                     // Collection "What-if" simulation (shipped to everyone 2026-09-28)
 let simState = { hidden: [], added: [] }; // loaded per-user on enter; persisted in wr_sim_<uid>
 
 // Ranking game state (shared by Collection and Wishlist — see gameMode)
@@ -19370,7 +19389,7 @@ async function loadAdminStats(force = false) {
     // One parallel batch (was four sequential awaits — the three slowest RPCs
     // each cost a full round-trip before the next started). 20 s, not 10: on a
     // cold cache these recompute concurrently on a 2-vCPU instance.
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes] = await withTimeout(Promise.all([
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes] = await withTimeout(Promise.all([
       // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
       db.rpc('admin_dod_counts', cacheArgs),
       // Fun-fact engagement + generation (totals + last-24h deltas)
@@ -19385,6 +19404,9 @@ async function loadAdminStats(force = false) {
       db.rpc('admin_collection_share_stats'),
       db.rpc('admin_feature_event_stats', { p_event: 'np_identify_outcome', p_key: 'outcome' }),
       db.rpc('admin_feature_event_stats', { p_event: 'snap_identify_outcome', p_key: 'outcome' }),
+      // What-if sims opened + AI wishlist recommendations (by surface)
+      db.rpc('admin_feature_event_stats', { p_event: 'sim_opened' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'wl_rec' }),
     ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
@@ -19395,6 +19417,8 @@ async function loadAdminStats(force = false) {
     const wls = wlShareRes.data || {};
     const cls = (collShareRes && collShareRes.data) || {};
     const hist = histRes.data || {};
+    const sim = (simRes && simRes.data) || {};
+    const wlRec = (wlRecRes && wlRecRes.data) || {};
     const ido = idoRes.data || {};
     const idoBy = ido.by_source || {};
     const idoDecided = (Number(idoBy.accepted) || 0) + (Number(idoBy.edited) || 0) + (Number(idoBy.rejected) || 0);
@@ -19734,6 +19758,11 @@ async function loadAdminStats(force = false) {
         ${statRow('Accuracy history views', Number(hist.events_total) || 0, Number(hist.events_24h) || 0,
           Object.entries(hist.by_source || {}).map(([k, v]) => k + ' ' + v).join(' · '))}
         ${statRow('Accuracy history viewers', Number(hist.users_total) || 0, Number(hist.users_24h) || 0)}
+        ${statRow('What-if sims opened', Number(sim.events_total) || 0, Number(sim.events_24h) || 0,
+          (Number(sim.users_total) || 0) + ' user' + (Number(sim.users_total) === 1 ? '' : 's'))}
+        ${statRow('AI wishlist picks', Number(wlRec.events_total) || 0, Number(wlRec.events_24h) || 0,
+          [(Number(wlRec.users_total) || 0) + ' user' + (Number(wlRec.users_total) === 1 ? '' : 's')]
+            .concat(Object.entries(wlRec.by_source || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => escHtml(k) + ' ' + (Number(v) || 0))).join(' · '))}
         ${statRow('Identify outcomes', Number(ido.events_total) || 0, Number(ido.events_24h) || 0,
           ['accepted', 'edited', 'rejected', 'failed'].filter(k => idoBy[k]).map(k => k + ' ' + idoBy[k]).join(' · '))}
         ${statRow('Identify accept rate', idoDecided ? Math.round((Number(idoBy.accepted) || 0) / idoDecided * 100) + '%' : '—', null, 'accepted / (accepted + edited + rejected)')}
@@ -23326,10 +23355,10 @@ function renderCollSortBar() {
   const bar = document.getElementById('coll-sort-bar');
   if (!bar) return;
   if (!watches.length) { bar.innerHTML = ''; return; }
-  // What-if simulation entry (experiment collection_sim). In sim mode the bar
+  // What-if simulation entry. In sim mode the bar
   // reduces to this one active chip — sort and photo toggles would act on the
   // grid the user isn't looking at.
-  const simChip = (currentUser && experiment('collection_sim'))
+  const simChip = currentUser
     ? `<button class="coll-sort-chip sim-chip${simMode ? ' active' : ''}" onclick="${simMode ? 'exitCollectionSim()' : 'enterCollectionSim()'}" title="Simulate selling watches and adding from your wishlist">What-if</button>` : '';
   if (simMode) { bar.innerHTML = `<div class="coll-sort-bar">${simChip}</div>`; return; }
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
@@ -23962,7 +23991,7 @@ function toggleCollView() {
 }
 
 // ══════════════════════════════════════════
-//  COLLECTION SIMULATION — "What-if" (experiment collection_sim)
+//  COLLECTION SIMULATION — "What-if" (shipped to everyone 2026-09-28)
 //  Temporarily mark watches as potential sales and try wishlist watches in the
 //  collection, with the hypothetical collection and its value on one screen.
 //  Entirely client-side: the scenario lives per-user in localStorage, the DB is
@@ -24084,7 +24113,7 @@ function renderCollectionSim() {
       <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)} <span class="sim-stat-delta${deltaCls(dVal)}">${fmtDelta(dVal, true)}</span></div>${unval}</div>
       <span class="grow"></span>
       <div class="sim-actions">
-        ${(experiment('wishlist_recommend') && pool.length >= 2) ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
+        ${pool.length >= 2 ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
         <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
       </div>
@@ -24096,7 +24125,7 @@ function renderCollectionSim() {
     <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
 }
 
-// ── "Recommend me (from wishlist)" — experiment wishlist_recommend ──────────
+// ── "Recommend me (from wishlist)" — shipped to everyone 2026-09-28 ──────────
 // One edge-function call ranks the wishlist against the collection + wear
 // patterns. The result lives in memory (+ a 7-day localStorage cache keyed on
 // the data, so nothing respends while nothing changed).
@@ -29810,7 +29839,7 @@ function renderWishlist(force) {
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
   if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
   const recBtn = document.getElementById('wl-rec-btn');
-  if (recBtn) recBtn.style.display = (visible.length >= 2 && !_wlSelect && currentUser && experiment('wishlist_recommend')) ? '' : 'none';
+  if (recBtn) recBtn.style.display = (visible.length >= 2 && !_wlSelect && currentUser) ? '' : 'none';
   const recPanel = document.getElementById('wl-rec-panel');
   if (recPanel && (visible.length < 2 || _wlSelect)) recPanel.innerHTML = '';
   if (bar) {

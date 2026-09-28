@@ -197,7 +197,11 @@ test('at 390px the select bar is one row and the sort bar does not spill', async
   expect(report.select.rows, JSON.stringify(report.select)).toBe(1);
   expect(report.select.spills).toBe(0);
   expect(report.sort.spills, JSON.stringify(report.sort)).toBe(0);
-  expect(report.sort.rows, JSON.stringify(report.sort)).toBe(1);
+  // Two rows since the What-if chip shipped to everyone (2026-09-28): Rank +
+  // three sorts + Post Pics + What-if need ~420px, and 390px offers ~358px, so
+  // the bar uses its designed wrap (the "safety net" breakpoint above). Never
+  // more than two rows, never a horizontal spill.
+  expect(report.sort.rows, JSON.stringify(report.sort)).toBeLessThanOrEqual(2);
 });
 
 test('Shared links shows comment counts, expands the thread, and deletes a comment', async ({ page }) => {
