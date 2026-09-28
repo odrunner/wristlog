@@ -1286,6 +1286,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-delta-down { color: var(--danger); }
     .sim-unvalued, .sim-hint { font-size: var(--fs-sm); color: var(--muted); }
     .sim-hint { flex-basis: 100%; }
+    /* The action buttons wrap below the stats as one row, never one by one. */
+    .sim-actions { display: flex; align-items: center; gap: var(--space-2-5); }
     .sim-grid { margin-bottom: var(--space-4); }
     /* Compact tiles — much smaller, tighter, image-only, so a whole collection or
        wishlist reads on one screen. Shared by the Collection/Wishlist 'compact'
@@ -7990,7 +7992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.17';
+const APP_VERSION = '28.16.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24081,9 +24083,11 @@ function renderCollectionSim() {
       <div class="sim-stat"><div class="sim-stat-lbl">Watches</div><div class="sim-stat-val">${list.length} <span class="sim-stat-delta${deltaCls(dCount)}">${fmtDelta(dCount)}</span></div></div>
       <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)} <span class="sim-stat-delta${deltaCls(dVal)}">${fmtDelta(dVal, true)}</span></div>${unval}</div>
       <span class="grow"></span>
-      ${(experiment('wishlist_recommend') && pool.length >= 2) ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
-      <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
-      <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
+      <div class="sim-actions">
+        ${(experiment('wishlist_recommend') && pool.length >= 2) ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
+        <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
+      </div>
       <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
     </div>
     ${recommendPanelHTML('sim')}
