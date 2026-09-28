@@ -1298,6 +1298,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
     .sim-tile.sim-added { border-color: var(--success); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
+    /* "Recommend me (from wishlist)" — experiment wishlist_recommend */
+    .rec-panel { display: block; margin-bottom: var(--space-3); }
+    .rec-panel-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); }
+    .rec-summary { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1); }
+    .rec-pick { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2-5); }
+    .rec-pick-name { font-weight: var(--fw-semibold); }
+    .rec-pick-reason { font-size: var(--fs-sm); color: var(--muted); }
 
     /* ── QUICK-LOG BUTTON (collection card) ── */
     .btn-quicklog {
@@ -4768,6 +4775,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
+        <button id="wl-rec-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="recommendFromWishlist('wishlist')" title="Recommend from wishlist" aria-label="Recommend from wishlist" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg><span class="wl-actions-text">Recommend</span></button>
         <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
@@ -4780,6 +4788,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="wl-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitWishlistSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
     </div>
+    <div id="wl-rec-panel"></div>
     <div id="wishlist-grid"></div>
   </div>
 
@@ -7977,7 +7986,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.38';
+const APP_VERSION = '28.07.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24068,13 +24077,137 @@ function renderCollectionSim() {
       <div class="sim-stat"><div class="sim-stat-lbl">Watches</div><div class="sim-stat-val">${list.length} <span class="sim-stat-delta${deltaCls(dCount)}">${fmtDelta(dCount)}</span></div></div>
       <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)} <span class="sim-stat-delta${deltaCls(dVal)}">${fmtDelta(dVal, true)}</span></div>${unval}</div>
       <span class="grow"></span>
+      ${(experiment('wishlist_recommend') && pool.length >= 2) ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
       <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
       <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
       <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
     </div>
+    ${recommendPanelHTML('sim')}
     <div class="wl-gallery wl-compact sim-grid">${tiles}</div>
     ${pool.length ? `<div class="sim-section-title">Add from wishlist</div>
     <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
+}
+
+// ── "Recommend me (from wishlist)" — experiment wishlist_recommend ──────────
+// One edge-function call ranks the wishlist against the collection + wear
+// patterns. The result lives in memory (+ a 7-day localStorage cache keyed on
+// the data, so nothing respends while nothing changed).
+let _recResult = null;
+let _recLoading = false;
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function buildRecommendPayload(watches, logs, wishlist, nowMs) {
+  const cutoff = new Date(nowMs - 90 * 86400000).toISOString().slice(0, 10);
+  const days90 = new Map(), daysAll = new Map(), uses = new Map();
+  for (const l of logs || []) {
+    if (!isWearEntry(l) || !l.date) continue;
+    if (!daysAll.has(l.watchId)) { daysAll.set(l.watchId, new Set()); days90.set(l.watchId, new Set()); uses.set(l.watchId, {}); }
+    daysAll.get(l.watchId).add(l.date);
+    if (l.date >= cutoff) days90.get(l.watchId).add(l.date);
+    const uc = l.useCase;
+    if (uc === 'work' || uc === 'leisure' || uc === 'dinner' || uc === 'travel') {
+      const u = uses.get(l.watchId); u[uc] = (u[uc] || 0) + 1;
+    }
+  }
+  const collection = (watches || []).filter(Boolean).slice(0, 300).map(w => ({
+    brand: w.brand || '', name: w.name || '', ref: w.ref || '',
+    tags: (w.tags || []).slice(0, 6), movement: w.movementType || w.movement || '',
+    size: w.caseDiameter ? String(w.caseDiameter) : '',
+    wears90: (days90.get(w.id) || new Set()).size,
+    wearsTotal: (daysAll.get(w.id) || new Set()).size,
+    useCases: uses.get(w.id) || {},
+  }));
+  const wishItems = (wishlist || []).filter(w => w && w.id).slice(0, 100).map(w => ({
+    id: w.id, brand: w.brand || '', name: w.name || '', ref: w.ref || '',
+    price: w.marketPrice ?? w.price ?? null, tags: (w.tags || []).slice(0, 6),
+  }));
+  return { collection, wishlist: wishItems };
+}
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function recommendCacheKey(payload) {
+  const s = JSON.stringify(payload);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + '-' + s.length;
+}
+
+function recKey() { return currentUser ? 'wr_rec_' + currentUser.id : null; }
+
+async function recommendFromWishlist(source) {
+  if (demoGuard()) return;
+  if (!currentUser || _recLoading) return;
+  const payload = buildRecommendPayload(watches, logs, wishlist, Date.now());
+  if (payload.wishlist.length < 2) { toast('Add at least two wishlist watches first', 'info'); return; }
+  const key = recommendCacheKey(payload);
+  const cached = safeGetJSON(recKey(), null);
+  if (cached && cached.key === key && cached.result && Date.now() - cached.ts < 7 * 86400000) {
+    _recResult = cached.result;
+    renderRecommendResult(source);
+    return;
+  }
+  payload.source = source;
+  const btn = document.getElementById(source === 'sim' ? 'sim-rec-btn' : 'wl-rec-btn');
+  const prevHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Thinking…'; }
+  _recLoading = true;
+  try {
+    const r = await authedFetch(SUPABASE_URL + '/functions/v1/recommend-wishlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }, 60000);
+    if (r.status === 429) { toast('Daily recommendation limit reached — try again tomorrow', 'info'); return; }
+    const data = await r.json();
+    if (!r.ok || !Array.isArray(data.picks) || !data.picks.length) {
+      toast(data.message || 'Could not get recommendations — try again later', 'error');
+      return;
+    }
+    _recResult = { picks: data.picks, summary: data.summary || '' };
+    safeSetJSON(recKey(), { key, ts: Date.now(), result: _recResult });
+    if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'wl_rec', meta: { source, picks: _recResult.picks.length } }).then(() => {});
+    renderRecommendResult(source);
+  } catch (e) {
+    toast('Could not get recommendations — try again later', 'error');
+  } finally {
+    _recLoading = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
+  }
+}
+
+function recWishName(id) {
+  const w = (wishlist || []).find(x => x && x.id === id);
+  return w ? ((w.brand || '') + ' ' + (w.name || '')).trim() : '';
+}
+
+// Panel shared by both surfaces. In the sim it re-renders with the grid, and
+// each pick can be tried in the scenario; on the Wishlist page it is static.
+function recommendPanelHTML(source) {
+  if (!_recResult || !Array.isArray(_recResult.picks)) return '';
+  const rows = _recResult.picks.map(p => {
+    const name = recWishName(p.id);
+    if (!name) return '';
+    const action = source === 'sim'
+      ? (simState.added.includes(p.id)
+        ? `<button class="btn btn-ghost btn-xs" onclick="simToggleWish('${p.id}')">Added ✓</button>`
+        : `<button class="btn btn-primary btn-xs" onclick="simToggleWish('${p.id}')">Try it</button>`)
+      : '';
+    return `<div class="rec-pick"><div class="grow"><div class="rec-pick-name">${escHtml(name)}</div>${p.reason ? `<div class="rec-pick-reason">${escHtml(p.reason)}</div>` : ''}</div>${action}</div>`;
+  }).join('');
+  if (!rows) return '';
+  return `<div class="panel rec-panel"><div class="row-between"><div class="rec-panel-title">Top picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
+}
+
+function renderRecommendResult(source) {
+  if (source === 'sim') { renderCollection(true); return; }
+  const el = document.getElementById('wl-rec-panel');
+  if (el) el.innerHTML = recommendPanelHTML('wishlist');
+}
+
+function dismissRecommend() {
+  _recResult = null;
+  const el = document.getElementById('wl-rec-panel');
+  if (el) el.innerHTML = '';
+  if (simMode) renderCollection(true);
 }
 
 function buildSwatches() {
@@ -29666,6 +29799,10 @@ function renderWishlist(force) {
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
   if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
+  const recBtn = document.getElementById('wl-rec-btn');
+  if (recBtn) recBtn.style.display = (visible.length >= 2 && !_wlSelect && currentUser && experiment('wishlist_recommend')) ? '' : 'none';
+  const recPanel = document.getElementById('wl-rec-panel');
+  if (recPanel && (visible.length < 2 || _wlSelect)) recPanel.innerHTML = '';
   if (bar) {
     bar.style.display = (_wlSelect && visible.length) ? 'flex' : 'none';
     if (_wlSelect) {

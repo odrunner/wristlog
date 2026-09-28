@@ -191,6 +191,23 @@ async function run() {
     }, 403)
   );
 
+  // recommend-wishlist rejects before any paid call: no token → 401, and an
+  // undersized wishlist → 400. Both checks cost nothing to run.
+  await check('recommend-wishlist (no auth → 401)', () =>
+    callFn('recommend-wishlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: [], wishlist: [] }),
+    }, 401)
+  );
+  await check('recommend-wishlist (wishlist < 2 → 400)', () =>
+    callFn('recommend-wishlist', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ collection: [], wishlist: [{ id: 'x', brand: 'B', name: 'N' }] }),
+    }, 400)
+  );
+
   await check('search-watch-image (auth)', () =>
     callFn('search-watch-image', {
       method: 'POST',

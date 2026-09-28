@@ -448,6 +448,45 @@ export function simCollectionValue(list) {
   });
   return { total, valuedCount, unvaluedCount: items.length - valuedCount };
 }
+// "Recommend me (from wishlist)" — experiment wishlist_recommend. Compact
+// payload for the recommend-wishlist edge function: the collection with wear
+// stats (unique dates, like wearLeaderboard) plus the wishlist. Only fields the
+// prompt uses travel; the server clamps everything again.
+export function buildRecommendPayload(watches, logs, wishlist, nowMs) {
+  const cutoff = new Date(nowMs - 90 * 86400000).toISOString().slice(0, 10);
+  const days90 = new Map(), daysAll = new Map(), uses = new Map();
+  for (const l of logs || []) {
+    if (!isWearEntry(l) || !l.date) continue;
+    if (!daysAll.has(l.watchId)) { daysAll.set(l.watchId, new Set()); days90.set(l.watchId, new Set()); uses.set(l.watchId, {}); }
+    daysAll.get(l.watchId).add(l.date);
+    if (l.date >= cutoff) days90.get(l.watchId).add(l.date);
+    const uc = l.useCase;
+    if (uc === 'work' || uc === 'leisure' || uc === 'dinner' || uc === 'travel') {
+      const u = uses.get(l.watchId); u[uc] = (u[uc] || 0) + 1;
+    }
+  }
+  const collection = (watches || []).filter(Boolean).slice(0, 300).map(w => ({
+    brand: w.brand || '', name: w.name || '', ref: w.ref || '',
+    tags: (w.tags || []).slice(0, 6), movement: w.movementType || w.movement || '',
+    size: w.caseDiameter ? String(w.caseDiameter) : '',
+    wears90: (days90.get(w.id) || new Set()).size,
+    wearsTotal: (daysAll.get(w.id) || new Set()).size,
+    useCases: uses.get(w.id) || {},
+  }));
+  const wishItems = (wishlist || []).filter(w => w && w.id).slice(0, 100).map(w => ({
+    id: w.id, brand: w.brand || '', name: w.name || '', ref: w.ref || '',
+    price: w.marketPrice ?? w.price ?? null, tags: (w.tags || []).slice(0, 6),
+  }));
+  return { collection, wishlist: wishItems };
+}
+// Cache key for a recommendation payload (djb2 over the JSON + length): any
+// change in collection, wear counts or wishlist busts the cached result.
+export function recommendCacheKey(payload) {
+  const s = JSON.stringify(payload);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + '-' + s.length;
+}
 // Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
 // watches become folders; single-watch and blank-brand items stay standalone.
 export function groupWishlistByBrand(items) {

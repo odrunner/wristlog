@@ -35,6 +35,7 @@ const VERBATIM = [
   'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
   'nextWishlistView', 'nextCollView', 'posterUrlFor', 'rankWishlistByElo', 'rowToLog', 'rowToWatch', 'rowToWish',
   'simStateFromStore', 'simulatedCollection', 'simCollectionValue',
+  'buildRecommendPayload', 'recommendCacheKey',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs', 'cardPathFor', 'cardUrlFor', 'cardSrcAttrs',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
