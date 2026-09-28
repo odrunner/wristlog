@@ -2694,6 +2694,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="u-maxh-60vh" style="overflow-y:auto;">
       <div class="stack-3">
+        <div class="item-title">Compact View</div>
+        <div class="body-muted">A third view for the <strong>Collection</strong> and <strong>Wishlist</strong> tabs: tiny photo tiles in a tight grid, so the whole collection fits on one screen &#8212; the closest thing to opening the watch box. Tap the view icon to cycle to it; tap a tile to open the watch, touch and hold to see its name. Sort, tag filter, Post Pics and sharing all still work.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Remove a Follower</div>
         <div class="body-muted">Open <strong>Followers</strong> on your own profile and each person now has a <strong>Remove</strong> button &#8212; tap twice to confirm. They aren&#8217;t notified, and if your profile approves its followers they&#8217;ll need to send a new request to follow you again.</div>
       </div>
@@ -3968,7 +3972,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="help-grid2">
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
-            <div class="help-mini-desc">The toggle in the Collection header switches between full cards and an <strong>images-only gallery</strong>. The gallery follows your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
+            <div class="help-mini-desc">The toggle in the Collection header cycles <strong>cards → gallery → compact</strong>. The gallery is an images-only grid; <strong>compact</strong> shrinks it to tiny tiles so the whole collection fits on one screen (touch and hold a tile for the name). Both follow your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
@@ -4022,7 +4026,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Switch views: list, brand folders, or gallery</div>
-              <div class="help-step-desc">Tap the view icon at the top to cycle <strong>list → brand folders → gallery</strong> — like the Collection toggle, the icon shows the view you'll get next. The <strong>folder view</strong> groups watches from the same brand into collapsible folders — every brand gets one, even if you only have a single watch from it — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
+              <div class="help-step-desc">Tap the view icon at the top to cycle <strong>list → brand folders → gallery → compact</strong> — like the Collection toggle, the icon shows the view you'll get next. The <strong>folder view</strong> groups watches from the same brand into collapsible folders — every brand gets one, even if you only have a single watch from it — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid, and <strong>compact</strong> shrinks it to tiny tiles so the whole wishlist fits on one screen.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4755,7 +4759,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
       <div class="wl-actions">
-        <!-- One icon cycles list → folders → gallery → list; like the Collection
+        <!-- One icon cycles list → folders → gallery → compact → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
         <button id="wl-view-btn" class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;"></button>
         <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -7970,7 +7974,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.25';
+const APP_VERSION = '27.19.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
