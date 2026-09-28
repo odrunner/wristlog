@@ -469,6 +469,7 @@ export function buildRecommendPayload(watches, logs, wishlist, nowMs) {
     brand: w.brand || '', name: w.name || '', ref: w.ref || '',
     tags: (w.tags || []).slice(0, 6), movement: w.movementType || w.movement || '',
     size: w.caseDiameter ? String(w.caseDiameter) : '',
+    price: w.marketPrice ?? w.price ?? null,
     wears90: (days90.get(w.id) || new Set()).size,
     wearsTotal: (daysAll.get(w.id) || new Set()).size,
     useCases: uses.get(w.id) || {},

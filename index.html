@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=7ca33db3">
+  <link rel="stylesheet" href="/design-system.css?v=85013467">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1298,11 +1298,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
     .sim-tile.sim-added { border-color: var(--success); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
-    /* "Recommend me (from wishlist)" — experiment wishlist_recommend */
-    .rec-panel { display: block; margin-bottom: var(--space-3); }
-    .rec-panel-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); }
+    /* "Recommend me (from wishlist)" — experiment wishlist_recommend. Its own
+       card (not .panel): the --ai tint marks the content as AI-generated. */
+    .rec-panel { display: block; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3-5); background: color-mix(in srgb, var(--ai) 5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ai) 40%, var(--border)); border-radius: var(--radius); }
+    .rec-panel-title { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--ai); }
     .rec-summary { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1); }
-    .rec-pick { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2-5); }
+    .rec-pick { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+    .rec-pick-imgwrap { width: var(--size-12); height: var(--size-12); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); background: var(--surface); }
+    .rec-pick-avatar { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--gold-text); background: var(--gold-dim); }
     .rec-pick-name { font-weight: var(--fw-semibold); }
     .rec-pick-reason { font-size: var(--fs-sm); color: var(--muted); }
 
@@ -7986,7 +7989,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.07.04';
+const APP_VERSION = '28.16.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24113,6 +24116,7 @@ function buildRecommendPayload(watches, logs, wishlist, nowMs) {
     brand: w.brand || '', name: w.name || '', ref: w.ref || '',
     tags: (w.tags || []).slice(0, 6), movement: w.movementType || w.movement || '',
     size: w.caseDiameter ? String(w.caseDiameter) : '',
+    price: w.marketPrice ?? w.price ?? null,
     wears90: (days90.get(w.id) || new Set()).size,
     wearsTotal: (daysAll.get(w.id) || new Set()).size,
     useCases: uses.get(w.id) || {},
@@ -24174,27 +24178,29 @@ async function recommendFromWishlist(source) {
   }
 }
 
-function recWishName(id) {
-  const w = (wishlist || []).find(x => x && x.id === id);
-  return w ? ((w.brand || '') + ' ' + (w.name || '')).trim() : '';
-}
-
 // Panel shared by both surfaces. In the sim it re-renders with the grid, and
 // each pick can be tried in the scenario; on the Wishlist page it is static.
+// Its own card (not .panel): the AI-accented border/background mark the content
+// as AI-generated, like the enhance-nudge card has its own card styles.
 function recommendPanelHTML(source) {
   if (!_recResult || !Array.isArray(_recResult.picks)) return '';
   const rows = _recResult.picks.map(p => {
-    const name = recWishName(p.id);
+    const w = (wishlist || []).find(x => x && x.id === p.id);
+    const name = w ? ((w.brand || '') + ' ' + (w.name || '')).trim() : '';
     if (!name) return '';
+    const img = w.image
+      ? `<div class="rec-pick-imgwrap"><img loading="lazy" src="${escHtml(w.image)}" class="img-cover" alt=""></div>`
+      : `<div class="rec-pick-imgwrap"><div class="rec-pick-avatar">${initials(w.brand, w.name)}</div></div>`;
     const action = source === 'sim'
       ? (simState.added.includes(p.id)
         ? `<button class="btn btn-ghost btn-xs" onclick="simToggleWish('${p.id}')">Added ✓</button>`
         : `<button class="btn btn-primary btn-xs" onclick="simToggleWish('${p.id}')">Try it</button>`)
       : '';
-    return `<div class="rec-pick"><div class="grow"><div class="rec-pick-name">${escHtml(name)}</div>${p.reason ? `<div class="rec-pick-reason">${escHtml(p.reason)}</div>` : ''}</div>${action}</div>`;
+    return `<div class="rec-pick">${img}<div class="grow"><div class="rec-pick-name">${escHtml(name)}</div>${p.reason ? `<div class="rec-pick-reason">${escHtml(p.reason)}</div>` : ''}</div>${action}</div>`;
   }).join('');
   if (!rows) return '';
-  return `<div class="panel rec-panel"><div class="row-between"><div class="rec-panel-title">Top picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
+  const spark = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg>`;
+  return `<div class="rec-panel"><div class="row-between"><div class="rec-panel-title">${spark} AI picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
 }
 
 function renderRecommendResult(source) {

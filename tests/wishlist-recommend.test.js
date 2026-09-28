@@ -65,6 +65,12 @@ describe('buildRecommendPayload', () => {
     expect(p.collection[1].size).toBe('');
   });
 
+  it('collection price prefers marketPrice, falls back to price, else null', () => {
+    const p = buildRecommendPayload(WATCHES, [], WISHLIST, NOW);
+    expect(p.collection[0].price).toBe(6000);
+    expect(p.collection[1].price).toBe(null);
+  });
+
   it('wishlist price prefers marketPrice, falls back to price, else null', () => {
     const p = buildRecommendPayload(WATCHES, [], WISHLIST, NOW);
     expect(p.wishlist[0]).toEqual({ id: 'w1', brand: 'Tudor', name: 'Black Bay 58', ref: '79030N', price: 3400, tags: ['Dive'] });
@@ -117,6 +123,15 @@ describe('index.html wiring', () => {
   });
   it('renders reasons through escHtml', () => {
     const fn = html.slice(html.indexOf('function recommendPanelHTML'));
-    expect(fn.slice(0, 1500)).toMatch(/escHtml\(/);
+    expect(fn.slice(0, 2000)).toMatch(/escHtml\(/);
+  });
+  it('each pick shows the wishlist image (or an initials fallback)', () => {
+    const fn = html.slice(html.indexOf('function recommendPanelHTML'));
+    expect(fn.slice(0, 2000)).toMatch(/rec-pick-imgwrap/);
+    expect(fn.slice(0, 2000)).toMatch(/rec-pick-avatar/);
+  });
+  it('panel uses the AI accent, not the plain panel role', () => {
+    expect(html).toMatch(/\.rec-panel \{[^}]*var\(--ai\)/);
+    expect(html).not.toMatch(/class="panel rec-panel"/);
   });
 });

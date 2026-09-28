@@ -17,7 +17,7 @@ Deno.test("sanitize: clamps text fields and keeps known shape", () => {
   const out = sanitizeRecommendPayload({
     collection: [{
       brand: "A".repeat(200), name: "Speedmaster", ref: "310.30", tags: ["Chronograph", "Sport"],
-      movement: "automatic", size: "42", wears90: 12, wearsTotal: 30,
+      movement: "automatic", size: "42", price: 6000, wears90: 12, wearsTotal: 30,
       useCases: { work: 5, leisure: 7, dinner: 0, travel: 1, hacking: 9 },
     }],
     wishlist: [{ id: "w1", brand: "Tudor", name: "BB58", ref: "79030N", price: 3400, tags: ["Dive"] }],
@@ -28,6 +28,7 @@ Deno.test("sanitize: clamps text fields and keeps known shape", () => {
   assertEquals(c.tags, ["Chronograph", "Sport"]);
   assertEquals(c.movement, "automatic");
   assertEquals(c.size, "42");
+  assertEquals(c.price, 6000);
   assertEquals(c.wears90, 12);
   assertEquals(c.wearsTotal, 30);
   assertEquals(c.useCases, { work: 5, leisure: 7, travel: 1 }); // zero + unknown keys dropped
@@ -45,13 +46,14 @@ Deno.test("sanitize: caps list sizes (collection 300, wishlist 100)", () => {
 
 Deno.test("sanitize: drops wishlist rows without id or name, junk wear counts become 0", () => {
   const out = sanitizeRecommendPayload({
-    collection: [{ brand: "Seiko", name: "5", wears90: -3, wearsTotal: "junk", useCases: "nope", tags: "notarray" }],
+    collection: [{ brand: "Seiko", name: "5", price: "junk", wears90: -3, wearsTotal: "junk", useCases: "nope", tags: "notarray" }],
     wishlist: [
       { id: "", brand: "Tudor", name: "BB58" },
       { id: "ok", brand: "", name: "" },
       { id: "w2", brand: "Omega", name: "", price: "notanumber" },
     ],
   });
+  assertEquals(out.collection[0].price, null);
   assertEquals(out.collection[0].wears90, 0);
   assertEquals(out.collection[0].wearsTotal, 0);
   assertEquals(out.collection[0].useCases, {});
@@ -73,7 +75,7 @@ Deno.test("sanitize: tags capped at 6 entries of 30 chars", () => {
 const PAYLOAD = sanitizeRecommendPayload({
   collection: [{
     brand: "Omega", name: "Speedmaster", ref: "310.30", tags: ["Chronograph", "Sport"],
-    movement: "automatic", size: "42", wears90: 12, wearsTotal: 30, useCases: { work: 5, leisure: 7 },
+    movement: "automatic", size: "42", price: 6000, wears90: 12, wearsTotal: 30, useCases: { work: 5, leisure: 7 },
   }],
   wishlist: [
     { id: "w1", brand: "Tudor", name: "Black Bay 58", ref: "79030N", price: 3400, tags: ["Dive"] },
@@ -81,13 +83,20 @@ const PAYLOAD = sanitizeRecommendPayload({
   ],
 });
 
-Deno.test("prompt: includes collection line with wear stats and use cases", () => {
+Deno.test("prompt: includes collection line with price, wear stats and use cases", () => {
   const p = buildRecommendPrompt(PAYLOAD);
   assertStringIncludes(p, "Omega Speedmaster");
   assertStringIncludes(p, "ref. 310.30");
+  assertStringIncludes(p, "worth $6000");
   assertStringIncludes(p, "worn 12 of the last 90 days");
   assertStringIncludes(p, "30 all-time");
   assertStringIncludes(p, "work×5");
+});
+
+Deno.test("prompt: demands second-person voice and price realism", () => {
+  const p = buildRecommendPrompt(PAYLOAD);
+  assertStringIncludes(p, 'never "they" or "their"');
+  assertStringIncludes(p, "Price is a real factor");
 });
 
 Deno.test("prompt: includes wishlist ids in brackets and prices when present", () => {

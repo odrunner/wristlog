@@ -204,6 +204,7 @@
   --watch-sky: #38bdf8; --watch-fuchsia: #e879f9; --watch-rose: #f43f5e; --watch-slate: #94a3b8;
   --watch-amber: #fbbf24; --watch-emerald: #34d399; --watch-tangerine: #fb923c; --watch-violet: var(--vis-friends);
   --watch-default: var(--watch-gold);
+  --ai: var(--watch-indigo);   /* AI-generated content accent (wishlist recommendations; any future AI surface) */
   --uc-unspecified: #7a7a95;   /* use-case chart: no use case, or an unknown one */
   /* charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. */
   --chart-grid: rgba(128,128,128,.15); --chart-series-2: var(--watch-indigo);

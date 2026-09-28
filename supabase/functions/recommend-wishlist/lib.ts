@@ -10,6 +10,7 @@ export type RecCollectionItem = {
   tags: string[];
   movement: string;
   size: string;
+  price: number | null;
   wears90: number;
   wearsTotal: number;
   useCases: Record<string, number>;
@@ -51,9 +52,11 @@ export function sanitizeRecommendPayload(body: unknown): RecPayload {
         if (n > 0) uc[k] = n;
       }
     }
+    const price = Number(w?.price);
     return {
       brand: clampText(w?.brand), name: clampText(w?.name), ref: clampText(w?.ref, 60),
       tags: clampTags(w?.tags), movement: clampText(w?.movement, 30), size: clampText(w?.size, 10),
+      price: Number.isFinite(price) && price > 0 ? price : null,
       wears90: clampCount(w?.wears90), wearsTotal: clampCount(w?.wearsTotal), useCases: uc,
     };
   });
@@ -76,6 +79,7 @@ function collectionLine(w: RecCollectionItem): string {
   const details = [
     w.tags.length ? `styles: ${w.tags.join("/")}` : "",
     w.movement, w.size ? `${w.size}mm` : "",
+    w.price != null ? `worth $${w.price}` : "",
   ].filter(Boolean).join("; ");
   const uses = Object.entries(w.useCases).map(([k, n]) => `${k}×${n}`).join(", ");
   const wear = `worn ${w.wears90} of the last 90 days (${w.wearsTotal} all-time${uses ? `; ${uses}` : ""})`;
@@ -107,7 +111,9 @@ Respond with ONLY a JSON object, no other text:
 Rules:
 - 1 to 3 picks, best first. "id" must be copied exactly from the wishlist above.
 - Judge by the gaps in their collection (style, type, brand, size variety) and what they actually wear — favour picks they would wear often, not trophies.
+- Price is a real factor: use the prices given. A pick pitched for daily, beater or worry-free duty must be genuinely inexpensive next to their collection — never call a luxury piece a beater.
 - Every reason must point at their own collection or wear habits, never generic praise.
+- Address the user directly in every reason and the summary: write "you" and "your", never "they" or "their".
 - Plain language a non-expert understands.`;
 }
 

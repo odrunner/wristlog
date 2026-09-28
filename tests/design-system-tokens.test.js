@@ -196,6 +196,7 @@ export const SHARED_LIGHT = {
   '--watch-tangerine': '#fb923c',
   '--watch-violet': 'var(--vis-friends)',
   '--watch-default': 'var(--watch-gold)',
+  '--ai': 'var(--watch-indigo)',
   '--uc-unspecified': '#7a7a95',
   '--chart-grid': 'rgba(128,128,128,.15)', '--chart-series-2': 'var(--watch-indigo)',
   // An alias of --gold: a var() inside a custom property resolves where it is DECLARED,
