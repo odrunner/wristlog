@@ -1310,7 +1310,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* AI pick rail (What-if + Wishlist) — composed from existing pieces:
        .eyebrow row, .panel cards, .btn variants, .pill badges, --ring. */
     .rec-rail-wrap { margin-bottom: var(--space-2-5); }
-    .rec-gap { font-size: var(--fs-sm); color: var(--muted); }
+    /* The eyebrow + gap tag share a row; on narrow phones the tag wraps below
+       instead of spilling past the page gutter (seen at 390px). */
+    .rec-rail-wrap .row-between { flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+    .rec-gap { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
     .rec-rail { display: flex; gap: var(--space-2-5); overflow-x: auto; padding: var(--space-1) var(--space-0-5) var(--space-2); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .rec-rail::-webkit-scrollbar { display: none; }
     .rec-card { flex: 0 0 var(--size-40); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2-5); }
@@ -8033,7 +8036,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.35';
+const APP_VERSION = '28.20.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
