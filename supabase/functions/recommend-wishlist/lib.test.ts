@@ -106,11 +106,14 @@ Deno.test("prompt: includes wishlist ids in brackets and prices when present", (
   assertStringIncludes(p, "[w2] Cartier Tank");
 });
 
-Deno.test("prompt: asks for JSON-only picks/summary response", () => {
+Deno.test("prompt: asks for JSON-only picks/summary/gapTag response with card fields", () => {
   const p = buildRecommendPrompt(PAYLOAD);
   assertStringIncludes(p, "ONLY a JSON object");
   assertStringIncludes(p, '"picks"');
   assertStringIncludes(p, '"summary"');
+  assertStringIncludes(p, '"shortName"');
+  assertStringIncludes(p, '"oneLiner"');
+  assertStringIncludes(p, '"gapTag"');
 });
 
 Deno.test("prompt: empty collection gets the first-watch line", () => {
@@ -122,23 +125,35 @@ Deno.test("prompt: empty collection gets the first-watch line", () => {
 
 const WISH_IDS = ["w1", "w2", "w3"];
 
-Deno.test("parse: valid response filtered to known ids, order kept", () => {
+Deno.test("parse: valid response filtered to known ids, order kept, card fields carried", () => {
   const out = parseRecommendResponse(
-    'Here you go: {"picks":[{"id":"w2","reason":"Fills the dress gap"},{"id":"nope","reason":"x"},{"id":"w1","reason":"You wear divers"}],"summary":"Lacks a dress watch"}',
+    'Here you go: {"picks":[{"id":"w2","shortName":"Tank","oneLiner":"Fills the dress gap","why":"You own no dress watch"},{"id":"nope","why":"x"},{"id":"w1","oneLiner":"You wear divers"}],"summary":"Lacks a dress watch","gapTag":"dress watch"}',
     WISH_IDS,
   );
   assertEquals(out, {
-    picks: [{ id: "w2", reason: "Fills the dress gap" }, { id: "w1", reason: "You wear divers" }],
+    picks: [
+      { id: "w2", shortName: "Tank", oneLiner: "Fills the dress gap", why: "You own no dress watch" },
+      { id: "w1", shortName: "", oneLiner: "You wear divers", why: "" },
+    ],
     summary: "Lacks a dress watch",
+    gapTag: "dress watch",
   });
+});
+
+Deno.test("parse: legacy 'reason' field still lands in why", () => {
+  const out = parseRecommendResponse(
+    '{"picks":[{"id":"w1","reason":"old style"}]}',
+    WISH_IDS,
+  );
+  assertEquals(out?.picks[0].why, "old style");
 });
 
 Deno.test("parse: dedupes ids and caps at 3 picks", () => {
   const out = parseRecommendResponse(
     JSON.stringify({
       picks: [
-        { id: "w1", reason: "a" }, { id: "w1", reason: "dup" },
-        { id: "w2", reason: "b" }, { id: "w3", reason: "c" }, { id: "w2", reason: "d" },
+        { id: "w1", why: "a" }, { id: "w1", why: "dup" },
+        { id: "w2", why: "b" }, { id: "w3", why: "c" }, { id: "w2", why: "d" },
       ],
     }),
     WISH_IDS,
@@ -146,18 +161,24 @@ Deno.test("parse: dedupes ids and caps at 3 picks", () => {
   assertEquals(out?.picks.map((p) => p.id), ["w1", "w2", "w3"]);
 });
 
-Deno.test("parse: clamps long reasons and summary, missing reason becomes empty", () => {
+Deno.test("parse: clamps every text field", () => {
   const out = parseRecommendResponse(
-    JSON.stringify({ picks: [{ id: "w1", reason: "r".repeat(500) }, { id: "w2" }], summary: "s".repeat(600) }),
+    JSON.stringify({
+      picks: [{ id: "w1", shortName: "n".repeat(100), oneLiner: "o".repeat(200), why: "r".repeat(500) }, { id: "w2" }],
+      summary: "s".repeat(600), gapTag: "g".repeat(100),
+    }),
     WISH_IDS,
   );
-  assertEquals(out?.picks[0].reason.length, 200);
-  assertEquals(out?.picks[1].reason, "");
+  assertEquals(out?.picks[0].shortName.length, 40);
+  assertEquals(out?.picks[0].oneLiner.length, 90);
+  assertEquals(out?.picks[0].why.length, 200);
+  assertEquals(out?.picks[1].why, "");
   assertEquals(out?.summary.length, 300);
+  assertEquals(out?.gapTag.length, 40);
 });
 
 Deno.test("parse: no valid picks yields null", () => {
-  assertEquals(parseRecommendResponse('{"picks":[{"id":"unknown","reason":"x"}]}', WISH_IDS), null);
+  assertEquals(parseRecommendResponse('{"picks":[{"id":"unknown","why":"x"}]}', WISH_IDS), null);
   assertEquals(parseRecommendResponse('{"picks":[]}', WISH_IDS), null);
   assertEquals(parseRecommendResponse('{"summary":"no picks"}', WISH_IDS), null);
 });
@@ -167,7 +188,8 @@ Deno.test("parse: malformed or non-JSON text yields null", () => {
   assertEquals(parseRecommendResponse('{"picks": [{"id": "w1", truncated', WISH_IDS), null);
 });
 
-Deno.test("parse: missing summary defaults to empty string", () => {
-  const out = parseRecommendResponse('{"picks":[{"id":"w1","reason":"good"}]}', WISH_IDS);
+Deno.test("parse: missing summary and gapTag default to empty strings", () => {
+  const out = parseRecommendResponse('{"picks":[{"id":"w1","why":"good"}]}', WISH_IDS);
   assertEquals(out?.summary, "");
+  assertEquals(out?.gapTag, "");
 });

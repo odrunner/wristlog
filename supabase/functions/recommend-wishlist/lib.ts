@@ -106,7 +106,7 @@ THEIR WISHLIST:
 ${p.wishlist.map(wishLine).join("\n")}
 
 Respond with ONLY a JSON object, no other text:
-{"picks":[{"id":"<wishlist id>","reason":"<one specific sentence, max 140 chars>"}],"summary":"<one sentence on what the collection is missing overall>"}
+{"picks":[{"id":"<wishlist id>","shortName":"<display name, max 18 chars, e.g. 'Explorer 36'>","oneLiner":"<why in one clause, max 60 chars>","why":"<one specific sentence, max 140 chars>"}],"summary":"<one sentence on what the collection is missing overall>","gapTag":"<the biggest gap in 2-3 plain words, e.g. 'everyday tool'>"}
 
 Rules:
 - 1 to 3 picks, best first. "id" must be copied exactly from the wishlist above.
@@ -117,10 +117,12 @@ Rules:
 - Plain language a non-expert understands.`;
 }
 
+export type RecPick = { id: string; shortName: string; oneLiner: string; why: string };
+
 export function parseRecommendResponse(
   text: string,
   wishIds: string[],
-): { picks: { id: string; reason: string }[]; summary: string } | null {
+): { picks: RecPick[]; summary: string; gapTag: string } | null {
   let obj: Record<string, unknown> | null = null;
   try {
     const m = text.match(/\{[\s\S]*\}/);
@@ -131,14 +133,21 @@ export function parseRecommendResponse(
   if (!obj || typeof obj !== "object") return null;
   const known = new Set(wishIds);
   const seen = new Set<string>();
-  const picks: { id: string; reason: string }[] = [];
+  const picks: RecPick[] = [];
   for (const p of Array.isArray(obj.picks) ? obj.picks : []) {
     const id = typeof p?.id === "string" ? p.id : "";
     if (!known.has(id) || seen.has(id)) continue;
     seen.add(id);
-    picks.push({ id, reason: clampText(p?.reason, 200) });
+    picks.push({
+      id,
+      shortName: clampText(p?.shortName, 40),
+      oneLiner: clampText(p?.oneLiner, 90),
+      // `reason` is the pre-redesign field name — accept it so an older
+      // deployed prompt (or a retried cached engine answer) still parses.
+      why: clampText(p?.why ?? p?.reason, 200),
+    });
     if (picks.length === 3) break;
   }
   if (!picks.length) return null;
-  return { picks, summary: clampText(obj.summary, 300) };
+  return { picks, summary: clampText(obj.summary, 300), gapTag: clampText(obj.gapTag, 40) };
 }

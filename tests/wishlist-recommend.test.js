@@ -107,34 +107,46 @@ describe('recommendCacheKey', () => {
 describe('index.html wiring', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  it('ships ungated: no wishlist_recommend experiment branch remains', () => {
+  it('ships ungated with no Recommend buttons: picks auto-load on both surfaces', () => {
     expect(html).not.toMatch(/experiment\('wishlist_recommend'\)/);
-    expect(html).toMatch(/visible\.length >= 2 && !_wlSelect && currentUser/);
-  });
-  it('has the wishlist header button and the sim-bar button call the same flow', () => {
-    expect(html).toMatch(/id="wl-rec-btn"[^>]*onclick="recommendFromWishlist\('wishlist'\)"/);
-    expect(html).toMatch(/recommendFromWishlist\('sim'\)/);
+    expect(html).not.toMatch(/wl-rec-btn/);
+    const enter = html.slice(html.indexOf('function enterCollectionSim'));
+    expect(enter.slice(0, 500)).toMatch(/primeRecommendations\(\)/);
+    const wl = html.slice(html.indexOf('function _renderWishlistBody'));
+    expect(wl.slice(0, 1400)).toMatch(/primeRecommendations\(\)/);
   });
   it('calls the recommend-wishlist edge function via authedFetch', () => {
     expect(html).toMatch(/authedFetch\(SUPABASE_URL \+ '\/functions\/v1\/recommend-wishlist'/);
   });
-  it('blocks demo mode before spending a paid call', () => {
-    const fn = html.slice(html.indexOf('async function recommendFromWishlist'));
-    expect(fn.slice(0, 600)).toMatch(/demoGuard\(\)/);
+  it('never spends a paid call in demo mode', () => {
+    const fn = html.slice(html.indexOf('function primeRecommendations'));
+    expect(fn.slice(0, 300)).toMatch(/_isDemoMode/);
   });
-  it('renders reasons through escHtml', () => {
-    const fn = html.slice(html.indexOf('function recommendPanelHTML'));
-    expect(fn.slice(0, 2000)).toMatch(/escHtml\(/);
+  it('rail renders names and one-liners through escHtml, thumbnails with fallback', () => {
+    const fn = html.slice(html.indexOf('function recRailHTML'));
+    const body = fn.slice(0, 3000);
+    expect(body).toMatch(/escHtml\(/);
+    expect(body).toMatch(/rec-pick-avatar/);
+    expect(body).toMatch(/rec-card-thumb/);
   });
-  it('each pick shows the wishlist image (or an initials fallback)', () => {
-    const fn = html.slice(html.indexOf('function recommendPanelHTML'));
-    expect(fn.slice(0, 2000)).toMatch(/rec-pick-imgwrap/);
-    expect(fn.slice(0, 2000)).toMatch(/rec-pick-avatar/);
+  it('sim cards toggle the scenario; wishlist cards toggle the tile highlight', () => {
+    const fn = html.slice(html.indexOf('function recRailHTML'));
+    const body = fn.slice(0, 3000);
+    expect(body).toMatch(/In simulation ✓/);
+    expect(body).toMatch(/\+ Add/);
+    expect(body).toMatch(/simToggleWish\(/);
+    expect(body).toMatch(/recToggleHighlight\(/);
   });
-  it('panel reuses the Enhance AI scheme (badge cream + gold-deep eyebrow)', () => {
-    expect(html).toMatch(/\.rec-panel \{[^}]*var\(--badge-bg\)/);
-    expect(html).toMatch(/\.rec-panel-title \{[^}]*var\(--gold-deep\)/);
+  it('wishlist render decorates picked tiles after every view branch', () => {
+    expect(html).toMatch(/function renderWishlist\(force\) \{\s*_renderWishlistBody\(force\);\s*decorateWishlistPicks\(\);/);
+  });
+  it('rail is built from existing design pieces, no bespoke scheme', () => {
+    expect(html).toMatch(/class="panel rec-card/);
+    expect(html).toMatch(/<span class="eyebrow">✦/);
     expect(html).not.toMatch(/var\(--ai\)/);
-    expect(html).not.toMatch(/class="panel rec-panel"/);
+  });
+  it('pre-redesign cached results (no oneLiner) are treated as a cache miss', () => {
+    const fn = html.slice(html.indexOf('function primeRecommendations'));
+    expect(fn.slice(0, 1200)).toMatch(/oneLiner !== undefined/);
   });
 });

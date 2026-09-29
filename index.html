@@ -1277,17 +1277,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-tile-url { font-size: var(--fs-sm); color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .wl-tile-url:hover { color: var(--gold-text); }
 
-    /* Collection "What-if" simulation (shipped to everyone 2026-09-28) */
-    .sim-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-3); padding: var(--space-2-5) var(--space-3-5); }
+    /* Collection "What-if" simulation (redesigned 2026-09-29: header mode
+       chips, sticky totals, AI pick rail, sticky Reset / Save scenario bar). */
+    .sim-totals { position: sticky; top: 0; z-index: var(--z-fab); display: flex; align-items: flex-start; gap: var(--space-6); margin-bottom: var(--space-3); padding: var(--space-2-5) var(--space-3-5); box-shadow: var(--shadow-1); }
     .sim-stat-lbl { font-size: var(--fs-2xs); color: var(--muted); text-transform: uppercase; letter-spacing: var(--ls-tight); }
     .sim-stat-val { font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); }
     .sim-stat-delta { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--muted); }
     .sim-delta-up { color: var(--success-text); }
     .sim-delta-down { color: var(--danger); }
-    .sim-unvalued, .sim-hint { font-size: var(--fs-sm); color: var(--muted); }
-    .sim-hint { flex-basis: 100%; }
-    /* The action buttons wrap below the stats as one row, never one by one. */
-    .sim-actions { display: flex; align-items: center; gap: var(--space-2-5); }
+    .sim-unvalued { font-size: var(--fs-sm); color: var(--muted); }
+    .sim-helper { font-size: var(--fs-sm); color: var(--muted); margin: var(--space-1) 0 var(--space-2-5); }
     .sim-grid { margin-bottom: var(--space-4); }
     /* Compact tiles — much smaller, tighter, image-only, so a whole collection or
        wishlist reads on one screen. Shared by the Collection/Wishlist 'compact'
@@ -1296,21 +1295,35 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tile-compact { padding: var(--space-0-5); gap: 0; }
     .tile-compact .wl-tile-avatar { font-size: var(--fs-base); }
     .sim-tile { cursor: pointer; }
-    .sim-tile.sim-selling { border-color: var(--danger); }
-    .sim-tile.sim-selling .wl-tile-img, .sim-tile.sim-selling .wl-tile-avatar { opacity: var(--opacity-dim); }
-    .sim-tile.sim-added { border-color: var(--success); }
+    .sim-pill { position: absolute; z-index: var(--z-raised-2); }
+    .sim-pill-new { top: var(--space-1); left: var(--space-1); }
+    .sim-pill-sell { bottom: var(--space-1); left: 50%; transform: translateX(-50%); }
+    .sim-tile.sim-selling::after { content: ''; position: absolute; inset: 0; z-index: var(--z-raised); background: color-mix(in srgb, var(--bg) 72%, transparent); border-radius: inherit; }
+    .sim-tile.sim-added { border-color: var(--gold); box-shadow: var(--ring); }
     .sim-section-title { font-size: var(--fs-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-tight); color: var(--muted); margin: var(--space-4) 0 var(--space-2); }
-    /* "Recommend me (from wishlist)" — shipped to everyone 2026-09-28. Reuses
-       the app's AI scheme (the Enhance story card): badge cream + gold-deep
-       uppercase eyebrow headings + badge body ink, all theme-aware. */
-    .rec-panel { display: block; padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-3-5); background: var(--badge-bg); border-radius: var(--radius); }
-    .rec-panel-title { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-2xs); font-weight: var(--fw-medium); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--gold-deep); }
-    .rec-summary { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--badge-text); margin-top: var(--space-1); }
-    .rec-pick { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
-    .rec-pick-imgwrap { width: var(--size-12); height: var(--size-12); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; border: 1px solid var(--badge-border); background: var(--surface); }
-    .rec-pick-avatar { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--gold-deep); background: var(--gold-dim); }
-    .rec-pick-name { font-weight: var(--fw-semibold); }
-    .rec-pick-reason { font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--badge-text); }
+    .sim-fab { position: sticky; bottom: var(--space-4); z-index: var(--z-fab); display: flex; gap: var(--space-2-5); margin-top: var(--space-4); padding: var(--space-2-5); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); }
+    .sim-fab-reset { flex: 1; }
+    .sim-fab-save { flex: 2; }
+    /* AI pick rail (What-if + Wishlist) — composed from existing pieces:
+       .eyebrow row, .panel cards, .btn variants, .pill badges, --ring. */
+    .rec-rail-wrap { margin-bottom: var(--space-2-5); }
+    .rec-gap { font-size: var(--fs-sm); color: var(--muted); }
+    .rec-rail { display: flex; gap: var(--space-2-5); overflow-x: auto; padding: var(--space-1) var(--space-0-5) var(--space-2); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .rec-rail::-webkit-scrollbar { display: none; }
+    .rec-card { flex: 0 0 var(--size-40); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2-5); }
+    .rec-card[role="button"] { cursor: pointer; }
+    .rec-card.rec-card-hl { border-color: var(--gold); box-shadow: var(--ring); }
+    .rec-card-top { display: flex; align-items: center; gap: var(--space-2); }
+    .rec-card-thumb { position: relative; width: var(--size-11); height: var(--size-11); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); background: var(--surface2); }
+    .rec-card-name { font-size: var(--fs-sm); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rec-card-price { font-size: var(--fs-xs); color: var(--muted); }
+    .rec-card-line { font-size: var(--fs-xs); line-height: var(--lh-snug); color: var(--muted); }
+    .rec-pick-avatar { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--gold-text); background: var(--gold-dim); }
+    .rec-rank-badge { position: absolute; top: var(--space-0-5); left: var(--space-0-5); z-index: var(--z-raised-2); display: flex; align-items: center; justify-content: center; width: var(--size-5); height: var(--size-5); border-radius: var(--radius-pill); background: var(--gold); color: var(--white); border: 2px solid var(--surface); font-size: var(--fs-2xs); font-weight: var(--fw-bold); }
+    /* Wishlist tiles the AI picked: faint gold ring, stronger when the matching
+       rail card is tapped. The tile's own 2px border doubles as the ring. */
+    .wl-tile.rec-picked { border-color: var(--gold-lt); }
+    .wl-tile.rec-picked-hl { border-color: var(--gold); box-shadow: var(--ring); }
 
     /* ── QUICK-LOG BUTTON (collection card) ── */
     .btn-quicklog {
@@ -1478,6 +1491,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Compact header — taller for mobile */
       .header-inner { padding: 0 var(--space-4); gap: var(--space-1-5); align-items: center; }
       .logo { font-size: var(--fs-xl); padding: var(--space-5) 0; }
+      /* What-if action bar clears the fixed bottom tab bar */
+      .sim-fab { bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0px)); }
 
       /* Fixed bottom tab bar */
       nav {
@@ -2711,11 +2726,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">What-If Simulator</div>
-        <div class="body-muted">Tap <strong>What-if</strong> in the sort bar above your collection to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count and estimated value update against your real collection. Nothing changes for real &#8212; it&#8217;s a sandbox, and your scenario is remembered until you reset it.</div>
+        <div class="body-muted">Switch to <strong>What-if</strong> next to the My Collection title to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count, estimated value and change update against your real collection in the bar that stays at the top. <strong>Save scenario</strong> keeps it for next time; nothing changes for real.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">AI Wishlist Picks</div>
-        <div class="body-muted">Tap <strong>Recommend</strong> at the top of your Wishlist (or inside the What-if simulator) and AI ranks your wishlist against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count. You get up to three picks with a reason for each; in the simulator, tap <strong>Try it</strong> to drop a pick straight into your scenario. Needs at least two wishlist watches.</div>
+        <div class="body-muted">Your Wishlist and the What-if simulator now show <strong>AI picks</strong> automatically: up to three watches from your wishlist that best complement what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. In the simulator, tap <strong>+ Add</strong> on a pick to drop it into your scenario; on the Wishlist, tap a pick to spot it in your list. Needs at least two wishlist watches.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">Compact View</div>
@@ -3292,6 +3307,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
+      <!-- Collection | What-if mode switch — same chips as the admin tabs. -->
+      <div id="coll-mode-seg" class="chips" role="tablist" aria-label="Collection mode" style="display:none;">
+        <button type="button" id="coll-seg-collection" class="chip selected" role="tab" aria-selected="true" onclick="exitCollectionSim()">Collection</button>
+        <button type="button" id="coll-seg-whatif" class="chip" role="tab" aria-selected="false" onclick="enterCollectionSim()">What-if</button>
+      </div>
       <div class="row">
         <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-md btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -4020,7 +4040,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M21 3l-7 7"/><path d="M3 3l7 7"/><path d="M16 21h5v-5"/><path d="M8 21H3v-5"/><path d="M21 21l-7-7"/><path d="M3 21l7-7"/></svg> What-If Simulator</div>
-            <div class="help-mini-desc">Tap <strong>What-if</strong> in the sort bar to try changes before making them: mark watches for sale, add wishlist watches, and see the count and estimated value move against your real collection. Tap <strong>Recommend</strong> there for AI picks from your wishlist. Nothing changes for real, and your scenario is kept until you reset it.</div>
+            <div class="help-mini-desc">Switch to <strong>What-if</strong> next to the My Collection title to try changes before making them: mark watches for sale, add wishlist watches, and see the count, value and change move against your real collection. AI picks from your wishlist appear automatically &#8212; tap <strong>+ Add</strong> to try one. Nothing changes for real; <strong>Save scenario</strong> keeps it until you reset.</div>
           </div>
         </div>
       </div>
@@ -4068,7 +4088,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Get AI picks from your wishlist</div>
-              <div class="help-step-desc">Tap <strong>Recommend</strong> at the top of the Wishlist tab and AI ranks your wishlist against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count. You get up to three picks with a reason for each. Needs at least two wishlist watches; also available inside the Collection&#8217;s What-if simulator, where a pick can be dropped straight into your scenario.</div>
+              <div class="help-step-desc">The Wishlist tab shows <strong>AI picks</strong> automatically: up to three watches ranked against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list. Needs at least two wishlist watches; the picks also appear in the Collection&#8217;s What-if simulator, where <strong>+ Add</strong> drops one straight into your scenario.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4793,6 +4813,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-wishlist" class="page">
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
+      <span id="wl-count" class="text-meta"></span>
       <div class="wl-actions">
         <!-- One icon cycles list → folders → gallery → compact → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
@@ -4800,7 +4821,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
-        <button id="wl-rec-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="recommendFromWishlist('wishlist')" title="Recommend from wishlist" aria-label="Recommend from wishlist" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg><span class="wl-actions-text">Recommend</span></button>
         <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
@@ -8011,7 +8031,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.34';
+const APP_VERSION = '28.19.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23355,12 +23375,10 @@ function renderCollSortBar() {
   const bar = document.getElementById('coll-sort-bar');
   if (!bar) return;
   if (!watches.length) { bar.innerHTML = ''; return; }
-  // What-if simulation entry. In sim mode the bar
-  // reduces to this one active chip — sort and photo toggles would act on the
-  // grid the user isn't looking at.
-  const simChip = currentUser
-    ? `<button class="coll-sort-chip sim-chip${simMode ? ' active' : ''}" onclick="${simMode ? 'exitCollectionSim()' : 'enterCollectionSim()'}" title="Simulate selling watches and adding from your wishlist">What-if</button>` : '';
-  if (simMode) { bar.innerHTML = `<div class="coll-sort-bar">${simChip}</div>`; return; }
+  // In What-if the sort bar disappears entirely — the header segmented chips
+  // switch modes, and sort/photo toggles would act on the grid the user isn't
+  // looking at.
+  if (simMode) { bar.innerHTML = ''; return; }
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
   // Photo toggle: show if any watch has a post with a photo (cards and gallery tiles)
   const anyPostPhoto = (collView === 'grid' || collView === 'gallery' || collView === 'compact') && _anyLogHasPhoto;
@@ -23379,7 +23397,7 @@ function renderCollSortBar() {
   ] : [];
   bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}${photoToggle}${simChip}</div>`;
+  ).join('')}${photoToggle}</div>`;
 }
 
 function toggleCollPhotoMode(checked) {
@@ -23698,6 +23716,14 @@ function renderCollection(force) {
     if (enhLbl) enhLbl.textContent = enhN > 0 ? `Enhance ${enhN}` : 'Enhance';
   }
   syncCollViewBtn();
+  const seg = document.getElementById('coll-mode-seg');
+  if (seg) {
+    seg.style.display = (currentUser && watches.length) ? 'flex' : 'none';
+    const segColl = document.getElementById('coll-seg-collection');
+    const segSim = document.getElementById('coll-seg-whatif');
+    if (segColl) { segColl.classList.toggle('selected', !simMode); segColl.setAttribute('aria-selected', String(!simMode)); }
+    if (segSim) { segSim.classList.toggle('selected', !!simMode); segSim.setAttribute('aria-selected', String(!!simMode)); }
+  }
   renderCollSortBar();
   if (simMode) { renderCollectionSim(); return; }
   renderTagFilterBar();
@@ -24038,6 +24064,7 @@ function enterCollectionSim() {
   simState = simStateFromStore(safeGetJSON(simKey(), null));
   simMode = true;
   logSimOpened();
+  primeRecommendations();   // AI picks load with the mode — there is no Recommend button
   renderCollection(true);
 }
 function exitCollectionSim() {
@@ -24073,10 +24100,12 @@ function simTileHTML(w, kind) {
   const stateCls = kind === 'selling' ? ' sim-selling' : kind === 'added' ? ' sim-added' : '';
   // Image-only: the tile is tiny so the whole collection fits one screen; the
   // watch's name travels in the tooltip and the aria-label, its sim state in
-  // the border colour and dimming.
+  // the NEW / SELL pill, the ring and the overlay.
+  const pill = kind === 'selling' ? `<span class="pill u-bg-danger u-c-white sim-pill sim-pill-sell">SELL</span>`
+    : kind === 'added' ? `<span class="pill u-bg-gold-dim u-c-gold-text sim-pill sim-pill-new">NEW</span>` : '';
   const lbl = (w.brand || '') + ' ' + (w.name || '') + (kind === 'selling' ? ' — selling' : kind === 'added' ? ' — added from wishlist' : '');
   return `<div class="wl-tile tile-compact sim-tile${stateCls}" data-id="${w.id}" onclick="${click}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${escAttr(lbl)}" aria-label="${escAttr(lbl)}">
-    <div class="wl-tile-imglink">${imgInner}</div>
+    <div class="wl-tile-imglink">${imgInner}</div>${pill}
   </div>`;
 }
 
@@ -24103,26 +24132,28 @@ function renderCollectionSim() {
     if (!b.purchaseDate) return -1;
     return b.purchaseDate.localeCompare(a.purchaseDate);
   });
-  const tiles = sortedAll.map(w => simTileHTML(w, hidden.has(w.id) ? 'selling' : 'kept'))
-    .concat(added.map(w => simTileHTML(w, 'added'))).join('');
+  // Added wishlist watches lead the grid (NEW), then the collection in the
+  // order the user just left (newest purchase first).
+  const tiles = added.map(w => simTileHTML(w, 'added'))
+    .concat(sortedAll.map(w => simTileHTML(w, hidden.has(w.id) ? 'selling' : 'kept'))).join('');
   const pool = wishlist.filter(w => !simState.added.includes(w.id));
   const unval = sim.unvaluedCount ? `<div class="sim-unvalued">${sim.unvaluedCount} without a price</div>` : '';
+  const changeCls = dVal > 0 ? ' sim-delta-up' : dVal < 0 ? ' sim-delta-down' : '';
   el.className = '';
-  el.innerHTML = `<div class="panel sim-bar">
-      <div class="sim-stat"><div class="sim-stat-lbl">Watches</div><div class="sim-stat-val">${list.length} <span class="sim-stat-delta${deltaCls(dCount)}">${fmtDelta(dCount)}</span></div></div>
-      <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)} <span class="sim-stat-delta${deltaCls(dVal)}">${fmtDelta(dVal, true)}</span></div>${unval}</div>
-      <span class="grow"></span>
-      <div class="sim-actions">
-        ${pool.length >= 2 ? `<button id="sim-rec-btn" class="btn btn-ghost btn-sm" onclick="recommendFromWishlist('sim')">Recommend</button>` : ''}
-        <button class="btn btn-ghost btn-sm" onclick="resetCollectionSim()">Reset</button>
-        <button class="btn btn-primary btn-sm" onclick="exitCollectionSim()">Done</button>
-      </div>
-      <div class="sim-hint">Tap a watch to mark it for sale — tap it again to keep it. Deltas compare against your real collection; nothing is changed for real.</div>
+  el.innerHTML = `<div class="panel sim-totals">
+      <div class="sim-stat"><div class="sim-stat-lbl">Watches</div><div class="sim-stat-val">${list.length}${dCount !== 0 ? ` <span class="sim-stat-delta${deltaCls(dCount)}">${fmtDelta(dCount)}</span>` : ''}</div></div>
+      <div class="sim-stat" title="Market value where saved, otherwise what you paid"><div class="sim-stat-lbl">Est. value</div><div class="sim-stat-val">${fmtMoney(sim.total)}</div>${unval}</div>
+      <div class="sim-stat"><div class="sim-stat-lbl">Change</div><div class="sim-stat-val${changeCls}">${dVal === 0 ? '—' : fmtDelta(dVal, true)}</div></div>
     </div>
-    ${recommendPanelHTML('sim')}
+    ${recRailHTML('sim')}
+    <div class="sim-helper">Tap a watch to mark it for sale</div>
     <div class="wl-gallery wl-compact sim-grid">${tiles}</div>
     ${pool.length ? `<div class="sim-section-title">Add from wishlist</div>
-    <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}`;
+    <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}
+    <div class="panel sim-fab">
+      <button class="btn btn-ghost sim-fab-reset" onclick="resetCollectionSim()">Reset</button>
+      <button class="btn btn-primary sim-fab-save" onclick="exitCollectionSim()">Save scenario</button>
+    </div>`;
 }
 
 // ── "Recommend me (from wishlist)" — shipped to everyone 2026-09-28 ──────────
@@ -24171,82 +24202,108 @@ function recommendCacheKey(payload) {
 
 function recKey() { return currentUser ? 'wr_rec_' + currentUser.id : null; }
 
-async function recommendFromWishlist(source) {
-  if (demoGuard()) return;
-  if (!currentUser || _recLoading) return;
+// Picks load automatically when a surface opens (there is no Recommend button):
+// cache-first (7 days, keyed on the data), one silent background fetch on a
+// miss, and _recKeyLoaded stops render loops from re-fetching the same data.
+let _recKeyLoaded = null;
+function primeRecommendations() {
+  if (!currentUser || _isDemoMode) return;
   const payload = buildRecommendPayload(watches, logs, wishlist, Date.now());
-  if (payload.wishlist.length < 2) { toast('Add at least two wishlist watches first', 'info'); return; }
+  if (payload.wishlist.length < 2) { _recResult = null; return; }
   const key = recommendCacheKey(payload);
+  if (_recKeyLoaded === key) return;
   const cached = safeGetJSON(recKey(), null);
-  if (cached && cached.key === key && cached.result && Date.now() - cached.ts < 7 * 86400000) {
+  // Pre-redesign cached results carry no oneLiner — treat them as a miss.
+  if (cached && cached.key === key && cached.result && cached.result.picks && cached.result.picks[0]
+      && cached.result.picks[0].oneLiner !== undefined && Date.now() - cached.ts < 7 * 86400000) {
     _recResult = cached.result;
-    renderRecommendResult(source);
+    _recKeyLoaded = key;
     return;
   }
-  payload.source = source;
-  const btn = document.getElementById(source === 'sim' ? 'sim-rec-btn' : 'wl-rec-btn');
-  const prevHtml = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = 'Thinking…'; }
+  fetchRecommendations(payload, key);
+}
+
+async function fetchRecommendations(payload, key) {
+  if (_recLoading) return;
   _recLoading = true;
+  payload.source = simMode ? 'sim' : 'wishlist';
   try {
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/recommend-wishlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }, 60000);
-    if (r.status === 429) { toast('Daily recommendation limit reached — try again tomorrow', 'info'); return; }
+    if (!r.ok) return;   // auto-loaded surface: no result simply means no rail
     const data = await r.json();
-    if (!r.ok || !Array.isArray(data.picks) || !data.picks.length) {
-      toast(data.message || 'Could not get recommendations — try again later', 'error');
-      return;
-    }
-    _recResult = { picks: data.picks, summary: data.summary || '' };
+    if (!Array.isArray(data.picks) || !data.picks.length) return;
+    _recResult = { picks: data.picks, summary: data.summary || '', gapTag: data.gapTag || '' };
+    _recKeyLoaded = key;
     safeSetJSON(recKey(), { key, ts: Date.now(), result: _recResult });
-    if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'wl_rec', meta: { source, picks: _recResult.picks.length } }).then(() => {});
-    renderRecommendResult(source);
+    if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'wl_rec', meta: { source: payload.source, picks: _recResult.picks.length } }).then(() => {});
+    if (simMode) renderCollection(true);
+    else renderWishlist(true);
   } catch (e) {
-    toast('Could not get recommendations — try again later', 'error');
+    // Silent: the rail just doesn't appear.
   } finally {
     _recLoading = false;
-    if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
   }
 }
 
-// Panel shared by both surfaces. In the sim it re-renders with the grid, and
-// each pick can be tried in the scenario; on the Wishlist page it is static.
-// Its own card (not .panel): the AI-accented border/background mark the content
-// as AI-generated, like the enhance-nudge card has its own card styles.
-function recommendPanelHTML(source) {
+// The AI pick rail, shared by What-if ('sim': + Add buttons) and the Wishlist
+// ('wishlist': rank badges, tap to highlight the matching tile). Built from
+// existing pieces: .eyebrow, .panel cards, .btn variants, .pill.
+function recRailHTML(surface) {
   if (!_recResult || !Array.isArray(_recResult.picks)) return '';
-  const rows = _recResult.picks.map(p => {
+  const cards = _recResult.picks.map((p, i) => {
     const w = (wishlist || []).find(x => x && x.id === p.id);
-    const name = w ? ((w.brand || '') + ' ' + (w.name || '')).trim() : '';
-    if (!name) return '';
+    if (!w) return '';
+    const name = (p.shortName || ((w.brand || '') + ' ' + (w.name || ''))).trim();
+    const price = (w.marketPrice ?? w.price) != null ? fmtMoney(w.marketPrice ?? w.price) : '';
     const img = w.image
-      ? `<div class="rec-pick-imgwrap"><img loading="lazy" src="${escHtml(w.image)}" class="img-cover" alt=""></div>`
-      : `<div class="rec-pick-imgwrap"><div class="rec-pick-avatar">${initials(w.brand, w.name)}</div></div>`;
-    const action = source === 'sim'
+      ? `<img loading="lazy" src="${escHtml(w.image)}" class="img-cover" alt="">`
+      : `<div class="rec-pick-avatar">${initials(w.brand, w.name)}</div>`;
+    const badge = surface === 'wishlist' ? `<span class="rec-rank-badge">${i + 1}</span>` : '';
+    const btn = surface === 'sim'
       ? (simState.added.includes(p.id)
-        ? `<button class="btn btn-ghost btn-xs" onclick="simToggleWish('${p.id}')">Added ✓</button>`
-        : `<button class="btn btn-primary btn-xs" onclick="simToggleWish('${p.id}')">Try it</button>`)
+        ? `<button class="btn btn-ghost-gold btn-sm btn-block" onclick="simToggleWish('${p.id}')">In simulation ✓</button>`
+        : `<button class="btn btn-primary btn-sm btn-block" onclick="simToggleWish('${p.id}')">+ Add</button>`)
       : '';
-    return `<div class="rec-pick">${img}<div class="grow"><div class="rec-pick-name">${escHtml(name)}</div>${p.reason ? `<div class="rec-pick-reason">${escHtml(p.reason)}</div>` : ''}</div>${action}</div>`;
+    const hl = surface === 'wishlist' && _recHighlight === p.id ? ' rec-card-hl' : '';
+    const tap = surface === 'wishlist' ? ` onclick="recToggleHighlight('${p.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"` : '';
+    const full = ((w.brand || '') + ' ' + (w.name || '')).trim();
+    return `<div class="panel rec-card${hl}"${tap} title="${escAttr(p.why || full)}" aria-label="${escAttr(full)}">
+      <div class="rec-card-top"><div class="rec-card-thumb">${img}${badge}</div><div class="grow u-minw-0"><div class="rec-card-name">${escHtml(name)}</div>${price ? `<div class="rec-card-price">${price}</div>` : ''}</div></div>
+      ${p.oneLiner || p.why ? `<div class="rec-card-line">${escHtml(p.oneLiner || p.why)}</div>` : ''}
+      ${btn}</div>`;
   }).join('');
-  if (!rows) return '';
-  return `<div class="rec-panel"><div class="row-between"><div class="rec-panel-title">⭐ AI picks from your wishlist</div><button class="btn btn-ghost btn-xs" onclick="dismissRecommend()" aria-label="Dismiss recommendations">✕</button></div>${_recResult.summary ? `<div class="rec-summary">${escHtml(_recResult.summary)}</div>` : ''}${rows}</div>`;
+  if (!cards) return '';
+  const label = surface === 'sim' ? 'AI picks from your wishlist' : 'AI picks for your collection';
+  const tag = _recResult.gapTag ? `<span class="rec-gap">Fills: ${escHtml(_recResult.gapTag)}</span>` : '';
+  return `<div class="rec-rail-wrap"><div class="row-between"><span class="eyebrow">✦ ${label}</span>${tag}</div><div class="rec-rail">${cards}</div></div>`;
 }
 
-function renderRecommendResult(source) {
-  if (source === 'sim') { renderCollection(true); return; }
-  const el = document.getElementById('wl-rec-panel');
-  if (el) el.innerHTML = recommendPanelHTML('wishlist');
+// Wishlist: tapping a pick card highlights it and rings the matching grid tile.
+let _recHighlight = null;
+function recToggleHighlight(id) {
+  _recHighlight = _recHighlight === id ? null : id;
+  renderWishlist(true);
 }
 
-function dismissRecommend() {
-  _recResult = null;
-  const el = document.getElementById('wl-rec-panel');
-  if (el) el.innerHTML = '';
-  if (simMode) renderCollection(true);
+// Rank badges + rings on the wishlist tiles that the AI picked. Runs after the
+// grid renders; tiles are found by data-id so every tile view works.
+function decorateWishlistPicks() {
+  if (!_recResult || !Array.isArray(_recResult.picks)) return;
+  const grid = document.getElementById('wishlist-grid');
+  if (!grid) return;
+  _recResult.picks.forEach((p, i) => {
+    grid.querySelectorAll(`.wl-tile[data-id="${p.id}"]`).forEach(tile => {
+      tile.classList.add('rec-picked');
+      tile.classList.toggle('rec-picked-hl', _recHighlight === p.id);
+      if (!tile.querySelector('.rec-rank-badge')) {
+        tile.insertAdjacentHTML('afterbegin', `<span class="rec-rank-badge">${i + 1}</span>`);
+      }
+    });
+  });
 }
 
 function buildSwatches() {
@@ -29824,6 +29881,10 @@ function wlTileImgFallback(img) {
 }
 
 function renderWishlist(force) {
+  _renderWishlistBody(force);
+  decorateWishlistPicks();   // rank badges + rings on AI-picked tiles, any view
+}
+function _renderWishlistBody(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
   _lastRenderedGen.wishlist = _dataGen;
   const el = document.getElementById('wishlist-grid');
@@ -29838,10 +29899,14 @@ function renderWishlist(force) {
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
   if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
-  const recBtn = document.getElementById('wl-rec-btn');
-  if (recBtn) recBtn.style.display = (visible.length >= 2 && !_wlSelect && currentUser) ? '' : 'none';
+  primeRecommendations();   // AI picks auto-load (cache-first); rail below
   const recPanel = document.getElementById('wl-rec-panel');
-  if (recPanel && (visible.length < 2 || _wlSelect)) recPanel.innerHTML = '';
+  if (recPanel) recPanel.innerHTML = (visible.length >= 2 && !_wlSelect && currentUser) ? recRailHTML('wishlist') : '';
+  const countEl = document.getElementById('wl-count');
+  if (countEl) {
+    const wlTotal = visible.reduce((s, w) => s + (Number(w.marketPrice ?? w.price) || 0), 0);
+    countEl.textContent = visible.length ? `${visible.length} watch${visible.length === 1 ? '' : 'es'}${wlTotal > 0 ? ' · ' + fmtMoney(wlTotal) : ''}` : '';
+  }
   if (bar) {
     bar.style.display = (_wlSelect && visible.length) ? 'flex' : 'none';
     if (_wlSelect) {
