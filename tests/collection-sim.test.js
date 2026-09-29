@@ -88,13 +88,16 @@ describe('simCollectionValue', () => {
 });
 
 describe('collection_sim wiring in index.html', () => {
-  it('ships ungated: the header mode chips switch Collection / What-if', () => {
+  it('ships ungated: the header What-if button enters the simulation', () => {
     expect(html).not.toMatch(/experiment\('collection_sim'\)/);
-    expect(html).toMatch(/id="coll-seg-whatif"[^>]*onclick="enterCollectionSim\(\)"/);
-    expect(html).toMatch(/id="coll-seg-collection"[^>]*onclick="exitCollectionSim\(\)"/);
+    expect(html).toMatch(/id="coll-whatif-btn"[^>]*onclick="enterCollectionSim\(\)"/);
   });
-  it('What-if keeps Save scenario + Reset in the sticky action bar', () => {
-    expect(html).toMatch(/sim-fab-save" onclick="exitCollectionSim\(\)">Save scenario/);
+  it('hides the real-collection header actions while simulating', () => {
+    expect(html).toMatch(/id="coll-header-actions"/);
+    expect(html).toMatch(/collActs\.style\.display = simMode \? 'none' : ''/);
+  });
+  it('What-if keeps Done + Reset in the sticky action bar', () => {
+    expect(html).toMatch(/sim-fab-save" onclick="exitCollectionSim\(\)">Done/);
     expect(html).toMatch(/sim-fab-reset" onclick="resetCollectionSim\(\)">Reset/);
   });
   it('logs a sim_opened feature_event, never in demo mode', () => {

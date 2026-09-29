@@ -2726,7 +2726,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">What-If Simulator</div>
-        <div class="body-muted">Switch to <strong>What-if</strong> next to the My Collection title to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count, estimated value and change update against your real collection in the bar that stays at the top. <strong>Save scenario</strong> keeps it for next time; nothing changes for real.</div>
+        <div class="body-muted">Tap <strong>What-if</strong> at the top of your collection to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count, estimated value and change update against your real collection in the bar that stays at the top. Your scenario is kept for next time; nothing changes for real.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">AI Wishlist Picks</div>
@@ -3306,19 +3306,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
-      <h1 class="page-title">My Collection</h1>
-      <!-- Collection | What-if mode switch — same chips as the admin tabs. -->
-      <div id="coll-mode-seg" class="chips" role="tablist" aria-label="Collection mode" style="display:none;">
-        <button type="button" id="coll-seg-collection" class="chip selected" role="tab" aria-selected="true" onclick="exitCollectionSim()">Collection</button>
-        <button type="button" id="coll-seg-whatif" class="chip" role="tab" aria-selected="false" onclick="enterCollectionSim()">What-if</button>
-      </div>
       <div class="row">
+        <h1 class="page-title">My Collection</h1>
+        <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+      </div>
+      <div class="row" id="coll-header-actions">
         <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-md btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary btn-md u-gap-1-5 u-ws-nowrap u-d-inline-flex" onclick="openPhotoIdentify()" title="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-enhance-all-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-md" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;">$</button>
-        <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="coll-whatif-btn" class="btn btn-ghost u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSim()" title="Simulate selling watches and adding from your wishlist" style="display:none;">What-if</button>
       </div>
     </div>
     <div id="coll-select-bar" class="panel u-items-center u-fw--wrap u-mb-3 coll-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
@@ -4040,7 +4038,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M21 3l-7 7"/><path d="M3 3l7 7"/><path d="M16 21h5v-5"/><path d="M8 21H3v-5"/><path d="M21 21l-7-7"/><path d="M3 21l7-7"/></svg> What-If Simulator</div>
-            <div class="help-mini-desc">Switch to <strong>What-if</strong> next to the My Collection title to try changes before making them: mark watches for sale, add wishlist watches, and see the count, value and change move against your real collection. AI picks from your wishlist appear automatically &#8212; tap <strong>+ Add</strong> to try one. Nothing changes for real; <strong>Save scenario</strong> keeps it until you reset.</div>
+            <div class="help-mini-desc">Tap <strong>What-if</strong> at the top of your collection to try changes before making them: mark watches for sale, add wishlist watches, and see the count, value and change move against your real collection. AI picks from your wishlist appear automatically &#8212; tap <strong>+ Add</strong> to try one. Nothing changes for real, and your scenario is kept until you reset it.</div>
           </div>
         </div>
       </div>
@@ -8031,7 +8029,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.19.49';
+const APP_VERSION = '28.19.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23716,14 +23714,13 @@ function renderCollection(force) {
     if (enhLbl) enhLbl.textContent = enhN > 0 ? `Enhance ${enhN}` : 'Enhance';
   }
   syncCollViewBtn();
-  const seg = document.getElementById('coll-mode-seg');
-  if (seg) {
-    seg.style.display = (currentUser && watches.length) ? 'flex' : 'none';
-    const segColl = document.getElementById('coll-seg-collection');
-    const segSim = document.getElementById('coll-seg-whatif');
-    if (segColl) { segColl.classList.toggle('selected', !simMode); segColl.setAttribute('aria-selected', String(!simMode)); }
-    if (segSim) { segSim.classList.toggle('selected', !!simMode); segSim.setAttribute('aria-selected', String(!!simMode)); }
-  }
+  const whatifBtn = document.getElementById('coll-whatif-btn');
+  if (whatifBtn) whatifBtn.style.display = (currentUser && watches.length) ? '' : 'none';
+  // The header actions (add, Add from Photo, Enhance, $, What-if) act on the
+  // REAL collection — in the What-if sandbox they'd be misleading, so they
+  // hide; Done / Reset in the sticky bottom bar are the way out.
+  const collActs = document.getElementById('coll-header-actions');
+  if (collActs) collActs.style.display = simMode ? 'none' : '';
   renderCollSortBar();
   if (simMode) { renderCollectionSim(); return; }
   renderTagFilterBar();
@@ -24152,7 +24149,7 @@ function renderCollectionSim() {
     <div class="wl-gallery wl-compact">${pool.map(w => simTileHTML(w, 'wish')).join('')}</div>` : ''}
     <div class="panel sim-fab">
       <button class="btn btn-ghost sim-fab-reset" onclick="resetCollectionSim()">Reset</button>
-      <button class="btn btn-primary sim-fab-save" onclick="exitCollectionSim()">Save scenario</button>
+      <button class="btn btn-primary sim-fab-save" onclick="exitCollectionSim()">Done</button>
     </div>`;
 }
 
