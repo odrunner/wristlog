@@ -8036,7 +8036,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.42';
+const APP_VERSION = '28.20.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18777,7 +18777,8 @@ function seedCollectionExtrasDraft() {
 // AI says when a wishlist watch merely duplicates what they own.
 // Seeded as a DRAFT only: nothing sends until it is queued and the drain runs.
 function seedWhatIfAiPicksDraft() {
-  const FLAG = 'wr_seed_whatif_ai_picks_draft_v1';
+  // v2 re-seeds over v1: adds the demo-account screenshots inline.
+  const FLAG = 'wr_seed_whatif_ai_picks_draft_v2';
   if (safeLS.get(FLAG)) return;
   safeLS.set(FLAG, '1');
   const SUBJECT = 'What if you sold two to fund the grail?';
@@ -18790,14 +18791,21 @@ function seedWhatIfAiPicksDraft() {
 
 You can stop playing it in your head. Open your <b>Collection</b> tab and tap <b>What-if</b>: mark watches for sale, pull in watches from your wishlist, and the count and value move against your real collection as you go. It’s a sandbox — nothing changes for real, and your scenario is kept for next time.
 
+[img1]
+
 And you don’t have to guess what to try. Tap <b>AI Picks</b> on your <b>Wishlist</b> and we read your collection and what you actually wear — the style gaps, the sizes you reach for, the prices that make sense — then rank your wishlist with a plain one-line reason for each pick. It’s honest, too: when a wishlist watch mostly overlaps with something you already own, it says so instead of flattering you.
+
+[img2]
 
 The same picks appear inside the simulator, where one tap drops a watch straight into your scenario. Sell two, add the pick, read the numbers. Then sleep on it.
 
 <a href="https://wrotate.com/open">Play out your next move →</a>
 
 The WRotate team`,
-    imageUrls: [],
+    imageUrls: [
+      { url: 'https://api.wrotate.com/storage/v1/object/public/media/broadcast/whatif-sim-2026-09.png', caption: 'The What-if simulator — sell one, add one, read the numbers' },
+      { url: 'https://api.wrotate.com/storage/v1/object/public/media/broadcast/ai-picks-wishlist-2026-09.png', caption: 'AI Picks on the wishlist — ranked, priced, a reason for each' },
+    ],
     savedAt: Date.now(),
   });
   safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
