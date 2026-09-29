@@ -8036,7 +8036,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.46';
+const APP_VERSION = '28.21.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -35041,6 +35041,12 @@ async function bootApp(user) {
     loadPromoSlots(),
     loadRecapLikes(),       // no-op out of the recap window; see its comment
   ]);
+  // The feed's boot render races this fetch and usually WINS on a warm cache
+  // (fast first paint since 2026-09-17), so its injectPromoCards() pass saw an
+  // empty slot list — and nothing ran again until the next re-render. One
+  // explicit pass now that the slots are actually here; idempotent, and a
+  // no-op when the feed list isn't mounted.
+  injectPromoCards();
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }

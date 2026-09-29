@@ -175,3 +175,15 @@ describe('eligiblePromoSlots', () => {
     expect(withMatchingEpoch(3)).toEqual([]);
   });
 });
+
+// The boot race (found 2026-09-29): the feed's boot render usually beats
+// loadPromoSlots() on a warm cache, so its injectPromoCards() pass saw an
+// empty slot list — and no later pass ran. An active card was invisible to
+// every returning user; a cold boot (slow feed) hid the bug in testing.
+describe('boot wiring in index.html', () => {
+  it('re-injects promo cards once loadPromoSlots() resolves', () => {
+    const html = require('fs').readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const boot = html.slice(html.indexOf('loadPromoSlots(),'));
+    expect(boot.slice(0, 800)).toMatch(/injectPromoCards\(\);/);
+  });
+});
