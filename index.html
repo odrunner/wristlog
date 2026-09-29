@@ -749,7 +749,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── COLLECTION PAGE ── */
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); flex-wrap: wrap; gap: var(--space-4); }
-    .page-title  { font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0; }
+    /* A fixed 44px line box (the btn-md height): the title's position no longer
+       depends on how tall its header neighbours are, so every tab's title sits
+       at the same x,y (audited 2026-09-29: was 78/82/87/88 across tabs). */
+    .page-title  { font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0; display: flex; align-items: center; min-height: var(--size-11); }
     h1, h2, h3 { margin: 0; font-size: inherit; font-weight: inherit; }
 
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--space-4); }
@@ -3310,13 +3313,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <h1 class="page-title">My Collection</h1>
         <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
-      <div class="row" id="coll-header-actions">
+      <div class="wl-actions" id="coll-header-actions">
         <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-md btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary btn-md u-gap-1-5 u-ws-nowrap u-d-inline-flex" onclick="openPhotoIdentify()" title="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-enhance-all-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-md" onclick="openUpdatePrices()" title="Update Market Prices" aria-label="Update market prices" style="display:none;">$</button>
-        <button id="coll-whatif-btn" class="btn btn-ghost u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSim()" title="Simulate selling watches and adding from your wishlist" style="display:none;">What-if</button>
+        <button id="coll-whatif-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSim()" title="Simulate selling watches and adding from your wishlist" aria-label="What-if simulator" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg><span class="wl-actions-text">What-if</span></button>
       </div>
     </div>
     <div id="coll-select-bar" class="panel u-items-center u-fw--wrap u-mb-3 coll-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
@@ -8029,7 +8032,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.19.59';
+const APP_VERSION = '28.20.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

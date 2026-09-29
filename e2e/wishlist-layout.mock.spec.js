@@ -74,7 +74,9 @@ test.describe('Wishlist layout on phones (mocked)', () => {
   for (const { label, vp, oneLine } of SIZES) {
     test(`top toolbar fits at ${label}`, async ({ page }) => {
       await openWishlist(page, vp);
-      const r = await rowReport(page, '.wl-actions');
+      // Scoped: the Collection header reuses .wl-actions too (2026-09-29), and
+      // it sits earlier in the DOM on an inactive page.
+      const r = await rowReport(page, '#page-wishlist .wl-actions');
       expect(r.missing).toBe(false);
       expect(r.spills).toEqual([]);
       if (oneLine) expect(r.rows).toBe(1);
