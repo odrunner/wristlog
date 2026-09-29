@@ -8036,7 +8036,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.21.17';
+const APP_VERSION = '28.21.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13296,6 +13296,10 @@ const PROMO_ACTIONS = {
   open_clubs:         () => showClubsPage(),
   open_discover:      () => openDiscover(),
   open_ranking_game:  () => { gameMode = 'collection'; beginRankingGame(); },
+  // Deep link into the What-if simulator: land on Collection already in sim
+  // mode. enterCollectionSim() no-ops when signed out, but promos only render
+  // for signed-in users anyway.
+  open_whatif:        () => { nav(document.querySelector('nav button[data-page="collection"]')); enterCollectionSim(); },
 };
 
 // Returns a callable for a slot's cta_action, or null. Null means "render no
@@ -22203,6 +22207,7 @@ const PROMO_ACTION_LABELS = {
   '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
   open_track: 'Open Track', open_stats: 'Open Stats', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
   open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
+  open_whatif: 'Open the What-if simulator',
   'url:': 'Custom URL (https only)',
   'feedback:': 'Open feedback form',
 };
