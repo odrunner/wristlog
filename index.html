@@ -8033,7 +8033,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.22';
+const APP_VERSION = '28.20.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18385,6 +18385,7 @@ function showAdminPage() {
   seedCollectionExtrasDraft();
   seedWishlistShareDraft();
   seedCollectionShareReleaseDraft();
+  seedWhatIfAiPicksDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -18761,6 +18762,38 @@ function seedCollectionExtrasDraft() {
 <b>And what it’s all worth.</b> Inside a watch, <b>Check price</b> gives an AI market estimate. The <b>$</b> button in the collection header prices your whole collection at once. Values are kept over time, so you can see which way your collection is moving.
 
 <a href="https://wrotate.com/open">Open WRotate →</a>`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// What-if simulator + AI wishlist picks shipped 2026-09-28/29. The story is the
+// collector's eternal head-game — "what would I sell to fund the next one?" —
+// answered by the sandbox, with AI Picks as the guide. Honesty is the hook: the
+// AI says when a wishlist watch merely duplicates what they own.
+// Seeded as a DRAFT only: nothing sends until it is queued and the drain runs.
+function seedWhatIfAiPicksDraft() {
+  const FLAG = 'wr_seed_whatif_ai_picks_draft_v1';
+  if (safeLS.get(FLAG)) return;
+  safeLS.set(FLAG, '1');
+  const SUBJECT = 'What if you sold two to fund the grail?';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 7,
+    subject: SUBJECT,
+    heading: 'Try your next move before you make it',
+    body: `Every collector plays the same game on the commute home: if the grail finally came in, what would go? Two pieces out, one in — is the collection better, or just different?
+
+You can stop playing it in your head. Open your <b>Collection</b> tab and tap <b>What-if</b>: mark watches for sale, pull in watches from your wishlist, and the count and value move against your real collection as you go. It’s a sandbox — nothing changes for real, and your scenario is kept for next time.
+
+And you don’t have to guess what to try. Tap <b>AI Picks</b> on your <b>Wishlist</b> and we read your collection and what you actually wear — the style gaps, the sizes you reach for, the prices that make sense — then rank your wishlist with a plain one-line reason for each pick. It’s honest, too: when a wishlist watch mostly overlaps with something you already own, it says so instead of flattering you.
+
+The same picks appear inside the simulator, where one tap drops a watch straight into your scenario. Sell two, add the pick, read the numbers. Then sleep on it.
+
+<a href="https://wrotate.com/open">Play out your next move →</a>
+
+The WRotate team`,
     imageUrls: [],
     savedAt: Date.now(),
   });
