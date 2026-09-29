@@ -107,13 +107,26 @@ describe('recommendCacheKey', () => {
 describe('index.html wiring', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  it('ships ungated with no Recommend buttons: picks auto-load on both surfaces', () => {
+  it('ships ungated: What-if auto-loads picks, the Wishlist has the AI Picks toggle', () => {
     expect(html).not.toMatch(/experiment\('wishlist_recommend'\)/);
-    expect(html).not.toMatch(/wl-rec-btn/);
     const enter = html.slice(html.indexOf('function enterCollectionSim'));
     expect(enter.slice(0, 500)).toMatch(/primeRecommendations\(\)/);
+    expect(html).toMatch(/id="wl-rec-btn"[^>]*onclick="toggleWishlistRecs\(\)"/);
+    // The wishlist render itself never spends a call — only the button does.
     const wl = html.slice(html.indexOf('function _renderWishlistBody'));
-    expect(wl.slice(0, 1400)).toMatch(/primeRecommendations\(\)/);
+    expect(wl.slice(0, 2000)).not.toMatch(/primeRecommendations\(\)/);
+  });
+  it('the toggle hides the rail on the second tap and blocks demo mode', () => {
+    const fn = html.slice(html.indexOf('function toggleWishlistRecs'));
+    const body = fn.slice(0, 400);
+    expect(body).toMatch(/demoGuard\(\)/);
+    expect(body).toMatch(/_recWlVisible = false/);
+    expect(body).toMatch(/primeRecommendations\(\)/);
+  });
+  it('rail and tile decorations render only while toggled on', () => {
+    expect(html).toMatch(/recPanel\.innerHTML = \(_recWlVisible && canRec\)/);
+    const dec = html.slice(html.indexOf('function decorateWishlistPicks'));
+    expect(dec.slice(0, 300)).toMatch(/if \(!_recWlVisible\) return;/);
   });
   it('calls the recommend-wishlist edge function via authedFetch', () => {
     expect(html).toMatch(/authedFetch\(SUPABASE_URL \+ '\/functions\/v1\/recommend-wishlist'/);

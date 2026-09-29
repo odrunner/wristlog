@@ -2733,7 +2733,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">AI Wishlist Picks</div>
-        <div class="body-muted">Your Wishlist and the What-if simulator now show <strong>AI picks</strong> automatically: up to three watches from your wishlist that best complement what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. In the simulator, tap <strong>+ Add</strong> on a pick to drop it into your scenario; on the Wishlist, tap a pick to spot it in your list. Needs at least two wishlist watches.</div>
+        <div class="body-muted">Tap <strong>AI Picks</strong> at the top of your Wishlist for up to three watches that best complement what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list, and tap the button again to hide them. In the What-if simulator the picks appear on their own; tap <strong>+ Add</strong> to drop one into your scenario. Needs at least two wishlist watches.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">Compact View</div>
@@ -4089,7 +4089,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Get AI picks from your wishlist</div>
-              <div class="help-step-desc">The Wishlist tab shows <strong>AI picks</strong> automatically: up to three watches ranked against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list. Needs at least two wishlist watches; the picks also appear in the Collection&#8217;s What-if simulator, where <strong>+ Add</strong> drops one straight into your scenario.</div>
+              <div class="help-step-desc">Tap <strong>AI Picks</strong> at the top of the Wishlist tab: up to three watches ranked against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list; tap the button again to hide them. Needs at least two wishlist watches; the picks also appear in the Collection&#8217;s What-if simulator, where <strong>+ Add</strong> drops one straight into your scenario.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4822,6 +4822,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
+        <button id="wl-rec-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="toggleWishlistRecs()" title="AI picks from your wishlist" aria-label="AI picks from your wishlist" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg><span class="wl-actions-text" id="wl-rec-btn-label">AI Picks</span></button>
         <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
@@ -8032,7 +8033,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.15';
+const APP_VERSION = '28.20.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24227,13 +24228,23 @@ async function fetchRecommendations(payload, key) {
   if (_recLoading) return;
   _recLoading = true;
   payload.source = simMode ? 'sim' : 'wishlist';
+  // The wishlist fetch is user-initiated (AI Picks button), so failures speak
+  // up; the What-if rail auto-loads, so there a failure just means no rail.
+  const vocal = !simMode && _recWlVisible;
   try {
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/recommend-wishlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }, 60000);
-    if (!r.ok) return;   // auto-loaded surface: no result simply means no rail
+    if (r.status === 429) {
+      if (vocal) { _recWlVisible = false; toast('Daily AI picks limit reached — try again tomorrow', 'info'); }
+      return;
+    }
+    if (!r.ok) {
+      if (vocal) { _recWlVisible = false; toast('Could not get AI picks — try again later', 'error'); }
+      return;
+    }
     const data = await r.json();
     if (!Array.isArray(data.picks) || !data.picks.length) return;
     _recResult = { picks: data.picks, summary: data.summary || '', gapTag: data.gapTag || '' };
@@ -24241,12 +24252,23 @@ async function fetchRecommendations(payload, key) {
     safeSetJSON(recKey(), { key, ts: Date.now(), result: _recResult });
     if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'wl_rec', meta: { source: payload.source, picks: _recResult.picks.length } }).then(() => {});
     if (simMode) renderCollection(true);
-    else renderWishlist(true);
   } catch (e) {
-    // Silent: the rail just doesn't appear.
+    if (vocal) { _recWlVisible = false; toast('Could not get AI picks — try again later', 'error'); }
   } finally {
     _recLoading = false;
+    if (!simMode) renderWishlist(true);   // rail on success, button label reset either way
   }
+}
+
+// Wishlist "AI Picks" button: first tap loads (cache-first) and shows the
+// rail; tapping again hides it.
+let _recWlVisible = false;
+function toggleWishlistRecs() {
+  if (demoGuard()) return;
+  if (_recWlVisible) { _recWlVisible = false; renderWishlist(true); return; }
+  _recWlVisible = true;
+  primeRecommendations();
+  renderWishlist(true);
 }
 
 // The AI pick rail, shared by What-if ('sim': + Add buttons) and the Wishlist
@@ -24292,6 +24314,7 @@ function recToggleHighlight(id) {
 // Rank badges + rings on the wishlist tiles that the AI picked. Runs after the
 // grid renders; tiles are found by data-id so every tile view works.
 function decorateWishlistPicks() {
+  if (!_recWlVisible) return;   // badges + rings belong to the toggled rail
   if (!_recResult || !Array.isArray(_recResult.picks)) return;
   const grid = document.getElementById('wishlist-grid');
   if (!grid) return;
@@ -29899,9 +29922,19 @@ function _renderWishlistBody(force) {
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
   if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
-  primeRecommendations();   // AI picks auto-load (cache-first); rail below
+  // AI picks show only after the user asks (toggleWishlistRecs); the What-if
+  // simulator keeps its automatic rail.
+  const canRec = visible.length >= 2 && !_wlSelect && currentUser;
+  const recBtn = document.getElementById('wl-rec-btn');
+  if (recBtn) {
+    recBtn.style.display = canRec ? '' : 'none';
+    recBtn.classList.toggle('btn-loading', _recLoading && _recWlVisible);
+    recBtn.disabled = _recLoading && _recWlVisible;
+    const lbl = document.getElementById('wl-rec-btn-label');
+    if (lbl) lbl.textContent = (_recLoading && _recWlVisible) ? 'Thinking…' : 'AI Picks';
+  }
   const recPanel = document.getElementById('wl-rec-panel');
-  if (recPanel) recPanel.innerHTML = (visible.length >= 2 && !_wlSelect && currentUser) ? recRailHTML('wishlist') : '';
+  if (recPanel) recPanel.innerHTML = (_recWlVisible && canRec) ? recRailHTML('wishlist') : '';
   const countEl = document.getElementById('wl-count');
   if (countEl) {
     const wlTotal = visible.reduce((s, w) => s + (Number(w.marketPrice ?? w.price) || 0), 0);
