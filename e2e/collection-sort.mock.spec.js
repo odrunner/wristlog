@@ -7,8 +7,8 @@ import {
 // Collection sort bar (2026-09-29, from user feedback): the sort chips show
 // even when the Ranking Game was never played (only "My Ranking" needs it),
 // a "Last Worn" sort joins the bar with a recency badge on each card, and a
-// "Full report →" link points to the sortable Stats table where purchase
-// price / market value / purchase date sorting already lives.
+// report button beside Share points to the sortable Stats table where
+// purchase price / market value / purchase date sorting already lives.
 
 // A third watch that has never been worn and was bought most recently.
 const UNWORN_WATCH = {
@@ -58,9 +58,10 @@ test('Last Worn sorts most-recent first, never-worn last, with recency badges', 
   await expect(badges.last()).toHaveText('Never');
 });
 
-test('Full report link jumps to the sortable Stats table with a Last Worn column', async ({ page }) => {
+test('report button beside Share jumps to the sortable Stats table with a Last Worn column', async ({ page }) => {
   await openCollection(page);
-  await page.locator('#coll-sort-bar button', { hasText: 'Full report' }).click();
+  await expect(page.locator('#coll-report-btn')).toBeVisible();
+  await page.locator('#coll-report-btn').click();
   await expect(page.locator('#page-stats')).toHaveClass(/active/);
   await expect(page.locator('#coll-report-card')).toBeVisible();
   const lastTh = page.locator('#coll-report-table th', { hasText: 'Last Worn' });

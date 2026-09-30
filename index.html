@@ -2732,7 +2732,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">Sort by Last Worn</div>
-        <div class="body-muted">The Collection sort chips now include <strong>Last Worn</strong> &#8212; most recent on your wrist first, never-worn at the end, with a colour-coded &#8220;how long ago&#8221; note on every card. The sort chips also no longer wait for the Ranking Game: Newest, Most Worn and Last Worn are always there. And the new <strong>Full report</strong> link above your collection jumps straight to the sortable Stats table, where every column &#8212; purchase date, price, market value, last worn, cost per wear &#8212; sorts with a tap.</div>
+        <div class="body-muted">The Collection sort chips now include <strong>Last Worn</strong> &#8212; most recent on your wrist first, never-worn at the end, with a colour-coded &#8220;how long ago&#8221; note on every card. The sort chips also no longer wait for the Ranking Game: Newest, Most Worn and Last Worn are always there. And the new <strong>report button</strong> next to Share at the top of the page jumps straight to the sortable Stats table, where every column &#8212; purchase date, price, market value, last worn, cost per wear &#8212; sorts with a tap.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">What-If Simulator</div>
@@ -3319,6 +3319,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="row">
         <h1 class="page-title">My Collection</h1>
         <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+        <button id="coll-report-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" onclick="openCollectionReport()" title="Collection report — sortable by purchase date, price, market value, cost per wear" aria-label="Collection report" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="9" x2="12" y2="21"/></svg></button>
       </div>
       <div class="wl-actions" id="coll-header-actions">
         <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
@@ -4028,7 +4029,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></svg> Sorting</div>
-            <div class="help-mini-desc">The chips above the grid sort by <strong>Newest</strong> (purchase date), <strong>Most Worn</strong>, <strong>Last Worn</strong> (freshest on the wrist first, never-worn last, with a &#8220;how long ago&#8221; note on each card) and, once you&#8217;ve played the Ranking Game, <strong>My Ranking</strong>. For price, market value and cost-per-wear sorting, tap <strong>Full report</strong> to open the sortable table in Stats.</div>
+            <div class="help-mini-desc">The chips above the grid sort by <strong>Newest</strong> (purchase date), <strong>Most Worn</strong>, <strong>Last Worn</strong> (freshest on the wrist first, never-worn last, with a &#8220;how long ago&#8221; note on each card) and, once you&#8217;ve played the Ranking Game, <strong>My Ranking</strong>. For price, market value and cost-per-wear sorting, tap the <strong>report icon</strong> next to Share to open the sortable table in Stats.</div>
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
@@ -8044,7 +8045,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.18.11';
+const APP_VERSION = '29.18.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23458,17 +23459,14 @@ function renderCollSortBar() {
     { key: 'wears',    label: 'Most Worn' },
     { key: 'lastworn', label: 'Last Worn' },
   ];
-  // Quiet pointer to the sortable Stats table that already covers purchase
-  // price / market value / purchase date — feedback said it goes undiscovered.
-  // Own line below the chips: inside the bar it pushed the row past 390px
-  // (the one-row-at-390px budget in e2e/collection-share.mock.spec.js).
-  const reportLink = `<div class="u-ta-right u-mb-2"><button class="btn btn-ghost btn-xs" onclick="openCollectionReport()" title="Sortable table: purchase date, price, market value, cost per wear">Full report →</button></div>`;
   bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}${photoToggle}</div>${reportLink}`;
+  ).join('')}${photoToggle}</div>`;
 }
 
-// "Full report →" in the Collection sort bar: jump to Stats → Collection Report
+// Report button beside Share in the header: jump to Stats → Collection Report
+// (sortable purchase date / price / market value / cost per wear — feedback
+// said the table goes undiscovered from Stats alone)
 function openCollectionReport() {
   nav(document.querySelector('nav button[data-page="stats"]'));
   requestAnimationFrame(() =>
@@ -23810,6 +23808,9 @@ function renderCollection(force) {
   const collShareBtn = document.getElementById('coll-share-btn');
   const collBar = document.getElementById('coll-select-bar');
   if (collShareBtn) collShareBtn.style.display = (currentUser && visible.length && !_collSelect && collView !== 'list') ? 'inline-flex' : 'none';
+  // Report jump lives beside Share; unlike Share it also works in list view
+  const collReportBtn = document.getElementById('coll-report-btn');
+  if (collReportBtn) collReportBtn.style.display = (currentUser && visible.length && !_collSelect) ? 'inline-flex' : 'none';
   if (collBar) {
     collBar.style.display = (selecting && visible.length) ? 'flex' : 'none';
     if (_collSelect) {
@@ -24213,6 +24214,8 @@ function renderCollectionSim() {
   if (tagBar) tagBar.innerHTML = '';
   const shareBtn = document.getElementById('coll-share-btn');
   if (shareBtn) shareBtn.style.display = 'none';
+  const reportBtn = document.getElementById('coll-report-btn');
+  if (reportBtn) reportBtn.style.display = 'none';
   const selBar = document.getElementById('coll-select-bar');
   if (selBar) selBar.style.display = 'none';
   const { added, list } = simulatedCollection(watches, wishlist, simState);
