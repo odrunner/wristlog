@@ -197,11 +197,11 @@ test('at 390px the select bar is one row and the sort bar does not spill', async
   expect(report.select.rows, JSON.stringify(report.select)).toBe(1);
   expect(report.select.spills).toBe(0);
   expect(report.sort.spills, JSON.stringify(report.sort)).toBe(0);
-  // 2026-09-29: the Last Worn sort chip joined the bar, so with a ranking
-  // present (My Ranking chip visible, as this test sets up) the bar wraps to
-  // two rows at 390px — flex-wrap is the designed safety net. Without a
-  // ranking it stays one row. Never more than two, never a spill.
-  expect(report.sort.rows, JSON.stringify(report.sort)).toBeLessThanOrEqual(2);
+  // One row even with the Last Worn chip (2026-09-29): Post Pics became an
+  // icon chip, buying back the width its labelled switch cost. This is the
+  // fullest the bar gets (My Ranking present + Post Pics), so one row here
+  // means one row everywhere; flex-wrap stays as the safety net below 390px.
+  expect(report.sort.rows, JSON.stringify(report.sort)).toBe(1);
 });
 
 test('Shared links shows comment counts, expands the thread, and deletes a comment', async ({ page }) => {

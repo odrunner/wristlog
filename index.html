@@ -892,11 +892,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-sort-chip.active { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: var(--gold); color: var(--gold-text); font-weight: var(--fw-semibold); }
     .coll-rank-chip       { display: inline-flex; align-items: center; gap: var(--space-1); }
     .coll-rank-chip + .coll-sort-chip { margin-left: var(--space-1-5); }
-    .coll-photo-toggle { display: flex; align-items: center; gap: var(--space-1-5); margin-left: auto; font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; text-transform: none; letter-spacing: normal; margin-bottom: 0; }
-    .coll-photo-toggle input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: var(--size-8); height: var(--size-4); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); position: relative; cursor: pointer; transition: background var(--dur-base), border-color var(--dur-base); flex-shrink: 0; }
-    .coll-photo-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: var(--size-0-5); left: var(--size-0-5); width: var(--size-3); height: var(--size-3); border-radius: var(--radius-round); background: var(--muted); transition: transform var(--dur-base), background var(--dur-base); }
-    .coll-photo-toggle input[type="checkbox"]:checked { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: var(--gold); }
-    .coll-photo-toggle input[type="checkbox"]:checked::after { transform: translateX(14px); background: var(--gold); }
+    /* Post Pics: icon chip since 2026-09-29 (was a labelled switch — the text
+       pushed the sort bar to two rows at 390px once Last Worn joined) */
+    .coll-photo-toggle { margin-left: auto; display: inline-flex; align-items: center; }
     .rank-badge-card      { position: absolute; top: var(--size-2); right: var(--size-2); font-size: var(--fs-base); line-height: var(--lh-none); pointer-events: none; }
     .rank-drag-handle     { position: absolute; top: var(--size-2); left: var(--size-2); color: var(--border); cursor: grab; font-size: var(--fs-xl); user-select: none; z-index: var(--z-raised-2); touch-action: none; line-height: var(--lh-none); }
     .rank-drag-handle:hover { color: var(--muted); }
@@ -1567,7 +1565,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          363px. Smaller chips, icon-only Rank, and wrap as the safety net for
          narrower phones. */
       .coll-sort-bar { flex-wrap: wrap; gap: var(--space-1); }
-      .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1) var(--space-2); }
+      .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1) var(--space-1-5); }
       .coll-rank-chip .coll-rank-text { display: none; }
       .coll-rank-chip + .coll-sort-chip { margin-left: var(--space-0-5); }
       .wishlist-modal .modal-actions { gap: var(--space-1); }
@@ -8045,7 +8043,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.18.54';
+const APP_VERSION = '29.19.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23442,11 +23440,9 @@ function renderCollSortBar() {
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
   // Photo toggle: show if any watch has a post with a photo (cards and gallery tiles)
   const anyPostPhoto = (collView === 'grid' || collView === 'gallery' || collView === 'compact') && _anyLogHasPhoto;
+  const _postOn = collPhotoMode === 'post';
   const photoToggle = anyPostPhoto
-    ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
-        <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
-        <span>Post Pics</span>
-      </label>` : '';
+    ? `<button class="coll-sort-chip coll-photo-toggle${_postOn ? ' active' : ''}" onclick="toggleCollPhotoMode(${_postOn ? 'false' : 'true'})" title="Show latest post photo instead of watch photo" aria-label="Post pics" aria-pressed="${_postOn}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>` : '';
   // Ranking Game lives here (next to the "My Ranking" sort it produces) so the
   // header keeps a single row of icons on phones.
   const rankChip = `<button class="coll-sort-chip coll-rank-chip" onclick="startGame()" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="coll-rank-text">Rank</span></button>`;
