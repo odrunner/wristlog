@@ -170,7 +170,7 @@ test('existing links are listed and can be revoked', async ({ page }) => {
 });
 
 // Phone layout: the select bar keeps all six controls on one row, and the sort
-// bar (Rank + three sorts + Post Pics) never pushes the toggle past the edge.
+// bar (Rank + four sorts + Post Pics) never pushes the toggle past the edge.
 test('at 390px the select bar is one row and the sort bar does not spill', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const logs = SAMPLE_LOGS.map((l, i) => i === 0 ? { ...l, photo_url: 'https://example.com/p.jpg' } : l);
@@ -197,9 +197,11 @@ test('at 390px the select bar is one row and the sort bar does not spill', async
   expect(report.select.rows, JSON.stringify(report.select)).toBe(1);
   expect(report.select.spills).toBe(0);
   expect(report.sort.spills, JSON.stringify(report.sort)).toBe(0);
-  // One row again since 2026-09-29: the What-if entry moved to the header mode
-  // chips, so the bar is back to Rank + three sorts + Post Pics.
-  expect(report.sort.rows, JSON.stringify(report.sort)).toBe(1);
+  // 2026-09-29: the Last Worn sort chip joined the bar, so with a ranking
+  // present (My Ranking chip visible, as this test sets up) the bar wraps to
+  // two rows at 390px — flex-wrap is the designed safety net. Without a
+  // ranking it stays one row. Never more than two, never a spill.
+  expect(report.sort.rows, JSON.stringify(report.sort)).toBeLessThanOrEqual(2);
 });
 
 test('Shared links shows comment counts, expands the thread, and deletes a comment', async ({ page }) => {

@@ -555,6 +555,7 @@
 .u-c-danger.u-c-danger.u-c-danger.u-c-danger.u-c-danger { color: var(--danger); }
 .u-c-danger-text.u-c-danger-text.u-c-danger-text.u-c-danger-text.u-c-danger-text { color: var(--danger-text); }
 .u-c-demo-ink.u-c-demo-ink.u-c-demo-ink.u-c-demo-ink.u-c-demo-ink { color: var(--demo-ink); }
+.u-c-expiring.u-c-expiring.u-c-expiring.u-c-expiring.u-c-expiring { color: var(--status-expiring); }
 .u-c-gold.u-c-gold.u-c-gold.u-c-gold.u-c-gold { color: var(--gold); }
 .u-c-gold-lt.u-c-gold-lt.u-c-gold-lt.u-c-gold-lt.u-c-gold-lt { color: var(--gold-lt); }
 .u-c-gold-text.u-c-gold-text.u-c-gold-text.u-c-gold-text.u-c-gold-text { color: var(--gold-text); }

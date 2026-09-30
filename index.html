@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=7ca33db3">
+  <link rel="stylesheet" href="/design-system.css?v=af3fe97c">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -2731,6 +2731,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">September 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Sort by Last Worn</div>
+        <div class="body-muted">The Collection sort chips now include <strong>Last Worn</strong> &#8212; most recent on your wrist first, never-worn at the end, with a colour-coded &#8220;how long ago&#8221; note on every card. The sort chips also no longer wait for the Ranking Game: Newest, Most Worn and Last Worn are always there. And the new <strong>Full report</strong> link above your collection jumps straight to the sortable Stats table, where every column &#8212; purchase date, price, market value, last worn, cost per wear &#8212; sorts with a tap.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">What-If Simulator</div>
         <div class="body-muted">Tap <strong>What-if</strong> at the top of your collection to play out changes before you make them: tap watches to mark them for sale, add watches from your wishlist, and watch the count, estimated value and change update against your real collection in the bar that stays at the top. Your scenario is kept for next time; nothing changes for real.</div>
       </div>
@@ -4023,6 +4027,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-mini-desc">The toggle in the Collection header cycles <strong>cards → gallery → compact</strong>. The gallery is an images-only grid; <strong>compact</strong> shrinks it to tiny tiles so the whole collection fits on one screen (touch and hold a tile for the name). Both follow your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
           </div>
           <div class="help-mini-card">
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></svg> Sorting</div>
+            <div class="help-mini-desc">The chips above the grid sort by <strong>Newest</strong> (purchase date), <strong>Most Worn</strong>, <strong>Last Worn</strong> (freshest on the wrist first, never-worn last, with a &#8220;how long ago&#8221; note on each card) and, once you&#8217;ve played the Ranking Game, <strong>My Ranking</strong>. For price, market value and cost-per-wear sorting, tap <strong>Full report</strong> to open the sortable table in Stats.</div>
+          </div>
+          <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
             <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection (or at the top of your Wishlist) for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time. On the Wishlist, saving reorders the list by preference &#8212; you can still drag items afterwards.</div>
           </div>
@@ -4861,7 +4869,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="card stack-5" id="wear-leaderboard"></div>
 
-    <div class="card stack-5">
+    <div class="card stack-5" id="coll-report-card">
       <div class="section-title">Collection Report</div>
       <div id="coll-report-summary"></div>
       <div id="coll-report-table" class="u-mt-2-5" style="overflow-x:auto;"></div>
@@ -8036,7 +8044,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.21.28';
+const APP_VERSION = '29.18.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17932,7 +17940,7 @@ let chUsecase = null, chCollValue = null;
 let _collValueRange = 'max';   // time horizon for the Collection Value chart
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
 let collView     = collViewFromStore(safeLS.get('wr_coll_view')); // 'grid' | 'gallery' ('list' is legacy, unreachable)
-let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears'
+let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears' | 'lastworn'
 let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
@@ -23441,14 +23449,30 @@ function renderCollSortBar() {
   // Ranking Game lives here (next to the "My Ranking" sort it produces) so the
   // header keeps a single row of icons on phones.
   const rankChip = `<button class="coll-sort-chip coll-rank-chip" onclick="startGame()" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="coll-rank-text">Rank</span></button>`;
-  const opts = hasRanking ? [
+  // Sorts that need no ranking always show; "My Ranking" appears once the
+  // Ranking Game has been played (before 2026-09-29 the whole bar was gated
+  // on hasRanking, so users who never ranked saw no sort options at all).
+  const opts = [
     { key: 'purchase', label: 'Newest' },
-    { key: 'ranking',  label: 'My Ranking' },
+    ...(hasRanking ? [{ key: 'ranking', label: 'My Ranking' }] : []),
     { key: 'wears',    label: 'Most Worn' },
-  ] : [];
+    { key: 'lastworn', label: 'Last Worn' },
+  ];
+  // Quiet pointer to the sortable Stats table that already covers purchase
+  // price / market value / purchase date — feedback said it goes undiscovered.
+  // Own line below the chips: inside the bar it pushed the row past 390px
+  // (the one-row-at-390px budget in e2e/collection-share.mock.spec.js).
+  const reportLink = `<div class="u-ta-right u-mb-2"><button class="btn btn-ghost btn-xs" onclick="openCollectionReport()" title="Sortable table: purchase date, price, market value, cost per wear">Full report →</button></div>`;
   bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}${photoToggle}</div>`;
+  ).join('')}${photoToggle}</div>${reportLink}`;
+}
+
+// "Full report →" in the Collection sort bar: jump to Stats → Collection Report
+function openCollectionReport() {
+  nav(document.querySelector('nav button[data-page="stats"]'));
+  requestAnimationFrame(() =>
+    document.getElementById('coll-report-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
 
 function toggleCollPhotoMode(checked) {
@@ -23805,12 +23829,23 @@ function renderCollection(force) {
     return;
   }
   const wearCounts = collGridSort === 'wears' ? new Map(visible.map(w => [w.id, wearsForWatch(w.id)])) : null;
+  // Last-worn date per watch (same unfiltered-log definition as the list
+  // view's Last Worn column and the Track selector order).
+  const lastWornMap = collGridSort === 'lastworn'
+    ? new Map(visible.map(w => [w.id, logsForWatch(w.id).reduce((m, l) => l.date > m ? l.date : m, '')]))
+    : null;
   const sorted = [...visible].sort((a, b) => {
     if (collGridSort === 'ranking') {
       return (eloRatings[b.id] ?? ELO_DEFAULT) - (eloRatings[a.id] ?? ELO_DEFAULT);
     }
     if (collGridSort === 'wears') {
       return wearCounts.get(b.id) - wearCounts.get(a.id);
+    }
+    if (collGridSort === 'lastworn') {
+      const la = lastWornMap.get(a.id), lb = lastWornMap.get(b.id);
+      if (la && !lb) return -1;
+      if (!la && lb) return 1;
+      return lb.localeCompare(la); // never-worn ties keep collection order
     }
     // default: purchase date descending
     if (!a.purchaseDate && !b.purchaseDate) return 0;
@@ -23869,6 +23904,19 @@ function renderCollection(force) {
       const wornToday = wLogs.some(l => l.date === today);
       const rankBadge = isRanking && (eloRatings[w.id] != null)
         ? `<span class="rank-badge-card" title="${eloRatings[w.id]} pts">${medals[idx] || '#'+(idx+1)}</span>` : '';
+      // Last Worn sort: recency caption in the rank badge's corner slot, with
+      // the same colour thresholds as the list view's Last Worn column.
+      let lastBadge = '';
+      if (collGridSort === 'lastworn') {
+        const last = lastWornMap.get(w.id);
+        if (!last) {
+          lastBadge = `<span class="rank-badge-card u-c-muted">Never</span>`;
+        } else {
+          const days = Math.floor((new Date(today+'T12:00:00') - new Date(last+'T12:00:00')) / 86400000);
+          const cls  = days <= 14 ? 'u-c-success' : days <= 45 ? 'u-c-expiring' : 'u-c-danger';
+          lastBadge  = `<span class="rank-badge-card ${cls}" title="Last worn ${escAttr(fmtDate(last))}">${days === 0 ? 'Today' : days + 'd ago'}</span>`;
+        }
+      }
       const dragHandle = isRanking
         ? `<span class="rank-drag-handle" title="Drag to reorder" ontouchstart="collTouchStart(event,'${w.id}')">⠿</span>` : '';
       // When some cards have a market price row and others don't, insert an invisible
@@ -23890,7 +23938,7 @@ function renderCollection(force) {
         ondragend="collDragEnd(event)"` : ''}>
         ${selectBox}
         ${dragHandle}
-        ${rankBadge}
+        ${rankBadge}${lastBadge}
         ${(() => {
           // Pick card image: "Latest post" mode uses newest post photo, falls back to watch image
           const cardImg = collPhotoMode === 'post'
@@ -26600,6 +26648,7 @@ function renderCollectionReport(fl) {
   const owned = watches;
 
   // Build row data
+  const _crNow = new Date(todayStr() + 'T12:00:00');
   let rows = owned.map(w => {
     const cnt   = wm[w.id] || 0;
     const cpw   = (w.price && cnt) ? w.price / cnt : null;
@@ -26615,7 +26664,11 @@ function renderCollectionReport(fl) {
       const totalGap = (new Date(allWLogs[allWLogs.length - 1]+'T12:00:00') - new Date(allWLogs[0]+'T12:00:00')) / 86400000;
       avgFreq = Math.round(totalGap / (allWLogs.length - 1));
     }
-    return { w, cnt, cpw, paid, mp, delta, pct, pdate, avgFreq };
+    // Last worn is all-time (like Avg Freq), not period-filtered
+    const lastDays = allWLogs.length
+      ? Math.floor((_crNow - new Date(allWLogs[allWLogs.length - 1] + 'T12:00:00')) / 86400000)
+      : null;
+    return { w, cnt, cpw, paid, mp, delta, pct, pdate, avgFreq, lastDays };
   });
 
   // Clear summary (totals are shown as a footer row in the table instead)
@@ -26644,6 +26697,7 @@ function renderCollectionReport(fl) {
         return asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
       }
       case 'wears':  return numSort(a.cnt,   b.cnt);
+      case 'last':   return numSort(a.lastDays, b.lastDays);
       case 'cpw':    return numSort(a.cpw,   b.cpw);
       case 'paid':   return numSort(a.paid,  b.paid);
       case 'market': return numSort(a.mp,    b.mp);
@@ -26668,13 +26722,16 @@ function renderCollectionReport(fl) {
   };
   const na = '<span class="pvm-na">—</span>';
 
-  const tableRows = rows.map(({ w, cnt, cpw, paid, mp, delta, pct, pdate, avgFreq }) => {
+  const tableRows = rows.map(({ w, cnt, cpw, paid, mp, delta, pct, pdate, avgFreq, lastDays }) => {
     const dCls = delta != null ? (delta >= 0 ? 'pvm-gain' : 'pvm-loss') : '';
     const sign = (delta != null && delta >= 0) ? '+' : '';
+    const lastCls  = lastDays == null ? '' : lastDays <= 14 ? 'u-c-success' : lastDays <= 45 ? 'u-c-expiring' : 'u-c-danger';
+    const lastCell = lastDays == null ? na : lastDays === 0 ? 'Today' : lastDays + 'd ago';
     return `<tr class="rank-tr">
       <td class="rank-td">${escHtml(w.brand)} ${escHtml(w.name)}${w.ref ? ` <span class="u-c-muted u-fs-aside-sm">(${escHtml(w.ref)})</span>` : ''}</td>
       <td class="rank-td u-ta-right u-c-muted u-ws-nowrap">${fmtMonYear(pdate) || na}</td>
       <td class="rank-td u-ta-right">${cnt}</td>
+      <td class="rank-td u-ta-right u-ws-nowrap ${lastCls}">${lastCell}</td>
       <td class="rank-td u-ta-right u-c-muted">${cpw  != null ? fmtMoney(Math.round(cpw)) : na}</td>
       <td class="rank-td u-ta-right u-c-muted u-ws-nowrap">${avgFreq != null ? '~' + avgFreq + 'd' : na}</td>
       <td class="rank-td u-ta-right">${paid != null ? fmtMoney(paid) : na}</td>
@@ -26700,6 +26757,7 @@ function renderCollectionReport(fl) {
     <td class="rank-td u-fw-bold u-c-gold-text">TOTAL</td>
     <td class="rank-td u-ta-right"></td>
     <td class="rank-td u-ta-right u-fw-bold">${totWears}</td>
+    <td class="rank-td u-ta-right"></td>
     <td class="rank-td u-ta-right u-fw-bold u-c-muted">${avgCpw != null ? fmtMoney(Math.round(avgCpw)) : na}</td>
     <td class="rank-td u-ta-right"></td>
     <td class="rank-td u-ta-right u-fw-bold">${totPaidAll ? fmtMoney(totPaidAll) : na}</td>
@@ -26714,6 +26772,7 @@ function renderCollectionReport(fl) {
         ${th('watch',  'Watch',     'left')}
         ${th('pdate',  'Purchased')}
         ${th('wears',  'Wears')}
+        ${th('last',   'Last Worn')}
         ${th('cpw',    'Cost/Wear')}
         ${th('freq',   'Avg Freq')}
         ${th('paid',   'Paid')}
