@@ -913,14 +913,12 @@ export function computeEloUpdate(winnerId, loserId, ratings) {
 //  WATCH RECOMMENDATION
 // ══════════════════════════════════════════
 
-const WARM = new Set(['#c9a84c', '#fbbf24', '#fb923c', '#ef7942', '#f43f5e']);
-const COOL = new Set(['#38bdf8', '#818cf8', '#a78bfa', '#34d399', '#4caf7d']);
-const DARK = new Set(['#94a3b8']);
-
-const DEFAULT_REC_SETTINGS = { excluded: [], prioritizeUnworn: true, anniversaryPicks: true, weatherMatch: true, useCaseMatch: true };
+// Weather × color matching removed 2026-09-29: w.color is the UI accent swatch
+// (defaults to gold, no user-facing picker), so it never described the watch's tone.
+const DEFAULT_REC_SETTINGS = { excluded: [], prioritizeUnworn: true, anniversaryPicks: true, useCaseMatch: true };
 export { DEFAULT_REC_SETTINGS };
 
-export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRatings = {}, recSettings = DEFAULT_REC_SETTINGS, now = new Date() }) {
+export function computeWatchRec({ watches, logs, skipSet, eloRatings = {}, recSettings = DEFAULT_REC_SETTINGS, now = new Date() }) {
   if (!watches.length) return null;
   const rs = { ...DEFAULT_REC_SETTINGS, ...recSettings };
   const excludedSet = new Set(rs.excluded || []);
@@ -965,14 +963,6 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
     const dowScore = dowCount * 8;
 
     // 3. Weather × color matching
-    let weatherScore = 0, weatherReason = null;
-    if (rs.weatherMatch && weatherData) {
-      const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
-      if (weatherData.condition === 'sunny' && isWarm) { weatherScore = 3; weatherReason = 'Warm tone for sunny skies'; }
-      else if (weatherData.condition === 'sunny' && isCool) { weatherScore = 1; }
-      else if ((weatherData.condition === 'cloudy' || weatherData.condition === 'rainy') && (isCool || isDark)) { weatherScore = 3; weatherReason = `Cool tone suits today's ${weatherData.condition} skies`; }
-    }
-
     // 4. Weekend/dinner bonus
     const hasDressTag = (w.tags || []).includes('Dress');
     const weekendScore = isWeekend ? Math.min(dinnerWears * 5 + (hasDressTag ? 10 : 0), 30) : 0;
@@ -1009,7 +999,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
       const daysSincePurchase = Math.floor((now - new Date(w.purchaseDate + 'T12:00:00')) / 86400000);
       if (daysSincePurchase <= 30 && daysSincePurchase >= 0) {
         honeymoonScore = 20;
-        honeymoonReason = 'New addition — break it in!';
+        honeymoonReason = 'New addition — break it in';
       } else if (daysSincePurchase <= 60 && daysSincePurchase > 30) {
         honeymoonScore = 10;
         honeymoonReason = 'Still getting to know this one';
@@ -1057,9 +1047,9 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
       }
     }
 
-    const score = recencyScore + dowScore + weatherScore * 5 + weekendScore
+    const score = recencyScore + dowScore + weekendScore
                 + eloScore + useCaseScore + honeymoonScore + neglectedScore + tagScore + anniversaryScore;
-    return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason,
+    return { w, daysSince, dowCount, weekendScore, weekendReason,
              eloScore, eloReason, useCaseScore, useCaseReason,
              honeymoonScore, honeymoonReason, neglectedScore, neglectedReason,
              tagScore, tagReason, anniversaryScore, anniversaryReason, anniversaryYears, score };

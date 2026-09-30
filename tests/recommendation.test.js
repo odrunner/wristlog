@@ -73,45 +73,34 @@ describe('computeWatchRec', () => {
     expect(result).toBeNull();
   });
 
-  // ── Weather scoring ──────────────────────────────────────────────────────
+  // ── Weather × color matching REMOVED 2026-09-29 ─────────────────────────
+  // w.color is the UI accent swatch (defaults to gold, no user-facing picker),
+  // so it never described the watch's actual tone. Weather must not affect picks.
 
-  it('gives warm-color watches a weather boost on sunny days', () => {
+  it('weather never influences the pick', () => {
     const watches = [
-      makeWatch('warm', { color: '#c9a84c' }),   // warm
-      makeWatch('cool', { color: '#38bdf8' }),   // cool
+      makeWatch('gold', { color: '#c9a84c' }),   // default swatch (was WARM)
+      makeWatch('cool', { color: '#38bdf8' }),   // was COOL
     ];
-    const weather = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
-    const result = computeWatchRec({ watches, logs: [], weatherData: weather, now: monday });
-    expect(result.w.id).toBe('warm');
-    expect(result.weatherScore).toBe(3);
+    // gold worn 12d ago, cool worn 20d ago — old sunny boost (+15) flipped this to gold
+    const logs = [
+      makeLog('gold', '2024-06-05'),
+      makeLog('cool', '2024-05-28'),
+    ];
+    const sunny = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
+    const withWeather = computeWatchRec({ watches, logs, weatherData: sunny, now: monday });
+    const withoutWeather = computeWatchRec({ watches, logs, weatherData: null, now: monday });
+    expect(withWeather.w.id).toBe('cool');
+    expect(withWeather.w.id).toBe(withoutWeather.w.id);
+    expect(withWeather.score).toBe(withoutWeather.score);
   });
 
-  it('gives cool-color watches a weather boost on cloudy days', () => {
-    const watches = [
-      makeWatch('warm', { color: '#c9a84c' }),
-      makeWatch('cool', { color: '#38bdf8' }),
-    ];
-    const weather = { condition: 'cloudy', desc: 'Overcast', tempC: 15 };
-    const result = computeWatchRec({ watches, logs: [], weatherData: weather, now: monday });
-    expect(result.w.id).toBe('cool');
-    expect(result.weatherScore).toBe(3);
-  });
-
-  it('gives dark-color watches a weather boost on rainy days', () => {
-    const watches = [
-      makeWatch('warm', { color: '#c9a84c' }),
-      makeWatch('dark', { color: '#94a3b8' }),
-    ];
-    const weather = { condition: 'rainy', desc: 'Rain', tempC: 10 };
-    const result = computeWatchRec({ watches, logs: [], weatherData: weather, now: monday });
-    expect(result.w.id).toBe('dark');
-    expect(result.weatherScore).toBe(3);
-  });
-
-  it('no weather boost when weatherData is null', () => {
+  it('result carries no weather score or reason fields', () => {
     const watches = [makeWatch('w1', { color: '#c9a84c' })];
-    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
-    expect(result.weatherScore).toBe(0);
+    const sunny = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
+    const result = computeWatchRec({ watches, logs: [], weatherData: sunny, now: monday });
+    expect(result.weatherScore).toBeUndefined();
+    expect(result.weatherReason).toBeUndefined();
   });
 
   // ── Weekend scoring ──────────────────────────────────────────────────────
@@ -279,21 +268,14 @@ describe('computeWatchRec', () => {
     expect(result.w.id).toBe('w3');
   });
 
-  // ── recSettings: weatherMatch toggle ────────────────────────────────────
+  // ── recSettings: legacy weatherMatch key is ignored ─────────────────────
 
-  it('disables weather scoring when weatherMatch is false', () => {
-    const watches = [makeWatch('warm', { color: '#c9a84c' })];
-    const weather = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
-    const recSettings = { ...DEFAULT_REC_SETTINGS, weatherMatch: false };
-    const result = computeWatchRec({ watches, logs: [], weatherData: weather, recSettings, now: monday });
-    expect(result.weatherScore).toBe(0);
-  });
-
-  it('enables weather scoring when weatherMatch is true (default)', () => {
-    const watches = [makeWatch('warm', { color: '#c9a84c' })];
-    const weather = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
-    const result = computeWatchRec({ watches, logs: [], weatherData: weather, now: monday });
-    expect(result.weatherScore).toBe(3);
+  it('ignores a stored legacy weatherMatch key', () => {
+    const watches = [makeWatch('gold', { color: '#c9a84c' })];
+    const sunny = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
+    const recSettings = { ...DEFAULT_REC_SETTINGS, weatherMatch: true };
+    const result = computeWatchRec({ watches, logs: [], weatherData: sunny, recSettings, now: monday });
+    expect(result.weatherScore).toBeUndefined();
   });
 
   // ── recSettings: useCaseMatch toggle ────────────────────────────────────
@@ -415,7 +397,6 @@ describe('computeWatchRec', () => {
       excluded: [],
       prioritizeUnworn: true,
       anniversaryPicks: true,
-      weatherMatch: true,
       useCaseMatch: true,
     });
   });
