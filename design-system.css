@@ -198,11 +198,12 @@
   --badge-habit: #B5663F;       --badge-habit-ink: color-mix(in srgb, var(--badge-habit) 58%, black);
   --badge-hidden: #7A7A6A;      --badge-hidden-ink: color-mix(in srgb, var(--badge-hidden) 58%, black);      --badge-chip-bg: color-mix(in srgb, var(--badge-hidden) 20%, white);
   --badge-locked: #C9C2A8; --badge-locked-ink: #A8A28C;   /* medallion face; a locked badge */
-  /* watch colours — the colour a user gives a watch. It is SAVED with the watch, so code reads these as
-     plain hex through dsToken() (index.html). Changing one changes what new watches get, not saved ones. */
+  /* watch colours — the accent a watch carries (saved with the watch, so code reads these as plain hex
+     through dsToken(), index.html). Changing one changes what new watches get, not saved ones. The old
+     picker palette (rose/amber/emerald/tangerine/violet) was removed 2026-09-29 with the dead swatch UI;
+     watches saved with those hues keep their stored hex. */
   --watch-gold: #c9a84c; --watch-green: var(--success); --watch-indigo: #818cf8; --watch-orange: var(--status-expiring);
-  --watch-sky: #38bdf8; --watch-fuchsia: #e879f9; --watch-rose: #f43f5e; --watch-slate: #94a3b8;
-  --watch-amber: #fbbf24; --watch-emerald: #34d399; --watch-tangerine: #fb923c; --watch-violet: var(--vis-friends);
+  --watch-sky: #38bdf8; --watch-fuchsia: #e879f9; --watch-slate: #94a3b8;
   --watch-default: var(--watch-gold);
   --uc-unspecified: #7a7a95;   /* use-case chart: no use case, or an unknown one */
   /* charts (Chart.js draws on canvas: read through dsToken). Chosen to read on both themes. */

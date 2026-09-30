@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=af3fe97c">
+  <link rel="stylesheet" href="/design-system.css?v=b0ed5e4e">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -1007,15 +1007,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     
 
     /* ── INLINE ICON BUTTON (receipts, photo) ── */
-
-    /* Color picker */
-    .color-swatch {
-      width: var(--size-7); height: var(--size-7); border-radius: var(--radius-round);
-      cursor: pointer; transition: transform var(--dur-fast), box-shadow var(--dur-fast);
-      border: 2px solid transparent;
-    }
-    .color-swatch.chosen { border-color: var(--white); box-shadow: var(--ring); transform: scale(1.15); }
-    .color-swatches { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1-5); }
 
     /* ── MODAL ── */
 
@@ -8043,7 +8034,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.19.55';
+const APP_VERSION = '29.20.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17968,7 +17959,6 @@ let wEditingStrapIdx = null; // index of strap currently being edited inline
 const WATCH_TAGS = ['Daily Beater','Dress','Dive','Chronograph','GMT','Pilot','Field','Sport','Sport-Luxury','Vintage','Complication','Skeleton'];
 
 const WATCH_HUE = h => dsToken('--watch-' + h);                  // design-system.css: --watch-*
-const PALETTE = ['gold', 'green', 'indigo', 'orange', 'sky', 'fuchsia', 'rose', 'slate', 'amber', 'emerald', 'tangerine', 'violet'].map(WATCH_HUE);
 
 const UC_COL = {
   unspecified: dsToken('--uc-unspecified'),
@@ -24424,20 +24414,6 @@ function decorateWishlistPicks() {
   });
 }
 
-function buildSwatches() {
-  const el = document.getElementById('color-swatches');
-  if (!el) return;
-  el.innerHTML = PALETTE.map(c =>
-    `<div class="color-swatch ${c===selColor?'chosen':''}"
-          style="background:${c}" onclick="pickColor('${c}')"></div>`
-  ).join('');
-}
-
-function pickColor(c) {
-  selColor = c;
-  buildSwatches();
-}
-
 function updateUrlBtn() {
   const input = document.getElementById('w-url');
   const btn   = document.getElementById('url-open-btn');
@@ -24898,7 +24874,7 @@ function openAddWatch() {
   if (demoGuard()) return;
   if (myProfile && !myProfile.username_set) { requireUsername(() => openAddWatch()); return; }
   editingId         = null;
-  selColor          = PALETTE[0];
+  selColor          = DEFAULT_WATCH_COLOR;
   wPendingImage     = null;
   wPendingFile      = null;
   ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp','w-caliber','w-case-diameter','w-case-length','w-case-thickness','w-case-material','w-crystal-type','w-water-resistance','w-weight','w-year-range','w-origin','w-functions-input','w-description','w-background'].forEach(id => document.getElementById(id).value = '');
@@ -31471,7 +31447,7 @@ const A11Y_LEAF_SELECTOR = [
   '.feed-watch-chip','.feed-wearing-row','.feed-user-name','.feed-user-avatar',
   '.watch-card-name','.watch-card-brand','.meta-val.clickable','.watch-card-add',
   '.market-price-row','.wl-info','.snap-match-card','.mention-link','.strap-name.clickable',
-  '.color-swatch','.feed-badge-hero','.feed-badge-ribbon','.profile-post-cell',
+  '.feed-badge-hero','.feed-badge-ribbon','.profile-post-cell',
   '.feed-card-thumb','.ob-row','.ob-head','.reminder-banner-body','.profile-avatar-cam'
 ].join(',');
 function _a11yButtonEl(el) {
