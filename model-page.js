@@ -131,7 +131,10 @@ function renderModelPage(el, ctx, h) {
     ${heroImg ? `<img ${imgSrcAttrs(heroImg, 960, 360)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
     <div class="u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct" style="position:absolute;inset:0;pointer-events:none;"></div>
     <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
-      <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
+      <span class="u-d-flex u-gap-2">
+        <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
+        <span class="mp-beta">Beta</span>
+      </span>
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="share">Share</span>
     </div>
     <div style="position:absolute;left:var(--size-4);bottom:var(--size-3-5);right:var(--size-4);pointer-events:none;">
@@ -366,6 +369,7 @@ function renderModelPage(el, ctx, h) {
     .mp-sec-hrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-2-5); }
     .mp-sub { font-size: var(--fs-sm); color: var(--muted); }
     .mp-eyebrow { font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
+    .mp-beta { align-self: center; padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); background: var(--gold); color: var(--black); font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; line-height: var(--lh-tight); }
     .mp-link { background: none; border: 0; padding: var(--space-1) 0; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--gold-text); cursor: pointer; }
     /* your watch / how they run */
     .mp-yours { margin: var(--space-4) var(--space-4) 0; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
