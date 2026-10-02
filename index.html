@@ -4674,7 +4674,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Post-save CTA: log a wear (primary, the core action) + share result -->
       <div id="msr-share-cta" style="display:none;">
         <div id="msr-cta-title" class="text-default u-fw-semibold u-mb-2 u-ta-center">Saved &mdash; log your wear?</div>
-        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">👋 Log you're wearing it</button>
+        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">Log you're wearing it</button>
         <div class="u-gap-1-5 u-d-flex">
           <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Share result</button>
           <button class="btn btn-ghost btn-sm btn-grow u-c-muted" onclick="dismissMsrShareCta()">Done</button>
@@ -5917,7 +5917,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Onboarding nudge: shown only when the compose was auto-opened for a first-ever wear-log -->
-    <div id="tl-onboarding-line" class="text-default u-mt-0-5 u-mr-0 u-mb-2-5 u-ml-0 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-bg-mix-gold-lt-14 u-bd-1px-solid-color-mix-in-srgb-gold-lt-35pct-transparent u-r- u-ta-center" style="display:none;">Last step — log your wear and post it 👋</div>
+    <div id="tl-onboarding-line" class="text-default u-mt-0-5 u-mr-0 u-mb-2-5 u-ml-0 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-bg-mix-gold-lt-14 u-bd-1px-solid-color-mix-in-srgb-gold-lt-35pct-transparent u-r- u-ta-center" style="display:none;">Last step — log your wear and post it</div>
 
     <!-- Date + worn notice -->
     <div class="tl-field">
@@ -8046,7 +8046,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.17.42';
+const APP_VERSION = '02.05.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21915,8 +21915,8 @@ function openTrackModal(id) {
     if (_firstWearOnboarding) {
       const wLabel = (w.name || w.brand || '').trim();
       obLine.textContent = wLabel
-        ? `Last step — log wearing your ${wLabel} and post it 👋`
-        : 'Last step — log your wear and post it 👋';
+        ? `Last step — log wearing your ${wLabel} and post it`
+        : 'Last step — log your wear and post it';
     }
   }
 
