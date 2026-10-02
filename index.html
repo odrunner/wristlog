@@ -8046,7 +8046,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.05.49';
+const APP_VERSION = '02.07.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10244,8 +10244,8 @@ async function renderClubDetail(clubId) {
       <div class="form-group u-mb-3-5">
         <label class="form-label u-fs-sm">Privacy</label>
         <div class="chips" id="club-edit-privacy-chips">
-          <div class="chip${club.privacy === 'public'  ? ' selected' : ''}" data-val="public"  onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='public'))">🌐 Public</div>
-          <div class="chip${club.privacy === 'private' ? ' selected' : ''}" data-val="private" onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='private'))">🔒 Private</div>
+          <div class="chip${club.privacy === 'public'  ? ' selected' : ''}" data-val="public"  onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='public'))">Public</div>
+          <div class="chip${club.privacy === 'private' ? ' selected' : ''}" data-val="private" onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='private'))">Private</div>
         </div>
       </div>
 
