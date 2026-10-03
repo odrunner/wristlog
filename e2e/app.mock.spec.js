@@ -928,13 +928,30 @@ test.describe('Clubs page (mocked)', () => {
     await waitForAppBoot(page);
   });
 
-  test('navigates to clubs page from feed', async ({ page }) => {
-    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
+  // Clubs is parked (2026-10-03): the feed button is hidden, but the page and
+  // its deep links (open_clubs) stay functional, so tests enter via
+  // showClubsPage() directly.
+  test('the feed Clubs button is hidden while Clubs is parked', async ({ page }) => {
+    await expect(page.locator('#page-feed button', { hasText: /clubs/i })).toBeHidden();
+  });
+
+  // Launched the same day: Watches (the model database) replaces Clubs as the
+  // visible feed-header destination, marked Beta.
+  test('the feed Watches button is visible, marked Beta, and opens Explore', async ({ page }) => {
+    const btn = page.locator('#feed-watches-btn');
+    await expect(btn).toBeVisible();
+    await expect(btn.locator('.tag-beta')).toHaveText(/beta/i);
+    await btn.click();
+    await expect(page.locator('#page-explore')).toBeVisible();
+  });
+
+  test('clubs page still opens programmatically (deep links)', async ({ page }) => {
+    await page.evaluate(() => showClubsPage());
     await expect(page.locator('#page-clubs')).toBeVisible();
   });
 
   test('clubs page shows Create button', async ({ page }) => {
-    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
+    await page.evaluate(() => showClubsPage());
     await expect(page.locator('#page-clubs button', { hasText: /create/i })).toBeVisible();
   });
 });
@@ -981,7 +998,7 @@ test.describe('Clubs populated (mocked)', () => {
   });
 
   test('My Clubs lists a club the user belongs to, with member count', async ({ page }) => {
-    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
+    await page.evaluate(() => showClubsPage());
     const content = page.locator('#clubs-page-content');
     await expect(content).toContainText('Dive Watch Club', { timeout: 5000 });
     await expect(content).toContainText('2 members');

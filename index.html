@@ -2739,6 +2739,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">October 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Watches <span class="tag-beta">Beta</span></div>
+        <div class="body-muted">A browsable watch database, now open to everyone: tap <strong>Watches</strong> at the top of the Feed to explore models &#8212; search by name or reference, or filter by brand. Every model gets its own page with photos, history and fun facts, and who on WRotate owns one. From a watch in your collection, tap <strong>See this model</strong> to jump straight to its page. It&#8217;s a beta: the database grows as members add watches.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">No Watch Today</div>
         <div class="body-muted">A day with nothing logged can mean two things &#8212; you forgot, or you truly didn&#8217;t wear a watch. Now you can say so: on the <strong>Track</strong> tab, tap <strong>Didn&#8217;t wear a watch today</strong> under the watch list. The day is recorded as deliberately watch-free &#8212; it keeps your streak alive and shows crossed out on the streak calendar, but it never touches your wear stats and is only visible to you. Logging a real wear that day replaces it automatically.</div>
       </div>
@@ -3368,8 +3372,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="u-gap-2 u-ml-auto u-d-flex">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
-        <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
+        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches <span class="tag-beta">Beta</span></button>
+        <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
+             feature is intact (open_clubs deep links still work) — drop the `hidden`
+             class to bring it back. -->
+        <button class="btn btn-ghost btn-sm hidden" onclick="showClubsPage()" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
@@ -4203,8 +4210,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
 
-      <!-- ── CLUBS ── -->
+      <!-- ── WATCHES (model database) ── -->
       <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches <span class="tag-beta">Beta</span></div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Browse the watch database</div>
+              <div class="help-step-desc">Tap <strong>Watches</strong> at the top of the Feed to explore watch models. Search by name or reference &#8212; Submariner, Speedmaster, SKX &#8212; or filter by brand.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Model pages</div>
+              <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there.</div>
+            </div>
+          </div>
+          <div class="help-tip">Watches is in beta &#8212; the database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
+        </div>
+      </div>
+
+      <!-- ── CLUBS ── (parked 2026-10-03: feed button hidden, feature intact —
+           drop the `hidden` class here and on the feed button to bring it back) -->
+      <div class="help-section hidden">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</div>
         <div class="help-card">
           <div class="help-step">
@@ -6254,7 +6284,6 @@ const FEATURE_FLAGS = {
   tg_dev_knobs: { label: 'Timegrapher: raw engine knob panel (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  watch_db: { label: 'Watch database: Explore, model pages, Also owned by (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = safeLS.get('ff_' + name);
@@ -6263,7 +6292,6 @@ function featureFlag(name) {
 }
 function setFeatureFlag(name, val) {
   safeLS.set('ff_' + name, val ? 'true' : 'false');
-  if (name === 'watch_db') applyWatchDbFlag();
 }
 // ── A/B experiments ─────────────────────────────────────────────────────
 // Server-assigned sticky variants (get_experiments RPC). Mirrored in wrotate_test.js.
@@ -6299,13 +6327,6 @@ function setExperimentOverride(key, variant) {
   if (variant) safeLS.set('exp_force_' + key, variant); else safeLS.remove('exp_force_' + key);
   if (currentUser) safeLS.set('exp_force_uid', currentUser.id);   // read by the head's early-fetch script
   renderDevExperiments();
-}
-// Watch database (Explore + model pages + Also owned by) — behind the watch_db
-// dev flag until launch. Hides the only visible entry point; the code paths
-// below also check the flag so nothing is reachable with it off.
-function applyWatchDbFlag() {
-  const btn = document.getElementById('feed-watches-btn');
-  if (btn) btn.style.display = featureFlag('watch_db') ? '' : 'none';
 }
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
@@ -8063,7 +8084,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.09.52';
+const APP_VERSION = '03.10.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20726,7 +20747,6 @@ let _exploreLoaded = false, _exploreQ = '', _exploreBrand = null, _exploreOffset
 const EXPLORE_PAGE_SIZE = 30;
 
 function showExplorePage() {
-  if (!featureFlag('watch_db')) return;
   if (demoGuard()) return;
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
@@ -25150,7 +25170,7 @@ function openAddWatch() {
 async function loadModelOwnersRow(w) {
   const row = document.getElementById('wm-also-owned');
   row.style.display = 'none'; row.onclick = null;
-  if (!w || !w.modelId || !currentUser || !featureFlag('watch_db')) return;
+  if (!w || !w.modelId || !currentUser) return;
   const { data, error } = await db.rpc('model_owners', { p_model_id: w.modelId });
   if (error || !data || editingId !== w.id) return; // modal may have moved on
   const others = (data.total_owners || 0) - 1; // viewer is always one of the owners here
@@ -25172,7 +25192,6 @@ let modelPagePrev = 'page-collection';
 let modelPagePrevScrollY = 0;
 let modelPageId = null;
 function openModelPage(modelId, owners) {
-  if (!featureFlag('watch_db')) return;
   // Close any open overlays (watch modal, watch preview) so the page is visible
   document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
@@ -30701,7 +30720,7 @@ function previewWatch(w) {
 
   const modelRow = document.getElementById('wpm-model-row');
   if (modelRow) {
-    modelRow.innerHTML = (w.modelId && featureFlag('watch_db'))
+    modelRow.innerHTML = w.modelId
       ? `<div role="button" tabindex="0" class="row u-mt-3 u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-border u-r-btn u-fs-base u-cur-pointer u-justify-space-between"
              data-mid="${escAttr(w.modelId)}"
              onclick="closeWatchPreview();openModelPage(this.dataset.mid)">
@@ -35271,7 +35290,6 @@ async function bootApp(user) {
   if (bellBtn) bellBtn.style.display = '';
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
-  applyWatchDbFlag();
   _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
