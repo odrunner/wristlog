@@ -708,6 +708,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .no-watch-row button { background: none; border: 0; padding: var(--space-1) var(--space-2); font-family: inherit; font-size: var(--fs-sm); color: var(--muted); text-decoration: underline; cursor: pointer; }
     .no-watch-row button:hover { color: var(--text); }
     .no-watch-row span + button { margin-left: var(--space-1); }
+    .no-watch-row button + button { margin-left: var(--space-2); }
     .tl-photo { aspect-ratio: unset; height: var(--size-20); }
     .tl-photo .log-photo-placeholder { font-size: var(--fs-base); }
 
@@ -6009,7 +6010,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-log-modal-title">
   <div class="modal u-maxw-95">
-    <div class="modal-title row" id="edit-log-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
+    <div class="modal-title row" id="edit-log-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> <span id="edit-log-modal-title-text">Edit Log Entry</span></div>
     <div class="form-group">
       <label for="edit-log-date">Date</label>
       <input type="date" id="edit-log-date">
@@ -8062,7 +8063,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.06.08';
+const APP_VERSION = '03.06.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21875,8 +21876,8 @@ function renderNoWatchRow() {
   const state = noWatchRowState(logs, todayStr());
   if (state === 'hidden') { el.innerHTML = ''; return; }
   el.innerHTML = state === 'logged'
-    ? `<span class="text-meta">No watch today — noted</span><button onclick="removeNoWatchToday()">Undo</button>`
-    : `<button onclick="logNoWatchToday()">Didn't wear a watch today</button>`;
+    ? `<span class="text-meta">No watch today — noted</span><button onclick="removeNoWatchToday()">Undo</button><button onclick="openNoWatchDayPicker()">Another day?</button>`
+    : `<button onclick="logNoWatchToday()">Didn't wear a watch today</button><button onclick="openNoWatchDayPicker()">Another day?</button>`;
 }
 
 function logNoWatchToday() {
@@ -23228,22 +23229,15 @@ function openEditLog(id) {
   editingLogId   = id;
   editLogUseCase = log.useCase || 'unspecified';
   editLogStrapId = log.strapId || null;
+  // A no-watch note is date-only: everything else on this modal is about a
+  // watch that wasn't worn.
+  if (log.useCase === 'no_watch') { _openDateOnlyLogModal('Edit Log Entry', log.date); return; }
+  document.getElementById('edit-log-modal-title-text').textContent = 'Edit Log Entry';
   const dateInput = document.getElementById('edit-log-date');
   dateInput.value = log.date;
-  // A no-watch note is date-only: everything else on this modal is about a
-  // watch that wasn't worn. Hide those fields and cap the date at today.
-  const isNoWatch = log.useCase === 'no_watch';
-  if (isNoWatch) dateInput.max = todayStr(); else dateInput.removeAttribute('max');
-  document.getElementById('edit-log-usecase-group').style.display = isNoWatch ? 'none' : '';
-  document.getElementById('edit-log-notes-group').style.display   = isNoWatch ? 'none' : '';
-  if (isNoWatch) {
-    document.getElementById('edit-log-notes').value = '';
-    document.getElementById('edit-log-strap-group').style.display = 'none';
-    const clubField = document.getElementById('edit-log-club-field');
-    if (clubField) clubField.style.display = 'none';
-    document.getElementById('edit-log-modal').classList.remove('hidden');
-    return;
-  }
+  dateInput.removeAttribute('max');
+  document.getElementById('edit-log-usecase-group').style.display = '';
+  document.getElementById('edit-log-notes-group').style.display   = '';
   document.getElementById('edit-log-notes').value = log.notes || '';
   // Set use-case chips
   document.querySelectorAll('#edit-log-usecase-chips [data-uc]').forEach(c => {
@@ -23285,9 +23279,55 @@ function selEditLogStrap(id) {
 function closeEditLog() {
   document.getElementById('edit-log-modal').classList.add('hidden');
   editingLogId = null;
+  _noWatchAddMode = false;
+}
+
+// The shared edit-log modal stripped to its date field — what a no-watch note
+// edit and the "Another day?" backfill both need (there is no watch to describe).
+let _noWatchAddMode = false;
+function _openDateOnlyLogModal(title, dateVal) {
+  document.getElementById('edit-log-modal-title-text').textContent = title;
+  const dateInput = document.getElementById('edit-log-date');
+  dateInput.value = dateVal;
+  dateInput.max = todayStr();
+  document.getElementById('edit-log-usecase-group').style.display = 'none';
+  document.getElementById('edit-log-notes-group').style.display   = 'none';
+  document.getElementById('edit-log-notes').value = '';
+  document.getElementById('edit-log-strap-group').style.display = 'none';
+  const clubField = document.getElementById('edit-log-club-field');
+  if (clubField) clubField.style.display = 'none';
+  document.getElementById('edit-log-modal').classList.remove('hidden');
+}
+
+// "Another day?" — backfill a no-watch note for a past day (defaults to
+// yesterday, the most likely one). Same validation as the date edit.
+function openNoWatchDayPicker() {
+  if (demoGuard()) return;
+  editingLogId = null;
+  _noWatchAddMode = true;
+  _openDateOnlyLogModal("Didn't Wear a Watch", addDaysStr(todayStr(), -1));
 }
 
 function saveEditLog() {
+  if (_noWatchAddMode) {
+    const date = document.getElementById('edit-log-date').value;
+    if (!date) { showFieldError('edit-log-date', 'Please select a date'); return; }
+    const issue = noWatchDateIssue(logs, null, date, todayStr());
+    if (issue === 'future')      { showFieldError('edit-log-date', "Can't note a day that hasn't happened"); return; }
+    if (issue === 'duplicate')   { showFieldError('edit-log-date', 'That day is already noted as no watch'); return; }
+    if (issue === 'wear_exists') { showFieldError('edit-log-date', 'You logged a wear that day'); return; }
+    const entry = { id: uid(), watchId: null, date, useCase: 'no_watch', notes: '', visibility: 'private' };
+    logs.push(entry);
+    markDirty('logs', entry.id);
+    save();
+    if (date === todayStr()) dismissReminder();
+    closeEditLog();
+    renderTrack();
+    updateStreakChip();
+    toast('Noted — no watch on ' + fmtDate(date));
+    if (window.posthog) posthog.capture('no_watch_logged', { backfill: true });
+    return;
+  }
   if (!editingLogId) return;
   const date = document.getElementById('edit-log-date').value;
   if (!date) { showFieldError('edit-log-date', 'Please select a date'); return; }

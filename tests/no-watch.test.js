@@ -90,4 +90,9 @@ describe('noWatchDateIssue', () => {
     expect(noWatchDateIssue(null, 'x', '2026-10-01', T)).toBeNull();
     expect(noWatchDateIssue([null], 'x', '2026-10-01', T)).toBeNull();
   });
+  it('add mode (null entryId) still detects conflicts', () => {
+    expect(noWatchDateIssue([noWatch('2026-10-01')], null, '2026-10-01', T)).toBe('duplicate');
+    expect(noWatchDateIssue([wear('2026-10-01')], null, '2026-10-01', T)).toBe('wear_exists');
+    expect(noWatchDateIssue([], null, '2026-10-01', T)).toBeNull();
+  });
 });
