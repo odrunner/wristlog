@@ -50,6 +50,33 @@
     const SUPABASE_URL = 'https://api.wrotate.com';
     const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+
+    // First-party visit log, same shape as p/ and profile/: one page_visits row
+    // per source+model per 30 min, slug carried in `path` so Admin → Traffic can
+    // break views down per watch. PostHog's model_page_viewed below stays the
+    // richer source (geo, full referrer) — this row is what the admin dashboard
+    // can read without a PostHog key.
+    (function() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const slug = (params.get('m') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const utm_source = params.get('utm_source');
+        const ref = document.referrer || null;
+        const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
+        const effectiveSource = utm_source || (externalRef ? null : 'direct');
+        const dedupKey = 'wristlog_visit_w_' + slug + '_' + (effectiveSource || '') + '_' + (params.get('utm_campaign') || '');
+        const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
+        if (Date.now() - lastVisit < 1800000) return;
+        localStorage.setItem(dedupKey, String(Date.now()));
+        db.from('page_visits').insert({
+          utm_source: effectiveSource, utm_medium: params.get('utm_medium'), utm_campaign: params.get('utm_campaign'),
+          utm_content: params.get('utm_content'), utm_term: params.get('utm_term'),
+          referrer: externalRef, path: '/w/' + (slug ? '?m=' + slug : ''),
+          user_agent: navigator.userAgent || null, user_id: null,
+        }).then(() => {}).catch(() => {});
+      } catch(e) {}
+    })();
+
     let ctx = null;
     const el = document.getElementById('model-page-content');
     function show(id) { for (const x of ['loading', 'notfound']) document.getElementById(x).style.display = x === id ? '' : 'none'; }

@@ -8063,7 +8063,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.06.23';
+const APP_VERSION = '03.09.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20078,7 +20078,7 @@ async function renderAdminTraffic(force = false) {
   el.innerHTML = '<div class="note">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
-    const [trafficR, emailEventsR, demoR, clickR, bootR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
@@ -20092,6 +20092,10 @@ async function renderAdminTraffic(force = false) {
       // First-load timings per day (sql/2026-09-18-boot-timings.sql). ~100 narrow
       // rows/day, so it is computed live — no admin_stats_cache entry needed.
       db.rpc('admin_boot_timing_daily', { p_days: 14 }),
+      // Public watch-page (w/) views, logged first-party into page_visits since
+      // 2026-10-03 (sql/2026-10-03-watch-page-traffic.sql). Small slice —
+      // computed live, no admin_stats_cache entry.
+      db.rpc('admin_watch_page_traffic', { p_days: 14 }),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -20107,13 +20111,16 @@ async function renderAdminTraffic(force = false) {
 
     // Bars scale to the busiest day in the window. (Was a fixed 3-visits-per-
     // block glyph string capped at 20 blocks, so every day >= 60 drew the same
-    // full bar and 82 looked identical to 61.)
-    const dailyMax = Math.max(1, ...(t.daily || []).map(d => Number(d.count) || 0));
-    const dailyRows = (t.daily || [])
-      .map(d => {
-        const pct = Math.round(((Number(d.count) || 0) / dailyMax) * 100);
+    // full bar and 82 looked identical to 61.) Shared with the Watch Pages card
+    // so the inline width style exists once.
+    const trafficDailyBars = daily => {
+      const max = Math.max(1, ...(daily || []).map(d => Number(d.count) || 0));
+      return (daily || []).map(d => {
+        const pct = Math.round(((Number(d.count) || 0) / max) * 100);
         return `<div class="row-between u-fs-sm u-pt-1 u-pr-0 u-pb-1 u-pl-0 u-bdb-1px-solid-border u-fvn-tabular-nums"><span class="u-c-muted u-w-20 u-shrink-0">${String(d.day).slice(5)}</span><span class="grow"><span class="u-h-2-5 u-bg-gold-text u-r-hair u-d-block" style="width:${pct}%;"></span></span><span class="u-c-gold-text u-fw-semibold u-w-8 u-ta-right">${d.count}</span></div>`;
       }).join('');
+    };
+    const dailyRows = trafficDailyBars(t.daily);
 
     const statRow = (label, value, sub) => `<div class="u-justify-space-between u-items-baseline u-fs-base u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdb-1px-solid-border u-d-flex"><span>${label}</span><span class="u-fw-semibold"><span class="text-gold">${value}</span>${sub ? `<span class="text-meta u-ml-1">${sub}</span>` : ''}</span></div>`;
 
@@ -20135,6 +20142,24 @@ async function renderAdminTraffic(force = false) {
         ${statRow('Last 7 days', dv.views_7d, (dv.unique_7d || 0) + ' unique IPs')}
       </div>` : '';
 
+    // Watch Pages (w/) — first-party views of the public model pages. Logged
+    // into page_visits by w/index.html since 2026-10-03; launch-day traffic
+    // before that exists only in PostHog's model_page_viewed. Rows are
+    // anonymous, so the admin's own visits count too.
+    const wt = (watchR && !watchR.error) ? watchR.data : null;
+    const watchListRows = (rows, label) => (rows || []).filter(r => r.total > 0)
+      .map(r => `<div class="u-justify-space-between u-fs-base u-pt-1 u-pr-0 u-pb-1 u-pl-0 u-bdb-1px-solid-border u-d-flex"><span class="grow">${escHtml(r[label])}</span><span class="u-fvn-tabular-nums"><span class="text-meta u-mr-2">1d: ${r.day}</span><span class="text-meta u-mr-2">7d: ${r.week}</span><span class="text-gold-strong">${r.total}</span></span></div>`)
+      .join('');
+    const watchModelRows = watchListRows(wt && wt.by_model, 'model');
+    const watchSourceRows = watchListRows(wt && wt.by_source, 'source');
+    const watchHtml = wt ? `<div class="admin-card">
+        <div class="eyebrow stack-2">Watch Pages (public)</div>
+        ${statRow('Views', wt.total, `1d: ${wt.last_1d} · 7d: ${wt.last_7d}`)}
+        ${watchModelRows ? `<div class="eyebrow stack-2 u-mt-3">By Model</div>${watchModelRows}` : ''}
+        ${watchSourceRows ? `<div class="eyebrow stack-2 u-mt-3">By Source</div>${watchSourceRows}` : ''}
+        ${(wt.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Daily</div>${trafficDailyBars(wt.daily)}` : ''}
+      </div>` : '';
+
     // The "Overview (All Time)" card used to live here. It was removed: its
     // unique/repeat visitor counts were unmeasurable (page_visits carries no
     // reliable per-person identity for logged-out traffic, so they degraded into
@@ -20145,6 +20170,7 @@ async function renderAdminTraffic(force = false) {
     el.innerHTML = `
       ${renderEmailHealth(emailEventsR.data || {})}
       ${demoViewsHtml}
+      ${watchHtml}
       ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">
         <div class="eyebrow stack-2">By Source</div>
