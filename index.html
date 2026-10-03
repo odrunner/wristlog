@@ -703,6 +703,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tl-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--muted); margin-bottom: var(--space-1-5); }
     .tl-opt   { font-weight: var(--fw-normal); text-transform: none; letter-spacing: 0; color: var(--muted); opacity: var(--opacity-soft); }
     .tl-worn-notice { margin-top: var(--space-1-5); font-size: var(--fs-sm); color: var(--success-text); min-height: 1em; }
+    /* "No watch today" — a quiet centered footnote under the watch selector, never a boxed peer of the rows */
+    .no-watch-row { text-align: center; margin-top: var(--space-3); }
+    .no-watch-row button { background: none; border: 0; padding: var(--space-1) var(--space-2); font-family: inherit; font-size: var(--fs-sm); color: var(--muted); text-decoration: underline; cursor: pointer; }
+    .no-watch-row button:hover { color: var(--text); }
+    .no-watch-row span + button { margin-left: var(--space-1); }
     .tl-photo { aspect-ratio: unset; height: var(--size-20); }
     .tl-photo .log-photo-placeholder { font-size: var(--fs-base); }
 
@@ -3303,7 +3308,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="card stack-5">
       <h2 class="card-label">Select a watch to log</h2>
       <div id="watch-selector"></div>
-      <div id="no-watch-row"></div>
+      <div id="no-watch-row" class="no-watch-row"></div>
     </div>
     <div class="card">
       <h2 class="card-label">Wear History</h2>
@@ -8057,7 +8062,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.05.46';
+const APP_VERSION = '03.06.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21857,8 +21862,8 @@ function renderNoWatchRow() {
   const state = noWatchRowState(logs, todayStr());
   if (state === 'hidden') { el.innerHTML = ''; return; }
   el.innerHTML = state === 'logged'
-    ? `<div class="row-between"><span class="text-meta">No watch today — noted</span><button class="btn btn-ghost btn-sm" onclick="removeNoWatchToday()">Undo</button></div>`
-    : `<button class="btn btn-ghost btn-sm" onclick="logNoWatchToday()">Didn't wear a watch today</button>`;
+    ? `<span class="text-meta">No watch today — noted</span><button onclick="removeNoWatchToday()">Undo</button>`
+    : `<button onclick="logNoWatchToday()">Didn't wear a watch today</button>`;
 }
 
 function logNoWatchToday() {
