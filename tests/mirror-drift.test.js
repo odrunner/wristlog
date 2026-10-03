@@ -46,7 +46,7 @@ const VERBATIM = [
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
-  'isWearEntry', 'noWatchEntry', 'noWatchRowState', 'noWatchOnlyDates', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome', 'applyCommentLikes',
+  'isWearEntry', 'noWatchEntry', 'noWatchRowState', 'noWatchOnlyDates', 'noWatchDateIssue', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome', 'applyCommentLikes',
   'feedSortDate', 'compareFeedLogs', 'feedCaughtUpIndex', 'feedMaxCreatedAt',
   'feedCacheKey', 'serializeFeedCache', 'parseFeedCache', 'carryFeedEnrichment', 'bootTimingPayload', 'earlyFeedUsable', 'firstLoadCardHtml',
   'socialCacheKey', 'serializeSocialCache', 'parseSocialCache', 'socialSignature', 'shouldRefreshOnBackground', 'feedPageToState', 'experimentSpeedHtml', 'knobTrialProgressHtml',

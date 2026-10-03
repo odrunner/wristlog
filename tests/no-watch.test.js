@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { noWatchEntry, noWatchRowState, noWatchOnlyDates } from '../wrotate_test.js';
+import { noWatchEntry, noWatchRowState, noWatchOnlyDates, noWatchDateIssue } from '../wrotate_test.js';
 
 // Explicit "no watch today" entries: logs rows with useCase 'no_watch' and no
 // watchId. isWearEntry() already excludes them from every wear stat; these
@@ -62,5 +62,32 @@ describe('noWatchOnlyDates', () => {
   it('tolerates null logs, null elements and dateless rows', () => {
     expect(noWatchOnlyDates(null).size).toBe(0);
     expect(noWatchOnlyDates([null, { id: 'x', useCase: 'no_watch' }]).size).toBe(0);
+  });
+});
+
+describe('noWatchDateIssue', () => {
+  const entry = noWatch(T); // id 'nw' + T
+  it('rejects a future date', () => {
+    expect(noWatchDateIssue([entry], entry.id, '2026-10-03', T)).toBe('future');
+  });
+  it('rejects a date that already has a no-watch note', () => {
+    expect(noWatchDateIssue([entry, noWatch('2026-10-01')], entry.id, '2026-10-01', T)).toBe('duplicate');
+  });
+  it('rejects a date with a wear logged', () => {
+    expect(noWatchDateIssue([entry, wear('2026-10-01')], entry.id, '2026-10-01', T)).toBe('wear_exists');
+  });
+  it('allows a clean past date', () => {
+    expect(noWatchDateIssue([entry], entry.id, '2026-10-01', T)).toBeNull();
+  });
+  it('keeping the same date is not a duplicate (own id excluded)', () => {
+    expect(noWatchDateIssue([entry], entry.id, T, T)).toBeNull();
+  });
+  it('a measurement share or untagged post on the date is not a wear', () => {
+    expect(noWatchDateIssue([entry, measurement('2026-10-01')], entry.id, '2026-10-01', T)).toBeNull();
+    expect(noWatchDateIssue([entry, post('2026-10-01')], entry.id, '2026-10-01', T)).toBeNull();
+  });
+  it('tolerates null logs and null elements', () => {
+    expect(noWatchDateIssue(null, 'x', '2026-10-01', T)).toBeNull();
+    expect(noWatchDateIssue([null], 'x', '2026-10-01', T)).toBeNull();
   });
 });

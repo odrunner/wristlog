@@ -242,6 +242,19 @@ export function noWatchRowState(logs, today) {
   return noWatchEntry(logs, today) ? 'logged' : 'offer';
 }
 
+// Can this no-watch entry move to newDate? null = fine, else why not:
+// 'future' (tomorrow is unknowable), 'duplicate' (that day is already noted),
+// 'wear_exists' (a real wear is logged there — the note would contradict it).
+export function noWatchDateIssue(logs, entryId, newDate, today) {
+  if (newDate > today) return 'future';
+  for (const l of logs || []) {
+    if (!l || l.date !== newDate || l.id === entryId) continue;
+    if (l.useCase === 'no_watch') return 'duplicate';
+    if (isWearEntry(l)) return 'wear_exists';
+  }
+  return null;
+}
+
 // Dates whose ONLY entries are no-watch — the streak calendar shows these as a
 // distinct muted cell instead of a gold "logged" one.
 export function noWatchOnlyDates(logs) {
