@@ -30,6 +30,8 @@ Prep already shipped: the profile view no longer fetches other users' `email_pre
 Still NOT covered by any of the above: logged-in users can read all 23 columns of anyone. Column privileges are per-role, not per-row, so that needs the private columns moved to a `profile_private` table keyed on user_id with own-row-only RLS — a schema migration plus client refactor, separate again.
 Full write-up: `audit-results/2026-08-13-security-audit.md` S1.
 
+**Web-measurement remnants (from the dead-code cleanup, 2026-09-23).** WRotate does not do web measurement and the Measure tab only shows under the native bridge, so the Web Audio fallback inside `toggleMsrListen` / `stopMsrListen` and the old listener leftovers (`stopTgListen`, `_tgListening` and its 4 guards, non-measure branches in the native event handler, `tg-listen-btn` lookups) are unreachable. ~100 lines. Own commit — it edits live measurement code; verify on a device build. Detail: `audit-results/2026-09-20-dead-code-audit.md` → Follow-up. (The dead-code cleanup itself shipped 2026-09-23: 23134c4, 5463df3, a222346.)
+
 In admin view, don't show the last 498, filter out users with no watch, wears, posts, etc to only have users with a record, so that i can hit columns to rank
 
 tick-log archival Stage 2 (PAUSED 2026-06-22) — sustainable rolling retention for timegrapher_tick_logs. Stage 1 done (archived 37,564 pre-approval rows offline + pruned, 60MB→14MB). Stage 2 = make rollout-check.py track its cumulative count incrementally (persisted state file) instead of re-scanning the full table, then a weekly LaunchAgent archives+prunes a rolling 30-day tail. Needs sign-off: it changes how the rollout cumulative number is computed. Design: docs/superpowers/specs/2026-06-22-tick-log-archival-design.md

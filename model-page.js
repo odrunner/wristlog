@@ -133,7 +133,7 @@ function renderModelPage(el, ctx, h) {
     <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
       <span class="u-d-flex u-gap-2">
         <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
-        <span class="mp-beta">Beta</span>
+        <span class="tag-beta">Beta</span>
       </span>
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="share">Share</span>
     </div>
@@ -368,9 +368,7 @@ function renderModelPage(el, ctx, h) {
     .mp-sec-gap { margin-bottom: var(--space-2-5); }
     .mp-sec-hrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-2-5); }
     .mp-sub { font-size: var(--fs-sm); color: var(--muted); }
-    .mp-eyebrow { font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
-    .mp-beta { align-self: center; padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); background: var(--gold); color: var(--black); font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; line-height: var(--lh-tight); }
-    .mp-link { background: none; border: 0; padding: var(--space-1) 0; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--gold-text); cursor: pointer; }
+    .mp-eyebrow { font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }    .mp-link { background: none; border: 0; padding: var(--space-1) 0; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--gold-text); cursor: pointer; }
     /* your watch / how they run */
     .mp-yours { margin: var(--space-4) var(--space-4) 0; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .mp-yours-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }

@@ -438,6 +438,8 @@
 .btn-ghost-gold, .btn-ghost-gold:hover { border-color: var(--gold); color: var(--gold-text); }
 .btn-ghost-muted, .btn-ghost-muted:hover { border-color: var(--border); color: var(--muted); }
 .btn-ghost-danger, .btn-ghost-danger:hover { border-color: var(--danger); color: var(--danger-text); }
+/* beta tag: the gold pill beside a page title or a hero's Back link while a surface is in beta */
+.tag-beta { display: inline-block; vertical-align: middle; align-self: center; padding: var(--space-0-5) var(--space-2); border-radius: var(--radius-pill); background: var(--gold); color: var(--black); font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; line-height: var(--lh-tight); }
 /* admin: a small stats panel inside an experiment card (Admin → Experiments knob-trial progress) */
 .adm-panel { margin: 0 0 var(--space-2-5); padding: var(--space-2) var(--space-2-5); border: 0.5px solid var(--border); border-radius: var(--radius-btn); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .adm-panel-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-1) var(--space-2-5); align-items: baseline; }

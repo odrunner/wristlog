@@ -5,7 +5,7 @@ const CACHE = 'wristlog-v1301';
 // '/' and '/index.html' are the same ~494 KB (gzip) document — fetch it once and
 // store it under both keys, so a navigation to either URL still hits the cache
 // offline without downloading the shell twice on every release.
-const PRECACHE = ['/', '/design-system.css?v=b0ed5e4e', '/model-page.js?v=cce21eb6', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
+const PRECACHE = ['/', '/design-system.css?v=b8dee363', '/model-page.js?v=f7a7733f', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
