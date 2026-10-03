@@ -227,6 +227,32 @@ export function isWearEntry(l) {
   return !!(l && l.watchId) && l.useCase !== 'measurement';
 }
 
+// Explicit "no watch today" entries (useCase 'no_watch', watchId null, private):
+// a deliberate record that nothing was worn, so an empty day can't read as
+// "forgot to log". isWearEntry() is false for them, so they never touch wear
+// stats; they DO count as logged days for the streak (logging is the habit).
+export function noWatchEntry(logs, date) {
+  return (logs || []).find(l => l && l.useCase === 'no_watch' && l.date === date) || null;
+}
+
+// Track-tab row state for `today`: 'hidden' once a real wear is logged (the
+// question is answered), 'logged' when a no-watch entry exists, else 'offer'.
+export function noWatchRowState(logs, today) {
+  if ((logs || []).some(l => l && l.date === today && isWearEntry(l))) return 'hidden';
+  return noWatchEntry(logs, today) ? 'logged' : 'offer';
+}
+
+// Dates whose ONLY entries are no-watch — the streak calendar shows these as a
+// distinct muted cell instead of a gold "logged" one.
+export function noWatchOnlyDates(logs) {
+  const other = new Set(), noWatch = new Set();
+  for (const l of logs || []) {
+    if (!l || !l.date) continue;
+    if (l.useCase === 'no_watch') noWatch.add(l.date); else other.add(l.date);
+  }
+  return new Set([...noWatch].filter(d => !other.has(d)));
+}
+
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 // Compare the native app version componentwise. parseFloat() was used at four
 // feature gates until 2026-07-25, which breaks the moment a version has a

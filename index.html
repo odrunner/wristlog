@@ -1374,6 +1374,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:var(--opacity-faint); }
     .streak-cal-cell.frozen { background:var(--streak-frozen-bg); color:var(--streak-frozen-ink); font-weight:var(--fw-bold); }
+    .streak-cal-cell.nowatch { background:var(--surface2); color:var(--muted); font-weight:var(--fw-bold); text-decoration:line-through; }
     .streak-cal-cell.rest { background:var(--surface2); color:var(--muted); position:relative; }
     .streak-cal-cell.rest::after { content:''; position:absolute; bottom:var(--size-1); left:50%; transform:translateX(-50%); width:var(--size-1); height:var(--size-1); border-radius:var(--radius-round); background:var(--muted); opacity:var(--opacity-soft); }
     .streak-cal-freezes { text-align:center; font-size:var(--fs-sm); color:var(--muted); margin:calc(-1 * var(--space-2)) 0 var(--space-3); }
@@ -2729,6 +2730,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="u-maxh-60vh" style="overflow-y:auto;">
       <div class="stack-3">
+        <span class="eyebrow eyebrow-muted">October 2026</span>
+      </div>
+      <div class="stack-3">
+        <div class="item-title">No Watch Today</div>
+        <div class="body-muted">A day with nothing logged can mean two things &#8212; you forgot, or you truly didn&#8217;t wear a watch. Now you can say so: on the <strong>Track</strong> tab, tap <strong>Didn&#8217;t wear a watch today</strong> under the watch list. The day is recorded as deliberately watch-free &#8212; it keeps your streak alive and shows crossed out on the streak calendar, but it never touches your wear stats and is only visible to you. Logging a real wear that day replaces it automatically.</div>
+      </div>
+      <div class="stack-3">
         <span class="eyebrow eyebrow-muted">September 2026</span>
       </div>
       <div class="stack-3">
@@ -3295,6 +3303,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="card stack-5">
       <h2 class="card-label">Select a watch to log</h2>
       <div id="watch-selector"></div>
+      <div id="no-watch-row"></div>
     </div>
     <div class="card">
       <h2 class="card-label">Wear History</h2>
@@ -3977,7 +3986,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Go to the Track tab</div>
-              <div class="help-step-desc">The date defaults to today. Tap <strong>Yesterday</strong> or <strong>Pick date</strong> to log retroactively. The <strong>Today's Pick</strong> card suggests a watch based on your rotation — tap <strong>Log This Wear</strong> to log it directly.</div>
+              <div class="help-step-desc">The date defaults to today. Tap <strong>Yesterday</strong> or <strong>Pick date</strong> to log retroactively. The <strong>Today's Pick</strong> card suggests a watch based on your rotation — tap <strong>Log This Wear</strong> to log it directly. Didn't wear anything? Tap <strong>Didn't wear a watch today</strong> under the watch list — the day is recorded as deliberately watch-free, keeps your streak going, and never touches your wear stats.</div>
             </div>
           </div>
           <div class="help-step">
@@ -6944,6 +6953,7 @@ function renderStreakCalendar() {
   const frozenSet = new Set(sk.frozen);
   const restSet = new Set(sk.restDays || []);
   const logged = new Set(logs.map(l => l.date));
+  const noWatchSet = noWatchOnlyDates(logs);
   const { year, month } = _streakCalYM;
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const cells = streakCalendarGrid(logged, year, month, t);
@@ -6967,8 +6977,9 @@ function renderStreakCalendar() {
         if (!c) return `<div class="streak-cal-cell streak-cal-blank"></div>`;
         const isFrozen = !c.logged && frozenSet.has(c.date);
         const isRest = !c.logged && !isFrozen && restSet.has(c.date);
-        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : (isFrozen ? ' frozen' : (isRest ? ' rest' : ''))) + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
-        return `<div class="${cls}"${isFrozen ? ' title="A streak freeze covered this day"' : (isRest ? ' title="Rest day — earned by logging the full week"' : '')}>${c.day}</div>`;
+        const isNoWatch = c.logged && noWatchSet.has(c.date);
+        const cls = 'streak-cal-cell' + (c.logged ? (isNoWatch ? ' nowatch' : ' logged') : (isFrozen ? ' frozen' : (isRest ? ' rest' : ''))) + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
+        return `<div class="${cls}"${isNoWatch ? ' title="No watch worn — logged on purpose"' : (isFrozen ? ' title="A streak freeze covered this day"' : (isRest ? ' title="Rest day — earned by logging the full week"' : ''))}>${c.day}</div>`;
       }).join('') +
     `</div>`;
 }
@@ -8046,7 +8057,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.05.45';
+const APP_VERSION = '03.05.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8109,6 +8120,33 @@ function isMeasurementCardImage(useCase, urls, idx) {
 // array), but it must never read as "you wore this".
 function isWearEntry(l) {
   return !!(l && l.watchId) && l.useCase !== 'measurement';
+}
+
+// VERBATIM mirrors of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Explicit "no watch today" entries (useCase 'no_watch', watchId null, private):
+// a deliberate record that nothing was worn, so an empty day can't read as
+// "forgot to log". isWearEntry() is false for them, so they never touch wear
+// stats; they DO count as logged days for the streak (logging is the habit).
+function noWatchEntry(logs, date) {
+  return (logs || []).find(l => l && l.useCase === 'no_watch' && l.date === date) || null;
+}
+
+// Track-tab row state for `today`: 'hidden' once a real wear is logged (the
+// question is answered), 'logged' when a no-watch entry exists, else 'offer'.
+function noWatchRowState(logs, today) {
+  if ((logs || []).some(l => l && l.date === today && isWearEntry(l))) return 'hidden';
+  return noWatchEntry(logs, today) ? 'logged' : 'offer';
+}
+
+// Dates whose ONLY entries are no-watch — the streak calendar shows these as a
+// distinct muted cell instead of a gold "logged" one.
+function noWatchOnlyDates(logs) {
+  const other = new Set(), noWatch = new Set();
+  for (const l of logs || []) {
+    if (!l || !l.date) continue;
+    if (l.useCase === 'no_watch') noWatch.add(l.date); else other.add(l.date);
+  }
+  return new Set([...noWatch].filter(d => !other.has(d)));
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -8702,6 +8740,7 @@ async function loadAndRenderProfile(userId) {
   _pp.push(db.from('logs')
     .select('id, date, use_case, notes, photo_url, visibility, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
     .eq('user_id', userId)
+    .neq('use_case', 'no_watch')
     .order('created_at', { ascending: false }).limit(9));
 
   // Collection showcase — pick the right query branch, push one promise
@@ -8839,6 +8878,7 @@ async function loadMoreProfilePosts(userId, isOwn) {
     const { data } = await db.from('logs')
       .select('id, date, use_case, notes, photo_url, visibility, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
       .eq('user_id', userId)
+      .neq('use_case', 'no_watch')
       .order('created_at', { ascending: false })
       .range(_profilePostsOffset, _profilePostsOffset + PROFILE_POSTS_BATCH - 1);
     const grid = document.getElementById('profile-posts-grid');
@@ -12251,6 +12291,7 @@ async function loadFeed() {
       // Q2: own posts — all visibility types (owner sees own private/followers/etc.)
       const q2 = db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
+        .neq('use_case', 'no_watch')
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
 
       const promises = [q1, q2];
@@ -12534,7 +12575,7 @@ async function loadMoreFeed() {
     const promises = [
       older(db.from('logs').select(FEED_LOG_COLS).eq('visibility', 'public'))
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
-      older(db.from('logs').select(FEED_LOG_COLS).eq('user_id', currentUser.id))
+      older(db.from('logs').select(FEED_LOG_COLS).eq('user_id', currentUser.id).neq('use_case', 'no_watch'))
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
     ];
     if (followingArr.length > 0) {
@@ -16764,6 +16805,7 @@ async function saveNewPost() {
   // dismiss the wear reminder or claim a wear was logged for it.
   const isWear = !!postedWatch && isWearEntry({ watchId: postedWatch.id, useCase });
   if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
+  if (isWear) clearNoWatchFor(entry.date); // a real wear supersedes a no-watch note
   // Fire-and-forget fun fact for ANY watch-tagged post (wears AND measurement shares —
   // the fact is about the watch) — never blocks. Same-day gate keeps it consistent with
   // a wear of the same watch that day.
@@ -21796,8 +21838,63 @@ function renderTrack(force) {
   renderWatchRecommendation();
   renderNeglectedStrip();
   renderWatchSelector();
+  renderNoWatchRow();
   renderTrackHistory();
   maybeShowLogAgainBanner();
+}
+
+// ── Explicit "no watch today" ────────────────────────────────────────────────
+// A private logs row (watch_id null, use_case 'no_watch') recording that
+// nothing was worn, so an empty day can't read as "forgot to log". Never a
+// wear (isWearEntry is false), excluded from the feed and profile Posts at
+// fetch time, but it counts as a logged day for the streak, and its logs row
+// dated today silences the 5pm reminder server-side (wear_reminder_targets()
+// skips anyone with any logs row dated today).
+function renderNoWatchRow() {
+  const el = document.getElementById('no-watch-row');
+  if (!el) return;
+  if (_isDemoMode || !currentUser || !watches.length) { el.innerHTML = ''; return; }
+  const state = noWatchRowState(logs, todayStr());
+  if (state === 'hidden') { el.innerHTML = ''; return; }
+  el.innerHTML = state === 'logged'
+    ? `<div class="row-between"><span class="text-meta">No watch today — noted</span><button class="btn btn-ghost btn-sm" onclick="removeNoWatchToday()">Undo</button></div>`
+    : `<button class="btn btn-ghost btn-sm" onclick="logNoWatchToday()">Didn't wear a watch today</button>`;
+}
+
+function logNoWatchToday() {
+  if (demoGuard()) return;
+  const today = todayStr();
+  if (noWatchRowState(logs, today) !== 'offer') { renderNoWatchRow(); return; }
+  const entry = { id: uid(), watchId: null, date: today, useCase: 'no_watch', notes: '', visibility: 'private' };
+  logs.push(entry);
+  markDirty('logs', entry.id);
+  save();
+  dismissReminder();
+  renderTrack();
+  updateStreakChip();
+  toast('Noted — no watch today');
+  haptic('success');
+  if (window.posthog) posthog.capture('no_watch_logged');
+}
+
+function removeNoWatchToday() {
+  if (demoGuard()) return;
+  clearNoWatchFor(todayStr());
+  renderTrack();
+  updateStreakChip();
+}
+
+// A real wear logged for the same date supersedes the no-watch note — called
+// from every wear-creating path so the two can't contradict each other.
+// Re-renders the row itself: quickLog and saveNewPost don't re-render Track.
+function clearNoWatchFor(date) {
+  const e = noWatchEntry(logs, date);
+  if (!e) return;
+  logs = logs.filter(l => l.id !== e.id);
+  save();
+  if (currentUser) queueDelete('logs', e.id);
+  cloudSync();
+  renderNoWatchRow();
 }
 
 function renderWornNotice() {
@@ -21943,6 +22040,13 @@ function renderTrackHistory() {
   const page = sorted.slice(0, _trackHistoryLimit);
   const watchMap = new Map(watches.map(w => [w.id, w]));
   tbody.innerHTML = page.map(log => {
+    if (log.useCase === 'no_watch') return `<tr>
+      <td class="u-ws-nowrap">${fmtDate(log.date)}</td>
+      <td><span class="u-c-muted">No watch</span></td>
+      <td class="u-ws-nowrap">
+        <button class="btn-icon" title="Delete" aria-label="Delete entry" onclick="deleteLog('${log.id}',this)">✕</button>
+      </td>
+    </tr>`;
     const w = watchMap.get(log.watchId);
     if (!w) return '';
     const thumb = w.image
@@ -22059,6 +22163,7 @@ async function saveLog() {
     }
   }
   save();
+  clearNoWatchFor(date);
   // Send mention notifications for @usernames in wear log notes
   if (notes && currentUser) {
     const mentionedUsernames = [...new Set((notes.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
@@ -25272,6 +25377,7 @@ function quickLog(watchId) {
   logs.push(qEntry);
   markDirty('logs', qId);
   save();
+  clearNoWatchFor(today);
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged!');
