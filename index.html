@@ -8084,7 +8084,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.22.26';
+const APP_VERSION = '03.22.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18478,6 +18478,7 @@ function showAdminPage() {
   seedWishlistShareDraft();
   seedCollectionShareReleaseDraft();
   seedWhatIfAiPicksDraft();
+  seedWatchesBetaDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -18865,6 +18866,37 @@ function seedCollectionExtrasDraft() {
 // answered by the sandbox, with AI Picks as the guide. Honesty is the hook: the
 // AI says when a wishlist watch merely duplicates what they own.
 // Seeded as a DRAFT only: nothing sends until it is queued and the drain runs.
+// Watches (the model database) launched to everyone 2026-10-03. The story is
+// the social one: every model has a page, and your watch's page knows who else
+// on WRotate owns it. Seeded as a DRAFT only: nothing sends until it is queued
+// and the drain runs.
+function seedWatchesBetaDraft() {
+  const FLAG = 'wr_seed_watches_beta_draft_v1';
+  if (safeLS.get(FLAG)) return;
+  safeLS.set(FLAG, '1');
+  const SUBJECT = 'Your watch has a page now';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 8,
+    subject: SUBJECT,
+    heading: 'Watches: browse the model database (beta)',
+    body: `There&#8217;s a new button at the top of your feed: <b>Watches</b>. Tap it and you&#8217;re browsing the WRotate model database &#8212; search by name or reference, Submariner to SKX, or wander by brand.
+
+Every model gets its own page: photos, a short history, the fun facts, and the part we like most &#8212; <b>who else on WRotate owns one</b>. Your Speedmaster isn&#8217;t just yours; there&#8217;s a small club of people who reach for the same watch, and now you can see them, follow them, and compare notes.
+
+It works from your collection too. Open any watch you own and tap <b>See this model</b> to jump straight to its page.
+
+It&#8217;s a beta, and that&#8217;s deliberate: the database grows as members add watches, so if a model page looks thin today, it fills in as more of its owners arrive. Your collection is already helping build it.
+
+<a href="https://wrotate.com/open">Browse the Watches database &#8594;</a>
+
+The WRotate team`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
 function seedWhatIfAiPicksDraft() {
   // v2 re-seeds over v1: adds the demo-account screenshots inline.
   const FLAG = 'wr_seed_whatif_ai_picks_draft_v2';
