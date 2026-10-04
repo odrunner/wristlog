@@ -4564,6 +4564,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" class="field field-compact"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
         <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" class="field field-compact"></label>
         <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" class="field field-compact"></label>
+        <label>Drift band s/d (999=off)<input type="number" step="1" id="tg-knob-driftband" oninput="onTgKnob('tg_driftband',this.value)" class="field field-compact"></label>
       </div>
       </details>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
@@ -8089,7 +8090,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.23.46';
+const APP_VERSION = '04.14.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -32023,6 +32024,7 @@ function initTgSourceSelector() {
       set('tg-knob-guardmode', String(_tgKnob0('tg_guardmode', 1)));
       set('tg-knob-gatemaxrej', _tgKnob('tg_gatemaxrej', 1));
       set('tg-knob-acquiremax', _tgKnob('tg_acquiremax', 15));
+      set('tg-knob-driftband', _tgKnob('tg_driftband', 999));
     } else knobPanel.style.display = 'none';
   }
   initPzTunePanel();
@@ -32566,6 +32568,9 @@ window._tgNativeCallback = function(data) {
         if (_beShown != null) _msrLastBe = _beShown;
         _msrRateHistory.push(r);
         if (_msrRateHistory.length > 1000) _msrRateHistory = _msrRateHistory.slice(-1000);
+        if (_isProV2 && (!_msrTgDriftSeries.length || Date.now() - _msrTgDriftSeries[_msrTgDriftSeries.length - 1].t >= 1900)) {
+          _msrTgDriftSeries.push({ t: Date.now(), v: r });
+        }
         // Native Theil-Sen rate is authoritative — bucket rate is too coarse
         // (quantized at 7.2 s/day steps, median stays at 0 for small rates)
         document.getElementById('msr-rate-input').value = r.toFixed(1);
@@ -32820,7 +32825,17 @@ window._tgNativeCallback = function(data) {
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
         if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
         // tg core (mic): converge on the engine's fast rateStable, bypassing the slow bucket logic.
-        if (isTgAlgo && data.rateStable && elapsed >= _tgConvKnob('tg_wallmin')) jsConverged = true;
+        if (isTgAlgo && data.rateStable && elapsed >= _tgConvKnob('tg_wallmin')) {
+          // Drift gate (tg_driftband, 999 = off): hold convergence while the tg
+          // estimate's second-half range exceeds the band. A held session keeps
+          // measuring and converges once the lock settles, or runs out the clock.
+          if (tgDriftGateBlocks(_msrTgDriftSeries.map(s => s.v), _tgKnob('tg_driftband', 999))) {
+            if (!_msrDriftHolding) { _msrDriftHolding = true; _msrDriftGateFires++; console.log('[TG JS] Drift gate holding convergence'); }
+          } else {
+            _msrDriftHolding = false;
+            jsConverged = true;
+          }
+        }
         if (_v2OwnsConverge) {
           // v2: _q2Tick (incremental-stability) owns the lock; never show CONVERGED prematurely.
           badge.style.display = 'none';
@@ -33203,6 +33218,9 @@ let _msrIsAuto = false; // whether current session is auto BPH
 let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
+let _msrTgDriftSeries = []; // tg-rate samples ~2 s apart for the drift gate — mirrors the [TGALGO] cadence the 6 s/d band was measured on
+let _msrDriftGateFires = 0; // times the drift gate held a would-be convergence this session
+let _msrDriftHolding = false;
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 let _msrCachedBucketRate = null; // bucket-median rate from the last rate update
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
@@ -33651,6 +33669,7 @@ function _resetMsrState(bph) {
   _msrLastRate = null; _msrLastBph = null;
   _msrLastBe = null; _msrFoldedBE = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
+  _msrTgDriftSeries = []; _msrDriftGateFires = 0; _msrDriftHolding = false;
   _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastAmp = null; _msrLastWave = null; _msrLastConf = 0;
   _msrLastNativeTicks = 0; _msrLastDurationSec = null; _msrLastRateStd = null;
   const scCanvas = document.getElementById('msr-scatter-plot');
@@ -34521,6 +34540,24 @@ function resolveTgKnob(personalRaw, trial, dflt, opts) {
   if (hasTrial) return trial;
   return dflt;
 }
+// ── Drift gate (tg_driftband, 2026-10-04) ──
+// Mirrors the weekly review's drift2h: range of the tg estimate over the second
+// half of the run (max − min, ≥4 samples; Python: tgs[len(tgs)//2:]). A good
+// lock sits still (2nd-half range p50 0.7 s/d); a bad one wanders (p50 6.7).
+// Gate table 2026-10-04: holding convergence at >6 s/d would have stopped 16%
+// of bad locks at 3% good cost — 6.3×, the best row in the table. Runs in JS at
+// the tg core's convergence acceptance (JS owns the stop), so no new binary.
+function tgSecondHalfDrift(vals) {
+  if (!Array.isArray(vals) || vals.length < 4) return null;
+  const half = vals.slice(Math.floor(vals.length / 2));
+  return Math.max(...half) - Math.min(...half);
+}
+// band 999 = off (the optional-gate convention); fails open on short series.
+function tgDriftGateBlocks(vals, band) {
+  if (!(band > 0) || band >= 999) return false;
+  const d = tgSecondHalfDrift(vals);
+  return d !== null && d > band;
+}
 function _tgTrial(k) { const t = tgTrialKnobs(EXPERIMENTS, _expOverrides()); return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null; }
 function _tgKnob(k, d) { return resolveTgKnob(safeLS.get(k), _tgTrial(k), d); }
 function _tgKnob0(k, d) { return resolveTgKnob(safeLS.get(k), _tgTrial(k), d, { allowZero: true }); }
@@ -34769,6 +34806,13 @@ function stopMsrListen(reason) {
   stopTuningPoll();
   if (_tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+  }
+  // Drift-gate echo — the JS twin of native's [TGTUNE] line. The Sunday loop reads
+  // this session's arm from driftBand= here (native can't echo a knob it doesn't
+  // know), so every tg session on this JS writes it, both arms.
+  if (_tgAlgo() === 'tg' && _tgDebugSessionId) {
+    const _d2h = tgSecondHalfDrift(_msrTgDriftSeries.map(s => s.v));
+    _tgTickDebugBuffer.push('[TGDRIFT] driftBand=' + _tgKnob('tg_driftband', 999) + ' fires=' + _msrDriftGateFires + ' drift2h=' + (_d2h == null ? 'nil' : _d2h.toFixed(1)));
   }
   // Flush remaining debug messages to Supabase
   if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {

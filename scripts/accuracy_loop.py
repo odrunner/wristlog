@@ -20,6 +20,7 @@ FLEET_DEFAULTS = {
     "tg_sigma": 0.0003, "tg_stabwin": 6, "tg_wallmin": 15, "tg_stabth": 3, "tg_maxwin": 16,
     "tg_agreeband": 12, "tg_lift": 52, "tg_ampmin": 90, "tg_confirmband": 999,
     "tg_guardmode": 1, "tg_gatemaxrej": 1, "tg_acquiremax": 15, "tg_periodfit": 2,
+    "tg_driftband": 999,   # JS drift gate (2026-10-04); 999 = off
 }
 # Knobs that belong to the precision preset: the client applies a trial on these only
 # to users on the default ('balanced') preset, so the analysis must use the same
@@ -32,6 +33,9 @@ _TUNE_FIELD = {
     "tg_maxwin": ("maxWin", None), "tg_agreeband": ("agreeBand", None), "tg_lift": ("lift", None),
     "tg_ampmin": ("ampMin", None), "tg_confirmband": ("confirmBand", None), "tg_guardmode": ("guardMode", None),
     "tg_gatemaxrej": ("gateMaxRej", None), "tg_acquiremax": ("acquireMax", None), "tg_periodfit": ("periodFit", None),
+    # JS-side gate: echoed by the client in its own [TGDRIFT] line (native TGTUNE
+    # can't know it); the weekly script hands tune_value both lines joined.
+    "tg_driftband": ("driftBand", None),
 }
 
 # Decision rules (spec §3A)

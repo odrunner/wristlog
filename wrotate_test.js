@@ -3902,6 +3902,24 @@ export function resolveTgKnob(personalRaw, trial, dflt, opts) {
   if (hasTrial) return trial;
   return dflt;
 }
+// ── Drift gate (tg_driftband, 2026-10-04) ──
+// Mirrors the weekly review's drift2h: range of the tg estimate over the second
+// half of the run (max − min, ≥4 samples; Python: tgs[len(tgs)//2:]). A good
+// lock sits still (2nd-half range p50 0.7 s/d); a bad one wanders (p50 6.7).
+// Gate table 2026-10-04: holding convergence at >6 s/d would have stopped 16%
+// of bad locks at 3% good cost — 6.3×, the best row in the table. Runs in JS at
+// the tg core's convergence acceptance (JS owns the stop), so no new binary.
+export function tgSecondHalfDrift(vals) {
+  if (!Array.isArray(vals) || vals.length < 4) return null;
+  const half = vals.slice(Math.floor(vals.length / 2));
+  return Math.max(...half) - Math.min(...half);
+}
+// band 999 = off (the optional-gate convention); fails open on short series.
+export function tgDriftGateBlocks(vals, band) {
+  if (!(band > 0) || band >= 999) return false;
+  const d = tgSecondHalfDrift(vals);
+  return d !== null && d > band;
+}
 
 // JS mirror of the SQL verdict ladder in evaluate_experiment(), so the admin tab can
 // re-derive a verdict from a snapshot. Order matters: too_early → guardrail → win → lose.

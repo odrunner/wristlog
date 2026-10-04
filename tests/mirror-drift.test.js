@@ -38,7 +38,7 @@ const VERBATIM = [
   'buildRecommendPayload', 'recommendCacheKey',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs', 'cardPathFor', 'cardUrlFor', 'cardSrcAttrs',
-  'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
+  'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'tgSecondHalfDrift', 'tgDriftGateBlocks', 'uniqueWears',
   'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'collViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows', 'notifStaysUnreadOnPanelOpen',
   'mergeBadgeNotifs',

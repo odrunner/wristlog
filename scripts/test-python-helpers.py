@@ -290,5 +290,34 @@ class CurlHttpMethod(unittest.TestCase):
         self.assertNotIn("-d", calls[0])
 
 
+class AnalyzeTuneDriftEcho(unittest.TestCase):
+    """analyze() must hand the arm reader BOTH echo lines: [TGTUNE] (native) and
+    [TGDRIFT] (JS drift gate, 2026-10-04 — native can't echo a knob it doesn't
+    know, so the client writes its own line). Without the join, every drift-gate
+    trial session reads as 'build lacks the knob' and the trial never fills."""
+
+    def _analyze(self):
+        ns = {"re": __import__("re")}
+        exec(_extract("weekly-measurement-review.py", "def analyze(", "_ALGO_RE"), ns)
+        return ns["analyze"]
+
+    def test_tune_joins_tgtune_and_tgdrift(self):
+        blob = ('[TGTUNE] regSkip=3 guardMode=1 confirmBand=999.0\n'
+                '[TGDRIFT] driftBand=6.0 fires=1 drift2h=7.2\n'
+                '{"stop_reason": "converged"}')
+        tune = self._analyze()(blob)["tune"]
+        self.assertIn("guardMode=1", tune)
+        self.assertIn("driftBand=6.0", tune)
+
+    def test_tune_without_drift_line_unchanged(self):
+        blob = '[TGTUNE] regSkip=3 guardMode=1\n{"stop_reason": "user_stopped"}'
+        tune = self._analyze()(blob)["tune"]
+        self.assertIn("guardMode=1", tune)
+        self.assertNotIn("TGDRIFT", tune)
+
+    def test_tune_none_when_neither_line(self):
+        self.assertIsNone(self._analyze()('{"stop_reason": "no_ticks"}')["tune"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

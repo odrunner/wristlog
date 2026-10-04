@@ -171,11 +171,15 @@ def analyze(blob):
     stop = ("plateau" if "plateau" in blob else "cap" if "duration_cap" in blob
             else "stopped" if ("user_stopped" in blob or "user_quit" in blob) else "?")
     end = (re.search(r'"stop_reason"\s*:\s*"([^"]+)"', blob) or [None, None])[1]
+    # Arm truth is the knob echo: [TGTUNE] from native, plus [TGDRIFT] from JS
+    # (the drift gate runs client-side, so the client echoes that knob itself).
     tune = re.search(r'\[TGTUNE\][^\n]*', blob)
+    drift = re.search(r'\[TGDRIFT\][^\n]*', blob)
+    tune_s = " ".join(m.group(0) for m in (tune, drift) if m) or None
     return dict(uid=uid, wid=wid, bph=bph, final=final, n_acc=n_acc,
                 pair_rej=pair_rej, phase_rej=phase_rej, auto=auto, stop=stop, end=end,
                 build=build_of(blob), precision=(re.search(r'"precision"\s*:\s*"(\w+)"', blob) or [None, None])[1],
-                tune=tune.group(0) if tune else None)
+                tune=tune_s)
 
 
 def build_of(blob):
@@ -370,7 +374,7 @@ GATE_CANDIDATES = [
     ("tg_gatemaxrej=0.5", "σ-gate rejected > 50% of windows",                lambda v: v["gate_frac"] is not None and v["gate_frac"] > 0.5),
     ("tg_ampmin=135",    "amplitude < 135° or none",                         lambda v: v["amp"] is None or v["amp"] < 135),
     ("(native, no knob)", "|tg − reg| > 10 s/d at the end",                  lambda v: v["delta"] is not None and v["delta"] > 10),
-    ("(no knob)",        "tg moved > 6 s/d over the 2nd half of the run",     lambda v: v["drift2h"] is not None and v["drift2h"] > 6),
+    ("tg_driftband=6",   "tg moved > 6 s/d over the 2nd half of the run",     lambda v: v["drift2h"] is not None and v["drift2h"] > 6),
     # T1 verdicts exist only on 2.5+ logs (lc=/lr=); None → the session is left out of that row.
     ("tg_confirmband=6", "T1 shadow: lock ever REJECTED (lr>0)",             lambda v: None if v["lc"] is None else ((v["lr"] or 0) > 0 or (v["lrej"] or 0) > 0)),
     ("tg_confirmband=6", "T1 shadow: lock never CONFIRMED (lc≠1)",           lambda v: None if v["lc"] is None else not (v["lc"] == 1 or (v["lconf"] or 0) > 0)),

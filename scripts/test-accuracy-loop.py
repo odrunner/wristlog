@@ -51,6 +51,20 @@ class Arms(unittest.TestCase):
         self.assertIsNone(al.tune_value(TUNE_25, "tg_nonsense"))
         self.assertIsNone(al.tune_value("[TGTUNE] tgKnobs=0.0003/6.0", "tg_wallmin"))
         self.assertIsNone(al.tune_value("[TGTUNE] maxWin=abc", "tg_maxwin"))
+    def test_driftband_from_js_echo(self):
+        # tg_driftband (2026-10-04) is a JS-side gate: the client appends its own
+        # [TGDRIFT] line to the tick log (native TGTUNE can't know it), and the
+        # weekly script hands tune_value the TGTUNE and TGDRIFT lines joined.
+        drift = TUNE_25 + " [TGDRIFT] driftBand=6.0 fires=1 drift2h=7.2"
+        self.assertEqual(al.tune_value(drift, "tg_driftband"), 6.0)
+        self.assertIsNone(al.tune_value(TUNE_25, "tg_driftband"))   # pre-gate JS lacks the echo
+        self.assertEqual(al.FLEET_DEFAULTS["tg_driftband"], 999)    # off by default; --start needs it
+    def test_driftband_session_arm(self):
+        treat = TUNE_25 + " [TGDRIFT] driftBand=6.0 fires=0 drift2h=0.4"
+        ctl = TUNE_25 + " [TGDRIFT] driftBand=999.0 fires=0 drift2h=0.4"
+        self.assertEqual(al.session_arm(treat, "tg_driftband", 6, 999), "treatment")
+        self.assertEqual(al.session_arm(ctl, "tg_driftband", 6, 999), "control")
+        self.assertIsNone(al.session_arm(TUNE_25, "tg_driftband", 6, 999))  # old JS: excluded
     def test_session_arm(self):
         self.assertEqual(al.session_arm(TUNE_25, "tg_guardmode", 0, 1), "control")
         self.assertEqual(al.session_arm(TUNE_25.replace("guardMode=1", "guardMode=0"), "tg_guardmode", 0, 1), "treatment")
