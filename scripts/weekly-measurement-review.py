@@ -368,13 +368,20 @@ def wrong_attribution(sessions, refs, per):
 # (knob, description, predicate over v2 stats)
 # A row whose value equals the fleet default (won trials folded in) is marked LIVE and
 # never picked; a key that was ever a trial is never re-tried (accuracy_loop.pick_candidate).
+# Knobs whose VALUE is the threshold carry a LADDER of values (2026-10-05): a knob value
+# needs no new binary (it rides the session config, or the JS drift gate), so one refuted
+# value must not exhaust the knob — the loop walks the ladder instead of stopping at
+# "needs native". The picker prefers never-trialed knobs over a killed knob's siblings.
 GATE_CANDIDATES = [
     ("tg_guardmode=1",   "harmonic guard fired: windows disagree → refuse",   lambda v: (v["guard_fires"] or 0) > 0),
     ("tg_stabwin=8",     "rate moved > 3 s/d over the last ~8 s (delay)",    lambda v: v["range8"] is not None and v["range8"] > 3),
-    ("tg_gatemaxrej=0.5", "σ-gate rejected > 50% of windows",                lambda v: v["gate_frac"] is not None and v["gate_frac"] > 0.5),
-    ("tg_ampmin=135",    "amplitude < 135° or none",                         lambda v: v["amp"] is None or v["amp"] < 135),
+    *[(f"tg_gatemaxrej={t:g}", f"σ-gate rejected > {round(t * 100)}% of windows",
+       lambda v, t=t: v["gate_frac"] is not None and v["gate_frac"] > t) for t in (0.3, 0.5, 0.7)],
+    *[(f"tg_ampmin={t:g}", f"amplitude < {t:g}° or none",
+       lambda v, t=t: v["amp"] is None or v["amp"] < t) for t in (110, 120, 135, 150)],
     ("(native, no knob)", "|tg − reg| > 10 s/d at the end",                  lambda v: v["delta"] is not None and v["delta"] > 10),
-    ("tg_driftband=6",   "tg moved > 6 s/d over the 2nd half of the run",     lambda v: v["drift2h"] is not None and v["drift2h"] > 6),
+    *[(f"tg_driftband={t:g}", f"tg moved > {t:g} s/d over the 2nd half of the run",
+       lambda v, t=t: v["drift2h"] is not None and v["drift2h"] > t) for t in (3, 4, 6, 8, 10, 12)],
     # T1 verdicts exist only on 2.5+ logs (lc=/lr=); None → the session is left out of that row.
     ("tg_confirmband=6", "T1 shadow: lock ever REJECTED (lr>0)",             lambda v: None if v["lc"] is None else ((v["lr"] or 0) > 0 or (v["lrej"] or 0) > 0)),
     ("tg_confirmband=6", "T1 shadow: lock never CONFIRMED (lc≠1)",           lambda v: None if v["lc"] is None else not (v["lc"] == 1 or (v["lconf"] or 0) > 0)),
@@ -603,8 +610,10 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
             name = f"{knob} = {val:g} vs live {defaults.get(knob):g}"
             L.append(f"\n**Started today: `{k}`** — {hyp}")
         else:
-            L.append("\n**Nothing started.** No untried JS knob clears the bar on the whole era (≥15% of bad locks blocked at ≤10% good cost, n≥10) — "
-                     "every qualifying key has already been tried. The next gain needs native work (the estimator itself; raw-audio field captures to iterate offline).")
+            L.append("\n**Nothing started.** No untried knob VALUE clears the bar on the whole era (≥15% of bad locks blocked at ≤10% good cost, n≥10) across the "
+                     "value ladders. That is a data verdict, not the end of non-native work: a new JS gate over the rate series can add a knob without a binary "
+                     "(how tg_driftband was built, 2026-10-04) — propose one from the no-knob rows above. Native work (the estimator itself; raw-audio field "
+                     "captures) stays the bigger lever.")
     if pick:
         k, knob, val, r = pick
         snap.update(started=k)

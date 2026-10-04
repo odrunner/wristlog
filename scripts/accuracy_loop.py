@@ -241,8 +241,12 @@ def pick_candidate(gate_rows, experiments, defaults, min_pb=15, max_pg=10, min_b
     """The next trial from the whole-era gate table. gate_rows: dicts with knob (label), desc,
     bb, gb, nb, ng, pb, pg, ratio. Skips rows without a real knob, rows whose value is already
     the fleet default (live), and any key that has ever been a trial (won/killed/archived/
-    running/draft) — a reverted or refuted change is never retried."""
+    running/draft) — a reverted or refuted change is never retried. The gate table carries
+    value LADDERS per knob (2026-10-05), so among qualifiers a never-trialed knob outranks
+    another value of a knob that already had a trial (one bad outcome on a knob is evidence
+    against its siblings); within each group the best separation wins."""
     tried = {e.get("key") for e in experiments or []}
+    tried_knobs = {parse_trial_key(e.get("key"))[0] for e in experiments or [] if parse_trial_key(e.get("key"))}
     ok = []
     for r in gate_rows:
         kv = parse_gate_label(r.get("knob"))
@@ -258,7 +262,7 @@ def pick_candidate(gate_rows, experiments, defaults, min_pb=15, max_pg=10, min_b
             continue
         if r["bb"] >= min_bb and r["pb"] >= min_pb and r["pg"] <= max_pg:
             ok.append((key, knob, val, r))
-    ok.sort(key=lambda x: -(x[3].get("ratio") or 0))
+    ok.sort(key=lambda x: (x[1] in tried_knobs, -(x[3].get("ratio") or 0)))
     return ok[0] if ok else None
 
 

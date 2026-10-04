@@ -319,5 +319,48 @@ class AnalyzeTuneDriftEcho(unittest.TestCase):
         self.assertIsNone(self._analyze()('{"stop_reason": "no_ticks"}')["tune"])
 
 
+class GateCandidateLadders(unittest.TestCase):
+    """The 2026-10-04 review dead-ended with 'nothing left but native' because the
+    gate table held ONE value per knob. Knob VALUES are testable without a binary
+    (they ride the session config / the JS drift gate), so threshold knobs carry a
+    ladder of values — the picker then always has non-native candidates to walk."""
+
+    def _candidates(self):
+        ns = {}
+        exec(_extract("weekly-measurement-review.py", "GATE_CANDIDATES = [", "def is_live_row("), ns)
+        return ns["GATE_CANDIDATES"]
+
+    def _by_label(self):
+        return {label: pred for label, _desc, pred in self._candidates()}
+
+    def test_ladder_labels_exist(self):
+        labels = {label for label, _d, _p in self._candidates()}
+        for want in ("tg_driftband=3", "tg_driftband=4", "tg_driftband=6", "tg_driftband=8",
+                     "tg_driftband=10", "tg_driftband=12",
+                     "tg_ampmin=110", "tg_ampmin=120", "tg_ampmin=135", "tg_ampmin=150",
+                     "tg_gatemaxrej=0.3", "tg_gatemaxrej=0.5", "tg_gatemaxrej=0.7",
+                     "(native, no knob)"):
+            self.assertIn(want, labels)
+
+    def test_thresholds_bind_per_row_not_to_the_last_loop_value(self):
+        # The classic closure bug would make every ladder row test the final value.
+        preds = self._by_label()
+        v = {"drift2h": 5.0}
+        self.assertTrue(preds["tg_driftband=3"](v))
+        self.assertFalse(preds["tg_driftband=8"](v))
+        v = {"amp": 120.0}
+        self.assertFalse(preds["tg_ampmin=110"](v))
+        self.assertTrue(preds["tg_ampmin=150"](v))
+        self.assertTrue(preds["tg_ampmin=150"]({"amp": None}))
+        v = {"gate_frac": 0.4}
+        self.assertTrue(preds["tg_gatemaxrej=0.3"](v))
+        self.assertFalse(preds["tg_gatemaxrej=0.7"](v))
+
+    def test_no_duplicate_labels_except_the_two_confirmband_shadows(self):
+        labels = [label for label, _d, _p in self._candidates()]
+        dupes = {l for l in labels if labels.count(l) > 1}
+        self.assertEqual(dupes, {"tg_confirmband=6"})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

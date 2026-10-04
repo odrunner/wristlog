@@ -163,6 +163,20 @@ class Pick(unittest.TestCase):
         won = [{"key": "tgknob_stabwin_8", "status": "won"}]
         d = al.effective_defaults(won)
         self.assertIsNone(al.pick_candidate(self.ROWS, won, d))
+    def test_prefers_fresh_knob_over_killed_knobs_other_value(self):
+        # 2026-10-05: the gate table carries value ladders, so a killed knob still
+        # has untried values. A never-trialed knob goes first even at lower
+        # separation — one bad outcome on a knob is evidence against its siblings.
+        rows = [
+            dict(knob="tg_driftband=4", desc="drift", bb=90, gb=30, nb=376, ng=561, pb=24, pg=5, ratio=4.5),
+            dict(knob="tg_agreeband=6", desc="agree", bb=70, gb=30, nb=376, ng=561, pb=19, pg=5, ratio=3.5),
+        ]
+        tried = [{"key": "tgknob_driftband_6", "status": "killed"}]
+        self.assertEqual(al.pick_candidate(rows, tried, al.FLEET_DEFAULTS)[0], "tgknob_agreeband_6")
+    def test_killed_knobs_other_value_still_pickable_when_alone(self):
+        rows = [dict(knob="tg_driftband=4", desc="drift", bb=90, gb=30, nb=376, ng=561, pb=24, pg=5, ratio=4.5)]
+        tried = [{"key": "tgknob_driftband_6", "status": "killed"}]
+        self.assertEqual(al.pick_candidate(rows, tried, al.FLEET_DEFAULTS)[0], "tgknob_driftband_4")
     def test_best_ratio_wins_among_qualifiers(self):
         rows = self.ROWS + [dict(knob="tg_agreeband=6", desc="x", bb=80, gb=30, nb=376, ng=561, pb=21, pg=5, ratio=4.0)]
         self.assertEqual(al.pick_candidate(rows, [], al.FLEET_DEFAULTS)[0], "tgknob_agreeband_6")
