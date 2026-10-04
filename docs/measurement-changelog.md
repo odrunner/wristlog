@@ -25,3 +25,4 @@ failure modes by distinct users will be filled in by the first review run; the n
 shipped change goes in a new row with its target metric, then we check it the
 following Sunday.
 | 2026-08-31 | **Loop:** started `tgknob_guardmode_0` at 50% | auto | see experiments / experiment_decisions | wrong-of-converged (A/B) | judged next Sunday |
+| 2026-10-04 | **Loop:** started `tgknob_driftband_6` at 50% | auto | see experiments / experiment_decisions | wrong-of-converged (A/B) | judged next Sunday |
