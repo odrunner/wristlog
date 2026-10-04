@@ -134,7 +134,8 @@ export function countHardcoded(src) {
     js++;
   }
   out['js-style-assign'] = js;
-  out['inline-style-attr'] = [...text.matchAll(/style=\\?(["'])((?:(?!\1).)*)\1/g)].filter(m => isDesignStyle(m[2])).length;
+  // (?<![-\w]): `font-style="italic"` on an SVG glyph is not a style attribute
+  out['inline-style-attr'] = [...text.matchAll(/(?<![-\w])style=\\?(["'])((?:(?!\1).)*)\1/g)].filter(m => isDesignStyle(m[2])).length;
   return out;
 }
 
@@ -142,7 +143,7 @@ export function countHardcoded(src) {
 // visibility, position and offsets, overflow, pointer-events — state that JS toggles), and not a data
 // value (`${…}` — a watch's colour, a progress width). `style="display:none"` ×90 and `style="width:${pct}%"`
 // are not things a redesign would change, so they are not counted.
-const BEHAVIOUR = new Set(['display', 'visibility', 'position', 'top', 'right', 'bottom', 'left', 'inset', 'overflow', 'overflow-x', 'overflow-y', 'pointer-events']);
+const BEHAVIOUR = new Set(['display', 'visibility', 'position', 'top', 'right', 'bottom', 'left', 'inset', 'overflow', 'overflow-x', 'overflow-y', 'pointer-events', 'cursor']);
 export function isDesignStyle(attr) {
   return attr.split(';').map(d => d.trim()).filter(Boolean).some(d => {
     const prop = d.split(':')[0].trim().toLowerCase();
