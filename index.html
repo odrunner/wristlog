@@ -8084,7 +8084,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.10.25';
+const APP_VERSION = '03.22.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20099,7 +20099,7 @@ async function renderAdminTraffic(force = false) {
   el.innerHTML = '<div class="note">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
-    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR, exploreR, modelAppR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
@@ -20117,6 +20117,10 @@ async function renderAdminTraffic(force = false) {
       // 2026-10-03 (sql/2026-10-03-watch-page-traffic.sql). Small slice —
       // computed live, no admin_stats_cache entry.
       db.rpc('admin_watch_page_traffic', { p_days: 14 }),
+      // In-app Watches browsing (launched 2026-10-03): feature_events copies of
+      // the PostHog events, internal accounts excluded by the RPC.
+      db.rpc('admin_feature_event_stats', { p_event: 'explore_viewed' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'model_page_viewed' }),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -20173,12 +20177,21 @@ async function renderAdminTraffic(force = false) {
       .join('');
     const watchModelRows = watchListRows(wt && wt.by_model, 'model');
     const watchSourceRows = watchListRows(wt && wt.by_source, 'source');
-    const watchHtml = wt ? `<div class="admin-card">
-        <div class="eyebrow stack-2">Watch Pages (public)</div>
-        ${statRow('Views', wt.total, `1d: ${wt.last_1d} · 7d: ${wt.last_7d}`)}
-        ${watchModelRows ? `<div class="eyebrow stack-2 u-mt-3">By Model</div>${watchModelRows}` : ''}
-        ${watchSourceRows ? `<div class="eyebrow stack-2 u-mt-3">By Source</div>${watchSourceRows}` : ''}
-        ${(wt.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Daily</div>${trafficDailyBars(wt.daily)}` : ''}
+    // In-app browsing (signed-in members tapping the feed Watches button) is a
+    // separate count from the public pages: different audience, different URL.
+    const evStat = r => (r && !r.error && r.data) ? r.data : null;
+    const ex = evStat(exploreR), ma = evStat(modelAppR);
+    const inAppHtml = (ex || ma) ? `
+        <div class="eyebrow stack-2 u-mt-3">In-App (members)</div>
+        ${ex ? statRow('Explore opens', ex.events_total, `24h: ${ex.events_24h} · ${ex.users_total} users`) : ''}
+        ${ma ? statRow('Model views', ma.events_total, `24h: ${ma.events_24h} · ${ma.users_total} users`) : ''}` : '';
+    const watchHtml = (wt || ex || ma) ? `<div class="admin-card">
+        <div class="eyebrow stack-2">Watch Pages</div>
+        ${wt ? statRow('Public views (wrotate.com/w/)', wt.total, `1d: ${wt.last_1d} · 7d: ${wt.last_7d}`) : ''}
+        ${inAppHtml}
+        ${watchModelRows ? `<div class="eyebrow stack-2 u-mt-3">Public, By Model</div>${watchModelRows}` : ''}
+        ${watchSourceRows ? `<div class="eyebrow stack-2 u-mt-3">Public, By Source</div>${watchSourceRows}` : ''}
+        ${wt && (wt.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Public, Daily</div>${trafficDailyBars(wt.daily)}` : ''}
       </div>` : '';
 
     // The "Overview (All Time)" card used to live here. It was removed: its
@@ -20758,6 +20771,9 @@ function showExplorePage() {
     loadExploreBrands();
     loadExploreModels(true);
     if (window.posthog) posthog.capture('explore_viewed');
+    // First-party copy for Admin → Traffic (PostHog is unreadable from the
+    // dashboard): internal accounts are excluded by admin_feature_event_stats.
+    if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'explore_viewed' }).then(() => {});
   }
 }
 
@@ -25205,6 +25221,7 @@ function openModelPage(modelId, owners) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   window.scrollTo(0, 0);
   if (window.posthog) posthog.capture('model_page_viewed', { model_id: modelId, surface: 'app' });
+  if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'model_page_viewed', meta: { model: modelId } }).then(() => {});
   loadAndRenderModel(modelId, owners);
 }
 

@@ -44,6 +44,27 @@ describe('Admin → Traffic shows the Watch Pages card', () => {
   });
 });
 
+// ── 2026-10-04: in-app browsing was invisible — the public card logged only
+// wrotate.com/w/, so launch day showed "1 click" while 21 members had opened
+// the app. In-app opens now write feature_events (internal accounts excluded
+// by admin_feature_event_stats) and the card shows them.
+describe('in-app Watches browsing is counted first-party', () => {
+  const src = readFileSync(join(root, 'index.html'), 'utf8');
+
+  it('explore opens write a feature_events row', () => {
+    expect(src).toMatch(/event: 'explore_viewed' }\)/);
+  });
+
+  it('in-app model page opens write a feature_events row with the model', () => {
+    expect(src).toMatch(/event: 'model_page_viewed', meta: \{ model: modelId \}/);
+  });
+
+  it('the Traffic tab fetches both in-app stats', () => {
+    expect(src).toContain("db.rpc('admin_feature_event_stats', { p_event: 'explore_viewed' })");
+    expect(src).toContain("db.rpc('admin_feature_event_stats', { p_event: 'model_page_viewed' })");
+  });
+});
+
 describe('admin_watch_page_traffic SQL is admin-locked', () => {
   const sql = readFileSync(join(root, 'sql/2026-10-03-watch-page-traffic.sql'), 'utf8');
 
