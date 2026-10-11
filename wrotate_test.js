@@ -4062,6 +4062,47 @@ export function agoText(iso, now = new Date()) {
   return `${Math.round(d / 365)} years ago`;
 }
 
+// Demo-mode measurement (2026-10-11): a demo visitor may RUN the timegrapher —
+// the engine is on-device and free — while keep/share/history stay gated.
+// Cap 0 = no cap; a positive cap blocks the start once that many runs completed
+// on this device (flip DEMO_MEASURE_CAP in index.html if abuse shows up —
+// run counts are on the Admin → Traffic "Demo Measure" card, never silent).
+export function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
+  if (!isDemo) return { allow: true, capped: false };
+  const c = Number(cap);
+  if (!Number.isFinite(c) || c <= 0) return { allow: true, capped: false };
+  const runs = Number(completedRuns);
+  const done = Number.isFinite(runs) ? runs : 0;
+  if (done >= c) return { allow: false, capped: true };
+  return { allow: true, capped: false };
+}
+
+// The post-reading signup ask, quoting the live number — the reading IS the
+// signup argument. Sign derived AFTER rounding (audit F7): -0.04 → "0.0".
+export function demoMeasureCta(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) {
+    return { title: 'Measure complete', sub: 'Sign up free to keep readings and track drift over time.' };
+  }
+  const mag = Math.abs(r).toFixed(1);
+  const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
+  return {
+    title: `Your watch is running ${rateStr} s/day`,
+    sub: 'Sign up free to keep this reading and see if it holds.',
+  };
+}
+
+// Telemetry band for demo_measure events — coarse on purpose (no exact rates
+// in feature_events meta).
+export function demoRateBand(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) return 'none';
+  const a = Math.abs(r);
+  if (a <= 5) return 'le5';
+  if (a <= 15) return 'le15';
+  return 'gt15';
+}
+
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 // Which comments a card shows, and in what order. Expanded: every comment,
 // chronological. Collapsed: the two most recent. A "top comment" is pinned

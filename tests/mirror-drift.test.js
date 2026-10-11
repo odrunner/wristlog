@@ -32,6 +32,7 @@ const VERBATIM = [
   'canDeleteComment', 'sessionSettleAction', 'decodeAuthUser', 'decodeAuthUserId', 'eloExpected', 'followNeedsRequest',
   'badgeRevealNames', 'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
   'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
+  'demoMeasureAllowed', 'demoMeasureCta', 'demoRateBand',
   'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', 'displayImageFor', '_q2Ls',
   'nextWishlistView', 'nextCollView', 'posterUrlFor', 'rankWishlistByElo', 'rowToLog', 'rowToWatch', 'rowToWish',
   'simStateFromStore', 'simulatedCollection', 'simCollectionValue',

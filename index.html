@@ -4498,8 +4498,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Measure content (shown when user has watches) -->
     <div id="measure-content" style="display:none;">
-      <!-- Watch + BPH selection — compact row -->
-      <div class="u-cols-1fr-auto u-gap-2 u-mb-3 u-d-grid">
+      <!-- Watch + BPH selection — compact row (hidden in demo: the demo account's
+           seeded watches would read as "pick a demo Rolex to measure your own watch") -->
+      <div id="msr-select-row" class="u-cols-1fr-auto u-gap-2 u-mb-3 u-d-grid">
         <select id="msr-watch-select" aria-label="Watch to measure" onchange="onMsrWatchChange()" class="text-default u-w-100pct u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface"></select>
         <select id="msr-bph-select" aria-label="Beat rate" onchange="onMsrBphChange()" class="text-default u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface">
           <option value="0" selected>Auto</option>
@@ -4511,6 +4512,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <option value="36000">36,000</option>
         </select>
       </div>
+      <!-- Demo mode: replaces the watch selector — the run is free, the save is the ask -->
+      <div id="msr-demo-note" class="text-secondary u-mb-3 u-ta-center hidden">Measuring your watch &mdash; sign up free to keep readings.</div>
       <!-- Input source (admin-gated by tg_piezo; hidden by default) -->
       <select id="tg-input-source" onchange="onTgSourceChange()" class="text-default u-w-100pct u-mb-3 u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface" style="display:none;">
         <option value="mic">iPhone mic</option>
@@ -4700,6 +4703,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="msr-cta-discard" class="u-ta-center u-mt-2" style="display:none;">
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
+        </div>
+      </div>
+      <!-- Demo: post-reading signup ask — the live number is the pitch; Keep/Share stay gated -->
+      <div id="msr-demo-cta" class="hidden">
+        <div id="msr-demo-cta-title" class="text-default u-fw-semibold u-mb-1 u-ta-center"></div>
+        <div id="msr-demo-cta-sub" class="text-secondary u-mb-3 u-ta-center"></div>
+        <button class="btn btn-primary btn-sm btn-block stack-1-5" onclick="demoMeasureSignup('google')">Continue with Google</button>
+        <div class="u-gap-1-5 u-d-flex">
+          <button class="btn btn-ghost btn-sm btn-grow" onclick="demoMeasureSignup('apple')">Continue with Apple</button>
+          <button class="btn btn-ghost btn-sm btn-grow u-c-muted" onclick="dismissDemoMsrCta()">Keep exploring</button>
         </div>
       </div>
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
@@ -7515,6 +7528,105 @@ function exitDemoMode() {
   safeLS.remove('wrotate_demo');
   signOut();
 }
+
+// ── Demo measurement (2026-10-11) ────────────────────────────────────────────
+// A demo visitor may RUN the timegrapher (on-device, free); Keep/Share/History
+// stay gated. Every run is telemetered to feature_events as `demo_measure`
+// under the demo account (internal — excluded from external metrics) with a
+// per-device id, and surfaced on Admin → Traffic ("Demo Measure" card) so
+// abuse is never silent. Flip the cap below if that card shows abuse.
+const DEMO_MEASURE_CAP = 0;   // 0 = no cap; N = block the start after N completed runs/device
+const DEMO_MSR_RUNS_KEY = 'wrotate_demo_msr_runs';
+const DEMO_MSR_SIGNUP_KEY = 'wrotate_demo_msr_signup';
+const DEMO_DEVICE_KEY = 'wrotate_demo_did';
+
+function _demoDeviceId() {
+  let v = safeLS.get(DEMO_DEVICE_KEY);
+  if (!v) { v = crypto.randomUUID(); safeLS.set(DEMO_DEVICE_KEY, v); }
+  return v;
+}
+
+function _demoRunsCompleted() {
+  return parseInt(safeLS.get(DEMO_MSR_RUNS_KEY) || '0', 10) || 0;
+}
+
+// phase: started | completed | capped | cta_signup | cta_dismissed | converted
+function _demoMeasureEvent(phase, extra) {
+  try {
+    if (!currentUser) return;
+    db.from('feature_events').insert({
+      user_id: currentUser.id,
+      event: 'demo_measure',
+      meta: { phase, did: _demoDeviceId(), ...(extra || {}) },
+    }).then(() => {}, () => {});
+    if (window.posthog) posthog.capture('demo_measure_' + phase, extra || {});
+  } catch (_) {}
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
+  if (!isDemo) return { allow: true, capped: false };
+  const c = Number(cap);
+  if (!Number.isFinite(c) || c <= 0) return { allow: true, capped: false };
+  const runs = Number(completedRuns);
+  const done = Number.isFinite(runs) ? runs : 0;
+  if (done >= c) return { allow: false, capped: true };
+  return { allow: true, capped: false };
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function demoMeasureCta(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) {
+    return { title: 'Measure complete', sub: 'Sign up free to keep readings and track drift over time.' };
+  }
+  const mag = Math.abs(r).toFixed(1);
+  const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
+  return {
+    title: `Your watch is running ${rateStr} s/day`,
+    sub: 'Sign up free to keep this reading and see if it holds.',
+  };
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function demoRateBand(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) return 'none';
+  const a = Math.abs(r);
+  if (a <= 5) return 'le5';
+  if (a <= 15) return 'le15';
+  return 'gt15';
+}
+
+// Reading finished in demo: count the run, log it, and show the signup ask
+// (instead of the save section, which demo never sees).
+function demoMeasureComplete(rate, wasConverged) {
+  try { safeLS.set(DEMO_MSR_RUNS_KEY, String(_demoRunsCompleted() + 1)); } catch (_) {}
+  _demoMeasureEvent('completed', { rate_band: demoRateBand(rate), converged: !!wasConverged });
+  const cta = demoMeasureCta(rate);
+  const title = document.getElementById('msr-demo-cta-title');
+  const sub = document.getElementById('msr-demo-cta-sub');
+  if (title) title.textContent = cta.title;
+  if (sub) sub.textContent = cta.sub;
+  const el = document.getElementById('msr-demo-cta');
+  if (el) el.classList.remove('hidden');
+}
+
+function demoMeasureSignup(provider) {
+  _demoMeasureEvent('cta_signup', { provider });
+  // Tag the funnel row before signIn's own (same-source) call — 5-min dedup
+  // keeps this one, so demo-measure signups are countable in page_visits.
+  trackVisit({ utm_source: 'signin_' + provider, utm_medium: 'funnel', utm_content: 'demo_measure', path: '/signin' });
+  try { safeLS.set(DEMO_MSR_SIGNUP_KEY, '1'); } catch (_) {}
+  exitDemoMode();
+  setTimeout(provider === 'apple' ? signInWithApple : signInWithGoogle, 300);
+}
+
+function dismissDemoMsrCta() {
+  const el = document.getElementById('msr-demo-cta');
+  if (el) el.classList.add('hidden');
+  _demoMeasureEvent('cta_dismissed');
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function signInWithGoogle() {
@@ -8058,7 +8170,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.18.24';
+const APP_VERSION = '10.18.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18357,6 +18469,7 @@ function maybeShowReviewPrompt(source) {
   // Feedback modal covers that. iOS shows the sheet at most 3x/365 days and
   // respects the user's In-App Ratings & Reviews setting; our call is silently
   // ignored when it shouldn't appear. Web has no system sheet → no-op.
+  if (_isDemoMode) return;   // never burn one of Apple's ~3/yr sheets on a demo visitor
   if (!shouldShowReviewPrompt(source)) return;
   const isNative = !!window.webkit?.messageHandlers?.appAction;
   if (!isNative) return;
@@ -20051,7 +20164,7 @@ async function renderAdminTraffic(force = false) {
   el.innerHTML = '<div class="note">Loading traffic…</div>';
   const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
-    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR, exploreR, modelAppR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR, exploreR, modelAppR, demoMsrR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
@@ -20073,6 +20186,10 @@ async function renderAdminTraffic(force = false) {
       // the PostHog events, internal accounts excluded by the RPC.
       db.rpc('admin_feature_event_stats', { p_event: 'explore_viewed' }),
       db.rpc('admin_feature_event_stats', { p_event: 'model_page_viewed' }),
+      // Demo measurement runs (live since 2026-10-11) — the "never silent"
+      // surface for the pre-signup timegrapher: run volume, per-device max
+      // (abuse dial) and the demo→signup funnel. sql/2026-10-11-demo-measure-traffic.sql.
+      db.rpc('admin_demo_measure_stats', { p_days: 14 }),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -20146,6 +20263,18 @@ async function renderAdminTraffic(force = false) {
         ${wt && (wt.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Public, Daily</div>${trafficDailyBars(wt.daily)}` : ''}
       </div>` : '';
 
+    // Demo Measure — pre-signup timegrapher runs (2026-10-11). The cap state is
+    // read from the live constant so the card always says what the brake is set to.
+    const dmr = (demoMsrR && !demoMsrR.error) ? demoMsrR.data : null;
+    const demoMsrHtml = dmr ? `<div class="admin-card">
+        <div class="eyebrow stack-2">Demo Measure (cap: ${DEMO_MEASURE_CAP > 0 ? DEMO_MEASURE_CAP + ' runs/device' : 'off'})</div>
+        ${statRow('Runs started', dmr.started_total, `1d: ${dmr.started_1d} · 7d: ${dmr.started_7d}`)}
+        ${statRow('Completed', dmr.completed_total, `7d: ${dmr.completed_7d}${dmr.capped_total ? ' · capped: ' + dmr.capped_total : ''}`)}
+        ${statRow('Devices', dmr.devices_total, `7d: ${dmr.devices_7d} · max runs/device 7d: ${dmr.max_device_7d}`)}
+        ${statRow('Signup CTA', dmr.cta_total, `converted: ${dmr.converted_total}`)}
+        ${(dmr.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Daily Starts</div>${trafficDailyBars(dmr.daily)}` : ''}
+      </div>` : '';
+
     // The "Overview (All Time)" card used to live here. It was removed: its
     // unique/repeat visitor counts were unmeasurable (page_visits carries no
     // reliable per-person identity for logged-out traffic, so they degraded into
@@ -20156,6 +20285,7 @@ async function renderAdminTraffic(force = false) {
     el.innerHTML = `
       ${renderEmailHealth(emailEventsR.data || {})}
       ${demoViewsHtml}
+      ${demoMsrHtml}
       ${watchHtml}
       ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">
@@ -20699,6 +20829,14 @@ function nav(btn) {
       if (gear) gear.style.display = _tgHasNative() ? '' : 'none';
       const histBtn = document.getElementById('msr-history-btn');
       if (histBtn) histBtn.style.display = (currentUser && !_isDemoMode) ? '' : 'none';
+      // Demo: the visitor measures THEIR watch — the demo account's seeded
+      // collection makes no sense in the selector, so swap it for one line.
+      const selRow = document.getElementById('msr-select-row');
+      if (selRow) selRow.classList.toggle('hidden', _isDemoMode);
+      const demoNote = document.getElementById('msr-demo-note');
+      if (demoNote) demoNote.classList.toggle('hidden', !_isDemoMode);
+      const demoCta = document.getElementById('msr-demo-cta');
+      if (demoCta) demoCta.classList.add('hidden');
       updateMsrModeIndicator();
       initTgSourceSelector();
     }
@@ -32400,8 +32538,10 @@ window._tgNativeCallback = function(data) {
       .catch(e => console.log('[PZ] raw capture upload failed', e));
     return;
   }
-  // Accumulate tick debug messages and flush to Supabase every ~3 seconds
-  if (data.event === 'update' && data.debugMessages && data.debugMessages.length > 0) {
+  // Accumulate tick debug messages and flush to Supabase every ~3 seconds.
+  // Demo runs skip this entirely: no tick logs, no session summary, nothing
+  // that could reach the Sunday loop's inputs.
+  if (data.event === 'update' && data.debugMessages && data.debugMessages.length > 0 && !_isDemoMode) {
     if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
     for (const msg of data.debugMessages) _tgTickDebugBuffer.push(msg);
     const now = Date.now();
@@ -34516,7 +34656,7 @@ function onMsrBphChange() {
     if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {
       _flushTickLog(_tgDebugSessionId, _tgTickDebugBuffer);
     }
-    _tgDebugSessionId = crypto.randomUUID();
+    _tgDebugSessionId = _isDemoMode ? null : crypto.randomUUID();  // demo: no tick-log session
     _tgTickDebugBuffer = [];
     console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
     _resetMsrState(bph);
@@ -34569,9 +34709,17 @@ function _stopMsrBadge() {
 }
 function toggleMsrListen() {
   _migrateProV2Precision();   // no-op once stamped; guarantees no run uses stale preset knobs
-  if (demoGuard()) return;
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen('user_stopped'); return; }
+  // Demo may RUN a measurement (2026-10-11) — the engine is on-device and the
+  // reading is the signup argument. Only a non-zero DEMO_MEASURE_CAP gates it.
+  if (_isDemoMode) {
+    const gate = demoMeasureAllowed({ isDemo: true, completedRuns: _demoRunsCompleted(), cap: DEMO_MEASURE_CAP });
+    if (!gate.allow) { _demoMeasureEvent('capped'); showDemoSignupModal(); return; }
+    const demoCta = document.getElementById('msr-demo-cta');
+    if (demoCta) demoCta.classList.add('hidden');
+    _demoMeasureEvent('started');
+  }
   markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
   _msrKeptReading = null;   // new session — the next converged reading is a new history row
   try {
@@ -34580,7 +34728,7 @@ function toggleMsrListen() {
     const bphVal = parseInt(document.getElementById('msr-bph-select').value);
     const bph = isNaN(bphVal) ? 0 : bphVal; // 0 = auto detect
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
-    _tgDebugSessionId = crypto.randomUUID();
+    _tgDebugSessionId = _isDemoMode ? null : crypto.randomUUID();  // demo: no tick-log session
     _tgTickDebugBuffer = [];
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode(), algo: _tgAlgo() });
     _msrListening = true;
@@ -34863,7 +35011,7 @@ function stopMsrListen(reason) {
     // Hide idle overlay so result stays visible on chart
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
-    if (wasConverged) {
+    if (wasConverged && !_isDemoMode) {   // demo: no review prompt, no count toward one
       try {
         const n = parseInt(safeLS.get('wristlog_msr_count') || '0') + 1;
         safeLS.set('wristlog_msr_count', String(n));
@@ -34875,8 +35023,11 @@ function stopMsrListen(reason) {
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'flex';
   }
-  // Keep save section visible if we have data
-  if (_msrLastRate != null) {
+  // Keep save section visible if we have data. In demo the save section never
+  // shows — the post-reading signup ask (with the live number) takes its place.
+  if (_msrLastRate != null && _isDemoMode) {
+    demoMeasureComplete(_msrLastRate, wasConverged);
+  } else if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
     const sign = _msrLastRate >= 0 ? '+' : '';
     document.getElementById('msr-rate-input').value = sign + _msrLastRate.toFixed(1);
@@ -35302,6 +35453,12 @@ async function bootApp(user) {
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
+  // Demo→signup funnel: a real session starting after a demo-measure CTA tap
+  // closes the loop — logged once under the NEW account, keyed to the device.
+  if (!_isDemoMode && safeLS.get(DEMO_MSR_SIGNUP_KEY) === '1') {
+    safeLS.remove(DEMO_MSR_SIGNUP_KEY);
+    _demoMeasureEvent('converted');
+  }
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
