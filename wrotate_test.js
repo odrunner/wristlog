@@ -4082,13 +4082,13 @@ export function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
 export function demoMeasureCta(rate) {
   const r = Number(rate);
   if (rate == null || !Number.isFinite(r)) {
-    return { title: 'Measure complete', sub: 'Sign up free to keep your readings:' };
+    return { title: 'Measure complete', sub: 'Sign up free to save your readings:' };
   }
   const mag = Math.abs(r).toFixed(1);
   const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
   return {
     title: `Your watch is running ${rateStr} s/day`,
-    sub: 'Sign up free to keep this reading:',
+    sub: 'Sign up free to save this reading:',
   };
 }
 

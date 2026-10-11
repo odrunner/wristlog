@@ -4705,22 +4705,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
         </div>
       </div>
-      <!-- Demo: post-reading signup ask — the live number is the pitch; Keep/Share stay gated.
-           The bullets are the "why an account": concrete payoffs, not a slogan (UAT 2026-10-11). -->
-      <div id="msr-demo-cta" class="hidden">
-        <div id="msr-demo-cta-title" class="text-default u-fw-semibold u-mb-1 u-ta-center"></div>
-        <div id="msr-demo-cta-sub" class="text-secondary u-mb-2 u-ta-center"></div>
-        <div class="panel u-pt-2-5 u-pr-4 u-pb-2-5 u-pl-4 u-mb-3">
-          <div class="text-secondary u-fs-sm u-mb-1">&middot; Accuracy history for every watch you own</div>
-          <div class="text-secondary u-fs-sm u-mb-1">&middot; Drift charts &mdash; see if it gets worse over time</div>
-          <div class="text-secondary u-fs-sm">&middot; A reminder when it&rsquo;s time to measure again</div>
-        </div>
-        <button class="btn btn-primary btn-sm btn-block stack-1-5" onclick="demoMeasureSignup('google')">Continue with Google</button>
-        <div class="u-gap-1-5 u-d-flex">
-          <button class="btn btn-ghost btn-sm btn-grow" onclick="demoMeasureSignup('apple')">Continue with Apple</button>
-          <button class="btn btn-ghost btn-sm btn-grow u-c-muted" onclick="dismissDemoMsrCta()">Keep exploring</button>
-        </div>
-      </div>
+      <!-- Demo post-reading signup ask is a MODAL (showDemoMeasureModal) since
+           2026-10-11 UAT round 2: the inline block sat below the tab-bar fold. -->
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
       <div id="msr-history-hint" class="card u-mt-4 u-pt-3 u-pr-4 u-pb-3 u-pl-4 u-cur-pointer" style="display:none;" onclick="openMsrHistory('hint_card')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory('hint_card');}">
         <div class="u-items-baseline u-justify-space-between u-gap-2 u-d-flex">
@@ -7584,13 +7570,13 @@ function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
 function demoMeasureCta(rate) {
   const r = Number(rate);
   if (rate == null || !Number.isFinite(r)) {
-    return { title: 'Measure complete', sub: 'Sign up free to keep your readings:' };
+    return { title: 'Measure complete', sub: 'Sign up free to save your readings:' };
   }
   const mag = Math.abs(r).toFixed(1);
   const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
   return {
     title: `Your watch is running ${rateStr} s/day`,
-    sub: 'Sign up free to keep this reading:',
+    sub: 'Sign up free to save this reading:',
   };
 }
 
@@ -7604,43 +7590,89 @@ function demoRateBand(rate) {
   return 'gt15';
 }
 
-// Reading finished in demo: count the run, log it, and show the signup ask
-// (instead of the save section, which demo never sees).
+// Reading finished in demo: count the run, log it, and pop the signup modal
+// (instead of the save section, which demo never sees). Short delay so the
+// completed dial renders first — the number on screen is what the modal quotes.
 function demoMeasureComplete(rate, wasConverged) {
   try { safeLS.set(DEMO_MSR_RUNS_KEY, String(_demoRunsCompleted() + 1)); } catch (_) {}
   _demoMeasureEvent('completed', { rate_band: demoRateBand(rate), converged: !!wasConverged });
+  setTimeout(() => showDemoMeasureModal(rate), 500);
+}
+
+// UAT 2026-10-11 round 2: the inline CTA under the Measure button sat below the
+// tab-bar fold and one line of copy didn't say why to sign up. A modal can't be
+// missed, and dismissing it DISCARDS the reading — save-or-lose, stated plainly
+// on the button.
+function showDemoMeasureModal(rate) {
+  if (document.getElementById('demo-measure-modal')) return;
   const cta = demoMeasureCta(rate);
-  const title = document.getElementById('msr-demo-cta-title');
-  const sub = document.getElementById('msr-demo-cta-sub');
-  if (title) title.textContent = cta.title;
-  if (sub) sub.textContent = cta.sub;
-  const el = document.getElementById('msr-demo-cta');
-  if (el) {
-    el.classList.remove('hidden');
-    // The CTA sits below the instrument + Measure button, under the tab bar's
-    // fold on a phone (UAT 2026-10-11: "Continue is not visible"). Scroll it
-    // into view once layout settles; the title repeats the rate, so the
-    // reading stays in front of the visitor.
-    setTimeout(() => {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
-    }, 350);
-  }
+  const m = document.createElement('div');
+  m.id = 'demo-measure-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--black) 50%, transparent);';
+  m.innerHTML = `
+    <div class="u-bg-bg u-r-lg u-pt-8 u-pr-8 u-pb-8 u-pl-8 u-maxw-85 u-w-90pct u-ta-center u-sh-shadow-4">
+      <div class="u-fs-2xl u-fw-bold u-c-text u-mb-1">${escHtml(cta.title)}</div>
+      <div class="text-secondary u-mb-3">${escHtml(cta.sub)}</div>
+      <div class="panel u-pt-2-5 u-pr-4 u-pb-2-5 u-pl-4 u-mb-4 u-ta-left">
+        <div class="text-secondary u-fs-sm u-mb-1">&middot; Accuracy history for every watch you own</div>
+        <div class="text-secondary u-fs-sm u-mb-1">&middot; Drift charts &mdash; see if it gets worse over time</div>
+        <div class="text-secondary u-fs-sm">&middot; A reminder when it&rsquo;s time to measure again</div>
+      </div>
+      <button onclick="demoMeasureSignup('google')" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-1px-solid-google-line u-bg-white u-c-google-ink u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-2">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Continue with Google
+      </button>
+      <button onclick="demoMeasureSignup('apple')" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-none u-bg-black u-c-white u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-3">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
+        Continue with Apple
+      </button>
+      <button onclick="dismissDemoMeasureModal()" class="btn-plain u-fs-base u-ff-inherit">Discard reading</button>
+    </div>`;
+  m.addEventListener('click', (e) => { if (e.target === m) dismissDemoMeasureModal(); });
+  document.body.appendChild(m);
+}
+
+function dismissDemoMeasureModal() {
+  const m = document.getElementById('demo-measure-modal');
+  if (m) m.remove();
+  demoWipeReading();
+  _demoMeasureEvent('cta_dismissed');
+}
+
+// Dismissing the modal discards the reading — the result leaves the screen
+// entirely (HUD, badges, scatter, beat scope, status), back to READY. The
+// reading is the thing an account would have saved; it doesn't linger free.
+function demoWipeReading() {
+  _msrLastRate = null; _msrLastBe = null; _msrFoldedBE = null;
+  _msrLastBph = null; _msrScatterData = []; _msrLastCumDev = 0;
+  const canvas = document.getElementById('msr-scatter-plot');
+  if (canvas) { const ctx = canvas.getContext('2d'); if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+  set('msr-live-rate', el => { el.textContent = '—'; });
+  set('msr-live-be', el => { el.textContent = '—'; });
+  set('msr-live-amp-wrap', el => { el.style.display = 'none'; });
+  set('msr-detected-bph', el => { el.style.display = 'none'; });
+  set('msr-converged-badge', el => { el.style.display = 'none'; });
+  set('msr-preliminary-badge', el => { el.style.display = 'none'; });
+  set('msr-beat-scope-panel', el => { el.style.display = 'none'; });
+  set('msr-signal-bars', el => { el.style.display = 'none'; });
+  set('msr-save-section', el => { el.style.display = 'none'; });
+  set('msr-status-text', el => { el.textContent = ' '; el.style.color = ''; });
+  set('msr-idle-overlay', el => { el.style.display = 'flex'; });
+  const btnLabel = document.getElementById('msr-btn-label');
+  if (btnLabel) btnLabel.textContent = 'Measure';
 }
 
 function demoMeasureSignup(provider) {
   _demoMeasureEvent('cta_signup', { provider });
+  const m = document.getElementById('demo-measure-modal');
+  if (m) m.remove();
   // Tag the funnel row before signIn's own (same-source) call — 5-min dedup
   // keeps this one, so demo-measure signups are countable in page_visits.
   trackVisit({ utm_source: 'signin_' + provider, utm_medium: 'funnel', utm_content: 'demo_measure', path: '/signin' });
   try { safeLS.set(DEMO_MSR_SIGNUP_KEY, '1'); } catch (_) {}
   exitDemoMode();
   setTimeout(provider === 'apple' ? signInWithApple : signInWithGoogle, 300);
-}
-
-function dismissDemoMsrCta() {
-  const el = document.getElementById('msr-demo-cta');
-  if (el) el.classList.add('hidden');
-  _demoMeasureEvent('cta_dismissed');
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -8185,7 +8217,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.19.51';
+const APP_VERSION = '10.20.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20850,8 +20882,6 @@ function nav(btn) {
       if (selRow) selRow.classList.toggle('hidden', _isDemoMode);
       const demoNote = document.getElementById('msr-demo-note');
       if (demoNote) demoNote.classList.toggle('hidden', !_isDemoMode);
-      const demoCta = document.getElementById('msr-demo-cta');
-      if (demoCta) demoCta.classList.add('hidden');
       updateMsrModeIndicator();
       initTgSourceSelector();
     }
@@ -34731,8 +34761,6 @@ function toggleMsrListen() {
   if (_isDemoMode) {
     const gate = demoMeasureAllowed({ isDemo: true, completedRuns: _demoRunsCompleted(), cap: DEMO_MEASURE_CAP });
     if (!gate.allow) { _demoMeasureEvent('capped'); showDemoSignupModal(); return; }
-    const demoCta = document.getElementById('msr-demo-cta');
-    if (demoCta) demoCta.classList.add('hidden');
     _demoMeasureEvent('started');
   }
   markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
