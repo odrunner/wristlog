@@ -1,4 +1,57 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const html = readFileSync(join(root, 'index.html'), 'utf8');
+
+// ── Direct Apple rating prompt (2026-10-10) ─────────────────────────────────
+// The "Enjoying WRotate?" gate halved the funnel (208 shown → 102 yes) and its
+// feedback branch caught 3 users in six months. maybeShowReviewPrompt now calls
+// the native requestReview directly; the custom modal is gone. Web is a no-op
+// (the system rating sheet only exists in the iOS app).
+
+describe('review prompt: direct native requestReview', () => {
+  it('maybeShowReviewPrompt calls the native requestReview handler directly', () => {
+    const fn = html.slice(html.indexOf('function maybeShowReviewPrompt'), html.indexOf('// Internal accounts'));
+    expect(fn).toContain("postMessage({ action: 'requestReview' })");
+    expect(fn).toContain("_logReviewEvent('requested')");
+  });
+
+  it('is a no-op on web (no native handler, no fallback modal)', () => {
+    const fn = html.slice(html.indexOf('function maybeShowReviewPrompt'), html.indexOf('// Internal accounts'));
+    expect(fn).toContain('window.webkit?.messageHandlers?.appAction');
+    expect(fn).not.toContain('review-prompt-modal');
+  });
+
+  it('stamps both cooldown keys so re-asks respect the 90-day rated window', () => {
+    const fn = html.slice(html.indexOf('function maybeShowReviewPrompt'), html.indexOf('// Internal accounts'));
+    expect(fn).toContain("safeLS.set('wristlog_review_last'");
+    expect(fn).toContain("safeLS.set('wristlog_review_rated'");
+  });
+
+  it('the custom gate modal and its handlers are gone', () => {
+    expect(html).not.toContain('review-prompt-modal');
+    expect(html).not.toContain('Enjoying WRotate?');
+    expect(html).not.toContain('function reviewPromptYes');
+    expect(html).not.toContain('function reviewPromptNo');
+    expect(html).not.toContain('function submitReviewFeedback');
+    expect(html).not.toContain('function closeReviewPrompt');
+  });
+
+  it('keeps the tunable threshold inputs and the eligibility logic', () => {
+    expect(html).toContain('id="review-wear-threshold"');
+    expect(html).toContain('id="review-cooldown-days"');
+    expect(html).toContain('function shouldShowReviewPrompt');
+  });
+
+  it('the event check constraint migration allows the new requested event', () => {
+    const sql = readFileSync(join(root, 'sql', '2026-10-10-review-prompt-direct.sql'), 'utf8');
+    expect(sql).toContain("'requested'");
+    expect(sql).toContain('review_prompt_events_event_check');
+  });
+});
 
 // ── Review prompt measurement counter logic ────────────────────────────────
 // The review prompt was relaxed: now just wasConverged (any converged session

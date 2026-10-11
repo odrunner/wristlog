@@ -1553,56 +1553,58 @@ test.describe('Anniversary modal (mocked)', () => {
 
 // ── Review prompt (mocked) ──────────────────────────────────────────────
 
+// Direct Apple rating sheet (2026-10-10): the two-step pre-prompt gate is gone.
+// On native, maybeShowReviewPrompt posts requestReview to the app shell; on web
+// (no webkit handler) it is a no-op. The tunable threshold inputs remain.
 test.describe('Review prompt (mocked)', () => {
-  test('review prompt modal structure exists', async ({ page }) => {
+  test('the custom gate modal is gone; threshold inputs remain', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
-    // Modal should exist but be hidden
-    await expect(page.locator('#review-prompt-modal')).toBeHidden();
-    await expect(page.locator('#review-step-ask')).toBeAttached();
-    await expect(page.locator('#review-step-feedback')).toBeAttached();
-    await expect(page.locator('#review-step-thanks')).toBeAttached();
+    await expect(page.locator('#review-prompt-modal')).toHaveCount(0);
+    await expect(page.locator('#review-wear-threshold')).toBeAttached();
+    await expect(page.locator('#review-cooldown-days')).toBeAttached();
   });
 
-  test('feedback form appears on "Not really" click', async ({ page }) => {
+  test('native path posts requestReview and stamps both cooldown keys', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
-    // Force-show the modal for testing
-    await page.evaluate(() => {
-      document.getElementById('review-step-ask').style.display = '';
-      document.getElementById('review-step-feedback').style.display = 'none';
-      document.getElementById('review-step-thanks').style.display = 'none';
-      document.getElementById('review-prompt-modal').classList.remove('hidden');
+    const posted = await page.evaluate(async () => {
+      const messages = [];
+      window.webkit = { messageHandlers: { appAction: { postMessage: (m) => messages.push(m) } } };
+      maybeShowReviewPrompt('enhance'); // 'enhance' is always eligible
+      await new Promise((r) => setTimeout(r, 1000)); // requestReview fires after the 800ms toast delay
+      return {
+        messages,
+        last: localStorage.getItem('wristlog_review_last'),
+        rated: localStorage.getItem('wristlog_review_rated'),
+      };
     });
-    await page.locator('#review-step-ask button:has-text("Not really")').click();
-    await expect(page.locator('#review-step-feedback')).toBeVisible();
-    await expect(page.locator('#review-feedback-text')).toBeVisible();
+    expect(posted.messages).toEqual([{ action: 'requestReview' }]);
+    expect(posted.last).not.toBeNull();
+    expect(posted.rated).not.toBeNull();
+    // No overlay of ours appeared anywhere in the flow
+    await expect(page.locator('#review-prompt-modal')).toHaveCount(0);
   });
 
-  test('thank you appears after submitting feedback', async ({ page }) => {
+  test('web (no native handler) is a no-op: nothing posted, no cooldown stamped', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
-    // Open modal in feedback step
-    await page.evaluate(() => {
-      document.getElementById('review-step-ask').style.display = 'none';
-      document.getElementById('review-step-feedback').style.display = '';
-      document.getElementById('review-step-thanks').style.display = 'none';
-      document.getElementById('review-prompt-modal').classList.remove('hidden');
+    const result = await page.evaluate(async () => {
+      maybeShowReviewPrompt('enhance');
+      await new Promise((r) => setTimeout(r, 1000));
+      return {
+        last: localStorage.getItem('wristlog_review_last'),
+        rated: localStorage.getItem('wristlog_review_rated'),
+      };
     });
-    await page.fill('#review-feedback-text', 'Would love dark mode improvements');
-    await page.locator('#review-step-feedback button:has-text("Send")').click();
-    await expect(page.locator('#review-step-thanks')).toBeVisible();
-    await expect(page.locator('text=Thank you!')).toBeVisible();
-    // The thanks step has no inline Close button; an X (top-right) closes it.
-    await expect(page.locator('#review-x-close')).toBeVisible();
-    await page.locator('#review-x-close').click();
-    await expect(page.locator('#review-prompt-modal')).toBeHidden();
+    expect(result.last).toBeNull();
+    expect(result.rated).toBeNull();
   });
 });
 

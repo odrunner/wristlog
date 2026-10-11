@@ -3106,38 +3106,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
   </div>
 </div>
-<div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
-  <div class="modal u-maxw-85 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7" style="position:relative;">
-    <button id="review-x-close" onclick="closeReviewPrompt()" aria-label="Close" class="btn-plain u-fs-2xl u-lh-none u-pt-1 u-pr-2 u-pb-1 u-pl-2" style="display:none;position:absolute;top:var(--size-2-5);right:var(--size-2-5);">&times;</button>
-    <!-- Step 1: Enjoying WRotate? -->
-    <div id="review-step-ask">
-      <div class="eyebrow stack-4">Quick question</div>
-      <div id="review-prompt-title" class="title-lg u-mb-2">Enjoying WRotate?</div>
-      <div class="text-body u-mb-6">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
-      <div class="u-gap-2 u-d-flex">
-        <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="reviewPromptNo()">Not really</button>
-        <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="reviewPromptYes()">Yes!</button>
-      </div>
-    </div>
-    <!-- Step 2a: Feedback form (unhappy path) -->
-    <div id="review-step-feedback" style="display:none;">
-      <div class="eyebrow stack-4">Feedback</div>
-      <div class="title-lg u-mb-2">What could be better?</div>
-      <div class="text-body u-mb-4">We read every response. Tell us what's on your mind.</div>
-      <textarea id="review-feedback-text" aria-label="Your feedback" rows="4" placeholder="What would make WRotate better for you?" class="text-default u-w-100pct u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-r-btn u-bd-1px-solid-border u-bg-surface2 u-rs-vertical u-mb-4"></textarea>
-      <div class="u-gap-2 u-d-flex">
-        <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="closeReviewPrompt()">Skip</button>
-        <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="submitReviewFeedback()">Send</button>
-      </div>
-    </div>
-    <!-- Step 2b: Thank you (after happy or after feedback sent) -->
-    <div id="review-step-thanks" style="display:none;">
-      <div class="title-lg u-mb-2">Thank you!</div>
-      <div id="review-thanks-msg" class="text-body u-mb-5">Your feedback means a lot to us.</div>
-      <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost u-w-100pct u-bdc-gold u-c-gold-text u-td-none" onclick="closeReviewPrompt()" style="display:none;">Rate on the App Store</a>
-    </div>
-  </div>
-</div>
 <!-- Hidden config for review prompt thresholds (adjustable without App Store rebuild) -->
 <input type="hidden" id="review-wear-threshold" value="5">
 <input type="hidden" id="review-measurement-threshold" value="4">
@@ -8090,7 +8058,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.14.25';
+const APP_VERSION = '10.17.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18383,79 +18351,25 @@ function _logReviewEvent(event) {
 }
 
 function maybeShowReviewPrompt(source) {
-  if (shouldShowReviewPrompt(source)) {
-    _reviewTriggerSource = source;
-    // Small delay so the save toast shows first
-    setTimeout(() => {
-      document.getElementById('review-step-ask').style.display = '';
-      document.getElementById('review-step-feedback').style.display = 'none';
-      document.getElementById('review-step-thanks').style.display = 'none';
-      document.getElementById('review-x-close').style.display = 'none';
-      document.getElementById('review-prompt-modal').classList.remove('hidden');
-      _logReviewEvent('shown');
-    }, 800);
-  }
-}
-
-function reviewPromptYes() {
-  document.getElementById('review-step-ask').style.display = 'none';
+  // Direct Apple rating sheet (2026-10-10). The old two-step pre-prompt gate
+  // halved the funnel (208 users shown → 102 reached Apple's dialog) and its
+  // feedback branch caught 3 users in six months — the standalone Send
+  // Feedback modal covers that. iOS shows the sheet at most 3x/365 days and
+  // respects the user's In-App Ratings & Reviews setting; our call is silently
+  // ignored when it shouldn't appear. Web has no system sheet → no-op.
+  if (!shouldShowReviewPrompt(source)) return;
   const isNative = !!window.webkit?.messageHandlers?.appAction;
-  if (isNative) {
-    window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
-    safeLS.set('wristlog_review_rated', String(Date.now()));
-    _logReviewEvent('yes_native');
-    document.getElementById('review-thanks-msg').textContent = 'If the rating dialog didn’t appear, you can rate here:';
-    document.getElementById('review-appstore-link').style.display = '';
-  } else {
-    _logReviewEvent('yes_web');
-    document.getElementById('review-thanks-msg').textContent = 'We’d love a quick rating — it really helps!';
-    document.getElementById('review-appstore-link').style.display = '';
-  }
-  // The thanks step has no button row of its own — the X (top-right) closes it.
-  document.getElementById('review-x-close').style.display = '';
+  if (!isNative) return;
+  _reviewTriggerSource = source;
+  // Small delay so the save toast shows first
   setTimeout(() => {
-    document.getElementById('review-step-thanks').style.display = '';
-  }, isNative ? 1500 : 0);
+    window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
+    _logReviewEvent('requested');
+  }, 800);
+  // Stamp both cooldowns: 'last' spaces any re-check, 'rated' keeps the 90-day
+  // window between requestReview calls (we can't tell if Apple showed it).
   safeLS.set('wristlog_review_last', String(Date.now()));
-}
-
-function reviewPromptNo() {
-  _logReviewEvent('no'); // count every negative response, even if they abandon without details
-  document.getElementById('review-step-ask').style.display = 'none';
-  document.getElementById('review-step-feedback').style.display = '';
-  document.getElementById('review-feedback-text').value = '';
-  setTimeout(() => document.getElementById('review-feedback-text').focus(), 100);
-}
-
-async function submitReviewFeedback() {
-  const text = document.getElementById('review-feedback-text').value.trim();
-  if (!text) { _logReviewEvent('no_no_text'); closeReviewPrompt(); return; }
-  if (currentUser) {
-    db.from('app_feedback').insert({
-      user_id: currentUser.id,
-      feedback: text.slice(0, 2000),
-      trigger_source: _reviewTriggerSource
-    }).then(({ error }) => {
-      if (error) console.error('[WristLog] feedback save error:', error.message);
-    });
-  }
-  document.getElementById('review-step-feedback').style.display = 'none';
-  document.getElementById('review-thanks-msg').textContent = 'Your feedback means a lot to us.';
-  document.getElementById('review-appstore-link').style.display = 'none';
-  document.getElementById('review-x-close').style.display = '';
-  document.getElementById('review-step-thanks').style.display = '';
-  safeLS.set('wristlog_review_last', String(Date.now()));
-  _logReviewEvent('no_with_text');
-}
-
-function closeReviewPrompt() {
-  const modal = document.getElementById('review-prompt-modal');
-  const wasOpen = !modal.classList.contains('hidden');
-  const onAsk = document.getElementById('review-step-ask').style.display !== 'none';
-  modal.classList.add('hidden');
-  // Always update cooldown on close so prompt doesn't repeat after expiry
-  safeLS.set('wristlog_review_last', String(Date.now()));
-  if (wasOpen && onAsk) _logReviewEvent('dismissed');
+  safeLS.set('wristlog_review_rated', String(Date.now()));
 }
 
 // Internal accounts — fetched from internal_accounts table, cached for session
@@ -31702,7 +31616,6 @@ const _overlayCloseMap = {
   'whats-new-modal':     closeWhatsNew,
   'streak-calendar-modal': closeStreakCalendar,
   'anniversary-modal':   dismissAnniversary,
-  'review-prompt-modal': closeReviewPrompt,
   'msr-help-modal':      closeMsrHelp,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
