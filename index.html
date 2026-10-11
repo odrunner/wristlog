@@ -4705,10 +4705,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
         </div>
       </div>
-      <!-- Demo: post-reading signup ask — the live number is the pitch; Keep/Share stay gated -->
+      <!-- Demo: post-reading signup ask — the live number is the pitch; Keep/Share stay gated.
+           The bullets are the "why an account": concrete payoffs, not a slogan (UAT 2026-10-11). -->
       <div id="msr-demo-cta" class="hidden">
         <div id="msr-demo-cta-title" class="text-default u-fw-semibold u-mb-1 u-ta-center"></div>
-        <div id="msr-demo-cta-sub" class="text-secondary u-mb-3 u-ta-center"></div>
+        <div id="msr-demo-cta-sub" class="text-secondary u-mb-2 u-ta-center"></div>
+        <div class="panel u-pt-2-5 u-pr-4 u-pb-2-5 u-pl-4 u-mb-3">
+          <div class="text-secondary u-fs-sm u-mb-1">&middot; Accuracy history for every watch you own</div>
+          <div class="text-secondary u-fs-sm u-mb-1">&middot; Drift charts &mdash; see if it gets worse over time</div>
+          <div class="text-secondary u-fs-sm">&middot; A reminder when it&rsquo;s time to measure again</div>
+        </div>
         <button class="btn btn-primary btn-sm btn-block stack-1-5" onclick="demoMeasureSignup('google')">Continue with Google</button>
         <div class="u-gap-1-5 u-d-flex">
           <button class="btn btn-ghost btn-sm btn-grow" onclick="demoMeasureSignup('apple')">Continue with Apple</button>
@@ -7578,13 +7584,13 @@ function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
 function demoMeasureCta(rate) {
   const r = Number(rate);
   if (rate == null || !Number.isFinite(r)) {
-    return { title: 'Measure complete', sub: 'Sign up free to keep readings and track drift over time.' };
+    return { title: 'Measure complete', sub: 'Sign up free to keep your readings:' };
   }
   const mag = Math.abs(r).toFixed(1);
   const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
   return {
     title: `Your watch is running ${rateStr} s/day`,
-    sub: 'Sign up free to keep this reading and see if it holds.',
+    sub: 'Sign up free to keep this reading:',
   };
 }
 
@@ -7609,7 +7615,16 @@ function demoMeasureComplete(rate, wasConverged) {
   if (title) title.textContent = cta.title;
   if (sub) sub.textContent = cta.sub;
   const el = document.getElementById('msr-demo-cta');
-  if (el) el.classList.remove('hidden');
+  if (el) {
+    el.classList.remove('hidden');
+    // The CTA sits below the instrument + Measure button, under the tab bar's
+    // fold on a phone (UAT 2026-10-11: "Continue is not visible"). Scroll it
+    // into view once layout settles; the title repeats the rate, so the
+    // reading stays in front of the visitor.
+    setTimeout(() => {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+    }, 350);
+  }
 }
 
 function demoMeasureSignup(provider) {
@@ -8170,7 +8185,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.18.56';
+const APP_VERSION = '10.19.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

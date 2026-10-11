@@ -46,11 +46,11 @@ describe('demoMeasureCta', () => {
   it('quotes the live rate, sign derived after rounding', () => {
     expect(demoMeasureCta(4.23)).toEqual({
       title: 'Your watch is running +4.2 s/day',
-      sub: 'Sign up free to keep this reading and see if it holds.',
+      sub: 'Sign up free to keep this reading:',
     });
     expect(demoMeasureCta(-3.97)).toEqual({
       title: 'Your watch is running -4.0 s/day',
-      sub: 'Sign up free to keep this reading and see if it holds.',
+      sub: 'Sign up free to keep this reading:',
     });
   });
 
@@ -61,7 +61,7 @@ describe('demoMeasureCta', () => {
   it('falls back to generic copy when there is no rate', () => {
     expect(demoMeasureCta(null)).toEqual({
       title: 'Measure complete',
-      sub: 'Sign up free to keep readings and track drift over time.',
+      sub: 'Sign up free to keep your readings:',
     });
     expect(demoMeasureCta('nope').title).toBe('Measure complete');
   });
