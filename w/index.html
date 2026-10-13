@@ -101,6 +101,9 @@
       const { data, error } = await db.rpc('model_page', { p_slug: slug });
       if (error || !data || !data.model) return show('notfound');
       const m = data.model;
+      // A merged model's old slug resolves to the canonical model — reflect
+      // that in the address bar so copies/shares carry the surviving URL.
+      if (m.slug && m.slug !== slug) history.replaceState(null, '', '/w/?m=' + encodeURIComponent(m.slug));
       const { data: st } = await db.rpc('model_stats', { p_model_id: m.id });
       document.title = `${m.brand} ${m.name} — WRotate`;
       document.getElementById('canonical-link').href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
