@@ -86,4 +86,14 @@ wait
 
 run_agent overseer
 
+# Email the consolidated summary to the owner (approved 2026-10-12).
+if [ -s "$REPORTS/overseer.md" ]; then
+  python3 "$WORK/send-agent-email.py" \
+    "WRotate weekly agents — $DATE" "$REPORTS/overseer.md" ||
+    echo "[$(date)] WARNING: emailing the overseer report failed"
+else
+  printf 'The weekly agent run produced no overseer report. Log tail:\n\n%s\n' \
+    "$(tail -40 "$LOG" 2>/dev/null)" |
+    python3 "$WORK/send-agent-email.py" "WRotate weekly agents FAILED — $DATE" - || true
+fi
 echo "[$(date)] weekly agents: done — summary at $REPORTS/overseer.md"
