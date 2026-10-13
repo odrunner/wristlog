@@ -82,3 +82,32 @@ describe('demoRateBand', () => {
     expect(demoRateBand(NaN)).toBe('none');
   });
 });
+
+// Demo funnel leak fixes (weekly agents A2, 2026-10-12): wiring assertions on
+// index.html so a refactor can't silently reintroduce either leak.
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
+
+describe('demo funnel wiring (index.html)', () => {
+  it('banner "Sign Up Free" opens the signup modal, not exit', () => {
+    const banner = html.slice(html.indexOf('id="demo-banner"'), html.indexOf('id="reminder-banner"'));
+    expect(banner).toContain('onclick="showDemoSignupModal()"');
+    // exactly one exit button remains in the banner
+    expect(banner.match(/onclick="exitDemoMode\(\)"/g)?.length).toBe(1);
+  });
+
+  it('banner copy is current (demo is not read-only; no persona name)', () => {
+    expect(html).not.toContain('read-only preview of Alex Rivera');
+    expect(html).toContain('explore a sample collection. Nothing here is saved.');
+  });
+
+  it('demo-measure modal has no backdrop-tap dismissal (a stray tap must not wipe the reading)', () => {
+    const fn = html.slice(html.indexOf('function showDemoMeasureModal'), html.indexOf('function dismissDemoMeasureModal'));
+    expect(fn).toContain('Discard reading');
+    expect(fn).not.toMatch(/addEventListener\('click'/);
+  });
+});
