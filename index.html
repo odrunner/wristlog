@@ -4679,6 +4679,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
         <div id="msr-complete-msg" class="text-default u-fw-semibold u-mb-2 u-ta-center">Measurement complete</div>
+        <div id="msr-verdict-line" class="text-secondary u-fs-sm u-mb-2 u-ta-center hidden"></div>
         <div class="u-cols-auto-1fr-1fr u-gap-1-5 u-items-center u-d-grid">
           <div class="u-items-center u-gap-1 u-d-flex">
             <input type="text" id="msr-rate-input" class="text-default u-w-18 u-pt-1-5 u-pr-1-5 u-pb-1-5 u-pl-1-5 u-r-sm u-bd-1px-solid-border u-bg-surface u-fw-semibold u-ta-center" value="">
@@ -7581,6 +7582,20 @@ function demoMeasureCta(rate) {
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Plain-language verdict under a converged reading (experiment msr_verdict_line).
+// Interprets the daily rate only — collectors speak in s/day, so no weekly
+// conversions. Bands: COSC chronometer spec (-4/+6), the ±15 s/day norm for a
+// healthy mechanical, ±30 for aging movements, beyond that magnetism/service
+// territory. Returns '' when there is no finite rate to interpret.
+function msrVerdictLine(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) return '';
+  if (r >= -4 && r <= 6) return 'Within chronometer spec (-4/+6 s/day) — excellent.';
+  if (Math.abs(r) <= 15) return 'Healthy — most mechanical watches run within ±15 s/day.';
+  if (Math.abs(r) <= 30) return 'Common for older movements; a regulation can bring it down.';
+  return 'Higher than typical — magnetism or service wear are common causes.';
+}
+
 function demoRateBand(rate) {
   const r = Number(rate);
   if (rate == null || !Number.isFinite(r)) return 'none';
@@ -8219,7 +8234,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.19.22';
+const APP_VERSION = '12.19.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -35094,6 +35109,14 @@ function stopMsrListen(reason) {
         completeMsg.textContent = 'Low confidence — retry recommended';
         completeMsg.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
       }
+    }
+    // Verdict line (experiment msr_verdict_line): plain-language read of the
+    // rate, converged readings only — never interpret a number we don't trust.
+    const verdictEl = document.getElementById('msr-verdict-line');
+    if (verdictEl) {
+      const verdict = (wasConverged && experiment('msr_verdict_line')) ? msrVerdictLine(_msrLastRate) : '';
+      verdictEl.textContent = verdict;
+      verdictEl.classList.toggle('hidden', !verdict);
     }
     // Auto-keep (Wi-Fi-scale model): a converged, plausible reading goes straight into the
     // watch's history — no Save tap — and the completion row offers Discard instead.

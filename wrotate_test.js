@@ -4092,6 +4092,20 @@ export function demoMeasureCta(rate) {
   };
 }
 
+// Plain-language verdict under a converged reading (experiment msr_verdict_line).
+// Interprets the daily rate only — collectors speak in s/day, so no weekly
+// conversions. Bands: COSC chronometer spec (-4/+6), the ±15 s/day norm for a
+// healthy mechanical, ±30 for aging movements, beyond that magnetism/service
+// territory. Returns '' when there is no finite rate to interpret.
+export function msrVerdictLine(rate) {
+  const r = Number(rate);
+  if (rate == null || !Number.isFinite(r)) return '';
+  if (r >= -4 && r <= 6) return 'Within chronometer spec (-4/+6 s/day) — excellent.';
+  if (Math.abs(r) <= 15) return 'Healthy — most mechanical watches run within ±15 s/day.';
+  if (Math.abs(r) <= 30) return 'Common for older movements; a regulation can bring it down.';
+  return 'Higher than typical — magnetism or service wear are common causes.';
+}
+
 // Telemetry band for demo_measure events — coarse on purpose (no exact rates
 // in feature_events meta).
 export function demoRateBand(rate) {
