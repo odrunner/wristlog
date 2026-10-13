@@ -103,6 +103,16 @@ export function utcDayStartIso(nowMs: number): string {
   return d.toISOString();
 }
 
+// Per-attempt Gemini timeouts for one lookup. Batch price refreshes
+// (update-prices) get a second, shorter attempt after a hang: rows in that
+// modal render independently, so nobody waits on any one of them, and a retry
+// replaces a ~$0.10 Claude+web-search fallback with a ~$0.001 Gemini call
+// (2 of 40 batch lookups hung past 35s on 2026-10-12). Interactive sources
+// keep the single 35s attempt — see the timeout rationale in index.ts.
+export function geminiAttemptTimeouts(source: string): number[] {
+  return source === "update-prices" ? [35000, 20000] : [35000];
+}
+
 // Round a value estimate to the nearest $50 — raw engine output can carry false
 // precision (e.g. 4801.5 from averaging listings). Values that would round to 0
 // keep whole-dollar rounding instead so tiny estimates aren't wiped out.

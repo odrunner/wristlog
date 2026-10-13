@@ -11,6 +11,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildWatchDesc,
   extractJson,
+  geminiAttemptTimeouts,
   isCacheFresh,
   roundEstimate,
   salvageJson,
@@ -155,77 +156,94 @@ Rules:
     // (validated 2026-07-19 against the full test collection, ±7% median deviation).
     let parsed: Record<string, unknown> | null = null;
     if (GEMINI_API_KEY) {
-      try {
-        const geminiAbort = new AbortController();
-        // 35s, not 60s. Measured over 80 live lookups (2026-08-13..19): median 15s,
-        // p90 23s, slowest healthy call 33s — a request still running at 35s has
-        // hung, not slowed down. The old 60s cap made the user wait the full minute
-        // BEFORE the Claude fallback even started, so the one hang on 2026-08-17
-        // took 95s end to end and the user gave up and retried at 89s. Raise this
-        // only if the p90 above moves; a too-generous timeout costs a real wait on
-        // every hang and buys nothing, because Gemini never recovers after ~35s.
-        const geminiTimer = setTimeout(() => geminiAbort.abort(), 35000);
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
-            signal: geminiAbort.signal,
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              tools: [{ google_search: {} }],
-              // The cap covers thinking + answer on 2.5 Flash. Measured live:
-              // answers run 651-1049 tokens, thinking 1596-2407. A heavy-thinking
-              // run (the 32-35s ones that failed to parse) can spend most of an
-              // 8192 budget before the JSON is finished, and a truncated object
-              // is unrecoverable at parse time — so give it headroom. Billing is
-              // per token generated, not per cap, so this costs nothing unused.
-              generationConfig: { temperature: 0.1, maxOutputTokens: 16384 },
-            }),
-          },
-        );
-        clearTimeout(geminiTimer);
-        if (geminiResponse.ok) {
-          const geminiResult = await geminiResponse.json();
-          const candidate = geminiResult.candidates?.[0];
-          const finishReason = candidate?.finishReason || "unknown";
-          const parts = candidate?.content?.parts ?? [];
-          const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text).join("");
-          try {
-            parsed = extractJson(text);
-          } catch (_e) {
-            parsed = null;
-          }
-          if (parsed && !parsed.estimated_value_usd) parsed = null;
-          // A MAX_TOKENS response still carries a complete estimate up front —
-          // both 2026-08-08 fallbacks did. Recover it rather than pay for a
-          // Claude re-run of a lookup Gemini had already answered.
-          // Require a usable mid: the UI keys off it entirely, so salvaging a
-          // range with only `low` would render "N/A" — worse than the Claude
-          // re-run this is replacing.
-          if (!parsed) {
-            const salvaged = salvageJson(text);
-            const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
-            if (est && roundEstimate(est.mid) !== null) {
-              salvaged!._salvaged = true;
-              parsed = salvaged;
+      // 35s, not 60s. Measured over 80 live lookups (2026-08-13..19): median 15s,
+      // p90 23s, slowest healthy call 33s — a request still running at 35s has
+      // hung, not slowed down. The old 60s cap made the user wait the full minute
+      // BEFORE the Claude fallback even started, so the one hang on 2026-08-17
+      // took 95s end to end and the user gave up and retried at 89s. Raise this
+      // only if the p90 above moves; a too-generous timeout costs a real wait on
+      // every hang and buys nothing, because Gemini never recovers after ~35s.
+      //
+      // Batch (update-prices) lookups get ONE shorter second attempt after an
+      // abort/network failure before the ~100x costlier Claude fallback: a hang
+      // is a per-request fluke (2026-10-12: the 38 batch calls around two hung
+      // ones all answered in 10-30s), and nobody is waiting on a single batch
+      // row. An HTTP error or a parse failure is never retried — both times
+      // those appeared they were real bugs, and the same request fails the
+      // same way. The retry log line must NOT say "Gemini exception/error" —
+      // cost-report.py counts those as failures, and a recovered stall isn't one.
+      const attemptTimeouts = geminiAttemptTimeouts(source);
+      for (let attempt = 0; attempt < attemptTimeouts.length; attempt++) {
+        try {
+          const geminiAbort = new AbortController();
+          const geminiTimer = setTimeout(() => geminiAbort.abort(), attemptTimeouts[attempt]);
+          const geminiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+              signal: geminiAbort.signal,
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ google_search: {} }],
+                // The cap covers thinking + answer on 2.5 Flash. Measured live:
+                // answers run 651-1049 tokens, thinking 1596-2407. A heavy-thinking
+                // run (the 32-35s ones that failed to parse) can spend most of an
+                // 8192 budget before the JSON is finished, and a truncated object
+                // is unrecoverable at parse time — so give it headroom. Billing is
+                // per token generated, not per cap, so this costs nothing unused.
+                generationConfig: { temperature: 0.1, maxOutputTokens: 16384 },
+              }),
+            },
+          );
+          clearTimeout(geminiTimer);
+          if (geminiResponse.ok) {
+            const geminiResult = await geminiResponse.json();
+            const candidate = geminiResult.candidates?.[0];
+            const finishReason = candidate?.finishReason || "unknown";
+            const parts = candidate?.content?.parts ?? [];
+            const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text).join("");
+            try {
+              parsed = extractJson(text);
+            } catch (_e) {
+              parsed = null;
             }
-          }
-          console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} salvaged=${!!parsed?._salvaged} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
-          if (parsed) {
-            parsed._engine = "gemini";
+            if (parsed && !parsed.estimated_value_usd) parsed = null;
+            // A MAX_TOKENS response still carries a complete estimate up front —
+            // both 2026-08-08 fallbacks did. Recover it rather than pay for a
+            // Claude re-run of a lookup Gemini had already answered.
+            // Require a usable mid: the UI keys off it entirely, so salvaging a
+            // range with only `low` would render "N/A" — worse than the Claude
+            // re-run this is replacing.
+            if (!parsed) {
+              const salvaged = salvageJson(text);
+              const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
+              if (est && roundEstimate(est.mid) !== null) {
+                salvaged!._salvaged = true;
+                parsed = salvaged;
+              }
+            }
+            console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} salvaged=${!!parsed?._salvaged} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
+            if (parsed) {
+              parsed._engine = "gemini";
+            } else {
+              const usage = geminiResult.usageMetadata ?? {};
+              console.error(
+                `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
+              );
+            }
           } else {
-            const usage = geminiResult.usageMetadata ?? {};
-            console.error(
-              `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
-            );
+            const errText = await geminiResponse.text();
+            console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
           }
-        } else {
-          const errText = await geminiResponse.text();
-          console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
+          break; // got an HTTP response — handled above, a retry can't help
+        } catch (geminiErr) {
+          if (attempt < attemptTimeouts.length - 1) {
+            console.log(`[watch-value] user=${user.id} Gemini stalled (attempt ${attempt + 1}/${attemptTimeouts.length}), retrying: ${(geminiErr as Error).message}`);
+            continue;
+          }
+          console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
         }
-      } catch (geminiErr) {
-        console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
       }
     }
 

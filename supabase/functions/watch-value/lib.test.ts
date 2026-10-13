@@ -2,11 +2,27 @@ import { assertEquals, assertThrows } from "jsr:@std/assert";
 import {
   buildWatchDesc,
   extractJson,
+  geminiAttemptTimeouts,
   isCacheFresh,
   roundEstimate,
   salvageJson,
   utcDayStartIso,
 } from "./lib.ts";
+
+// A hung Gemini call during a batch price refresh gets one shorter retry
+// before the ~100x costlier Claude fallback (2 of 40 batch lookups hit the
+// 35s abort on 2026-10-12; their neighbors all answered in 10-30s, so a
+// hang is a per-request fluke a fresh call recovers from). Interactive
+// sources keep the single fast attempt — a person is waiting on that row.
+Deno.test("geminiAttemptTimeouts — update-prices gets a second, shorter attempt", () => {
+  assertEquals(geminiAttemptTimeouts("update-prices"), [35000, 20000]);
+});
+
+Deno.test("geminiAttemptTimeouts — interactive sources get a single attempt", () => {
+  assertEquals(geminiAttemptTimeouts("single"), [35000]);
+  assertEquals(geminiAttemptTimeouts("add-flow"), [35000]);
+  assertEquals(geminiAttemptTimeouts(""), [35000]);
+});
 
 const DAY = 24 * 60 * 60 * 1000;
 
