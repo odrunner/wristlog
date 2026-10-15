@@ -2685,8 +2685,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </a>
       </div>
       <script>
+        // Native app shell: this visitor just installed from the App Store
+        // page, which carries the same pitch — skip the re-pitch and get them
+        // signed in. Logo + one line + buttons, Apple first inside iOS.
+        // (Kept in this exact slot: compare.sh landing pairs elements by
+        // document order, so the script must not move.)
         if (window.webkit?.messageHandlers?.auth) {
           document.getElementById('landing-app-badge').style.display = 'none';
+          document.querySelector('.landing-divider').style.display = 'none';
+          document.querySelector('.landing-features').style.display = 'none';
+          document.querySelector('.landing-tagline').textContent = 'Sign in to start your collection — 100% free.';
+          document.addEventListener('DOMContentLoaded', () => {
+            const g = document.querySelector('.landing-auth .btn-google');
+            g.parentNode.insertBefore(document.querySelector('.landing-auth .btn-apple'), g);
+          });
         }
       </script>
       <button class="btn-google" onclick="signInWithGoogle()">
@@ -8235,7 +8247,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.06.47';
+const APP_VERSION = '15.07.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11756,7 +11768,7 @@ document.addEventListener('click', e => {
 // Name and call sites are unchanged: it is still invoked from the five places
 // that detect a logged-out visitor.
 function loadPublicFeed() {
-  if (window.posthog) posthog.capture('landing_page_viewed');
+  if (window.posthog) posthog.capture('landing_page_viewed', { native: !!window.webkit?.messageHandlers?.auth });
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────

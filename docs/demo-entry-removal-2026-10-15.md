@@ -43,9 +43,21 @@ SELECT d.day::date,
 FROM generate_series(current_date - 13, current_date, '1 day') d(day) ORDER BY 1;
 ```
 
-- Primary: **signups/day after vs 2.6/day before.** Clearly up or flat →
-  the demo was not earning signups; consider keeping it off or reworking it.
-  Clearly down → the demo was part of the funnel; restore the button.
+- Primary: **web-only signups/day** — signups with no `device_tokens` row
+  (the native-trimmed welcome shipped later on 2026-10-15 moves app-side
+  signups, so total signups mixes two tests; the demo entry only ever
+  existed on the web landing). Recompute the baseline with the same split:
+
+```sql
+SELECT count(*) FILTER (WHERE NOT EXISTS
+         (SELECT 1 FROM device_tokens dt WHERE dt.user_id = p.id)) AS web_signups
+FROM profiles p
+WHERE p.created_at BETWEEN '2026-10-02' AND '2026-10-16';
+```
+
+  Clearly up or flat → the demo was not earning signups; consider keeping
+  it off or reworking it. Clearly down → the demo was part of the funnel;
+  restore the button.
 - Sanity check: `demo_visitors` should fall to ~0 (stragglers = existing
   sessions / direct `demo-login` calls).
 - Denominator if signups look noisy: PostHog `landing_page_viewed` per day
