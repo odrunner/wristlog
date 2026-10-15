@@ -32,6 +32,17 @@ describe('w/ logs page_visits like the other public pages', () => {
   });
 });
 
+// ── 2026-10-14: our own Playwright-style runs (HeadlessChrome on the Mac
+// Mini) rendered w/ pages and counted as "public views" — 5 of the first 6
+// rows. The RPC skips headless UAs; the raw rows stay in page_visits.
+describe('admin_watch_page_traffic excludes headless-browser visits', () => {
+  const sql = readFileSync(join(root, 'sql/2026-10-03-watch-page-traffic.sql'), 'utf8');
+
+  it('filters HeadlessChrome user agents out of the aggregation', () => {
+    expect(sql).toMatch(/NOT ILIKE '%HeadlessChrome%'/);
+  });
+});
+
 describe('Admin → Traffic shows the Watch Pages card', () => {
   const src = readFileSync(join(root, 'index.html'), 'utf8');
 

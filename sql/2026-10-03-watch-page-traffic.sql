@@ -14,6 +14,11 @@
 -- No internal-account exclusion is possible: these rows are anonymous
 -- (user_id is null), so the admin's own test visits count — same caveat as
 -- the p/ and profile/ rows feeding admin_traffic_stats.
+--
+-- 2026-10-14: HeadlessChrome visits are excluded — our own Playwright-style
+-- scripts (screenshot/crawl runs on the Mac Mini) rendered w/ pages and
+-- inflated "public views" (5 of the first 6 rows). The rows stay in
+-- page_visits; only this aggregation skips them.
 
 CREATE OR REPLACE FUNCTION public.admin_watch_page_traffic(p_days integer DEFAULT 14)
 RETURNS json
@@ -40,6 +45,7 @@ BEGIN
       END AS source
     FROM page_visits
     WHERE path LIKE '/w/%'
+      AND COALESCE(user_agent, '') NOT ILIKE '%HeadlessChrome%'
   )
   SELECT json_build_object(
     'total',   (SELECT count(*) FROM wv),
