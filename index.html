@@ -7528,7 +7528,7 @@ function exitDemoMode() {
 // under the demo account (internal — excluded from external metrics) with a
 // per-device id, and surfaced on Admin → Traffic ("Demo Measure" card) so
 // abuse is never silent. Flip the cap below if that card shows abuse.
-const DEMO_MEASURE_CAP = 0;   // 0 = no cap; N = block the start after N completed runs/device
+const DEMO_MEASURE_CAP = 3;   // 0 = no cap; N = block the start after N completed runs/device
 const DEMO_MSR_RUNS_KEY = 'wrotate_demo_msr_runs';
 const DEMO_MSR_SIGNUP_KEY = 'wrotate_demo_msr_signup';
 const DEMO_DEVICE_KEY = 'wrotate_demo_did';
@@ -8234,7 +8234,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.20.21';
+const APP_VERSION = '14.20.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
