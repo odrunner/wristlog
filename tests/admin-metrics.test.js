@@ -61,7 +61,7 @@ describe('Totals card day-over-day deltas', () => {
   });
 
   it('fetches the deltas from the admin_dod_counts RPC', () => {
-    expect(html).toContain("db.rpc('admin_dod_counts', cacheArgs)");
+    expect(html).toContain("db.rpc('admin_dod_counts')");
   });
 
   it('Advanced mode delta compares 24h vs the prior 24h window', () => {
@@ -72,7 +72,7 @@ describe('Totals card day-over-day deltas', () => {
   });
 
   it('Totals splits measurements by engine — Pro V2 and Original, each with users + sessions', () => {
-    expect(html).toContain("db.rpc('admin_engine_stats', cacheArgs)");
+    expect(html).toContain("db.rpc('admin_engine_stats')");
     expect(html).toMatch(/engineRow\('Measurements — Pro V2',\s*eng\.prov2_sessions,\s*eng\.prov2_users,\s*eng\.prov2_sessions_24h,\s*eng\.prov2_sessions_prev24h\)/);
     expect(html).toMatch(/engineRow\('Measurements — Original',\s*eng\.orig_sessions,\s*eng\.orig_users,\s*eng\.orig_sessions_24h,\s*eng\.orig_sessions_prev24h\)/);
   });
@@ -243,7 +243,7 @@ describe('Per-User Averages w/w + m/m', () => {
   const keys = ['watches', 'wears', 'price_checks', 'enhances', 'measurements', 'follows'];
 
   it('fetches the snapshots from the admin_per_user_trend RPC', () => {
-    expect(html).toContain("db.rpc('admin_per_user_trend', cacheArgs)");
+    expect(html).toContain("db.rpc('admin_per_user_trend')");
   });
 
   it.each(keys)('the %s row passes trendSub into its sub slot', (key) => {
@@ -267,17 +267,26 @@ describe('Admin stats cache (sql/2026-08-15-admin-stats-cache.sql)', () => {
   const CACHED = ['admin_dod_counts', 'admin_active_dau', 'admin_engine_stats', 'admin_per_user_trend',
     'admin_measurement_counts', 'admin_user_stats', 'admin_last_active',
     'admin_traffic_stats', 'admin_email_engagement', 'admin_email_clickthrough'];
-  it('every cached RPC is called with the p_force args object, never bare', () => {
+  it('every cached RPC reads the cache (no p_force from the client)', () => {
     for (const fn of CACHED) {
-      expect(html, fn).toContain(`db.rpc('${fn}', cacheArgs)`);
-      expect(html, fn).not.toContain(`db.rpc('${fn}')`);
+      expect(html, fn).toContain(`db.rpc('${fn}')`);
+      expect(html, fn).not.toContain(`db.rpc('${fn}', cacheArgs)`);
     }
+    expect(html).not.toContain('p_force: force');
   });
-  it('the ↻ Refresh buttons force a recompute; tab open and Retry read the cache', () => {
-    expect(html).toContain('onclick="loadAdminStats(true)">↻ Refresh');
-    expect(html).toContain('onclick="renderAdminTraffic(true)">↻ Refresh');
+  it('no ↻ Refresh button forces a recompute; Retry still re-reads the cache', () => {
+    expect(html).not.toContain('onclick="loadAdminStats(true)"');
+    expect(html).not.toContain('onclick="renderAdminTraffic(true)"');
     expect(html).toContain('onclick="loadAdminStats()">↻ Retry');
-    expect(html).toContain('const cacheArgs = { p_force: force === true };');
+  });
+  it('the Usage tab starts all its query batches before awaiting the first', () => {
+    const fn = html.slice(html.indexOf('async function loadAdminStats()'), html.indexOf('await idsP;'));
+    expect(fn).toContain('const b2P = _adminStatsBatch2();');
+    expect(fn).toContain('const b3P = _adminStatsBatch3(idsP);');
+  });
+  it('the Demo Measure card is gone from Admin → Traffic', () => {
+    expect(html).not.toContain("db.rpc('admin_demo_measure_stats'");
+    expect(html).not.toContain('Demo Measure (cap:');
   });
   it('the SQL wraps exactly those RPCs and keeps the live ones unwrapped', () => {
     const sql = readFileSync(join(__dirname, '..', 'sql', '2026-08-15-admin-stats-cache.sql'), 'utf8');
