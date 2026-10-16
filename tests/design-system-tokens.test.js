@@ -21,31 +21,31 @@ const DS_LINK = `<link rel="stylesheet" href="${DS_URL}">`;
 
 // Tokens design-system.css owns. Nothing else may declare these.
 export const SHARED_LIGHT = {
-  '--bg': '#f5f5f8',
+  '--bg': '#e9edf1',
   '--surface': '#ffffff',
-  '--surface2': '#eeeff5',
-  '--border': '#d8d9e8',
-  '--gold': '#9a7628',
+  '--surface2': '#f1f4f7',
+  '--border': '#d3d9e1',
+  '--gold': '#87661a',
   // Gold as TEXT needs to be darker than gold as a surface: #9a7628 measures 3.66
   // on --surface2, below the 4.5:1 AA floor. Darkening --gold itself would have
   // fixed 113 text rules and broken 47 background ones (buttons 4.70 -> 3.81),
   // so the two uses carry two values. Audit U5.
   '--gold-text': '#8b6719',
   '--gold-lt': '#c9a84c',
-  '--gold-dim': 'rgba(154,118,40,.12)',
-  '--text': '#16161e',
+  '--gold-dim': 'rgba(135,102,26,.12)',
+  '--text': '#141a24',
   // Darkened from #70708a on 2026-08-14 (audit U5): the old value measured 4.41:1
   // on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor for body text.
-  '--muted': '#6a6a84',
-  '--danger': '#e05555',
-  '--success': '#4caf7d',
+  '--muted': '#566070',
+  '--danger': '#bb3535',
+  '--success': '#26734f',
   // Danger/success as TEXT, same split as --gold-text: the base values measure
   // 3.27–3.75 and 2.37–2.71 on the light surfaces. #b03636 / #27714b clear
   // 4.5:1 on all three. Audit 2026-09-01 A3.
   '--danger-text': '#b03636',
   '--success-text': '#27714b',
   '--radius': '10px',
-  '--overlay-bg': 'rgba(245,245,248,.96)',
+  '--overlay-bg': 'rgba(233,237,241,.96)',
   '--space-1': '.25rem',
   '--space-2': '.5rem',
   '--space-3': '.75rem',
@@ -209,7 +209,10 @@ export const SHARED_DARK = {
   // against the light value (see the aliases note below).
   '--gold-text': 'var(--gold)',
   // Dark danger/success already pass as text (4.51+ / 6.23+), so text and
-  // surface share one value each. Audit 2026-09-01 A3.
+  // surface share one value each. Audit 2026-09-01 A3. Declared in dark since
+  // the light values went darker (2a Mineral, 2026-10-16).
+  '--danger': '#e05555',
+  '--success': '#4caf7d',
   '--danger-text': 'var(--danger)',
   '--success-text': 'var(--success)',
   '--gold-lt': '#dbbe72',

@@ -8,11 +8,11 @@
    carries that attribute, can force light regardless of the app theme. */
 
 :root, [data-theme="light"] {
-  --bg: #f5f5f8;
+  --bg: #e9edf1;
   --surface: #ffffff;
-  --surface2: #eeeff5;
-  --border: #d8d9e8;
-  --gold: #9a7628;
+  --surface2: #f1f4f7;
+  --border: #d3d9e1;
+  --gold: #87661a;
   /* Gold used as TEXT needs to be darker than gold used as a surface. #9a7628
      measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the
      4.5:1 WCAG AA floor. Darkening --gold itself would fix the 113 text rules and
@@ -24,14 +24,14 @@
   /* The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the
      pressed state of a gold button. Took over --badge-accent/-close/-deep and --promo-gold-deep 2026-09-23. */
   --gold-deep: #6E5514;
-  --gold-dim: rgba(154,118,40,.12);
-  --text: #16161e;
+  --gold-dim: rgba(135,102,26,.12);
+  --text: #141a24;
   /* #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1
      WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed
      it. #6a6a84 clears 4.5 on all three light backdrops. Audit U5. */
-  --muted: #6a6a84;
-  --danger: #e05555;
-  --success: #4caf7d;
+  --muted: #566070;
+  --danger: #bb3535;
+  --success: #26734f;
   /* Danger/success used as TEXT need darker values than the surface/border
      uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75
      and --success #4caf7d only 2.37–2.71 on the light surfaces — both under
@@ -40,7 +40,7 @@
   --danger-text: #b03636;
   --success-text: #27714b;
   --radius: 10px;
-  --overlay-bg: rgba(245,245,248,.96);
+  --overlay-bg: rgba(233,237,241,.96);
 
   /* Hover / chosen outline on round header buttons and swatches. An alias of --gold, repeated in the
      dark block on purpose: a var() inside a custom property resolves where it is DECLARED, so an alias
@@ -222,7 +222,11 @@
   --gold-text: var(--gold);
   /* Dark danger/success already pass as text (4.51+ / 6.23+ on every dark
      surface), so text and surface share one value — declared, not inherited,
-     for the alias-resolution reason documented below. */
+     for the alias-resolution reason documented below. Declared here since the
+     light values went darker (2a Mineral): without these, dark mode would
+     inherit the light reds/greens. */
+  --danger: #e05555;
+  --success: #4caf7d;
   --danger-text: var(--danger);
   --success-text: var(--success);
   --gold-lt: #dbbe72;
