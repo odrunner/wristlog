@@ -26,22 +26,22 @@ export const SHARED_LIGHT = {
   '--surface2': '#f1f4f7',
   '--border': '#d3d9e1',
   '--gold': '#87661a',
-  // Gold as TEXT needs to be darker than gold as a surface: #9a7628 measures 3.66
-  // on --surface2, below the 4.5:1 AA floor. Darkening --gold itself would have
-  // fixed 113 text rules and broken 47 background ones (buttons 4.70 -> 3.81),
-  // so the two uses carry two values. Audit U5.
+  // Gold as TEXT has its own token from when the surface gold (#9a7628) failed
+  // the 4.5:1 AA floor as text (audit U5). The 2a Mineral gold passes as text
+  // everywhere; #8b6719 measures 4.40 on the new --bg, marginally under AA
+  // (flagged 2026-10-16).
   '--gold-text': '#8b6719',
   '--gold-lt': '#c9a84c',
   '--gold-dim': 'rgba(135,102,26,.12)',
   '--text': '#141a24',
-  // Darkened from #70708a on 2026-08-14 (audit U5): the old value measured 4.41:1
-  // on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor for body text.
+  // #566070 (2a Mineral) measures 5.40+ on all three light surfaces, clear of
+  // the 4.5:1 WCAG AA floor the pre-Mineral values only just met. Audit U5.
   '--muted': '#566070',
   '--danger': '#bb3535',
   '--success': '#26734f',
-  // Danger/success as TEXT, same split as --gold-text: the base values measure
-  // 3.27–3.75 and 2.37–2.71 on the light surfaces. #b03636 / #27714b clear
-  // 4.5:1 on all three. Audit 2026-09-01 A3.
+  // Danger/success as TEXT, same split as --gold-text: kept from when the old
+  // base values failed AA. The 2a Mineral bases and the -text values all clear
+  // 4.5:1 on the light surfaces (4.86+). Audit 2026-09-01 A3.
   '--danger-text': '#b03636',
   '--success-text': '#27714b',
   '--radius': '10px',

@@ -13,12 +13,12 @@
   --surface2: #f1f4f7;
   --border: #d3d9e1;
   --gold: #87661a;
-  /* Gold used as TEXT needs to be darker than gold used as a surface. #9a7628
-     measures 4.20 on --surface, 3.86 on --bg and 3.66 on --surface2 — below the
-     4.5:1 WCAG AA floor. Darkening --gold itself would fix the 113 text rules and
-     break the 47 background ones: dark-on-gold buttons drop 4.70 -> 3.81. So the
-     two uses get two values. #8b6719 clears 4.5 on all three light surfaces.
-     Audit U5. */
+  /* Gold as TEXT has its own token from when the surface gold (#9a7628) failed
+     the 4.5:1 WCAG AA floor as text; darkening it would have broken the
+     dark-on-gold buttons, so the two uses got two values (audit U5). The 2a
+     Mineral gold #87661a passes as text everywhere (5.32 on --surface, 4.52 on
+     --bg, 4.82 on --surface2). #8b6719 measures 5.18 / 4.40 / 4.69 on the same
+     surfaces — the 4.40 on --bg is marginally under AA (flagged 2026-10-16). */
   --gold-text: #8b6719;
   --gold-lt: #c9a84c;
   /* The deep gold: gold ink on the badge / promo cream (clears AA where --gold fails) and the
@@ -26,17 +26,17 @@
   --gold-deep: #6E5514;
   --gold-dim: rgba(135,102,26,.12);
   --text: #141a24;
-  /* #70708a measured 4.41:1 on --bg and 4.18:1 on --surface2, under the 4.5:1
-     WCAG AA floor — 225 labels across feed/track/collection/wishlist/stats failed
-     it. #6a6a84 clears 4.5 on all three light backdrops. Audit U5. */
+  /* #566070 (2a Mineral) measures 6.36 on --surface, 5.40 on --bg and 5.76 on
+     --surface2 — clear of the 4.5:1 WCAG AA floor that the pre-Mineral values
+     (#70708a, then #6a6a84) only just met. Audit U5. */
   --muted: #566070;
   --danger: #bb3535;
   --success: #26734f;
-  /* Danger/success used as TEXT need darker values than the surface/border
-     uses, exactly like --gold-text above. --danger #e05555 measures 3.27–3.75
-     and --success #4caf7d only 2.37–2.71 on the light surfaces — both under
-     the 4.5:1 AA floor. #b03636 (5.34–6.13) and #27714b (5.16–5.92) clear it
-     on all three. Audit 2026-09-01 A3. */
+  /* Danger/success as TEXT have their own tokens from when the base values
+     (#e05555 / #4caf7d) failed the 4.5:1 AA floor as text. The 2a Mineral
+     bases #bb3535 / #26734f pass on all three light surfaces (4.86+ / 4.89+),
+     as do #b03636 (5.21+) and #27714b (5.03+); the split stays so the roles
+     can diverge again. Audit 2026-09-01 A3. */
   --danger-text: #b03636;
   --success-text: #27714b;
   --radius: 10px;
