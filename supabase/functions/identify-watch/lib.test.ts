@@ -161,6 +161,15 @@ Deno.test("COLD_PROMPT — does not ask for a bounding box", () => {
   assertEquals(COLD_PROMPT.includes("boundingBox"), false);
 });
 
+// Gemini 2.5 Pro answered a no-watch photo in prose ("I did not find any
+// watches in the image", twice on 2026-10-15) instead of the instructed
+// {"watches": []}, costing a Claude Opus re-run that returned the same empty
+// answer. watch-value's prompt says "ONLY a JSON object" and has never seen a
+// prose reply; COLD_PROMPT only said "Return a JSON object".
+Deno.test("COLD_PROMPT — demands a JSON-only response", () => {
+  assertStringIncludes(COLD_PROMPT, "ONLY a JSON object, no other text");
+});
+
 Deno.test("buildClaudeFallbackPrompt — embeds the BRAND_CUES block", () => {
   const p = buildClaudeFallbackPrompt();
   assertStringIncludes(p, BRAND_CUES);

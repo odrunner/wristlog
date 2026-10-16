@@ -3466,13 +3466,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Traffic -->
     <div id="admin-tab-traffic" class="admin-tab" role="tabpanel" style="display:none;">
-      <div class="eyebrow u-mb-3">Traffic</div>
+      <div class="row-between u-mb-3">
+        <div class="eyebrow">Traffic</div>
+        <button class="btn btn-ghost btn-xs" onclick="renderAdminTraffic(true)">↻ Refresh</button>
+      </div>
       <div id="admin-traffic" class="u-c-muted u-fs-md">Loading…</div>
     </div>
 
     <!-- Tab: Usage -->
     <div id="admin-tab-usage" class="admin-tab" role="tabpanel">
-      <div class="eyebrow u-mb-3">Site Usage</div>
+      <div class="row-between u-mb-3">
+        <div class="eyebrow">Site Usage</div>
+        <button class="btn btn-ghost btn-xs" onclick="loadAdminStats(true)">↻ Refresh</button>
+      </div>
       <div id="admin-stats" class="u-c-muted u-fs-md">Loading…</div>
     </div>
 
@@ -8245,7 +8251,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.17.15.20.21';
+const APP_VERSION = '16.12.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19639,99 +19645,18 @@ async function adminSuspendUser(userId, name) {
   toast(`${name} suspended`);
 }
 
-// Usage-tab query batches, split out of loadAdminStats so all of them can be
-// started before the first one is awaited.
-function _adminStatsBatch2() {
-  // 20 s, not 10: on a cold cache (first open after an idle hour, before the
-  // cron rewarms it) these recompute concurrently on a 2-vCPU instance.
-  return withTimeout(Promise.all([
-    // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
-    db.rpc('admin_dod_counts'),
-    // Fun-fact engagement + generation (totals + last-24h deltas)
-    db.rpc('admin_fact_counts'),
-    // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
-    db.rpc('admin_active_dau'),
-    // Email unsubscribes + measurement volume split by detection engine + push approvals
-    db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'), db.rpc('admin_push_stats'),
-    db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend'),
-    db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
-    db.rpc('admin_feature_event_stats', { p_event: 'identify_outcome', p_key: 'outcome' }),
-    db.rpc('admin_collection_share_stats'),
-    db.rpc('admin_feature_event_stats', { p_event: 'np_identify_outcome', p_key: 'outcome' }),
-    db.rpc('admin_feature_event_stats', { p_event: 'snap_identify_outcome', p_key: 'outcome' }),
-    // What-if sims opened + AI wishlist recommendations (by surface)
-    db.rpc('admin_feature_event_stats', { p_event: 'sim_opened' }),
-    db.rpc('admin_feature_event_stats', { p_event: 'wl_rec' }),
-  ]), 20000);
-}
-
-function _adminStatsBatch3(idsP) {
-  // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
-  const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
-  const d2ago = new Date(Date.now() - 48 * 3600000).toISOString();
-  // Every profile, paged. This used to be a flat .limit(500), which meant the
-  // users table only ever showed the newest page — so a user with real activity
-  // who signed up before that window was invisible, and clicking a column header
-  // ranked the newest 500 rather than the whole base. Paged instead of one large
-  // .limit() so it can't silently truncate again as the base grows.
-  const fetchAllProfiles = async () => {
-    const PAGE = 1000, out = [];
-    for (let from = 0; from < 50000; from += PAGE) {
-      const r = await db.from('profiles').select('id, username, display_name, avatar_url, created_at')
-        .order('created_at', { ascending: false }).range(from, from + PAGE - 1);
-      if (r.error) return r;
-      out.push(...(r.data || []));
-      if ((r.data || []).length < PAGE) break;
-    }
-    return { data: out, error: null };
-  };
-  return withTimeout(Promise.all([
-    fetchAllProfiles(),
-    // The user total still comes from an exact count, not from the length of the
-    // fetch above: the rows are filtered down to users with a record before they
-    // are rendered, so counting them would undercount every signup with no
-    // activity yet. head:true — a count over the wire, no rows.
-    db.from('profiles').select('id', { count: 'exact', head: true }),
-    // Internal accounts explicitly, not filtered out of the capped page: the
-    // oldest 4 of the 6 had already fallen outside it, so the Internal
-    // Accounts table was showing 2. This is the table the external numbers
-    // get cross-referenced against, so it has to be complete.
-    idsP.then(() => db.from('profiles').select('id, username, display_name, avatar_url, created_at').in('id', [...INTERNAL_IDS])),
-    db.rpc('admin_measurement_counts'),
-    db.rpc('admin_user_stats'),
-    db.from('watches').select('user_id').gte('created_at', d1ago),
-    db.from('logs').select('user_id').neq('use_case', 'measurement').gte('created_at', d1ago),
-    db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
-    db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d2ago).lt('created_at', d1ago),
-    db.from('valuation_events').select('user_id').gte('created_at', d1ago),
-    db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
-    db.rpc('admin_last_active'),
-  ]), 20000);
-}
-
-// The heavy admin RPCs serve the server-side admin_stats_cache
-// (sql/2026-08-15-admin-stats-cache.sql), which the refresh-admin-stats-cache
-// cron rewarms every 10 min while the dashboard is in use — so a read is a ~1 ms
-// cache hit at any age. The ↻ Refresh button that forced a recompute (p_force)
-// was removed 2026-10-15: it ran all ten heavy RPCs cold at once (0.5–8 s each on
-// a 2-vCPU instance) and was the main source of a slow dashboard.
-//
-// All three query batches below are independent, so they are started together
-// and the page costs one network wave instead of four sequential ones
-// (internal ids → batch 1 → batch 2 → batch 3).
-async function loadAdminStats() {
+// `force` (the ↻ Refresh button) passes p_force to the cached admin RPCs so they
+// recompute instead of serving the 10-minute server-side cache
+// (sql/2026-08-15-admin-stats-cache.sql). A normal open reads the cache — the
+// heavy RPCs (active_dau, user_stats, last_active…) were 57 % of all DB time.
+async function loadAdminStats(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-stats');
   if (!el) return;
+  const cacheArgs = { p_force: force === true };
+  await loadInternalIds();
   el.innerHTML = '<div class="note-md">Loading…</div>';
-  const idsP = loadInternalIds();
-  const b2P = _adminStatsBatch2();
-  const b3P = _adminStatsBatch3(idsP);
-  // Each batch is awaited in order below; if an earlier one throws, the later
-  // promises must not surface as unhandled rejections.
-  b2P.catch(() => {}); b3P.catch(() => {});
   try {
-    await idsP;
     // Parallel queries for all stats
     const [usersRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
       db.from('profiles').select('id', { count: 'exact', head: true }),
@@ -19762,7 +19687,28 @@ async function loadAdminStats() {
     // between formats.
     const avg = (n, d) => d > 0 ? (n / d).toFixed(3) : '0.000';
 
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes] = await b2P;
+    // One parallel batch (was four sequential awaits — the three slowest RPCs
+    // each cost a full round-trip before the next started). 20 s, not 10: on a
+    // cold cache these recompute concurrently on a 2-vCPU instance.
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes] = await withTimeout(Promise.all([
+      // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
+      db.rpc('admin_dod_counts', cacheArgs),
+      // Fun-fact engagement + generation (totals + last-24h deltas)
+      db.rpc('admin_fact_counts'),
+      // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
+      db.rpc('admin_active_dau', cacheArgs),
+      // Email unsubscribes + measurement volume split by detection engine + push approvals
+      db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats', cacheArgs), db.rpc('admin_push_stats'),
+      db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend', cacheArgs),
+      db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'identify_outcome', p_key: 'outcome' }),
+      db.rpc('admin_collection_share_stats'),
+      db.rpc('admin_feature_event_stats', { p_event: 'np_identify_outcome', p_key: 'outcome' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'snap_identify_outcome', p_key: 'outcome' }),
+      // What-if sims opened + AI wishlist recommendations (by surface)
+      db.rpc('admin_feature_event_stats', { p_event: 'sim_opened' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'wl_rec' }),
+    ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
     const dauDod = dauRes.data || {};
@@ -19782,7 +19728,47 @@ async function loadAdminStats() {
     // under identical definitions. Spec: sql/2026-08-15-admin-per-user-trend.sql.
     const trend = trendRes.data || {};
 
-    const [profilesR, profileCountR, internalProfilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await b3P;
+    // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
+    const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
+    const d2ago = new Date(Date.now() - 48 * 3600000).toISOString();
+    // Every profile, paged. This used to be a flat .limit(500), which meant the
+    // users table only ever showed the newest page — so a user with real activity
+    // who signed up before that window was invisible, and clicking a column header
+    // ranked the newest 500 rather than the whole base. Paged instead of one large
+    // .limit() so it can't silently truncate again as the base grows.
+    const fetchAllProfiles = async () => {
+      const PAGE = 1000, out = [];
+      for (let from = 0; from < 50000; from += PAGE) {
+        const r = await db.from('profiles').select('id, username, display_name, avatar_url, created_at')
+          .order('created_at', { ascending: false }).range(from, from + PAGE - 1);
+        if (r.error) return r;
+        out.push(...(r.data || []));
+        if ((r.data || []).length < PAGE) break;
+      }
+      return { data: out, error: null };
+    };
+    const [profilesR, profileCountR, internalProfilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
+      fetchAllProfiles(),
+      // The user total still comes from an exact count, not from the length of the
+      // fetch above: the rows are filtered down to users with a record before they
+      // are rendered, so counting them would undercount every signup with no
+      // activity yet. head:true — a count over the wire, no rows.
+      db.from('profiles').select('id', { count: 'exact', head: true }),
+      // Internal accounts explicitly, not filtered out of the capped page: the
+      // oldest 4 of the 6 had already fallen outside it, so the Internal
+      // Accounts table was showing 2. This is the table the external numbers
+      // get cross-referenced against, so it has to be complete.
+      db.from('profiles').select('id, username, display_name, avatar_url, created_at').in('id', [...INTERNAL_IDS]),
+      db.rpc('admin_measurement_counts', cacheArgs),
+      db.rpc('admin_user_stats', cacheArgs),
+      db.from('watches').select('user_id').gte('created_at', d1ago),
+      db.from('logs').select('user_id').neq('use_case', 'measurement').gte('created_at', d1ago),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d2ago).lt('created_at', d1ago),
+      db.from('valuation_events').select('user_id').gte('created_at', d1ago),
+      db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
+      db.rpc('admin_last_active', cacheArgs),
+    ]), 20000);
 
     const watchByUser = {}, wearByUser = {}, postByUser = {}, valByUser = {}, enhByUser = {}, activeDaysByUser = {};
     (userStatsR.data || []).forEach(r => {
@@ -20252,23 +20238,24 @@ async function openAdminUserDetail(userId) {
 
 // ── Admin Traffic Stats ───────────────────────────────────────────────────
 
-async function renderAdminTraffic() {
+async function renderAdminTraffic(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-traffic');
   if (!el) return;
   el.innerHTML = '<div class="note">Loading traffic…</div>';
+  const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
-    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR, exploreR, modelAppR] = await withTimeout(Promise.all([
-      db.rpc('admin_traffic_stats'),
+    const [trafficR, emailEventsR, demoR, clickR, bootR, watchR, exploreR, modelAppR, demoMsrR] = await withTimeout(Promise.all([
+      db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
       //  undercounted cumulative campaign delivery/open/click totals.)
-      db.rpc('admin_email_engagement'),
+      db.rpc('admin_email_engagement', cacheArgs),
       db.rpc('admin_demo_views'),
       // Click-through measured from our own page_visits utm tags. SES click
       // tracking is live only for broadcasts to iOS 2.6+ recipients (since
       // 2026-08-21), so this is the fuller count. Spec: sql/2026-08-14-email-clickthrough.sql.
-      db.rpc('admin_email_clickthrough'),
+      db.rpc('admin_email_clickthrough', cacheArgs),
       // First-load timings per day (sql/2026-09-18-boot-timings.sql). ~100 narrow
       // rows/day, so it is computed live — no admin_stats_cache entry needed.
       db.rpc('admin_boot_timing_daily', { p_days: 14 }),
@@ -20280,6 +20267,10 @@ async function renderAdminTraffic() {
       // the PostHog events, internal accounts excluded by the RPC.
       db.rpc('admin_feature_event_stats', { p_event: 'explore_viewed' }),
       db.rpc('admin_feature_event_stats', { p_event: 'model_page_viewed' }),
+      // Demo measurement runs (live since 2026-10-11) — the "never silent"
+      // surface for the pre-signup timegrapher: run volume, per-device max
+      // (abuse dial) and the demo→signup funnel. sql/2026-10-11-demo-measure-traffic.sql.
+      db.rpc('admin_demo_measure_stats', { p_days: 14 }),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -20353,9 +20344,17 @@ async function renderAdminTraffic() {
         ${wt && (wt.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Public, Daily</div>${trafficDailyBars(wt.daily)}` : ''}
       </div>` : '';
 
-    // The "Demo Measure" card (pre-signup timegrapher runs, 2026-10-11) was
-    // removed 2026-10-15. The demo_measure feature_events and the
-    // admin_demo_measure_stats RPC are untouched, so it can be queried directly.
+    // Demo Measure — pre-signup timegrapher runs (2026-10-11). The cap state is
+    // read from the live constant so the card always says what the brake is set to.
+    const dmr = (demoMsrR && !demoMsrR.error) ? demoMsrR.data : null;
+    const demoMsrHtml = dmr ? `<div class="admin-card">
+        <div class="eyebrow stack-2">Demo Measure (cap: ${DEMO_MEASURE_CAP > 0 ? DEMO_MEASURE_CAP + ' runs/device' : 'off'})</div>
+        ${statRow('Runs started', dmr.started_total, `1d: ${dmr.started_1d} · 7d: ${dmr.started_7d}`)}
+        ${statRow('Completed', dmr.completed_total, `7d: ${dmr.completed_7d}${dmr.capped_total ? ' · capped: ' + dmr.capped_total : ''}`)}
+        ${statRow('Devices', dmr.devices_total, `7d: ${dmr.devices_7d} · max runs/device 7d: ${dmr.max_device_7d}`)}
+        ${statRow('Signup CTA', dmr.cta_total, `converted: ${dmr.converted_total}`)}
+        ${(dmr.daily || []).length ? `<div class="eyebrow stack-2 u-mt-3">Daily Starts</div>${trafficDailyBars(dmr.daily)}` : ''}
+      </div>` : '';
 
     // The "Overview (All Time)" card used to live here. It was removed: its
     // unique/repeat visitor counts were unmeasurable (page_visits carries no
@@ -20367,6 +20366,7 @@ async function renderAdminTraffic() {
     el.innerHTML = `
       ${renderEmailHealth(emailEventsR.data || {})}
       ${demoViewsHtml}
+      ${demoMsrHtml}
       ${watchHtml}
       ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">

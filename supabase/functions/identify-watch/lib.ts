@@ -226,7 +226,7 @@ Brand identification guide:
 - Panerai: Cushion case, crown-protecting bridge
 - Grand Seiko: "GS" logo, zaratsu polishing
 
-Return a JSON object with your identifications:
+Respond with ONLY a JSON object, no other text:
 {"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "exact reference number or empty string", "dialText": "text you read on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "yearRange": "e.g. 2018-2023 or empty string", "movementType": "automatic/manual-wind/quartz or empty string", "caliber": "movement caliber name or empty string", "caseMaterial": "e.g. stainless steel, 18k yellow gold, titanium or empty string", "caseDiameter": "e.g. 41mm or empty string", "waterResistance": "e.g. 300m or empty string", "retailPrice": "estimated retail USD or empty string", "productUrl": "official manufacturer product page URL or empty string"}]}
 
 Rules:
