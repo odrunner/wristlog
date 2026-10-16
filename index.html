@@ -293,6 +293,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     /* ── Landing Page ── */
     .auth-screen { overflow-y:auto; }
+    /* Native app shell only (class set by the welcome-trim script): the
+       trimmed welcome is short, so center it instead of pinning to the top. */
+    .auth-screen.native-centered { align-items: center; }
     .landing-inner { max-width:var(--size-130); margin:0 auto; }
     .landing-logo { display:flex; align-items:center; gap:var(--space-2); justify-content:center; margin-bottom:var(--space-3); }
     .landing-logo span { font-size:var(--fs-3xl); font-weight:var(--fw-semibold); color:var(--gold-text); }
@@ -2691,6 +2694,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         // (Kept in this exact slot: compare.sh landing pairs elements by
         // document order, so the script must not move.)
         if (window.webkit?.messageHandlers?.auth) {
+          document.getElementById('auth-screen').classList.add('native-centered');
           document.getElementById('landing-app-badge').style.display = 'none';
           document.querySelector('.landing-divider').style.display = 'none';
           document.querySelector('.landing-features').style.display = 'none';
@@ -8247,7 +8251,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.04';
+const APP_VERSION = '15.17.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
