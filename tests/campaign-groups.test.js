@@ -76,23 +76,27 @@ describe('campaignSubject', () => {
 describe('campaignGroupOf', () => {
   const ONBOARDING = [
     'Add your first watch',
+    '3 things you can do with WRotate',
     CAMPAIGN_FUNFACT_DRIP,
+    'Show your collection with one link',
     'How accurate is your watch?',
+    'What if you sold two to fund the grail?',
     'Which watch is really your favorite?',
   ];
 
-  it('puts the four onboarding drips in group 0, in order', () => {
+  it('puts the onboarding drips in group 0, in order', () => {
     ONBOARDING.forEach((s, i) => {
       expect(campaignGroupOf(s).group).toBe(0);
       expect(campaignGroupOf(s).rank).toBe(i);
     });
   });
 
-  it('makes the fun-fact drip onboarding slot 2, not an Older campaign', () => {
+  it('makes the fun-fact drip an onboarding slot, not an Older campaign', () => {
     // email_campaigns "Onboarding 2 — Start your streak" (active) replaced the
-    // retired "Start tracking your wears".
+    // retired "Start tracking your wears". Rank 2 = day 3 in the expanded
+    // 1/2/3/5/7/10/14/21 schedule.
     expect(campaignGroupOf(campaignSubject('A fun fact about your Seiko Sekonda')))
-      .toEqual({ group: 0, rank: 1 });
+      .toEqual({ group: 0, rank: 2 });
   });
 
   it('retires "Start tracking your wears" to Older campaigns', () => {
@@ -218,18 +222,22 @@ describe('index.html mirrors the campaign constants', () => {
     expect(arrayIn('CAMPAIGN_RECURRING')).toEqual(["What's on your wrist today?"]);
   });
 
-  it('onboarding slot 2 is the fun-fact drip constant, not a retired subject', () => {
-    expect(arrayIn('CAMPAIGN_ONBOARDING')[1]).toBe('CAMPAIGN_FUNFACT_DRIP');
+  it('the day-3 onboarding slot is the fun-fact drip constant, not a retired subject', () => {
+    expect(arrayIn('CAMPAIGN_ONBOARDING')[2]).toBe('CAMPAIGN_FUNFACT_DRIP');
   });
 
-  it('onboarding lists all five drips in send order', () => {
+  it('onboarding lists all eight drips in send order', () => {
     // Order is the display order in the admin Onboarding group — the numbering
-    // ("5. Which watch is next?") comes from this array's index, so a drip added
+    // ("8. Which watch is next?") comes from this array's index, so a drip added
     // to email_campaigns but not here renders as an unnumbered "Older campaign".
+    // Days 1, 2, 3, 5, 7, 10, 14, 21 (sql/2026-10-17-onboarding-drip-expansion.sql).
     expect(arrayIn('CAMPAIGN_ONBOARDING')).toEqual([
       'Add your first watch',
+      '3 things you can do with WRotate',
       'CAMPAIGN_FUNFACT_DRIP',
+      'Show your collection with one link',
       'How accurate is your watch?',
+      'What if you sold two to fund the grail?',
       'Which watch is really your favorite?',
       'Which watch is next?',
     ]);
