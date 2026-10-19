@@ -33,8 +33,8 @@ PROJECT_REF="xnzweevzrojmouzhpwzv" # public (it's in index.html)
 # - file writes only under the reports directory and /private/tmp (throwaway
 #   Playwright scripts); no Edit of repo files, no git push, no deploys.
 ALLOWED_TOOLS="Read Glob Grep WebSearch WebFetch TodoWrite \
-Write(//$HOME/.local/share/wrotate-agents/reports/**) \
-Write(//private/tmp/**) \
+Edit(//$HOME/.local/share/wrotate-agents/reports/**) \
+Edit(//private/tmp/**) \
 Bash(git log:*) Bash(git show:*) Bash(git diff:*) Bash(git status:*) \
 Bash(npm test:*) Bash(npm run test:e2e:*) Bash(npm audit:*) \
 Bash(npx supabase db query --linked:*) Bash(npx supabase link:*) \
@@ -43,12 +43,35 @@ Bash(curl -s:*) Bash(curl -sI:*) \
 Bash(ls:*) Bash(cat:*) Bash(head:*) Bash(tail:*) Bash(grep:*) Bash(rg:*) \
 Bash(mkdir -p /private/tmp/*) Bash(wc:*) Bash(sed -n:*)"
 
+# Same-day guard (like rollout-check): a manual kickstart plus the 7:12
+# calendar fire must not produce two runs and two emails. Checked before the
+# log redirect so a skipped run can't truncate the real run's log.
+if [ -e "$REPORTS/.started" ]; then
+  echo "[$(date)] weekly agents: already ran today ($REPORTS) — skipping"
+  exit 0
+fi
 mkdir -p "$REPORTS" "$(dirname "$LOG")"
+touch "$REPORTS/.started"
 exec >"$LOG" 2>&1 # latest run only, persistent across reboots
 echo "[$(date)] weekly agents: start"
 
 # Supabase access token for `db query --linked` (normally loaded by .zshrc)
 [ -f "$HOME/.config/supabase/env" ] && . "$HOME/.config/supabase/env" && export SUPABASE_ACCESS_TOKEN
+
+# Claude Code auth for headless runs: launchd can't use the interactive
+# session's Keychain OAuth (first unattended run failed 2026-10-19 with
+# "OAuth session expired and could not be refreshed"; same Keychain/TCC class
+# as the gh CLI finding 2026-09-23). The owner generates a long-lived token
+# with `claude setup-token` and saves it as CLAUDE_CODE_OAUTH_TOKEN=... in
+# the env file below (chmod 600). Without it the run stops here and emails.
+if [ -f "$HOME/.config/wrotate/claude-agent.env" ]; then
+  . "$HOME/.config/wrotate/claude-agent.env" && export CLAUDE_CODE_OAUTH_TOKEN
+else
+  echo "[$(date)] FATAL: no $HOME/.config/wrotate/claude-agent.env (claude setup-token needed)"
+  printf 'Weekly agents could not run: headless claude has no auth token.\nRun `claude setup-token` and save it as CLAUDE_CODE_OAUTH_TOKEN=... in ~/.config/wrotate/claude-agent.env\n' |
+    python3 "$WORK/send-agent-email.py" "WRotate weekly agents FAILED — $DATE" - || true
+  exit 1
+fi
 
 # Fresh checkout of the public repo (read-only; agents never push)
 if [ -d "$REPO/.git" ]; then
@@ -87,7 +110,10 @@ wait
 run_agent overseer
 
 # Email the consolidated summary to the owner (approved 2026-10-12).
-if [ -s "$REPORTS/overseer.md" ]; then
+# A placeholder overseer.md (agent died without writing) is a FAILURE, not a
+# summary — 2026-10-19 the auth outage emailed the placeholder as if it were
+# the weekly report.
+if [ -s "$REPORTS/overseer.md" ] && ! grep -q "finished without writing a report" "$REPORTS/overseer.md"; then
   python3 "$WORK/send-agent-email.py" \
     "WRotate weekly agents — $DATE" "$REPORTS/overseer.md" ||
     echo "[$(date)] WARNING: emailing the overseer report failed"
