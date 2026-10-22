@@ -27,21 +27,33 @@ LOG="$HOME/.local/share/wrotate-logs/weekly-agents.log"
 CLAUDE="/opt/homebrew/bin/claude"
 PROJECT_REF="xnzweevzrojmouzhpwzv" # public (it's in index.html)
 
-# What the headless agents may do. Deliberately scoped:
-# - read-only git/npm-test/db-query/curl shell commands
-# - web search/fetch for the growth agent's competitor scan
-# - file writes only under the reports directory and /private/tmp (throwaway
-#   Playwright scripts); no Edit of repo files, no git push, no deploys.
-ALLOWED_TOOLS="Read Glob Grep WebSearch WebFetch TodoWrite \
-Edit(//$HOME/.local/share/wrotate-agents/reports/**) \
-Edit(//private/tmp/**) \
+# What the headless agents may do. Deliberately scoped; tightened 2026-10-22
+# (weekly security report 2026-10-19, F1: the old list was escapable — open
+# cat/head/tail/sed, open curl as an exfil channel, Edit+node in /private/tmp
+# as arbitrary code execution, and a write-capable db query with the
+# management token exported into every agent's environment):
+# - Read/Edit pinned to the agent work dirs (repo clone + reports)
+# - DB only via wrotate-agent-db.sh: one SELECT/WITH statement, forced
+#   read-only transaction; the management token never enters agent env
+# - HTTP only via wrotate-agent-fetch.sh: one URL, pinned to our own hosts
+# - no Playwright and no /private/tmp scripts — write-then-execute was
+#   arbitrary code. Live-site checks are HTTP-level now (prompts updated).
+# Residual, accepted for now: Glob/Grep are read-only tools Claude Code
+# always permits (Grep can surface content outside the Read pin), and
+# WebFetch (growth's competitor scan) remains a generic outbound channel.
+ALLOWED_TOOLS="Read(//$REPO/**) Read(//$WORK/reports/**) Glob Grep WebSearch WebFetch TodoWrite \
+Edit(//$WORK/reports/**) \
 Bash(git log:*) Bash(git show:*) Bash(git diff:*) Bash(git status:*) \
 Bash(npm test:*) Bash(npm run test:e2e:*) Bash(npm audit:*) \
-Bash(npx supabase db query --linked:*) Bash(npx supabase link:*) \
-Bash(npx playwright:*) Bash(node /private/tmp/*) \
-Bash(curl -s:*) Bash(curl -sI:*) \
-Bash(ls:*) Bash(cat:*) Bash(head:*) Bash(tail:*) Bash(grep:*) Bash(rg:*) \
-Bash(mkdir -p /private/tmp/*) Bash(wc:*) Bash(sed -n:*)"
+Bash($HOME/.local/bin/wrotate-agent-db.sh:*) Bash(~/.local/bin/wrotate-agent-db.sh:*) \
+Bash($HOME/.local/bin/wrotate-agent-fetch.sh:*) Bash(~/.local/bin/wrotate-agent-fetch.sh:*) \
+Bash(ls:*) Bash(wc:*)"
+
+# Allow rules only ADD permission — Read elsewhere stays allowed by default
+# (verified 2026-10-22: without these denies an agent could Read
+# ~/.config/supabase/env despite the pinned allow rules above). Deny the
+# credential directories outright.
+DISALLOWED_TOOLS="Read(//$HOME/.config/**) Read(//$HOME/.ssh/**) Read(//$HOME/.aws/**)"
 
 # Same-day guard (like rollout-check): a manual kickstart plus the 7:12
 # calendar fire must not produce two runs and two emails. Checked before the
@@ -54,9 +66,6 @@ mkdir -p "$REPORTS" "$(dirname "$LOG")"
 touch "$REPORTS/.started"
 exec >"$LOG" 2>&1 # latest run only, persistent across reboots
 echo "[$(date)] weekly agents: start"
-
-# Supabase access token for `db query --linked` (normally loaded by .zshrc)
-[ -f "$HOME/.config/supabase/env" ] && . "$HOME/.config/supabase/env" && export SUPABASE_ACCESS_TOKEN
 
 # Claude Code auth for headless runs: launchd can't use the interactive
 # session's Keychain OAuth (first unattended run failed 2026-10-19 with
@@ -83,9 +92,13 @@ if [ $? -ne 0 ]; then
   echo "[$(date)] FATAL: git clone/update failed"
   exit 1
 fi
-# Link once so `npx supabase db query --linked` works in this checkout
+# Link once so wrotate-agent-db.sh's `db query --linked` works in this
+# checkout. The Supabase token is sourced in this subshell only — agents must
+# not inherit it (they reach the DB solely through the read-only wrapper,
+# which sources the token itself).
 [ -f "$REPO/supabase/.temp/project-ref" ] ||
-  (cd "$REPO" && npx supabase link --project-ref "$PROJECT_REF") || true
+  (cd "$REPO" && . "$HOME/.config/supabase/env" && export SUPABASE_ACCESS_TOKEN &&
+    npx supabase link --project-ref "$PROJECT_REF") || true
 
 run_agent() {
   local name="$1"
@@ -98,6 +111,7 @@ run_agent() {
   echo "[$(date)] agent $name: start"
   (cd "$REPO" && "$CLAUDE" -p "$(cat "$REPORTS/.$name.prompt")" \
     --allowedTools "$ALLOWED_TOOLS" \
+    --disallowedTools "$DISALLOWED_TOOLS" \
     >"$REPORTS/$name.transcript.txt" 2>&1)
   echo "[$(date)] agent $name: exit=$? report=$([ -s "$report" ] && echo yes || echo MISSING)"
   [ -s "$report" ] ||
