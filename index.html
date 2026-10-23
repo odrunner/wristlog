@@ -8245,7 +8245,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.24';
+const APP_VERSION = '22.17.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20630,7 +20630,7 @@ function renderEmailEngagement(data) {
         ? `<div style="font-size:var(--fs-2xs);letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--muted);padding:${lastGroup === -1 ? '0' : '.6rem'} 0 .1rem;">${GROUP_LABELS[g]}</div>`
         : '';
       lastGroup = g;
-      // Onboarding drips are numbered 1-4 by their position in the sequence.
+      // Onboarding drips are numbered 1-8 by their position in the sequence.
       const label = g === 0 ? `${rankOf(subj) + 1}. ${subj}` : subj;
       // Still-queued count, so a mid-send broadcast reads as in flight rather
       // than as a campaign that only reached the handful already delivered.

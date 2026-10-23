@@ -94,11 +94,11 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
     expect(older).not.toContain('Mentions');
   });
 
-  test('onboarding drips keep their 1-4 numbering, with fun fact at 2', async ({ page }) => {
+  test('onboarding drips keep their 1-8 numbering, with fun fact at 3', async ({ page }) => {
     const labels = await renderLabels(page);
     expect(labels).toContain('1. Add your first watch');
-    expect(labels).toContain('2. A fun fact about your watch');
-    expect(labels).toContain('4. Which watch is really your favorite?');
+    expect(labels).toContain('3. A fun fact about your watch');
+    expect(labels).toContain('7. Which watch is really your favorite?');
     // The personalized variants collapsed rather than rendering one row each.
     expect(labels).not.toContain('A fun fact about your Seiko Sekonda');
     expect(labels).not.toContain('A fun fact about the Omega Speedmaster');
@@ -129,7 +129,7 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
     // The onboarding drip row still exists, and is still the drip — the two are
     // separate campaigns that merely share a subject template.
     const onboarding = labels.slice(0, labels.indexOf('Notifications'));
-    expect(onboarding).toContain('2. A fun fact about your watch');
+    expect(onboarding).toContain('3. A fun fact about your watch');
     expect(onboarding).not.toContain('A fun fact about {{watchPhrase}}');
   });
 
