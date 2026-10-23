@@ -79,6 +79,8 @@ class CorePartATest {
     // at ship defaults the phase-locked crest selection picks a decay-tail sample of the early
     // beat, which hides most of the displacement — see psBEAtShipDefaultsMatchesSwift.
     // The real Swift engine on this exact fixture with phaseLock=false logs psBE=1.94ms.
+    // foldedBE= is the background analyze's epoch-fold estimate (Task 7); the golden harness
+    // runs analyze synchronously on audio time, as this port does with a null executor.
     @Test
     fun psBERecoversInjectedBeatError() {
         val s = run(SynthSpec(beatErrorMs = 2.0), tuning = Tuning(phaseLock = false))
@@ -86,7 +88,7 @@ class CorePartATest {
         assertTrue(psBE in 1.5..2.5, "psBE=$psBE")
         assertEquals(
             "[TGTICK #696 @ 87.79s] pairDev=0.000ms cumPairDev=0.152ms thresh=1.00ms beatErr=1.0ms" +
-                " ticks=-1.0,1.0ms psBE=1.94ms foldedBE=-ms energy=0.025408",
+                " ticks=-1.0,1.0ms psBE=1.94ms foldedBE=3.00ms energy=0.025408",
             s.log.last { it.startsWith("[TGTICK #") },
         )
     }
@@ -96,6 +98,7 @@ class CorePartATest {
     // injected 2.0 ms: phase-lock collects a candidate on every decay-tail sample above
     // threshold and keeps the one closest to the predicted beat, so an early beat is read
     // ~10 ring samples late. This pins that Swift behaviour; it is not a port defect.
+    // (foldedBE=3.00ms: the legacy epoch fold, live since Task 7 — see the note above.)
     @Test
     fun psBEAtShipDefaultsMatchesSwift() {
         val s = run(SynthSpec(beatErrorMs = 2.0))
@@ -106,7 +109,7 @@ class CorePartATest {
         assertEquals(343, s.log.count { it.startsWith("[TGTICK #") })
         assertEquals(
             "[TGTICK #696 @ 87.71s] pairDev=-0.019ms cumPairDev=-0.008ms thresh=1.00ms beatErr=0.1ms" +
-                " ticks=-0.0,0.0ms psBE=0.14ms foldedBE=-ms energy=0.002071",
+                " ticks=-0.0,0.0ms psBE=0.14ms foldedBE=3.00ms energy=0.002071",
             s.log.last { it.startsWith("[TGTICK #") },
         )
     }

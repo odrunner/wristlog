@@ -1426,10 +1426,65 @@ class TimegrapherCore(
 
     // MARK: - Combined analysis: Goertzel primary + autocorrelation fallback
 
-    /** Task 7: Swift analyze (1399-1443) — auto-BPH and epoch-fold beat error. */
-    @Suppress("UNUSED_PARAMETER")
+    private data class BphRatio(val bph: Int, val ratio: Double)
+
+    /** Swift analyze (1399-1443). Runs on [analysisExecutor], or inline when it is null. */
     private fun analyze(signals: List<FloatArray>, count: Int, ringSampleRate: Double) {
-        // Task 7
+        // Phase 1: Auto BPH detection (only if BPH not yet locked)
+        if (autoBph && detectedBph == null) {
+            // Try all 3 HP cutoffs for better discrimination
+            var bestCandidate = BphRatio(0, 0.0)
+            var secondBestRatio = 0.0
+            for (f in 0 until 3) {
+                val ratios = ArrayList<BphRatio>()
+                for (candidate in bphCandidates) {
+                    val tf = candidate.toDouble() / 3600.0
+                    val ratio = goertzelRatio(signals[f], count = count, tickFreq = tf, sampleRate = ringSampleRate)
+                    ratios.add(BphRatio(bph = candidate, ratio = ratio))
+                }
+                // Swift `sort { $0.ratio > $1.ratio }` (stable): comparator on `>` exactly,
+                // so -0.0/0.0 tie as in Swift rather than by Double.compareTo.
+                ratios.sortWith { a, b -> if (a.ratio > b.ratio) -1 else if (b.ratio > a.ratio) 1 else 0 }
+                if (ratios[0].ratio > bestCandidate.ratio) {
+                    bestCandidate = ratios[0]
+                    secondBestRatio = if (ratios.size > 1) ratios[1].ratio else 0.0
+                }
+            }
+
+            // Require: (1) above threshold, (2) decisively better than runner-up (1.5x)
+            val elSec = count.toDouble() / ringSampleRate
+            debugLog("[TGAUTO BPH @ ${cf(elSec, 1)}s] best=${bestCandidate.bph} ratio=${cf(bestCandidate.ratio, 2)} 2nd=${cf(secondBestRatio, 2)} threshold=${swiftDesc(peakRatioThreshold)} decisive=${bestCandidate.ratio >= secondBestRatio * 1.5}")
+            if (bestCandidate.ratio > peakRatioThreshold.toDouble() && (secondBestRatio < 1.0 || bestCandidate.ratio >= secondBestRatio * 1.5)) {
+                targetBph = bestCandidate.bph
+                detectedBph = bestCandidate.bph
+                debugLog("[TGAUTO BPH LOCKED] ${bestCandidate.bph}")
+                activateTickDetection(ringSampleRate = ringSampleRate)
+            }
+            // If not locked yet, just return — ticks will start once BPH locks
+            if (detectedBph == null) {
+                recentPeakEnergy *= 0.95f
+                return
+            }
+        }
+
+        // Phase 2: BPH is locked — only compute beat error via epoch folding
+        // Rate comes from tick regression (computed in processAudioBuffer), not Goertzel
+        if (!tickDetectionActive) {
+            activateTickDetection(ringSampleRate = ringSampleRate)
+        }
+        // Epoch fold for beat error on the lowest HP cutoff signal
+        detectTickEvents(signal = signals[0], count = count, ringSampleRate = ringSampleRate)
+        recentPeakEnergy *= 0.95f
+    }
+
+    // Swift 1455-1461. Unreferenced in Swift too (legacy Goertzel path); ported for 1:1 completeness.
+    @Suppress("unused")
+    private fun updateCumulativeOffset(rate: Double, elapsedSec: Double) {
+        if (lastAnalysisElapsed > 0) {
+            val dt = elapsedSec - lastAnalysisElapsed
+            cumulativeOffsetMs += (rate / 86400.0) * dt * 1000.0
+        }
+        lastAnalysisElapsed = elapsedSec
     }
 
     private fun activateTickDetection(ringSampleRate: Double) {
@@ -1465,6 +1520,36 @@ class TimegrapherCore(
         debugLog("[TGACTIVATE] bph=$targetBph autoBph=$autoBph expectedInterval=${cf(expectedTickInterval, 1)} ringSR=${cf(ringSampleRate, 0)} CALIBRATING for $calibrationDuration samples")
     }
 
+    // Swift 1495-1520. Unreferenced in Swift too (the Goertzel rate path was superseded by
+    // tick regression and then tg); ported for 1:1 completeness.
+    @Suppress("unused")
+    private fun applyResult(rate: Double, ratio: Double, detectedFreq: Double, ringSampleRate: Double, count: Int) {
+        currentRate = roundAway(rate * 10) / 10
+        currentDetectedInterval = (1.0 / detectedFreq) * 1000.0
+        detectedBph = targetBph
+
+        // Activate tick detection on first successful detection
+        consecutiveFailures = 0
+        if (!tickDetectionActive) activateTickDetection(ringSampleRate = ringSampleRate)
+
+        val elapsedSec = count.toDouble() / ringSampleRate
+        val durationFactor = min(1.0, elapsedSec / 60.0)
+        val peakFactor = min(1.0, max(0.0, (ratio - 1.0) / 9.0))
+        currentConfidence = min(0.99, roundAway((peakFactor * (0.3 + 0.7 * durationFactor)) * 100) / 100)
+        peakCount = if (tickCount > 0) tickCount else (elapsedSec * targetBph.toDouble() / 3600.0).toInt()
+
+        lastDebugInfo = DebugInfo(
+            sampleRate = actualSampleRate, fftSize = energyRingCount, bufferSamples = count,
+            hpCutoff = hpCutoffs[activeHpIndex].toDouble(), bestLag = targetBph,
+            bestCorrelation = ratio, refinedLag = detectedFreq, noiseFloor = 0.0,
+            threshold = ratio, peakEnergy = recentPeakEnergy.toDouble(),
+            allBphCorrelations = listOf(
+                BphCorrelation(bph = targetBph, correlation = ratio.toFloat(), lag = (detectedFreq * 1000).toInt()),
+            ),
+        )
+        recentPeakEnergy *= 0.95f
+    }
+
     // MARK: - Linearize ring buffer
 
     private fun linearize(ringIndex: Int, count: Int): FloatArray {
@@ -1475,6 +1560,150 @@ class TimegrapherCore(
             signal[i] = energyRings[f][idx]
         }
         return signal
+    }
+
+    // MARK: - Goertzel detection + rate sweep
+    // (goertzelPower / goertzelRatio live in Goertzel.kt.)
+
+    private data class Detection(val score: Double, val rate: Double?, val detectedFreq: Double)
+
+    /// Returns (ratio, rate, detectedFreq). rate is nil if ratio below threshold.
+    /// Swift 1550-1595; unreferenced in Swift too, ported for 1:1 completeness.
+    @Suppress("unused")
+    private fun tryGoertzel(signal: FloatArray, count: Int, tickFreq: Double, ringSampleRate: Double): Detection {
+        val targetPower = goertzelPower(signal, count = count, targetFreq = tickFreq, sampleRate = ringSampleRate)
+
+        val baselineMultipliers = doubleArrayOf(0.73, 0.81, 1.19, 1.37, 1.61)
+        var baselineSum = 0.0
+        for (mult in baselineMultipliers) {
+            baselineSum += goertzelPower(signal, count = count, targetFreq = tickFreq * mult, sampleRate = ringSampleRate)
+        }
+        val baseline = baselineSum / baselineMultipliers.size.toDouble()
+        val ratio = if (baseline > 0) targetPower / baseline else (if (targetPower > 0) 10.0 else 0.0)
+
+        if (!(ratio > peakRatioThreshold.toDouble())) {
+            return Detection(ratio, null, tickFreq)
+        }
+
+        // Fine frequency sweep +-0.5%
+        val sweepRange = tickFreq * 0.005
+        val steps = 201
+        var bestPower = 0.0
+        var bestIdx = steps / 2
+        val sweepPowers = DoubleArray(steps)
+
+        for (i in 0 until steps) {
+            val f = tickFreq - sweepRange + (2.0 * sweepRange * i.toDouble() / (steps - 1).toDouble())
+            val p = goertzelPower(signal, count = count, targetFreq = f, sampleRate = ringSampleRate)
+            sweepPowers[i] = p
+            if (p > bestPower) { bestPower = p; bestIdx = i }
+        }
+
+        val df = 2.0 * sweepRange / (steps - 1).toDouble()
+        var detectedFreq = tickFreq - sweepRange + df * bestIdx.toDouble()
+        if (bestIdx > 0 && bestIdx < steps - 1) {
+            val a = sweepPowers[bestIdx - 1]
+            val b = sweepPowers[bestIdx]
+            val c = sweepPowers[bestIdx + 1]
+            val denom = 2.0 * (2.0 * b - a - c)
+            if (abs(denom) > 1e-30) {
+                detectedFreq += (a - c) / denom * df
+            }
+        }
+
+        val rate = ((detectedFreq - tickFreq) / tickFreq) * 86400.0
+        return Detection(ratio, if (abs(rate) <= 120.0) rate else null, detectedFreq)
+    }
+
+    // MARK: - FFT Autocorrelation fallback
+
+    /// Returns (confidence, rate, detectedFreq). rate is nil if not confident.
+    /// Swift 1598-1686; unreferenced in Swift too, ported for 1:1 completeness.
+    @Suppress("unused")
+    private fun tryAutocorrelation(signal: FloatArray, count: Int, tickFreq: Double, ringSampleRate: Double): Detection {
+        // Rectify and remove mean
+        val rect = FloatArray(count)
+        for (i in 0 until count) rect[i] = abs(signal[i])
+        val mean = vdspMean(rect, count)
+        val negMean = -mean
+        for (i in 0 until count) rect[i] = rect[i] + negMean // vDSP_vsadd
+
+        // Cosine taper (10% each end)
+        val tl = (count.toDouble() * 0.1).toInt()
+        for (i in 0 until tl) {
+            val w = (0.5 * (1.0 - kotlin.math.cos(PI * i.toDouble() / tl.toDouble()))).toFloat()
+            rect[i] *= w
+            rect[count - 1 - i] *= w
+        }
+
+        // FFT autocorrelation (Fft.kt; Swift: Accelerate)
+        val acorr = fftAutocorrelation(rect, count)
+        if (!(acorr.size >= count)) return Detection(0.0, null, tickFreq)
+
+        // Search for peak near expected period
+        val expectedPeriod = ringSampleRate / tickFreq
+        val lo = max(1, (expectedPeriod * 0.95).toInt())
+        val hi = min(count - 2, (expectedPeriod * 1.05).toInt())
+        if (!(lo < hi)) return Detection(0.0, null, tickFreq)
+
+        var peakIdx = lo
+        var peakVal = acorr[lo]
+        for (i in (lo + 1)..hi) {
+            if (acorr[i] > peakVal) { peakVal = acorr[i]; peakIdx = i }
+        }
+
+        // Confidence: peak vs mean in search range
+        val segAbs = FloatArray(hi - lo + 1)
+        for (i in lo..hi) segAbs[i - lo] = abs(acorr[i])
+        val segMean = vdspMean(segAbs, segAbs.size)
+        val conf = if (segMean > 0) (peakVal / segMean).toDouble() else 0.0
+
+        if (!(conf > 1.5)) return Detection(conf, null, tickFreq)
+
+        // Parabolic interpolation for sub-sample precision
+        val refined: Double = if (peakIdx > 0 && peakIdx < count - 1) {
+            val a = acorr[peakIdx - 1].toDouble()
+            val b = acorr[peakIdx].toDouble()
+            val c = acorr[peakIdx + 1].toDouble()
+            val d = 2.0 * (2.0 * b - a - c)
+            if (abs(d) > 1e-30) peakIdx.toDouble() + (a - c) / d else peakIdx.toDouble()
+        } else {
+            peakIdx.toDouble()
+        }
+
+        // Harmonic refinement: check 2nd-5th harmonics
+        val periods = arrayListOf(refined)
+        for (mult in 2..5) {
+            val expM = refined * mult.toDouble()
+            val loM = (expM - refined * 0.01).toInt()
+            val hiM = (expM + refined * 0.01).toInt()
+            if (!(hiM < count - 1 && loM > 0)) break
+
+            var pkIdx = loM
+            var pkVal = acorr[loM]
+            for (i in (loM + 1)..hiM) {
+                if (acorr[i] > pkVal) { pkVal = acorr[i]; pkIdx = i }
+            }
+
+            val pkR: Double = if (pkIdx > 0 && pkIdx < count - 1) {
+                val a = acorr[pkIdx - 1].toDouble()
+                val b = acorr[pkIdx].toDouble()
+                val c = acorr[pkIdx + 1].toDouble()
+                val d = 2.0 * (2.0 * b - a - c)
+                if (abs(d) > 1e-30) pkIdx.toDouble() + (a - c) / d else pkIdx.toDouble()
+            } else {
+                pkIdx.toDouble()
+            }
+            periods.add(pkR / mult.toDouble())
+        }
+
+        // Median of all period estimates
+        periods.sort()
+        val finalPeriod = periods[periods.size / 2]
+        val detFreq = ringSampleRate / finalPeriod
+        val rate = ((detFreq - tickFreq) / tickFreq) * 86400.0
+
+        return Detection(conf, if (abs(rate) <= 120.0) rate else null, detFreq)
     }
 
     // MARK: - tg-style detection core (rate via autocorrelation period, not beat regression)
@@ -1900,6 +2129,129 @@ class TimegrapherCore(
             thr *= 1.4f; iters += 1
         }
         return null
+    }
+
+    // MARK: - Beat error via epoch folding (Swift 2222-2327)
+
+    private fun detectTickEvents(signal: FloatArray, count: Int, ringSampleRate: Double) {
+        val tickFreq = targetBph.toDouble() / 3600.0
+        val beatFreq = tickFreq / 2.0
+        val beatPeriod = ringSampleRate / beatFreq
+        val periodSamples = roundAway(beatPeriod).toInt()
+
+        if (!(count >= periodSamples * 8)) return
+
+        // Epoch fold at beat period
+        val folded = DoubleArray(periodSamples)
+        val foldCount = IntArray(periodSamples)
+        for (i in 0 until count) {
+            val idx = i % periodSamples
+            folded[idx] += signal[i].toDouble()
+            foldCount[idx] += 1
+        }
+        for (i in 0 until periodSamples) {
+            if (foldCount[i] > 0) folded[i] /= foldCount[i].toDouble()
+        }
+
+        // Smooth the folded profile
+        val smoothW = max(1, periodSamples / 50)
+        val smoothed = DoubleArray(periodSamples)
+        for (i in 0 until periodSamples) {
+            var s = 0.0; var c = 0
+            for (j in -smoothW..smoothW) {
+                val idx = (i + j + periodSamples) % periodSamples
+                s += folded[idx]; c += 1
+            }
+            smoothed[i] = s / c.toDouble()
+        }
+
+        // Find peak 1 (global max)
+        var peak1Idx = 0
+        var peak1Val = smoothed[0]
+        for (i in 1 until periodSamples) {
+            if (smoothed[i] > peak1Val) { peak1Val = smoothed[i]; peak1Idx = i }
+        }
+
+        // Find peak 2 (max outside +-25% exclusion zone)
+        val exclusion = periodSamples / 4
+        var peak2Idx = -1
+        var peak2Val = -1.0
+        for (i in 0 until periodSamples) {
+            val dist = min(abs(i - peak1Idx), periodSamples - abs(i - peak1Idx))
+            if (dist > exclusion && smoothed[i] > peak2Val) {
+                peak2Val = smoothed[i]; peak2Idx = i
+            }
+        }
+        if (!(peak2Idx >= 0)) {
+            currentBeatError = null; return
+        }
+
+        // Quality gate: both peaks must have good prominence
+        var floor = smoothed[0] // Swift smoothed.min(): first element, replaced on `<`
+        for (v in smoothed) if (v < floor) floor = v
+        val prom1 = peak1Val - floor
+        val prom2 = peak2Val - floor
+        val promRatio = if (prom1 > 0) prom2 / prom1 else 0.0
+        if (!(promRatio > 0.25)) {
+            currentBeatError = null; return
+        }
+
+        // Compute beat error
+        val gap1 = (peak2Idx - peak1Idx + periodSamples) % periodSamples
+        val gap2 = periodSamples - gap1
+        val gap1Ms = gap1.toDouble() / ringSampleRate * 1000.0
+        val gap2Ms = gap2.toDouble() / ringSampleRate * 1000.0
+        val be = abs(gap1Ms - gap2Ms)
+
+        val halfPeriodMs = periodSamples.toDouble() / ringSampleRate * 1000.0 / 2.0
+        val minGapFraction = 0.35
+        if (!(be < 5.0 &&
+                gap1Ms > halfPeriodMs * minGapFraction &&
+                gap2Ms > halfPeriodMs * minGapFraction)
+        ) {
+            currentBeatError = null; return
+        }
+
+        currentBeatError = roundAway(be * 100) / 100
+
+        // Waveform: downsample the active ring's last 500ms for visualization
+        val vizRingSamples = min(count, (ringSampleRate * 0.5).toInt())
+        val vizStart = count - vizRingSamples
+        val targetPoints = 200
+        val step = max(1, vizRingSamples / targetPoints)
+        val waveform = ArrayList<Float>(targetPoints)
+        var i = 0
+        while (i < vizRingSamples) {
+            var maxVal = 0f
+            val end = min(i + step, vizRingSamples)
+            for (j in i until end) {
+                if (signal[vizStart + j] > maxVal) maxVal = signal[vizStart + j]
+            }
+            waveform.add(maxVal)
+            i += step
+        }
+        lastBeatWaveform = waveform.toFloatArray()
+
+        // Tick positions in waveform
+        val ticksInViz = (vizRingSamples.toDouble() / beatPeriod * 2).toInt()
+        val tickPos = ArrayList<Int>()
+        for (t in 0 until ticksInViz) {
+            val sampleInViz = (t.toDouble() * beatPeriod / 2.0).toInt() % vizRingSamples
+            val wfIdx = sampleInViz / step
+            if (wfIdx >= 0 && wfIdx < waveform.size) tickPos.add(wfIdx)
+        }
+        lastTickPositions = tickPos.toIntArray()
+    }
+
+    /// Trimmed mean: removes top/bottom fraction of values, averages the rest.
+    /// Swift 2330-2336; unreferenced in Swift too, ported for 1:1 completeness.
+    @Suppress("unused")
+    private fun trimmedMean(values: List<Double>, fraction: Double): Double {
+        val sorted = values.sorted()
+        val trimCount = max(0, (sorted.size.toDouble() * fraction).toInt())
+        val trimmed = if (trimCount < sorted.size - trimCount) sorted.subList(trimCount, sorted.size - trimCount) else emptyList()
+        if (trimmed.isEmpty()) return sorted[sorted.size / 2]
+        return trimmed.fold(0.0) { a, b -> a + b } / trimmed.size.toDouble()
     }
 }
 
