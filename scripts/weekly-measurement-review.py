@@ -94,6 +94,32 @@ LEDGER = os.path.expanduser("~/Documents/Claude project/watch tracker/docs/measu
 # launchd runs can't read ~/Documents (macOS TCC) — keep a cache the LaunchAgent can reach.
 # Manual runs refresh it from the repo copy.
 LEDGER_CACHE = os.path.expanduser("~/.local/share/wrotate-measurement-changelog.md")
+
+# Experiments the Android-port review (2026-10-23) identified but which the auto-picker
+# CANNOT start, so they'd otherwise be invisible to this weekly cadence. Each is a native
+# engine fix for a real iOS behaviour, gated behind a NEW tuning knob (dark default = today's
+# behaviour), shipped in BOTH engines in lockstep (TG_ENGINE_REV bump) — so none can run until
+# the knob exists in a shipped build (iOS 2.10 + the Android build). Remove a line once its
+# knob ships and the auto-picker/loop can trial it. Blockers below are why none has started yet.
+QUEUED_NATIVE_EXPERIMENTS = [
+    ("stability-honesty", "rateStable can latch on AGC-squashed audio at up to ~15 s/d off "
+     "(stability counts every buffer, not fresh readings; flag survives rate gaps). Needs a knob "
+     "to count only fresh readings + drop the flag across gaps. Ship FIRST (most user harm)."),
+    ("autobph-noise-gate", "Auto-BPH can lock 36000 on pure noise. Needs a stricter pre-lock "
+     "confidence knob (watch false-negatives on real 36000 watches)."),
+    ("phaselock-toggle", "psBE telemetry under-reads beat error ~14x at ship defaults (phase-lock "
+     "snaps ticks to prediction). phaseLock is ALREADY tunable on shipped builds — this one needs "
+     "only a ~5-line web trial, no new knob — but still queues behind the single running trial."),
+]
+# NOT an experiment: the post-restart blank-rate bug is a deterministic defect with no accuracy
+# trade-off; ship it as a plain knob-guarded fix, don't burn a trial slot on it.
+QUEUED_BLOCKERS = [
+    "The loop judges/runs ONE trial at a time; the slot is taken until the running trial decides.",
+    "3 of 4 fixes have no knob in the shipped iOS build (no setTuning param) — a trial row with no "
+    "client knob changes nothing. They need iOS 2.10 + the Android build first.",
+    "accuracy_loop.py must report PER-PLATFORM splits (the Android `model=` TGTUNE token exists for "
+    "this) before any knob trial can be read across iOS+Android.",
+]
 TMP = "/tmp/wrotate-weekly"
 # "sane" = a believable number. No Weishi ground truth in the field; the per-watch
 # reference (below) is the truth proxy for lock quality.
@@ -804,6 +830,15 @@ def main():
     # 6. Trial ledger (DB = the record the job reads; never retried once here)
     L.append("\n## Trial ledger (every knob trial ever run)")
     L += al.fmt_ledger(trials)
+
+    # 6b. Queued native experiments the auto-picker can't start (would otherwise be invisible here)
+    if QUEUED_NATIVE_EXPERIMENTS:
+        L.append("\n## Queued experiments (blocked — not startable by the loop yet)")
+        for key, why in QUEUED_NATIVE_EXPERIMENTS:
+            L.append(f"  - `{key}`: {why}")
+        L.append("  Blockers:")
+        for b in QUEUED_BLOCKERS:
+            L.append(f"    - {b}")
     if not dry and (loop_snap.get("trial_action") in ("won", "killed") or loop_snap.get("started")):
         bits = []
         if loop_snap.get("trial_action") in ("won", "killed"):
