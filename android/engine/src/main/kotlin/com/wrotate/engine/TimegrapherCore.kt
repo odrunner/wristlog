@@ -1,6 +1,7 @@
 package com.wrotate.engine
 
 import java.util.concurrent.Executor
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -427,9 +428,9 @@ class TimegrapherCore(
     private var lastBeatWaveform: FloatArray? = null
     private var lastTickPositions: IntArray? = null
 
-    // MARK: - tg-path state read by part A (Swift 1691-1729). Declared here because setTuning,
+    // MARK: - tg-path knobs and state (Swift 1691-1729). Declared here because setTuning,
     // the [TGTUNE] echo, start()'s reset and the recalibration branch reference them; the tg
-    // core that drives them is Task 6.
+    // core that drives them is at the end of the class.
 
     // tg-path convergence knobs — all JS-tunable via the tuning message (no rebuild needed)
     private var tgSigmaGate = 3e-4        // reject a window if per-cycle period estimates disagree
@@ -651,10 +652,41 @@ class TimegrapherCore(
         }
     }
 
-    /** Task 6: the non-AVAudio parts of Swift rebuildAudioAfterInterruption (648-694). */
-    @Suppress("UNUSED_PARAMETER")
-    fun onCaptureRestart(newSampleRate: Double) {
-        // Task 6
+    /// The non-AVAudio parts of Swift rebuildAudioAfterInterruption (648-694). The capture
+    /// layer tears down and rebuilds the dead capture itself, then calls this with the rate
+    /// the new capture actually runs at, before feeding it to process(). `reason` lands in
+    /// the [TGAUDIO RESUME] line as in Swift (e.g. "interruption-ended", "route-change-1").
+    ///
+    /// Pre-gap audio is discarded (energyRingCount = 0) so no analysis window ever spans the
+    /// seam — the tg windows refill from fresh audio within seconds; the tick detector
+    /// recalibrates. A confirmed T1 lock survives (the watch didn't change); an unconfirmed
+    /// pending one is cleared rather than confirmed across a gap of unknown length.
+    fun onCaptureRestart(newSampleRate: Double, reason: String = "capture-restart") {
+        if (!isRunning) return
+        val rateChanged = abs(newSampleRate - actualSampleRate) > actualSampleRate * 0.01
+        if (rateChanged) {
+            // New input hardware (e.g. AirPods mic) — re-derive everything that
+            // hangs off the sample rate, exactly as start() does.
+            actualSampleRate = newSampleRate
+            hpFilters = Array(hpCutoffs.size) { makeBiquadHP(cutoff = hpCutoffs[it], sampleRate = actualSampleRate) }
+            ringSubsampleTarget = max(1, (actualSampleRate / ringTargetRate).toInt())
+            val rsr = actualSampleRate / ringSubsampleTarget.toDouble()
+            energyRingCapacity = (rsr * bufferDurationSec.toDouble()).toInt()
+            energyRings = Array(3) { FloatArray(energyRingCapacity) }
+            energyRingWritePos = 0
+        }
+        energyRingCount = 0                     // discard pre-gap audio; abs counter stays monotonic
+        tgRateCached = null; tgBeCached = null; tgAmpCached = null; tgFoldCached = null
+        if (!tgLockConfirmed) { tgPendingLockRate = null; tgPendingLockAbs = -1 }
+        // Audio-clock ppm estimator anchors are pre-gap — restart it.
+        clkHaveFirst = false; clkFirstHost = 0; clkFirstFrames = 0; clkFrames = 0; clkLastLogSec = -1.0; clkPpm = null
+        clkN = 0; clkSh = 0.0; clkSf = 0.0; clkShh = 0.0; clkShf = 0.0
+        val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+        if (tickDetectionActive || !autoBph) {
+            tickDetectionActive = false          // force a fresh calibration pass
+            activateTickDetection(ringSampleRate = ringSampleRate)
+        }
+        debugLog("[TGAUDIO RESUME] $reason rate=${cf(actualSampleRate, 0)} rateChanged=$rateChanged")
     }
 
     fun stop(): Result {
@@ -1246,26 +1278,131 @@ class TimegrapherCore(
         emitUpdate()
     }
 
-    /**
-     * Minimal Update assembly so part A's state is observable. Task 6 adds the tg
-     * compute/caching block and stability/convergence (Swift 1276-1349); Task 7 replaces this
-     * with the full assembly (Swift 1268-1274 + 1350-1394: regression rate, TGUPDATE log,
-     * T3/T4 surface state). Until then rate is null and rateStable false.
-     */
+    /** Swift processAudioBuffer tail (1267-1394): tick drain, tg compute, rate, stability, Update. */
     private fun emitUpdate() {
         // Drain pending ticks
         var ticks: List<TickDot> = ArrayList(pendingTicks)
         if (useTgAlgo) { ticks = ArrayList(tgPendingDots); tgPendingDots.clear() } // tg path: dots come from the tg grid, not the detector
         pendingTicks.clear()
 
+        // Compute rate from Theil-Sen median regression on ALL accepted pairs
+        var rateForUpdate: Double? = null
         val wallElapsed = (sampleCounter - tickStartSample).toDouble() / actualSampleRate
+        // tg rate is expensive (FFT over up to 16s of ring) — refresh at most ~2x/sec and cache.
+        if (wallElapsed - lastTgComputeSec > 0.5) {
+            lastTgComputeSec = wallElapsed
+            tgRateCached = computeTgRate()
+            // Fold + amplitude compute even when the toggle is off, so silent/shadow
+            // sessions log amplitude in [TGALGO] too. Display stays gated on useTgAlgo.
+            val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+            val nominal = 7200.0 / targetBph.toDouble() * ringSampleRate
+            val env8 = recentEnvelope((ringSampleRate * 8).toInt())
+            val period = tgPeriod(env8, nominal = nominal, ringSampleRate = ringSampleRate)
+            if (period != null) {
+                val fold = tgFoldedBeat(period = period)
+                if (fold != null) {
+                    tgFoldCached = fold
+                    tgAmpCached = tgAmplitude(rawFold = fold, period = period)
+                    tgBeCached = tgBeatError(fold = fold, period = period, ringSampleRate = ringSampleRate)
+                }
+                if (useTgAlgo) tgTrackDots(period = period, ringSampleRate = ringSampleRate, wallElapsed = wallElapsed)
+            }
+        }
+        // Pick the rate source: tg autocorrelation-period (when toggled) or Theil-Sen regression.
+        val regRateLog: Double? = if (regN >= regNMinimum) theilSenSlope()?.let { it * 86.4 } else null
+        var candidate: Double? = null
+        if (useTgAlgo) {
+            candidate = tgRateCached
+        } else if (regRateLog != null && abs(regRateLog) <= 200.0) {
+            candidate = regRateLog
+        }
+        if (candidate != null) {
+            val r: Double = candidate
+            smoothedRate = r
+            rateForUpdate = roundAway(r * 10) / 10
+            // Track rate history for stability detection
+            rateHistory.add(RatePoint(time = wallElapsed, rate = r))
+            // Prune old entries beyond stability window
+            rateHistory.removeAll { wallElapsed - it.time > stabilityWindow + 5 }
+        }
+        // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
+        if (wallElapsed - lastTgLogSec > 2.0) {
+            lastTgLogSec = wallElapsed
+            // win= is the analysis window the headline rate came from and gate= the running
+            // sigma-gate rejection count: without them a bad reading could not be attributed
+            // to a short window after the fact (audit 2026-07-31).
+            debugLog(
+                "[TGALGO @ ${cf(wallElapsed, 0)}s] useTg=$useTgAlgo reg=${regRateLog?.let { cf(it, 1, plus = true) } ?: "nil"}" +
+                    " tg=${tgRateCached?.let { cf(it, 1, plus = true) } ?: "nil"} amp=${tgAmpCached?.let { cf(it, 0) } ?: "nil"}" +
+                    " be=${tgBeCached?.let { cf(it, 2) } ?: "nil"} beOn=${tgBeOnsetCached?.let { cf(it, 2) } ?: "nil"}" +
+                    " win=${cf(tgLastWindowSec, 0)}s gate=$tgGateRejects ga=$tgGateAttempts fit=$tgPeriodFit" +
+                    " lc=${if (tgLockConfirmed) 1 else 0} lr=$tgLockRejects ppm=${clkPpm?.let { cf(it, 2, plus = true) } ?: "nil"}",
+            )
+        }
+
+        // Stability: rate has stayed within +-threshold for the full stability window
+        // Uses hysteresis: easier to gain stability (3 s/day), harder to lose it (5 s/day)
+        var isStable = wasStable
+        if (smoothedRate != null) {
+            // tg's rate is a precise per-window period measurement that settles fast, so it can
+            // converge on a much shorter window/wall-min than the regression's slow slope.
+            val effWindow = if (useTgAlgo) tgStabWindowSec else stabilityWindow
+            val effWallMin = if (useTgAlgo) tgWallMinSec else wallElapsedMinimum
+            val effThresh = if (useTgAlgo) tgStabThresh else stabilityThreshold
+            val recentRates = rateHistory.filter { wallElapsed - it.time <= effWindow }
+            if (recentRates.size >= 5 && wallElapsed >= effWallMin) {
+                val rateMin = recentRates.minOf { it.rate }
+                val rateMax = recentRates.maxOf { it.rate }
+                val spread = rateMax - rateMin
+                isStable = if (wasStable) {
+                    spread <= (if (useTgAlgo) tgStabThresh * 1.7 else stabilityLoseThreshold)
+                } else {
+                    spread <= effThresh
+                }
+            }
+        }
+        // T1/T3 (dark at ship defaults): a tg session cannot GAIN stability on an
+        // unconfirmed lock, nor while the sigma-gate is rejecting most windows. The rate
+        // series is built from overlapping reads of one ring, so its "stability" cannot
+        // distinguish a right lock from a confident wrong one — the disjoint-segment
+        // confirmation can. Losing stability is unaffected.
+        if (useTgAlgo && isStable && !wasStable) {
+            if (tgConfirmBand < 900 && !tgLockConfirmed) isStable = false
+            if (tgGateMaxRej < 1.0) {
+                val rf = tgGateRejFraction()
+                if (rf != null && rf > tgGateMaxRej) isStable = false
+            }
+        }
+        wasStable = isStable
+
         // Confidence based on pair count
         val tickConfidence = if (regN >= 5) min(0.99, regN.toDouble() / 250.0 + 0.3) else 0.0
+
+        // Debug: log rate update every 8 new pairs
+        if (regN > 0 && regN - lastUpdateLogRegN >= 8) {
+            lastUpdateLogRegN = regN
+            debugLog("[TGUPDATE] elapsed=${cf(wallElapsed, 1)}s rate=${rateForUpdate?.let { cf(it, 1) } ?: "nil"} stable=$isStable conf=${cf(tickConfidence, 2)} regN=$regN tickCount=$tickCount cumDev=${cf(pairDeviationMs, 2)}ms")
+        }
+
         // Drain debug messages
         val dbgMsgs = drainDebugMessages()
 
+        // T3/T4 surface state (inert until the knobs are flipped; JS ignores unknown keys)
+        var sigQuality: String? = null
+        if (useTgAlgo) {
+            val rf = tgGateRejFraction()
+            if (rf != null) {
+                sigQuality = if (rf > 0.5) "poor" else (if (rf > 0.2) "fair" else "good")
+            } else if (tgRateCached != null) {
+                sigQuality = "good"
+            }
+        }
+        val acquiring = useTgAlgo && tgRateCached == null &&
+            wallElapsed < tgAcquireMaxSec && tgActivelyEvaluating()
+
         val update = Update(
-            rate = null, // Task 6/7
+            rate = rateForUpdate,
+            // tg path: fold-based BE; legacy folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
             beatError = if (useTgAlgo) tgBeCached else currentBeatError,
             tickCount = tickCount,
             confidence = tickConfidence, noiseLevel = currentNoiseLevel,
@@ -1278,9 +1415,9 @@ class TimegrapherCore(
             cumulativeOffset = pairDeviationMs,
             elapsedSec = wallElapsed,
             method = if (regN >= regNMinimum) "Ticks" else "",
-            rateStable = false, // Task 6
-            tgSignalQuality = null, // Task 6/7
-            tgAcquiring = false, // Task 6/7
+            rateStable = isStable,
+            tgSignalQuality = sigQuality,
+            tgAcquiring = acquiring,
             newTicks = ticks,
             debugMessages = dbgMsgs,
         )
@@ -1339,4 +1476,442 @@ class TimegrapherCore(
         }
         return signal
     }
+
+    // MARK: - tg-style detection core (rate via autocorrelation period, not beat regression)
+    // Reference: docs/research/2026-07-03-tg-algorithm-learnings.md. Toggled by useTgAlgo.
+    // (Swift 1688-2155. The knobs and T1-T4 state, tgActivelyEvaluating and tgHasRecentLock
+    // are declared with the part-A state above; fftAutocorrelation lives in Fft.kt.)
+
+    private data class WindowRate(val secs: Double, val rate: Double)
+    private data class CycleLag(val cyc: Double, val lag: Double)
+
+    private fun tgRecordGateEvent(rejected: Boolean) {
+        tgGateAttempts += 1
+        tgGateEvents.add(GateEvent(energyRingAbs, rejected))
+        val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+        val cutoff = energyRingAbs - (ringSampleRate * 10).toInt()
+        while (tgGateEvents.isNotEmpty() && tgGateEvents[0].abs < cutoff) tgGateEvents.removeAt(0)
+    }
+
+    /// sigma-gate reject fraction over the last 10 s; null until there are enough attempts to mean anything.
+    private fun tgGateRejFraction(): Double? {
+        if (tgGateEvents.size < 3) return null
+        return tgGateEvents.count { it.rejected }.toDouble() / tgGateEvents.size.toDouble()
+    }
+
+    /// T1: advance the pending-lock / confirmed-lock state machine. `rates` is this pass's
+    /// per-window estimates; the 8 s window is the confirmation instrument because once
+    /// `energyRingAbs - tgPendingLockAbs >= 8 s` every sample in it postdates the pending
+    /// lock — zero overlap, so agreement is evidence rather than self-confirmation.
+    ///
+    /// SHADOW-ALWAYS-ON: this machine runs on every session regardless of tgConfirmBand,
+    /// so lc=/lr= in the TGALGO line carry a live-population A/B of the gate's verdicts
+    /// while enforcement stays knob-gated at the convergence check (same playbook as the
+    /// 2.1 reg-vs-tg shadow). At the dark default the ONLY effect is logging. The shadow
+    /// judges with the staged band (6 s/d), not the enforcement knob — otherwise 999
+    /// would confirm everything and the shadow would be data-free.
+    private fun tgUpdateLockConfirmation(chosen: Double, rates: List<WindowRate>, ringSampleRate: Double) {
+        if (tgLockConfirmed) return
+        val shadowBand = min(tgConfirmBand, 6.0)   // staged target; a LOWERED knob tightens the shadow too
+        val confirmWin = 8.0
+        if (!(tgPendingLockRate != null && tgPendingLockAbs >= 0)) {
+            tgPendingLockRate = chosen; tgPendingLockAbs = energyRingAbs
+            return
+        }
+        if (!((energyRingAbs - tgPendingLockAbs).toDouble() >= confirmWin * ringSampleRate)) return
+        // The 8 s window may have sigma-gate-failed this pass — then just try again next pass.
+        val r1 = rates.firstOrNull { it.secs == confirmWin }?.rate ?: return
+        val r0 = tgPendingLockRate!!
+        if (abs(r1 - r0) <= shadowBand) {
+            tgLockConfirmed = true
+            debugLog("[TGALGO lock-confirm] r0=${cf(r0, 1, plus = true)} r1=${cf(r1, 1, plus = true)} band=${cf(shadowBand, 0)}")
+        } else {
+            tgLockRejects += 1
+            debugLog("[TGALGO lock-reject] r0=${cf(r0, 1, plus = true)} r1=${cf(r1, 1, plus = true)} band=${cf(shadowBand, 0)} n=$tgLockRejects")
+            tgPendingLockRate = r1; tgPendingLockAbs = energyRingAbs
+        }
+    }
+
+    /// Most-recent `n` samples of the active envelope ring, linearized oldest->newest.
+    private fun recentEnvelope(n: Int): FloatArray {
+        val count = min(n, energyRingCount)
+        if (count <= 0) return FloatArray(0)
+        val ring = energyRings[activeHpIndex]
+        val out = FloatArray(count)
+        var idx = (energyRingWritePos - count + energyRingCapacity) % energyRingCapacity
+        for (i in 0 until count) { out[i] = ring[idx]; idx = (idx + 1) % energyRingCapacity }
+        return out
+    }
+
+    /// Full (tic-to-tic) period in ring samples via FFT-autocorrelation, refined across
+    /// lag-cycles (tg algo.c:427-450). Returns null if the sigma-gate fails.
+    ///
+    /// The refinement is a straight line through the origin: the ACF peak near
+    /// `cyc * nominal` sits at `cyc * period`, so every cycle measures the same period —
+    /// but not equally well. A half-sample peak-location error is a half-sample of period
+    /// at cyc=1 and a 40th of one at cyc=40. Averaging `lag/cyc` with EQUAL weight (what
+    /// shipped through 2.3) therefore lets the worst estimates set the answer: error falls
+    /// off as ln(K)/K instead of 1/K. Weighted least squares through the origin with
+    /// w = cyc^2 is the right estimator for constant per-lag noise, and measured ~2x tighter
+    /// in Monte-Carlo at every window >= 4s (audit 2026-07-31, scripts in that audit).
+    /// tgPeriodFit keeps the old behaviour reachable from JS so the change can be A/B'd.
+    private fun tgPeriod(env: FloatArray, nominal: Double, ringSampleRate: Double): Double? {
+        val n = env.size
+        if (!(n > (nominal * 2.5).toInt())) return null
+        val e = env.copyOf()
+        val mean = vdspMean(e, n)
+        val negMean = -mean
+        for (i in 0 until n) e[i] = e[i] + negMean          // vDSP_vsadd
+        val tap = min(n / 2, (ringSampleRate * 0.1).toInt())
+        if (tap > 1) {
+            for (i in 0 until tap) {
+                val w = (0.5 * (1 - kotlin.math.cos(i.toDouble() / tap.toDouble() * PI))).toFloat()
+                e[i] *= w; e[n - 1 - i] *= w
+            }
+        }
+        val ac = fftAutocorrelation(e, count = n)
+        val tol = ringSampleRate * 0.02
+        val lags = ArrayList<CycleLag>(); var cyc = 1.0
+        while (nominal * cyc < n.toDouble() * 0.66) {
+            val lo = (nominal * cyc - tol).toInt()
+            val hi = (nominal * cyc + tol).toInt()
+            if (hi >= ac.size - 1 || lo < 1) break
+            var best = lo; var bv = ac[lo]
+            for (k in lo..hi) { if (ac[k] > bv) { bv = ac[k]; best = k } }
+            val a0 = ac[best - 1].toDouble(); val b0 = ac[best].toDouble(); val c0 = ac[best + 1].toDouble()
+            val d = a0 - 2 * b0 + c0
+            val frac = if (abs(d) > 1e-9) 0.5 * (a0 - c0) / d else 0.0
+            lags.add(CycleLag(cyc, best.toDouble() + frac)); cyc += 1
+        }
+        if (lags.isEmpty()) return null
+        val period = tgFitPeriod(lags)
+        if (!(period > 1)) return null
+        // sigma-gate, measured around the unweighted MEAN on purpose — not around the fitted
+        // period. The gate asks "do the per-cycle estimates agree with each other", and
+        // tgSigmaGate was tuned against the spread about their mean, which by construction
+        // is the smallest such spread. Measuring it about the weighted fit instead leaves
+        // the threshold nominally identical while making it 1-7% stricter in practice, and
+        // that silently drops marginal windows — worst at the 4s window and low SNR, i.e.
+        // precisely the weak signals that already fail most. The gate keeps its own
+        // reference point; only the returned period changes.
+        if (lags.size > 1) {
+            val ests = lags.map { it.lag / it.cyc }
+            val estMean = ests.fold(0.0) { acc, v -> acc + v } / ests.size.toDouble()
+            val varr = ests.map { (it - estMean) * (it - estMean) }.fold(0.0) { acc, v -> acc + v } / ests.size.toDouble()
+            if (estMean > 0 && sqrt(varr) / estMean > tgSigmaGate) {
+                tgGateRejects += 1
+                tgRecordGateEvent(true)     // T3/T4: an attempt that sigma-rejected
+                return null
+            }
+        }
+        tgRecordGateEvent(false)            // T3/T4: an attempt that produced a period
+        return period
+    }
+
+    /// Period (ring samples) from the per-cycle ACF peak lags. See tgPeriod for why the
+    /// weighting is the whole point; mode 0 reproduces the pre-2.4 estimator bit for bit.
+    private fun tgFitPeriod(lags: List<CycleLag>): Double {
+        when (tgPeriodFit) {
+            0 -> return lags.fold(0.0) { acc, l -> acc + l.lag / l.cyc } / lags.size.toDouble()
+            1 -> {
+                val s = lags.map { it.lag / it.cyc }.sorted()
+                return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2
+            }
+            else -> {
+                // Weighted LS through the origin: period = sum(w*cyc*lag) / sum(w*cyc^2), w = cyc^2.
+                var num = 0.0; var den = 0.0
+                for ((c, l) in lags) { val w = c * c; num += w * c * l; den += w * c * c }
+                if (!(den > 0)) return lags[lags.size - 1].lag / lags[lags.size - 1].cyc
+                return num / den
+            }
+        }
+    }
+
+    /// tg-style rate: measure period over 2/4/8/16s windows of the envelope ring;
+    /// use the longest window that passes the sigma-gate and yields an in-range rate.
+    private fun computeTgRate(): Double? {
+        val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+        val nominal = 7200.0 / targetBph.toDouble() * ringSampleRate
+        val rates = ArrayList<WindowRate>()
+        for (secs in doubleArrayOf(2.0, 4.0, 8.0, 16.0, 32.0)) {
+            if (!(secs <= tgMaxWindowSec)) continue
+            val want = (secs * ringSampleRate).toInt()
+            val env = recentEnvelope(want)
+            if (env.size < (want.toDouble() * 0.9).toInt()) continue
+            val period = tgPeriod(env, nominal = nominal, ringSampleRate = ringSampleRate) ?: continue
+            val rate = (nominal / period - 1) * 86400
+            if (abs(rate) <= 200) rates.add(WindowRate(secs, rate))
+        }
+        if (rates.isEmpty()) return null
+        // Harmonic-reject guard: a low-BPH harmonic lock shows up as ONE window
+        // reading ~2x off. The longest window is the headline, but only trust it if
+        // it agrees with the median of all valid windows; otherwise fall back to the
+        // median. On a clean watch every window agrees, so the longest still wins
+        // (no-op). Set tgAgreeBand very high to disable.
+        //
+        // Needs >= 3 windows to mean anything. With exactly 2, the "median" is just
+        // max(rate0, rate1) — there is no majority for it to express — so a
+        // disagreement would hand the reading to whichever window happens to read
+        // higher. That is a coin flip, and when it loses it discards the long window
+        // (the more stable estimate) in favour of the short one (the noisier estimate,
+        // and the one MORE prone to harmonic lock) — the exact inversion of intent.
+        val sorted = rates.map { it.rate }.sorted()
+        val median = if (sorted.size % 2 == 1) sorted[sorted.size / 2]
+        else (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2
+        val longestEntry = rates.maxByOrNull { it.secs }!!
+        val longest = longestEntry.rate
+        // A rate means the envelope is periodic at the expected BPH — that is a lock, and
+        // it is what tgHoldOnLock keys off. Recorded on the absolute ring counter because
+        // a recalibration rewinds wallElapsed.
+        tgLastLockAbs = energyRingAbs
+        tgLastWindowSec = longestEntry.secs
+        val disagree = abs(longest - median) > tgAgreeBand
+        // T2 (guardMode 1): windows that disagree beyond the band mean NO number is
+        // trustworthy — refuse and keep acquiring, instead of shipping the median
+        // (2.4 once shipped median=109.5 over longest=41.4). n==2 also refuses: with two
+        // windows "median" is just max(), a coin flip documented below. A refusal clears
+        // an UNCONFIRMED pending T1 lock; a confirmed lock survives one noisy pass
+        // (starvation-hold semantics unchanged).
+        if (tgGuardMode >= 1 && rates.size >= 2 && disagree) {
+            debugLog("[TGALGO harmonic-guard] longest=${cf(longest, 1)} median=${cf(median, 1)} band=${cf(tgAgreeBand, 0)} n=${rates.size} -> nil")
+            if (!tgLockConfirmed) { tgPendingLockRate = null; tgPendingLockAbs = -1 }
+            return null
+        }
+        var chosen = longest
+        if (rates.size >= 3 && disagree) {
+            debugLog("[TGALGO harmonic-guard] longest=${cf(longest, 1)} median=${cf(median, 1)} band=${cf(tgAgreeBand, 0)} n=${rates.size} -> median")
+            chosen = median
+        }
+        tgUpdateLockConfirmation(chosen = chosen, rates = rates, ringSampleRate = ringSampleRate)
+        return chosen
+    }
+
+    /// Envelope sample at an absolute ring index (0 if it has scrolled out of the ring).
+    private fun envAtAbs(a: Int): Float {
+        val back = energyRingAbs - a
+        if (!(back >= 1 && back <= min(energyRingCount, energyRingCapacity))) return 0f
+        val idx = ((energyRingWritePos - back) % energyRingCapacity + energyRingCapacity) % energyRingCapacity
+        return energyRings[activeHpIndex][idx]
+    }
+
+    /// Locate beats on the tg-period grid and emit per-pair cumulative-deviation dots
+    /// (same convention as the detector's dots: pairing cancels beat error).
+    private fun tgTrackDots(period: Double, ringSampleRate: Double, wallElapsed: Double) {
+        val halfP = period / 2
+        val nominalFull = 7200.0 / targetBph.toDouble() * ringSampleRate
+        val win = max(2.0, halfP * 0.12)
+        val absNow = energyRingAbs.toDouble()
+        if (tgDotNext < 0) {
+            val span = (halfP * 1.5).toInt()
+            if (!(energyRingCount > span + 4)) return
+            var best = -1f; var bi = energyRingAbs - span
+            var a = energyRingAbs - span
+            while (a < energyRingAbs) { val v = envAtAbs(a); if (v > best) { best = v; bi = a }; a += 1 }
+            tgDotPrevAbs = bi.toDouble(); tgDotNext = bi.toDouble() + halfP
+            tgDotPairAccum = 0.0; tgDotPairPhase = 0; tgDotSkipPairs = 1
+            return
+        }
+        var guardCount = 0
+        while (tgDotNext + win < absNow && guardCount < 64) {
+            guardCount += 1
+            val lo = (tgDotNext - win).toInt()
+            val hi = (tgDotNext + win).toInt()
+            if (energyRingAbs - lo > min(energyRingCount, energyRingCapacity)) { tgDotNext = -1.0; return }  // fell behind — resync
+            var best = -1f; var bi = lo
+            var a = lo
+            while (a <= hi) { val v = envAtAbs(a); if (v > best) { best = v; bi = a }; a += 1 }
+            val p = bi.toDouble()
+            val interval = p - tgDotPrevAbs
+            tgDotPrevAbs = p
+            tgDotNext = p + halfP
+            if (abs(interval - halfP) > halfP * 0.2) { tgDotPairAccum = 0.0; tgDotPairPhase = 0; continue }  // outlier — drop this pair
+            tgDotPairAccum += interval; tgDotPairPhase += 1
+            if (tgDotPairPhase == 2) {
+                val devMs = (nominalFull - tgDotPairAccum) / ringSampleRate * 1000.0
+                tgDotPairAccum = 0.0; tgDotPairPhase = 0
+                if (tgDotSkipPairs > 0) { tgDotSkipPairs -= 1; continue }
+                tgDotCumMs += devMs
+                val tSec = wallElapsed - (absNow - p) / ringSampleRate
+                tgPendingDots.add(TickDot(timeSec = max(0.0, tSec), deviationMs = tgDotCumMs))
+            }
+        }
+    }
+
+    /// Beat error (ms) from the folded beat: the toc's offset from exactly half a period.
+    /// (tg derives B.E. the same way — tic->toc spacing vs period/2.)
+    private fun tgBeatError(fold: FloatArray, period: Double, ringSampleRate: Double): Double? {
+        val P = fold.size; if (!(P > 8)) return null
+        var tic = 0; var tv = fold[0]
+        for (i in 1 until P) { if (fold[i] > tv) { tv = fold[i]; tic = i } }
+        // strongest point in the window [tic + 0.4P, tic + 0.6P] (circular) = toc
+        var best = -1f; var toc = tic
+        for (off in (P.toDouble() * 0.4).toInt()..(P.toDouble() * 0.6).toInt()) {
+            val i = (tic + off) % P
+            if (fold[i] > best) { best = fold[i]; toc = i }
+        }
+        // Sub-sample refinement. Integer bins quantise B.E. at one ring sample — 0.083 ms at
+        // the default 12 kHz ring — on a quantity whose entire useful range is 0-0.5 ms, so
+        // the reading moved in visible steps. Same parabolic fit the ACF peak search uses.
+        val d = tgCircularSpan(from = tgRefinePeak(fold, tic), to = tgRefinePeak(fold, toc), p = P.toDouble())
+        val be = abs(d - period / 2) / ringSampleRate * 1000.0
+        // Shadow estimator: the same spacing measured from each pulse's leading EDGE instead
+        // of its peak. Peak position walks with pulse amplitude, so a tic/toc amplitude
+        // imbalance biases the peak-based figure; onsets do not. Logged only (beOn= in
+        // TGALGO) until there is field data to compare the two — do not wire it to the
+        // display before that comparison exists.
+        val onTic = tgPulseOnset(fold, marker = tic)
+        val onToc = tgPulseOnset(fold, marker = toc)
+        if (onTic != null && onToc != null) {
+            val od = tgCircularSpan(from = onTic, to = onToc, p = P.toDouble())
+            val obe = abs(od - period / 2) / ringSampleRate * 1000.0
+            tgBeOnsetCached = if (obe < 10) obe else null
+        } else {
+            tgBeOnsetCached = null
+        }
+        return if (be < 10) be else null                    // >10ms = fold not clean, don't report
+    }
+
+    /// Forward distance from `a` to `b` on a circle of length `p`.
+    private fun tgCircularSpan(from: Double, to: Double, p: Double): Double {
+        var d = (to - from) % p                             // Swift truncatingRemainder
+        if (d < 0) d += p
+        return d
+    }
+
+    /// Sub-sample peak position around an integer argmax, by parabolic fit on the three
+    /// surrounding fold bins (circular). Clamped to +-1 bin so a flat top can't run away.
+    private fun tgRefinePeak(fold: FloatArray, i: Int): Double {
+        val P = fold.size
+        val a = fold[(i - 1 + P) % P].toDouble(); val b = fold[i].toDouble(); val c = fold[(i + 1) % P].toDouble()
+        val d = a - 2 * b + c
+        if (!(abs(d) > 1e-12)) return i.toDouble()
+        return i.toDouble() + max(-1.0, min(1.0, 0.5 * (a - c) / d))
+    }
+
+    /// Leading-edge position of the pulse peaking at `marker`, as a fractional fold index
+    /// (may be negative — callers wrap it). Threshold sits halfway between the quiet region
+    /// (the same P/6..P/4 window tgAmplitude uses for its noise floor) and the peak, and the
+    /// crossing is linearly interpolated. null when the pulse never clears the noise.
+    private fun tgPulseOnset(fold: FloatArray, marker: Int): Double? {
+        val P = fold.size; if (!(P > 8)) return null
+        fun at(d: Int): Float = fold[((marker - d) % P + P) % P]
+        var noise = 0f
+        var q = P / 6
+        while (q <= P / 4) { if (at(q) > noise) noise = at(q); q += 1 }
+        val peak = fold[marker]
+        if (!(peak > noise)) return null
+        val thr = noise + 0.5f * (peak - noise)
+        var d = 1
+        while (d < P / 8 && at(d) > thr) d += 1
+        // d == 1 is a legitimate crossing (between the peak bin and the one before it) —
+        // unlike tgAmplitude's pulseBefore, which needs room to walk on to a second peak.
+        // Bailing out only when no crossing was found inside P/8.
+        if (!(d < P / 8)) return null
+        val hi = at(d - 1); val lo = at(d)                  // hi > thr >= lo
+        val frac = if (hi > lo) (thr - lo).toDouble() / (hi - lo).toDouble() else 0.0
+        return marker.toDouble() - d.toDouble() + frac
+    }
+
+    /// tg-style averaged beat: fold the recent envelope at the measured period (trimmed mean per bin).
+    private fun tgFoldedBeat(period: Double): FloatArray? {
+        val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+        val P = roundAway(period).toInt(); if (!(P > 8)) return null
+        val env = recentEnvelope((ringSampleRate * 8).toInt())     // up to 8s of beats
+        val nBeats = env.size / P; if (!(nBeats >= 4)) return null
+        val fold = FloatArray(P)
+        val col = FloatArray(nBeats)
+        val keep = max(1, (nBeats.toDouble() * 0.8).toInt())     // trimmed mean: drop loudest 20%
+        for (p in 0 until P) {
+            for (b in 0 until nBeats) col[b] = env[b * P + p]
+            col.sort()
+            var s = 0f; for (b in 0 until keep) s += col[b]
+            fold[p] = s / keep.toFloat()
+        }
+        val mean = vdspMean(fold, P)
+        val neg = -mean
+        for (i in 0 until P) fold[i] = fold[i] + neg              // vDSP_vsadd
+        return fold
+    }
+
+    /// Amplitude (degrees) from the escapement pulse-pair + lift angle. null if not plausible.
+    /// tg's full recipe: 1ms leaky-max smoothing (noise bumps stopped the peak-walk early ->
+    /// short dt -> amplitude read high), quiet-region noise floor, and a x1.4 threshold
+    /// iteration that only accepts a mutually-consistent, plausible tic/toc pair.
+    private fun tgAmplitude(rawFold: FloatArray, period: Double): Double? {
+        val P = rawFold.size; if (!(P > 8)) return null
+        // 1ms leaky-max (peak-hold) smoothing, two passes for circular wrap (tg algo.c:611)
+        val ringSampleRate = actualSampleRate / ringSubsampleTarget.toDouble()
+        val w = max(2, (ringSampleRate / 1000.0).toInt())
+        val k = 1.0f - 1.0f / w.toFloat()
+        val fold = rawFold.copyOf()
+        var hold = 0f
+        for (pass in 0 until 2) {
+            for (i in 0 until P) {
+                hold *= k
+                if (rawFold[i] > hold) hold = rawFold[i]
+                if (pass == 1 || i > w) fold[i] = hold
+            }
+        }
+        val glob = fold.maxOrNull() ?: 0f; if (!(glob > 0)) return null
+        // tic/toc markers from the smoothed fold
+        var tic = 0; var tv = fold[0]
+        for (i in 1 until P) { if (fold[i] > tv) { tv = fold[i]; tic = i } }
+        val lo = (tic + (P.toDouble() * 0.4).toInt()) % P
+        val hi = (tic + (P.toDouble() * 0.6).toInt()) % P
+        var toc = lo; var bv = fold[lo]; var j = lo
+        while (j != hi) { if (fold[j] > bv) { bv = fold[j]; toc = j }; j = (j + 1) % P }
+        // Noise floor from the quiet region between the pulse clusters (d in [P/6, P/4]
+        // before each marker), not the whole-fold mean (which the pulses inflate).
+        var noise = 0f
+        for (mk in intArrayOf(tic, toc)) {
+            var d = P / 6
+            while (d <= P / 4) { val v = fold[((mk - d) % P + P) % P]; if (v > noise) noise = v; d += 1 }
+        }
+        // Threshold iteration (tg algo.c:770/809): accept the first level that yields a
+        // plausible, consistent pulse pair; a faint pulse that never qualifies -> null.
+        var thr = max(0.01f * glob, 1.4f * noise)
+        var iters = 0
+        while (thr < glob && iters < 12) {
+            fun pulseBefore(marker: Int): Int? {
+                fun at(d: Int): Float = fold[((marker - d) % P + P) % P]
+                var d = P / 8
+                while (d > 2 && at(d) <= thr) d -= 1     // threshold crossing
+                if (!(d > 2)) return null
+                while (d > 3 && at(d - 1) > at(d)) d -= 1 // walk to the pulse peak
+                return d
+            }
+            val amps = ArrayList<Double>()
+            var ok = true
+            for (mk in intArrayOf(tic, toc)) {
+                val dt = pulseBefore(mk)
+                if (dt == null) { ok = false; break }
+                val s = kotlin.math.sin(PI * dt.toDouble() / period)
+                if (!(s > 0)) { ok = false; break }
+                amps.add(liftAngleDeg / (2 * s))
+            }
+            // Plausibility gate. The floor used to be a hardcoded 135 deg, which inverted the
+            // feature: a watch genuinely running at 120 deg — exactly the one whose owner needs
+            // telling — reported nothing at all, while a healthy one reported fine. 21% of
+            // tg-locked sessions produced no amplitude (audit 2026-07-31). tgAmpMinDeg drops
+            // the floor to 90 deg so a low reading comes through and the UI can colour it red.
+            if (ok && amps.size == 2 && amps.all { tgAmpMinDeg <= it && it <= 360 } && abs(amps[0] - amps[1]) <= 60) {
+                return (amps[0] + amps[1]) / 2
+            }
+            thr *= 1.4f; iters += 1
+        }
+        return null
+    }
+}
+
+/**
+ * vDSP_meanv stand-in: the mean of the first [n] floats. Summed in Double and rounded once,
+ * which is the correctly-rounded mean; vDSP's own vectorised Float summation order is not
+ * specified, so the last bit can differ from it (no effect on any logged figure in the
+ * golden runs).
+ */
+private fun vdspMean(x: FloatArray, n: Int): Float {
+    if (n <= 0) return 0f
+    var s = 0.0
+    for (i in 0 until n) s += x[i].toDouble()
+    return (s / n).toFloat()
 }
