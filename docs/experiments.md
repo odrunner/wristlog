@@ -37,3 +37,25 @@ there. `get_experiments()` skips server-owned experiments at login, so the arm s
 contain users who were actually eligible. Set `owner='server'` on the experiment row; the
 nightly judge evaluates it like any other. Example: `remeasure_d7` in
 `sql/2026-09-11-remeasure-d7.sql`.
+
+## Platforms (iOS + Android)
+
+Experiments must behave identically on both apps. The rules that make that true:
+
+- **Assignment is per USER, not per device.** `get_experiments()` hashes the user id, so
+  the same account gets the same arm in the iOS WebView, the Android WebView, and the
+  web. Never key an arm off a device token or platform.
+- **Web-level experiments (`experiment('key')`) carry over automatically** — both shells
+  load the same `index.html`. Nothing per-platform to do.
+- **Engine knob trials (`tgknob_*`)** reach the native engines through the same
+  `setTuning` bridge payload; the Kotlin engine is a 1:1 port, so a knob value means the
+  same thing on both. Old builds that lack a knob simply don't echo it in `[TGTUNE]`,
+  and the Sunday judge reads arms from the echo (log truth), so they fall out cleanly.
+- **Platform attribution:** Android `[TGTUNE]` lines end with `cap=<src> model=<Model>`
+  (iOS lines don't) — that token is the platform split. Before the first external
+  Android session, `scripts/accuracy_loop.py` must report per-platform splits on knob
+  trials (a knob that helps iOS but hurts Android must be visible), and
+  `rollout-check.py` needs its deferred platform split (spec 2026-10-22).
+- **Server-owned experiments** are user-keyed and platform-agnostic already; push-channel
+  gating via `device_tokens.app_version` will need Android-aware gating when Android
+  push lands (later plan).
