@@ -1,6 +1,8 @@
 package com.wrotate.engine
 
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -68,6 +70,51 @@ class TickSynthTest {
             assertEquals(44100.0, sr)
             assertEquals(x.size, y.size)
             for (i in x.indices) assertEquals(x[i], y[i], 1e-6f)
+        } finally {
+            f.delete()
+        }
+    }
+    private fun pcm16Wav(channels: Int, sampleRate: Int, interleaved: ShortArray, junkChunk: Boolean): ByteArray {
+        val dataBytes = interleaved.size * 2
+        val junk = if (junkChunk) 8 + 3 + 1 else 0 // odd-sized chunk plus its pad byte
+        val bb = ByteBuffer.allocate(44 + junk + dataBytes).order(ByteOrder.LITTLE_ENDIAN)
+        bb.put("RIFF".toByteArray()); bb.putInt(36 + junk + dataBytes); bb.put("WAVE".toByteArray())
+        bb.put("fmt ".toByteArray()); bb.putInt(16)
+        bb.putShort(1); bb.putShort(channels.toShort()); bb.putInt(sampleRate)
+        bb.putInt(sampleRate * channels * 2); bb.putShort((channels * 2).toShort()); bb.putShort(16)
+        if (junkChunk) { bb.put("junk".toByteArray()); bb.putInt(3); bb.put(byteArrayOf(1, 2, 3, 0)) }
+        bb.put("data".toByteArray()); bb.putInt(dataBytes)
+        for (v in interleaved) bb.putShort(v)
+        return bb.array()
+    }
+
+    @Test
+    fun wavReadsMono16BitPcm() {
+        val raw = shortArrayOf(0, 16384, -16384, 32767, -32768)
+        val f = File.createTempFile("pcm16", ".wav")
+        try {
+            f.writeBytes(pcm16Wav(1, 48000, raw, false))
+            val (y, sr) = WavIo.read(f)
+            assertEquals(48000.0, sr)
+            assertEquals(raw.size, y.size)
+            for (i in raw.indices) assertEquals(raw[i] / 32768f, y[i], 1f / 32768f)
+        } finally {
+            f.delete()
+        }
+    }
+
+    @Test
+    fun wavReadsStereo16BitPcmFirstChannelOnly() {
+        val left = shortArrayOf(1000, -2000, 3000, -4000)
+        val right = shortArrayOf(9999, 9999, 9999, 9999)
+        val inter = ShortArray(8) { if (it % 2 == 0) left[it / 2] else right[it / 2] }
+        val f = File.createTempFile("pcm16st", ".wav")
+        try {
+            f.writeBytes(pcm16Wav(2, 44100, inter, true))
+            val (y, sr) = WavIo.read(f)
+            assertEquals(44100.0, sr)
+            assertEquals(left.size, y.size)
+            for (i in left.indices) assertEquals(left[i] / 32768f, y[i], 1f / 32768f)
         } finally {
             f.delete()
         }

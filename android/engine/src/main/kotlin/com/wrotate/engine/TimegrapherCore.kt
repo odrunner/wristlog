@@ -151,7 +151,7 @@ private fun roundAway(x: Double): Double {
 }
 
 class TimegrapherCore(
-    private val analysisExecutor: Executor? = null, // null = synchronous (tests); app passes a single-thread executor
+    private val analysisExecutor: Executor? = null, // null = synchronous analyze inside process() (tests AND the harness app use null); a non-null executor reproduces Swift's analysisQueue race with process() - callers must serialise the two externally
 ) {
     private data class RegPoint(val x: Double, val y: Double)
     private data class RatePoint(val time: Double, val rate: Double)
