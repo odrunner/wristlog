@@ -4,7 +4,10 @@ export default defineConfig({
   test: {
     // supabase/functions holds Deno edge-function tests (jsr: imports, Deno.test);
     // they run via `npm run test:functions` (deno test), not under vitest/Node.
-    exclude: ['node_modules', 'e2e', 'supabase/functions/**'],
+    // .claude/worktrees holds full repo copies (git worktrees) whose tests must
+    // not run from the main checkout — without the exclude, vitest triple-runs
+    // the unit suite and chokes on the worktrees' Playwright specs.
+    exclude: ['node_modules', 'e2e', 'supabase/functions/**', '.claude/**', '**/.claude/**'],
     coverage: {
       provider: 'v8',
       // Gate ONLY the source vitest actually imports — wrotate_test.js, the
