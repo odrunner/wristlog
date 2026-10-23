@@ -1,6 +1,5 @@
 package com.wrotate.engine
 
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -18,8 +17,14 @@ class BiquadState {
     var cutoffHz: Float = 4000f
 }
 
+// Swift's Float.pi is rounded TOWARD ZERO (0x1.921fb4p+1 = 3.14159250); PI.toFloat() rounds to
+// nearest (3.14159274). The one-ulp difference shifts every filter coefficient, so the tick
+// detector's [TGTICK] values drifted in the last printed digit against the Swift engine;
+// with this constant the part-A log is byte-identical to Swift on the synthetic fixtures.
+private val SWIFT_FLOAT_PI: Float = Float.fromBits(0x40490FDA)
+
 fun makeBiquadHP(cutoff: Float, sampleRate: Double): BiquadState {
-    val w0 = 2.0f * PI.toFloat() * cutoff / sampleRate.toFloat()
+    val w0 = 2.0f * SWIFT_FLOAT_PI * cutoff / sampleRate.toFloat()
     val cosW0 = cos(w0)
     val sinW0 = sin(w0)
     val alpha = sinW0 / (2.0f * 0.7071f) // Q = 0.7071 (Butterworth)
