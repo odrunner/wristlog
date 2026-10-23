@@ -1,6 +1,7 @@
 import AVFoundation
 import Accelerate
 
+// TG_ENGINE_REV: 1
 /// Measures watch accuracy via Goertzel + autocorrelation at a known BPH.
 ///
 /// Algorithm: user provides BPH → we know the exact tick frequency.

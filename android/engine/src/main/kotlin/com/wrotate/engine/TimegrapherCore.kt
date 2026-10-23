@@ -1,5 +1,7 @@
 package com.wrotate.engine
 
+// TG_ENGINE_REV: 1
+
 import java.util.concurrent.Executor
 import kotlin.math.PI
 import kotlin.math.abs
@@ -137,6 +139,9 @@ data class Tuning(
     val tgGuardMode: Int? = null,
     val tgGateMaxRej: Double? = null,
     val tgAcquireMax: Double? = null,
+    // Engine-set telemetry (not knobs): logged as trailing cap=/model= tokens on [TGTUNE], Android only.
+    val captureSource: String? = null,
+    val deviceModel: String? = null,
 )
 
 /** Swift `x.rounded()` / C `round()`: half away from zero (kotlin.math.round is half-even). */
@@ -559,7 +564,9 @@ class TimegrapherCore(
                 " maxWin=${swiftDesc(tgMaxWindowSec)} agreeBand=${swiftDesc(tgAgreeBand)} lift=${swiftDesc(liftAngleDeg)}" +
                 " periodFit=${this.tgPeriodFit} holdOnLock=${this.tgHoldOnLock} ampMin=${swiftDesc(tgAmpMinDeg)}" +
                 " confirmBand=${swiftDesc(this.tgConfirmBand)} guardMode=${this.tgGuardMode}" +
-                " gateMaxRej=${swiftDesc(this.tgGateMaxRej)} acquireMax=${swiftDesc(this.tgAcquireMaxSec)}",
+                " gateMaxRej=${swiftDesc(this.tgGateMaxRej)} acquireMax=${swiftDesc(this.tgAcquireMaxSec)}" +
+                (t.captureSource?.let { " cap=$it" } ?: "") +
+                (t.deviceModel?.let { " model=$it" } ?: ""),
         )
     }
 

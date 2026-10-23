@@ -54,6 +54,24 @@ class CorePartATest {
         assertEquals(expected, tokens.subList(0, expected.size))
     }
 
+    @Test
+    fun tgTuneAppendsCapAndModelOnlyWhenSet() {
+        fun tune(t: Tuning): String {
+            val log = ArrayList<String>()
+            val core = TimegrapherCore()
+            core.logSink = { log.add(it) }
+            core.start(28800, true, 48000.0)
+            core.setTuning(t)
+            return log.single { it.startsWith("[TGTUNE]") }
+        }
+        val plain = tune(Tuning())
+        assertTrue(!plain.contains("cap=") && !plain.contains("model="), plain)
+        val both = tune(Tuning(captureSource = "AAudio", deviceModel = "Pixel_7"))
+        assertEquals("$plain cap=AAudio model=Pixel_7", both)
+        assertEquals("$plain cap=AAudio", tune(Tuning(captureSource = "AAudio")))
+        assertEquals("$plain model=Pixel_7", tune(Tuning(deviceModel = "Pixel_7")))
+    }
+
     // (b) clean 90 s default fixture: the detector counts ticks and logs psBE.
     @Test
     fun cleanFixtureCountsTicksAndLogsPsBE() {
