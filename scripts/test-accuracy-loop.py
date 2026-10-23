@@ -51,6 +51,13 @@ class Arms(unittest.TestCase):
         self.assertIsNone(al.tune_value(TUNE_25, "tg_nonsense"))
         self.assertIsNone(al.tune_value("[TGTUNE] tgKnobs=0.0003/6.0", "tg_wallmin"))
         self.assertIsNone(al.tune_value("[TGTUNE] maxWin=abc", "tg_maxwin"))
+    def test_android_trailing_cap_model_tokens(self):
+        # Android engine appends " cap=<src> model=<model>" to [TGTUNE]; knob extraction must not care.
+        android = TUNE_25 + " cap=AAudio model=Pixel 7"
+        for knob in ("tg_stabwin", "tg_wallmin", "tg_sigma", "tg_guardmode", "tg_maxwin"):
+            self.assertEqual(al.tune_value(android, knob), al.tune_value(TUNE_25, knob))
+        self.assertEqual(al.tune_value(android, "tg_guardmode"), 1.0)
+        self.assertEqual(al.session_arm(android, "tg_stabwin", 6.0, 15.0), "treatment")
     def test_driftband_from_js_echo(self):
         # tg_driftband (2026-10-04) is a JS-side gate: the client appends its own
         # [TGDRIFT] line to the tick log (native TGTUNE can't know it), and the
