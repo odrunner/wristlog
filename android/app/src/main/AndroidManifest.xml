@@ -5,15 +5,25 @@
 
     <application
         android:allowBackup="false"
-        android:label="WRotate">
+        android:label="WRotate"
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <!-- configChanges: a rotation must not recreate the activity mid-session (the
+             capture thread and core belong to this instance). -->
         <activity
-            android:name=".MainActivity"
+            android:name=".HarnessActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".LogProvider"
+            android:authorities="com.wrotate.app.logs"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

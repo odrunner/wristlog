@@ -27,4 +27,5 @@ kotlin {
 
 dependencies {
     implementation(project(":engine"))
+    testImplementation(kotlin("test-junit"))
 }
