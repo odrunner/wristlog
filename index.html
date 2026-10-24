@@ -8249,7 +8249,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.09.30';
+const APP_VERSION = '24.10.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -31801,8 +31801,12 @@ function _syncInert() {
     if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK') continue;
     if (el.id === 'toast' || el.id === 'badge-toast' || el.id === 'offline-banner' || el.id === 'mention-ac') continue;
     let makeInert;
-    if (el.classList.contains('overlay')) {
-      makeInert = false; // open overlays stay interactive; hidden ones are display:none
+    if (el.classList.contains('overlay') || el.classList.contains('img-viewer-overlay')) {
+      // Open overlays stay interactive; hidden ones are display:none. The
+      // fullscreen image viewer sits ABOVE modals (z-popover) and is the only
+      // thing a phone user can touch while it's up — inert here would leave
+      // no way to close it (no Escape key on touch devices).
+      makeInert = false;
     } else if (el === authEl) {
       makeInert = anyOverlay; // EULA modal can sit above the auth screen
     } else {

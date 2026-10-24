@@ -2083,6 +2083,29 @@ test.describe('Watch preview modal structure (mocked)', () => {
     await expect(page.locator('#wishlist-modal')).toBeVisible();
   });
 
+  test('viewer opened above a modal stays tappable: close button works (inert regression)', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(img => {
+      previewWatch({ id: 'test', brand: 'Rolex', name: 'Submariner', ref: '', url: '', image: img, color: '#1a1a2e' });
+    }, TINY_IMG);
+    await page.locator('#wpm-thumb img.img-thumb-tap').click();
+
+    const viewer = page.locator('.img-viewer-overlay');
+    await expect(viewer).toBeVisible();
+    // The modal-open inert sync must never mark the viewer inert — on touch
+    // devices that leaves no way to close it (no Escape key on a phone).
+    await expect(viewer).not.toHaveAttribute('inert', '');
+
+    // Close by tapping the X — the only path a phone user has besides swipe
+    await viewer.locator('.img-viewer-close').click({ timeout: 3000 });
+    await expect(viewer).toHaveCount(0);
+    await expect(page.locator('#watch-preview-modal')).toBeVisible();
+  });
+
   test('edit-watch modal with no photo shows no thumbnail', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
