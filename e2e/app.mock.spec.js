@@ -2012,6 +2012,88 @@ test.describe('Watch preview modal structure (mocked)', () => {
     const style = await linkBtn.getAttribute('style');
     expect(style).toContain('outline:none');
   });
+
+  const TINY_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+  test('preview thumbnail opens fullscreen viewer; Escape closes only the viewer', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(img => {
+      previewWatch({ id: 'test', brand: 'Rolex', name: 'Submariner', ref: '', url: '', image: img, color: '#1a1a2e' });
+    }, TINY_IMG);
+    await expect(page.locator('#watch-preview-modal')).toBeVisible();
+
+    const thumb = page.locator('#wpm-thumb img.img-thumb-tap');
+    await expect(thumb).toBeVisible();
+    await expect(thumb).toHaveAttribute('role', 'button');
+    await thumb.click();
+
+    const viewer = page.locator('.img-viewer-overlay');
+    await expect(viewer).toBeVisible();
+    await expect(viewer.locator('.img-viewer-media-slot img')).toHaveAttribute('src', TINY_IMG);
+
+    // Escape closes the viewer but must leave the preview modal open underneath
+    await page.keyboard.press('Escape');
+    await expect(viewer).toHaveCount(0);
+    await expect(page.locator('#watch-preview-modal')).toBeVisible();
+  });
+
+  test('edit-watch modal shows a tappable thumbnail that opens the viewer', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(img => {
+      watches[0].image = img;
+      openEditWatch(watches[0].id);
+    }, TINY_IMG);
+    await expect(page.locator('#watch-modal')).toBeVisible();
+
+    const thumb = page.locator('#w-img-thumb img.img-thumb-tap');
+    await expect(thumb).toBeVisible();
+    await thumb.click();
+    await expect(page.locator('.img-viewer-overlay')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.img-viewer-overlay')).toHaveCount(0);
+    await expect(page.locator('#watch-modal')).toBeVisible();
+  });
+
+  test('edit-wishlist modal shows a tappable thumbnail that opens the viewer', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(img => {
+      wishlist.push({ id: 'wl-thumb-test', brand: 'Omega', name: 'Seamaster', image: img });
+      openEditWishlist('wl-thumb-test');
+    }, TINY_IMG);
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+
+    const thumb = page.locator('#wl-img-thumb img.img-thumb-tap');
+    await expect(thumb).toBeVisible();
+    await thumb.click();
+    await expect(page.locator('.img-viewer-overlay')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.img-viewer-overlay')).toHaveCount(0);
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+  });
+
+  test('edit-watch modal with no photo shows no thumbnail', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(() => openEditWatch(watches[0].id)); // image: null in fixtures
+    await expect(page.locator('#watch-modal')).toBeVisible();
+    await expect(page.locator('#w-img-thumb img')).toHaveCount(0);
+    await expect(page.locator('#w-change-photo-btn')).toHaveText('Add photo');
+  });
 });
 
 // ── Badge system always on (mocked) ────────────────────────────────────

@@ -1729,6 +1729,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wpm-modal { max-width: var(--size-90); }
     .wpm-hero { width: 100%; height: var(--size-40); display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--surface2); overflow: hidden; margin-bottom: var(--space-3-5); }
     .wpm-hero img { width: 100%; height: 100%; object-fit: contain; }
+    /* Tappable watch thumbnail — opens the fullscreen image viewer */
+    .img-thumb-tap { width: var(--size-24); height: var(--size-24); object-fit: contain; border-radius: var(--radius-btn); flex-shrink: 0; cursor: pointer; }
     .wpm-actions { flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
     .wpm-actions .btn { width: 100%; justify-content: center; }
 
@@ -2759,6 +2761,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="u-maxh-60vh" style="overflow-y:auto;">
       <div class="stack-3">
         <span class="eyebrow eyebrow-muted">October 2026</span>
+      </div>
+      <div class="stack-3">
+        <div class="item-title">Tap a Photo to See It Full Screen</div>
+        <div class="body-muted">Watch photos are now visible everywhere you open a watch &#8212; and tappable. Open a watch from your <strong>Collection</strong> or <strong>Wishlist</strong> and its photo sits at the top; in the <strong>Feed</strong>, a watch&#8217;s info card shows its photo too. Tap any of them to see the picture full screen &#8212; swipe down or tap outside to close.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">Watches <span class="tag-beta">Beta</span></div>
@@ -4031,6 +4037,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Collection Features</div>
         <div class="help-grid2">
           <div class="help-mini-card">
+            <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg> Full-Screen Photos</div>
+            <div class="help-mini-desc">Open any watch &#8212; from your Collection, your Wishlist, or a watch&#8217;s info card in the Feed &#8212; and its photo shows at the top. <strong>Tap the photo</strong> to see it full screen; swipe down or tap outside to close.</div>
+          </div>
+          <div class="help-mini-card">
             <div class="help-mini-title row-tight"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
             <div class="help-mini-desc">The toggle in the Collection header cycles <strong>cards → gallery → compact</strong>. The gallery is an images-only grid; <strong>compact</strong> shrinks it to tiny tiles so the whole collection fits on one screen (touch and hold a tile for the name). Both follow your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
           </div>
@@ -4962,9 +4972,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- ── Identity strip (non-collapsible) ── -->
     <div id="edit-identity-strip" style="display:none;">
-      <div id="edit-id-name" class="u-fw-medium u-lh-snug u-fs-md u-c-text"></div>
-      <div id="edit-id-sub" class="text-meta u-lh-snug u-mt-px"></div>
-      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" class="text-caption u-ff-inherit u-cur-pointer u-mt-1-5 u-bg-transparent u-bd-0p5px-solid-border u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
+      <div class="row-start-lg">
+        <div class="grow-clip">
+          <div id="edit-id-name" class="u-fw-medium u-lh-snug u-fs-md u-c-text"></div>
+          <div id="edit-id-sub" class="text-meta u-lh-snug u-mt-px"></div>
+          <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" class="text-caption u-ff-inherit u-cur-pointer u-mt-1-5 u-bg-transparent u-bd-0p5px-solid-border u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
+        </div>
+        <div id="w-img-thumb"></div>
+      </div>
       <div class="u-bdb-0p5px-solid-border u-mt-2-5 u-mb-3"></div>
     </div>
     <div id="wm-also-owned" class="u-cur-pointer u-mt-0 u-mr-0 u-mb-3 u-ml-0 u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-border u-r-btn u-fs-base" style="display:none;" role="button" tabindex="0"></div>
@@ -5419,7 +5434,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="wl-img-preview" style="display:none;">
       <img id="wl-img-el" src="" alt="" style="display:none;">
     </div>
-    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" class="text-caption u-ff-inherit u-cur-pointer u-mt-1-5 u-mb-2-5 u-bg-transparent u-bd-0p5px-solid-border u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
+    <div class="row-start-lg">
+      <div class="grow-clip">
+        <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" class="text-caption u-ff-inherit u-cur-pointer u-mt-1-5 u-mb-2-5 u-bg-transparent u-bd-0p5px-solid-border u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-r-sm">Add photo</button>
+      </div>
+      <div id="wl-img-thumb"></div>
+    </div>
 
     <div class="form-row">
       <div class="form-group">
@@ -8229,7 +8249,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.22.24';
+const APP_VERSION = '24.09.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25576,12 +25596,15 @@ function closeWatchModal() {
 /* ── Watch modal photo preview ── */
 function renderWatchModalImg() {
   const img  = document.getElementById('w-img-preview');
+  const thumb = document.getElementById('w-img-thumb');
   const changeBtn = document.getElementById('w-change-photo-btn');
   if (wPendingImage) {
     if (img) img.src = wPendingImage;
+    if (thumb) thumb.innerHTML = `<img src="${escHtml(wPendingImage)}" alt="" class="img-thumb-tap" role="button" tabindex="0" aria-label="View photo full screen" onclick="openImageViewer([this.src],0)" onerror="this.parentElement.innerHTML=''">`;
     if (changeBtn) changeBtn.textContent = 'Change photo';
   } else {
     if (img) img.src = '';
+    if (thumb) thumb.innerHTML = '';
     if (changeBtn) changeBtn.textContent = 'Add photo';
   }
 }
@@ -30848,7 +30871,7 @@ function previewWatch(w) {
 
   const thumbEl = document.getElementById('wpm-thumb');
   if (w.image) {
-    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" alt="${escAttr(((w.brand||'') + ' ' + (w.name||'')).trim())}" style="width:var(--size-24);height:var(--size-24);object-fit:contain;border-radius:var(--radius-btn);flex-shrink:0;" onerror="this.parentElement.innerHTML=''">`;
+    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" alt="${escAttr(((w.brand||'') + ' ' + (w.name||'')).trim())}" class="img-thumb-tap" role="button" tabindex="0" aria-label="View photo full screen" onclick="openImageViewer([this.src],0)" onerror="this.parentElement.innerHTML=''">`;
   } else {
     thumbEl.innerHTML = '';
   }
@@ -31325,8 +31348,10 @@ function renderWlModalImg(existingSrc) {
   }
   const src = wlRemoveImage ? null : (wlPendingImage || existingSrc);
   const img = document.getElementById('wl-img-el');
+  const thumb = document.getElementById('wl-img-thumb');
   const changeBtn = document.getElementById('wl-change-photo-btn');
   if (img) img.src = src || '';
+  if (thumb) thumb.innerHTML = src ? `<img src="${escHtml(src)}" alt="" class="img-thumb-tap" role="button" tabindex="0" aria-label="View photo full screen" onclick="openImageViewer([this.src],0)" onerror="this.parentElement.innerHTML=''">` : '';
   if (changeBtn) changeBtn.textContent = src ? 'Change photo' : 'Add photo';
 }
 
@@ -31852,6 +31877,9 @@ document.addEventListener('click', e => {
 // Escape key closes the topmost open modal
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  // The fullscreen image viewer sits above any modal and handles its own
+  // Escape — don't also close the modal underneath it.
+  if (document.querySelector('.img-viewer-overlay')) return;
   const open = [...document.querySelectorAll('.overlay:not(.hidden)')];
   if (!open.length) return;
   const top = open[open.length - 1];
