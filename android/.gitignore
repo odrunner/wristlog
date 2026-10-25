@@ -4,3 +4,7 @@ build/
 .idea/
 *.iml
 .kotlin/
+# Release signing — never commit the key or its passwords
+keystore.properties
+*.jks
+*.keystore

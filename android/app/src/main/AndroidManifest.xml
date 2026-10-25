@@ -16,6 +16,8 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="WRotate"
         android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <!-- The shell is the launcher: a WebView over live wrotate.com. configChanges keeps the

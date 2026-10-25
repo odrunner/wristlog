@@ -1,6 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// Release signing is read from android/keystore.properties (gitignored; see
+// keystore.properties.example). Absent (CI / a dev without the key) → debug builds still work and
+// `release` is simply unsigned.
+val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let {
+    Properties().apply { load(FileInputStream(it)) }
 }
 
 android {
@@ -12,7 +22,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0"
         // Capability version on the shared iOS numbering line (NOT the Play Store versionName),
         // injected as window._nativeAppVersion so the measurement gates (>=2.0/2.1/2.3) clear.
         buildConfigField("String", "NATIVE_CAPABILITY_VERSION", "\"2.10\"")
@@ -20,6 +30,24 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    signingConfigs {
+        if (keystoreProps != null) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     compileOptions {
