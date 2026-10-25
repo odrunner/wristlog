@@ -8,8 +8,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.MediaStore
 import android.util.Log
 import android.view.WindowManager
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -18,9 +21,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.FileProvider
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wrotate.engine.TimegrapherCore
 import org.json.JSONObject
+import java.io.File
 
 /**
  * The WRotate Android shell: one Activity hosting a WebView that loads live wrotate.com, mirroring
@@ -42,6 +47,23 @@ class ShellActivity : ComponentActivity() {
     private lateinit var measurement: MeasurementController
     private lateinit var authHandler: AuthHandler
     private var pendingStartJson: String? = null
+
+    // WebView file chooser (add-watch-photo / avatar / share-to-feed file inputs).
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraImageUri: Uri? = null
+    private val fileChooser =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val cb = filePathCallback; filePathCallback = null
+            if (cb == null) return@registerForActivityResult
+            val uris: Array<Uri>? = when {
+                result.resultCode != RESULT_OK -> null
+                result.data?.data != null || result.data?.clipData != null ->
+                    WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+                cameraImageUri != null -> arrayOf(cameraImageUri!!) // camera wrote to our uri; data is null
+                else -> null
+            }
+            cb.onReceiveValue(uris)
+        }
     private val micPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val json = pendingStartJson; pendingStartJson = null
@@ -78,6 +100,17 @@ class ShellActivity : ComponentActivity() {
                     return false
                 }
             }
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    view: WebView,
+                    callback: ValueCallback<Array<Uri>>,
+                    params: FileChooserParams,
+                ): Boolean {
+                    filePathCallback?.onReceiveValue(null)
+                    filePathCallback = callback
+                    return launchPhotoChooser()
+                }
+            }
         }
 
         refresh = SwipeRefreshLayout(this).apply {
@@ -112,6 +145,40 @@ class ShellActivity : ComponentActivity() {
         val data = intent?.data ?: return
         if (data.scheme == "wrotate" && data.host == "auth-callback") {
             authHandler.onCallback(data.toString())
+        }
+    }
+
+    private fun launchPhotoChooser(): Boolean {
+        val content = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        val camera = buildCameraIntent()
+        val chooser = Intent(Intent.ACTION_CHOOSER).apply {
+            putExtra(Intent.EXTRA_INTENT, content)
+            putExtra(Intent.EXTRA_TITLE, "Add a photo")
+            if (camera != null) putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
+        }
+        return try {
+            fileChooser.launch(chooser)
+            true
+        } catch (e: Exception) {
+            filePathCallback?.onReceiveValue(null); filePathCallback = null
+            false
+        }
+    }
+
+    private fun buildCameraIntent(): Intent? {
+        val capture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        if (capture.resolveActivity(packageManager) == null) return null
+        return try {
+            val file = File.createTempFile("capture_", ".jpg", cacheDir)
+            cameraImageUri = FileProvider.getUriForFile(this, "com.wrotate.app.fileprovider", file)
+            capture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+            capture.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            capture
+        } catch (e: Exception) {
+            null
         }
     }
 
