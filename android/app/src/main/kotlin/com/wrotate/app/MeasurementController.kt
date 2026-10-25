@@ -24,25 +24,32 @@ class MeasurementController(
     private val applyTuning: (Tuning) -> Unit = core::setTuning,
 ) {
     private val pending = AtomicReference<Tuning?>(null)
+    @Volatile private var running = false
 
-    /** Entry point for the `timegrapher` handler; parses the action and dispatches. */
+    /** Entry point for the `timegrapher` handler; parses the action and dispatches. Never throws. */
     fun handleTimegrapherMessage(json: String) {
-        val o = JSONObject(json)
-        when (o.optString("action")) {
-            "ping" -> emit(BridgeMessages.pong())
-            "start" -> start(o.optInt("bph", 28800))
-            "stop" -> stop()
-            "tuning" -> enqueueTuning(parseTuning(o))
-            // tg mode ignores sensitivity; piezo is not ported.
-            "sensitivity", "tuningPiezo" -> {}
+        try {
+            val o = JSONObject(json)
+            when (o.optString("action")) {
+                "ping" -> emit(BridgeMessages.pong())
+                "start" -> start(o.optInt("bph", 28800))
+                "stop" -> stop()
+                "tuning" -> enqueueTuning(parseTuning(o))
+                // tg mode ignores sensitivity; piezo is not ported.
+                "sensitivity", "tuningPiezo" -> {}
+            }
+        } catch (e: Exception) {
+            emit(BridgeMessages.error("Measurement error: ${e.message ?: "bad request"}"))
         }
     }
 
     fun start(bph: Int) {
+        if (running) stop() // never run two sessions on one core
         if (!capture.open()) {
             emit(BridgeMessages.error("Microphone unavailable. Allow it in Settings and try again."))
             return
         }
+        running = true
         core.onUpdate = { u -> emit(BridgeMessages.updateEvent(u)) }
         // Android always runs the validated tg engine (Standard retired); source/algo are vestigial.
         core.start(bph, true, capture.sampleRate)
@@ -66,9 +73,17 @@ class MeasurementController(
     }
 
     fun stop() {
-        capture.stop()
-        val r = core.stop()
+        if (!running) return
+        val exited = capture.stop()
+        if (!exited) {
+            // The capture thread is still alive (HAL stall). Touching the core now would race
+            // core.process on that thread — leave the session marked running and surface it.
+            emit(BridgeMessages.error("Could not stop the microphone cleanly. Reopen the app to measure again."))
+            return
+        }
+        running = false
         onMeasuringChange(false)
+        val r = core.stop()
         emit(BridgeMessages.stopped(r))
     }
 

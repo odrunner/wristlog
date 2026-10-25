@@ -65,7 +65,20 @@ object BridgeMessages {
 
     private fun num(x: Double?): String = x?.toString() ?: "null"
 
-    private fun str(s: String?): String =
-        if (s == null) "null"
-        else "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\""
+    private fun str(s: String?): String {
+        if (s == null) return "null"
+        val sb = StringBuilder("\"")
+        for (c in s) {
+            when {
+                c == '\\' -> sb.append("\\\\")
+                c == '"' -> sb.append("\\\"")
+                c == '\n' -> sb.append("\\n")
+                c == '\r' -> sb.append("\\r")
+                c == '\t' -> sb.append("\\t")
+                c < ' ' -> sb.append("\\u").append("%04x".format(c.code))
+                else -> sb.append(c)
+            }
+        }
+        return sb.append("\"").toString()
+    }
 }

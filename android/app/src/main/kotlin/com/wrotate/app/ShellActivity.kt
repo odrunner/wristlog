@@ -22,6 +22,8 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wrotate.engine.TimegrapherCore
 import org.json.JSONObject
@@ -29,10 +31,10 @@ import java.io.File
 
 /**
  * The WRotate Android shell: one Activity hosting a WebView that loads live wrotate.com, mirroring
- * the iOS WKWebView. It injects the native bridge shim (see [buildBridgeScript]) at every page
- * start so the page's existing measurement/haptic/auth JS runs unchanged, and returns native
- * results to the page via [callJs]. v1 handles the `haptic` handler here; `timegrapher` and `auth`
- * are forwarded to hooks wired in by later tasks ([onTimegrapher], [onAuth]).
+ * the iOS WKWebView. It injects the native bridge shim (see [buildBridgeScript]) at every wrotate.com
+ * page start so the page's existing measurement/haptic/auth JS runs unchanged, and returns native
+ * results via [callJs]. The bridge is gated to the wrotate.com origin; everything else opens
+ * externally, so no third-party page can reach the native interface (mirrors the iOS host policy).
  */
 class ShellActivity : ComponentActivity() {
 
@@ -41,12 +43,15 @@ class ShellActivity : ComponentActivity() {
     private var pausedAtMs = 0L
     private val idleReloadMs = 30 * 60 * 1000L
 
-    /** Set by the sign-in task to receive `auth` postMessages (raw JSON). */
-    var onAuth: ((String) -> Unit)? = null
-
     private lateinit var measurement: MeasurementController
     private lateinit var authHandler: AuthHandler
     private var pendingStartJson: String? = null
+
+    // The committed main-frame host; the bridge acts only while this is wrotate.com.
+    @Volatile private var currentHost: String? = null
+    // Hold-until-loaded for the OAuth session injection (cold-start return lands before the page).
+    @Volatile private var pageLoaded = false
+    private var pendingInjectJs: String? = null
 
     // WebView file chooser (add-watch-photo / avatar / share-to-feed file inputs).
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
@@ -67,7 +72,7 @@ class ShellActivity : ComponentActivity() {
     private val micPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val json = pendingStartJson; pendingStartJson = null
-            if (granted && json != null) measurement.handleTimegrapherMessage(json)
+            if (granted && json != null) safeHandle(json)
             else if (!granted) callJs(BridgeMessages.error("Microphone permission denied. Allow it in Settings to measure."))
         }
 
@@ -83,11 +88,18 @@ class ShellActivity : ComponentActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                     super.onPageStarted(view, url, favicon)
-                    view.evaluateJavascript(buildBridgeScript(BuildConfig.NATIVE_CAPABILITY_VERSION), null)
+                    pageLoaded = false
+                    currentHost = url?.let { Uri.parse(it).host }
+                    // Install the bridge shim only on our own origin.
+                    if (isWrotateHost(currentHost)) {
+                        view.evaluateJavascript(buildBridgeScript(BuildConfig.NATIVE_CAPABILITY_VERSION), null)
+                    }
                 }
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
                     refresh.isRefreshing = false
+                    pageLoaded = true
+                    pendingInjectJs?.let { view.evaluateJavascript(it, null); pendingInjectJs = null }
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val u = request.url
@@ -97,7 +109,13 @@ class ShellActivity : ComponentActivity() {
                         authHandler.startOAuth(u.toString())
                         return true
                     }
-                    return false
+                    // Keep our own origin in the WebView; send everything else to the browser so no
+                    // third-party page can host the native bridge (mirrors the iOS allow-list).
+                    if (isWrotateHost(u.host)) return false
+                    if (request.isForMainFrame) {
+                        try { startActivity(Intent(Intent.ACTION_VIEW, u)) } catch (e: Exception) { }
+                    }
+                    return true
                 }
             }
             webChromeClient = object : WebChromeClient() {
@@ -108,7 +126,7 @@ class ShellActivity : ComponentActivity() {
                 ): Boolean {
                     filePathCallback?.onReceiveValue(null)
                     filePathCallback = callback
-                    return launchPhotoChooser()
+                    return launchPhotoChooser(params)
                 }
             }
         }
@@ -116,8 +134,19 @@ class ShellActivity : ComponentActivity() {
         refresh = SwipeRefreshLayout(this).apply {
             addView(webView)
             setOnRefreshListener { webView.reload() }
+            // Only pull-to-refresh at the true top of the page, so a drag inside a scrolled
+            // modal (e.g. the compose-post sheet) does not reload and discard a draft.
+            setOnChildScrollUpCallback { _, _ -> webView.scrollY > 0 }
         }
         setContentView(refresh)
+
+        // targetSdk 35 is edge-to-edge by default; pad for the system bars and keyboard so the
+        // page's header/footer are not under the status bar / gesture nav / IME.
+        ViewCompat.setOnApplyWindowInsetsListener(refresh) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -128,11 +157,21 @@ class ShellActivity : ComponentActivity() {
         measurement = buildMeasurement()
         authHandler = AuthHandler(
             openCustomTab = { url -> CustomTabsIntent.Builder().build().launchUrl(this, Uri.parse(url)) },
-            inject = { js -> runOnUiThread { webView.evaluateJavascript(js, null) } },
+            inject = { js ->
+                runOnUiThread {
+                    if (pageLoaded) webView.evaluateJavascript(js, null) else pendingInjectJs = js
+                }
+            },
         )
 
-        if (savedInstanceState == null) webView.loadUrl(SITE_URL)
+        val restored = savedInstanceState != null && webView.restoreState(savedInstanceState) != null
+        if (!restored) webView.loadUrl(SITE_URL)
         handleAuthIntent(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        webView.saveState(outState) // survive process death on return from Custom Tab / camera
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -148,31 +187,34 @@ class ShellActivity : ComponentActivity() {
         }
     }
 
-    private fun launchPhotoChooser(): Boolean {
-        val content = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-            addCategory(Intent.CATEGORY_OPENABLE)
-        }
-        val camera = buildCameraIntent()
+    private fun launchPhotoChooser(params: WebChromeClient.FileChooserParams): Boolean {
+        cameraImageUri = null
+        val content = params.createIntent() // honors the input's acceptTypes + multiple
+        val types = params.acceptTypes.joinToString(",")
+        val wantsImage = types.isBlank() || types.contains("image") || types.contains("*/*")
+        val wantsVideo = types.contains("video") || types.contains("*/*")
+        val extras = ArrayList<Intent>()
+        if (wantsImage) buildCaptureIntent(MediaStore.ACTION_IMAGE_CAPTURE, ".jpg")?.let { extras.add(it) }
+        if (wantsVideo) buildCaptureIntent(MediaStore.ACTION_VIDEO_CAPTURE, ".mp4")?.let { extras.add(it) }
         val chooser = Intent(Intent.ACTION_CHOOSER).apply {
             putExtra(Intent.EXTRA_INTENT, content)
             putExtra(Intent.EXTRA_TITLE, "Add a photo")
-            if (camera != null) putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
+            if (extras.isNotEmpty()) putExtra(Intent.EXTRA_INITIAL_INTENTS, extras.toTypedArray())
         }
         return try {
             fileChooser.launch(chooser)
             true
         } catch (e: Exception) {
             filePathCallback?.onReceiveValue(null); filePathCallback = null
-            false
+            true // we consumed the callback; returning true keeps the WebView contract honored
         }
     }
 
-    private fun buildCameraIntent(): Intent? {
-        val capture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    private fun buildCaptureIntent(action: String, suffix: String): Intent? {
+        val capture = Intent(action)
         if (capture.resolveActivity(packageManager) == null) return null
         return try {
-            val file = File.createTempFile("capture_", ".jpg", cacheDir)
+            val file = File.createTempFile("capture_", suffix, cacheDir)
             cameraImageUri = FileProvider.getUriForFile(this, "com.wrotate.app.fileprovider", file)
             capture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
             capture.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -201,6 +243,7 @@ class ShellActivity : ComponentActivity() {
     /** Runs on the UI thread. A `start` needs the mic permission first; everything else passes through. */
     private fun routeTimegrapher(json: String) {
         val action = try { JSONObject(json).optString("action") } catch (e: Exception) { "" }
+        if (action == "stop") pendingStartJson = null // cancel a start waiting on the permission prompt
         if (action == "start" &&
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -208,7 +251,17 @@ class ShellActivity : ComponentActivity() {
             micPermission.launch(Manifest.permission.RECORD_AUDIO)
             return
         }
-        measurement.handleTimegrapherMessage(json)
+        safeHandle(json)
+    }
+
+    /** A thrown AudioRecord/parse error must surface as an event, never crash the process. */
+    private fun safeHandle(json: String) {
+        try {
+            measurement.handleTimegrapherMessage(json)
+        } catch (e: Exception) {
+            setKeepScreenOn(false)
+            callJs(BridgeMessages.error("Measurement error: ${e.message ?: "unknown"}"))
+        }
     }
 
     override fun onPause() {
@@ -223,6 +276,9 @@ class ShellActivity : ComponentActivity() {
         }
         pausedAtMs = 0L
     }
+
+    private fun isWrotateHost(host: String?): Boolean =
+        host == "wrotate.com" || host == "www.wrotate.com" || host == "api.wrotate.com"
 
     /** Keep the screen on while a measurement is active; the measurement bridge toggles it. */
     fun setKeepScreenOn(on: Boolean) {
@@ -248,10 +304,12 @@ class ShellActivity : ComponentActivity() {
     inner class AndroidBridge {
         @android.webkit.JavascriptInterface
         fun post(handler: String, json: String) {
+            // Only our own origin may reach native (a linked third-party page must not).
+            if (!isWrotateHost(currentHost)) return
             when (handler) {
                 "haptic" -> vibrate()
                 "timegrapher" -> runOnUiThread { routeTimegrapher(json) }
-                "auth" -> onAuth?.invoke(json)
+                "auth" -> {} // web→native auth notifications are unused on Android v1 (no push)
             }
         }
     }

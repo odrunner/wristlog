@@ -27,6 +27,11 @@ describe('nativeAtLeast', () => {
     globalThis.window = {};
     expect(nativeAtLeast('2.3')).toBe(false);
   });
+
+  it('is false in a non-browser context (no window)', () => {
+    delete globalThis.window;
+    expect(nativeAtLeast('2.3')).toBe(false);
+  });
 });
 
 describe('nativePlatform', () => {
@@ -44,6 +49,11 @@ describe('nativePlatform', () => {
 
   it('returns web when nothing native is set', () => {
     globalThis.window = {};
+    expect(nativePlatform()).toBe('web');
+  });
+
+  it('returns web in a non-browser context (no window)', () => {
+    delete globalThis.window;
     expect(nativePlatform()).toBe('web');
   });
 });

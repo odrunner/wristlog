@@ -58,6 +58,13 @@ class BridgeMessagesTest {
     }
 
     @Test
+    fun controlCharsAreEscapedSoTheEventStaysValidJson() {
+        val js = BridgeMessages.updateEvent(sampleUpdate(debug = listOf("a\u0001b\tc")))
+        assertTrue(!js.contains("\u0001"), "raw control char must not leak into the JS")
+        assertTrue(js.contains("\\u0001"), "control char escaped as \\u00XX")
+    }
+
+    @Test
     fun stoppedIsExactlyTheIosShape() {
         assertEquals(
             "{\"event\":\"stopped\",\"rate\":-1.9,\"beatError\":0.1,\"tickCount\":42}",

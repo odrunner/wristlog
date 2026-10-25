@@ -10,14 +10,14 @@ import kotlin.test.assertTrue
 
 class MeasurementControllerTest {
 
-    private class FakeCapture : CaptureHandle {
+    private class FakeCapture(var stopResult: Boolean = true) : CaptureHandle {
         override var sampleRate = 48000.0
         override val sourceTag = "unproc"
         private var cb: ((FloatArray, Int) -> Unit)? = null
         private val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "cap-thread") }
         override fun open() = true
         override fun start(onBuffer: (FloatArray, Int) -> Unit) { cb = onBuffer }
-        override fun stop() = true
+        override fun stop() = stopResult
         /** Run one buffer on the capture thread (blocking), return that thread. */
         fun deliverOneBuffer(): Thread {
             val seen = AtomicReference<Thread>()
@@ -60,5 +60,25 @@ class MeasurementControllerTest {
         assertEquals("cap-thread", applied.get().name)
         assertEquals(capThread.name, applied.get().name)
         assertTrue(applied.get() !== Thread.currentThread(), "not applied on the caller thread")
+    }
+
+    @Test
+    fun stopWithAStuckCaptureThreadDoesNotTouchTheCore() {
+        val cap = FakeCapture(stopResult = false); val events = mutableListOf<String>()
+        val c = controller(cap, events) {}
+        c.start(21600)
+        c.stop()
+        // Capture thread did not exit → core.stop() must be skipped (no second-thread race), so no
+        // "stopped" is emitted; the user is told instead.
+        assertTrue(events.none { it.contains("\"event\":\"stopped\"") }, "no stopped on stuck capture")
+        assertTrue(events.any { it.contains("\"event\":\"error\"") }, "error surfaced")
+    }
+
+    @Test
+    fun malformedMessageEmitsErrorNotCrash() {
+        val cap = FakeCapture(); val events = mutableListOf<String>()
+        val c = controller(cap, events) {}
+        c.handleTimegrapherMessage("{not valid json")
+        assertTrue(events.any { it.contains("\"event\":\"error\"") }, "error emitted, no throw")
     }
 }

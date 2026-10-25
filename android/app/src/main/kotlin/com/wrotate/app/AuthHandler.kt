@@ -21,7 +21,11 @@ object AuthCallback {
         }
     }
 
-    /** Pull access_token/refresh_token from the callback URL's fragment (or query); null if absent. */
+    // Supabase tokens are base64url/JWT (letters, digits, '.', '_', '-'). Anything else is an
+    // injection attempt — reject it rather than interpolate it into the setSession JS literal.
+    private val SAFE_TOKEN = Regex("^[A-Za-z0-9._-]+$")
+
+    /** Pull access_token/refresh_token from the callback URL's fragment (or query); null if absent or unsafe. */
     fun parse(callbackUrl: String): SessionTokens? {
         val frag = callbackUrl.substringAfter('#', "").ifEmpty { callbackUrl.substringAfter('?', "") }
         if (frag.isEmpty()) return null
@@ -30,15 +34,24 @@ object AuthCallback {
         }.toMap()
         val a = m["access_token"] ?: return null
         val r = m["refresh_token"] ?: return null
+        if (!SAFE_TOKEN.matches(a) || !SAFE_TOKEN.matches(r)) return null
         return SessionTokens(a, r)
     }
 
-    /** JS that hands the session to the page's Supabase client, mirroring the iOS injection. */
+    /**
+     * JS that hands the session to the page's Supabase client, mirroring the iOS injection — with
+     * the iOS fallback: if the client is not ready yet, push the tokens into the URL hash and
+     * reload so Supabase's detectSessionInUrl picks them up. Tokens are pre-validated (see [parse]),
+     * so the literal interpolation is safe.
+     */
     fun sessionInjectionJs(t: SessionTokens): String = """
 (function() {
   if (typeof db !== 'undefined' && db.auth) {
     db.auth.setSession({ access_token: '${t.accessToken}', refresh_token: '${t.refreshToken}' })
       .then(function(result) { if (!result.error) window.location.reload(); });
+  } else {
+    window.location.hash = 'access_token=${t.accessToken}&refresh_token=${t.refreshToken}';
+    window.location.reload();
   }
   return true;
 })();
@@ -54,15 +67,21 @@ class AuthHandler(
     private val openCustomTab: (String) -> Unit,
     private val inject: (String) -> Unit,
 ) {
-    private val delivered = HashSet<String>()
+    // Honor a callback only while a flow THIS app started is in progress, and only once. This is
+    // both the single-delivery invariant and the login-CSRF guard: the wrotate://auth-callback
+    // intent is exported+BROWSABLE, so any app can fire it, but a forged one arrives when we are
+    // not expecting and is dropped.
+    @Volatile private var expecting = false
 
     fun startOAuth(authorizeUrl: String) {
+        expecting = true
         openCustomTab(AuthCallback.rewriteRedirect(authorizeUrl))
     }
 
     fun onCallback(callbackUrl: String) {
+        if (!expecting) return
+        expecting = false
         val t = AuthCallback.parse(callbackUrl) ?: return
-        if (!delivered.add(t.accessToken)) return
         inject(AuthCallback.sessionInjectionJs(t))
     }
 }

@@ -9,6 +9,9 @@
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
+        <intent>
+            <action android:name="android.media.action.VIDEO_CAPTURE" />
+        </intent>
     </queries>
 
     <application
@@ -38,7 +41,7 @@
         <activity
             android:name=".HarnessActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
-            android:exported="true" />
+            android:exported="false" />
 
         <provider
             android:name=".LogProvider"

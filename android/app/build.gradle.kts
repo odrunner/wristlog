@@ -39,4 +39,6 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.browser:browser:1.8.0")
     testImplementation(kotlin("test-junit"))
+    // Real org.json so JVM unit tests exercise the message-parse path (android.jar stubs it).
+    testImplementation("org.json:json:20231013")
 }
