@@ -3,12 +3,12 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect } from 'vitest';
 
-// The engine dropdown (Pro V2 / Standard) moved from the Measure page to the
-// Advanced Settings page on 2026-08-23 — first step of retiring the Standard
-// engine. These guard the move: the selector must live on the settings page
-// only, be synced when the page opens, and swap the Pro V2 / Standard settings
-// sections live when changed. Engine-choice SEMANTICS (session-only, Pro V2
-// default) are covered in tests/tg-engine-default.test.js and must not change.
+// The Standard engine selector was RETIRED 2026-10-25 (it had moved from the Measure page
+// to Advanced Settings on 2026-08-23 as the first step). These guard the retirement: no
+// selector markup or choice plumbing may come back, while the Standard-only settings
+// sections stay in place as the fallback UI for pre-2.1 binaries, which have no Pro V2.
+// Engine semantics (_tgAlgo build fallback) live in tests/tg-engine-default.test.js.
+// The removed code is archived in docs/archive/standard-engine-selector-retired-2026-10-25.md.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
@@ -20,37 +20,29 @@ function fnBody(name) {
   return html.slice(start, html.indexOf('\n}', start));
 }
 
-describe('engine selector lives on the Advanced Settings page', () => {
-  it('renders exactly one selector, inside page-msr-settings', () => {
-    expect(html.split('id="tg-algo-sel"').length - 1).toBe(1);
-    const page = html.indexOf('id="page-msr-settings"');
-    const sel = html.indexOf('id="tg-algo-sel"');
-    const proV2Section = html.indexOf('id="msr-prov2-settings"');
-    expect(page).toBeGreaterThan(-1);
-    expect(sel).toBeGreaterThan(page);
-    expect(sel).toBeLessThan(proV2Section);
+describe('the Standard engine selector is retired', () => {
+  it('no selector markup or choice plumbing remains', () => {
+    for (const marker of ['id="tg-algo-sel"', 'id="msr-engine-section"', 'id="tg-algo-hint"',
+                          'function onTgAlgo(', '_tgAlgoSel']) {
+      expect(html).not.toContain(marker);
+    }
   });
 
-  it('openMsrSettings gates the section by build and mirrors the running engine', () => {
-    const body = fnBody('openMsrSettings');
-    expect(body).toContain('msr-engine-section');
-    expect(body).toContain('_proV2Available()');
-    expect(body).toMatch(/algoSel\.value = _tgAlgo\(\)/);
+  it('_tgAlgo is build-only: Pro V2 everywhere it exists', () => {
+    const body = fnBody('_tgAlgo');
+    expect(body).toContain("_proV2Available() ? 'tg' : 'original'");
   });
 
-  it('changing the engine swaps the settings sections live', () => {
-    // Without this, picking Standard on the settings page would keep showing
-    // Pro V2's precision cards until the page was closed and reopened.
-    expect(fnBody('onTgAlgo')).toContain('_msrSettingsApplyEngine()');
+  it('the settings page still swaps sections for pre-2.1 builds', () => {
+    expect(fnBody('openMsrSettings')).toContain('_msrSettingsApplyEngine()');
     const apply = fnBody('_msrSettingsApplyEngine');
     for (const id of ['msr-prov2-settings', 'msr-std-preset-section', 'msr-std-tuning-section']) {
       expect(apply).toContain(id);
     }
   });
 
-  it('the Measure page init no longer touches the selector', () => {
-    // The old measure-page block set the selector's style/value from Measure
-    // init; left behind, it would fight the settings page's availability gate.
-    expect(fnBody('initTgSourceSelector')).not.toContain('tg-algo-sel');
+  it('help and news no longer offer the Standard engine', () => {
+    expect(html).not.toMatch(/[Pp]ick <strong>Standard<\/strong>/);
+    expect(html).not.toContain('from the engine selector');
   });
 });

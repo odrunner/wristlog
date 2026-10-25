@@ -151,10 +151,11 @@ describe('preset changes reach users who already picked one', () => {
   });
 });
 
-// Pro V2 improves with every release, so a user who tried Standard once must not be frozen
-// on the older engine forever. Before 2026-08-02 the pick lived in localStorage and did.
-describe('engine choice resets to Pro V2 each app session', () => {
-  it('does not persist the choice to localStorage', () => {
+// The Standard engine was RETIRED 2026-10-25 — there is no engine choice any more. These
+// guard against any pick resurfacing (before 2026-08-02 a localStorage pick froze users on
+// the older engine; from then until retirement it was session-only).
+describe('engine choice is retired (Pro V2 only)', () => {
+  it('no engine pick is read from or written to localStorage', () => {
     expect(html).not.toContain("safeLS.set('tg_algo_sel'");
     expect(html).not.toContain("safeLS.get('tg_algo_sel')");
   });
@@ -163,26 +164,9 @@ describe('engine choice resets to Pro V2 each app session', () => {
     expect(fnBody('initTgSourceSelector')).toContain("safeLS.remove('tg_algo_sel')");
   });
 
-  it('defaults to Pro V2, honours an in-session pick, and forgets it on reload', () => {
-    // Mirrors _tgAlgo/onTgAlgo: module state, so a page load starts from null again.
-    const mk = () => {
-      let sel = null;
-      return {
-        algo: (available = true) => (!available ? 'original' : sel === 'original' ? 'original' : 'tg'),
-        pick: (v) => { sel = v; },
-      };
-    };
-    let e = mk();
-    expect(e.algo()).toBe('tg');               // fresh session defaults to Pro V2
-    e.pick('original');
-    expect(e.algo()).toBe('original');         // the pick holds within the session
-    e = mk();                                  // app relaunch / WebView reload
-    expect(e.algo()).toBe('tg');               // and is forgotten
-  });
-
-  it('still falls back to Standard when the build has no Pro V2', () => {
+  it('falls back to Standard only when the build has no Pro V2', () => {
     const body = fnBody('_tgAlgo');
-    expect(body).toContain("if (!_proV2Available()) return 'original';");
+    expect(body).toContain("_proV2Available() ? 'tg' : 'original'");
   });
 });
 
