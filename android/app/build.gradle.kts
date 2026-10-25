@@ -13,6 +13,13 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        // Capability version on the shared iOS numbering line (NOT the Play Store versionName),
+        // injected as window._nativeAppVersion so the measurement gates (>=2.0/2.1/2.3) clear.
+        buildConfigField("String", "NATIVE_CAPABILITY_VERSION", "\"2.10\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {
@@ -27,5 +34,8 @@ kotlin {
 
 dependencies {
     implementation(project(":engine"))
+    implementation("androidx.activity:activity:1.9.3")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("androidx.browser:browser:1.8.0")
     testImplementation(kotlin("test-junit"))
 }
