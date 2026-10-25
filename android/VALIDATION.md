@@ -55,3 +55,40 @@ A single same-position live A/B (watch dial-up, unmoved, Pixel then iPhone) woul
 end-to-end and rule out any `vrec` capture bias in the live rate. The replay cannot settle that,
 since the recording already went through `vrec`; but rate derives from tick timing, which voice
 processing does not systematically shift, and the clean convergence + low beat error here bear that out.
+
+---
+
+# Shell app (Plan 2) — status
+
+The Android shell (WebView over wrotate.com + measurement bridge + sign-in + photo uploads)
+was built task-by-task with unit tests and clean `:app:assembleDebug`:
+- Web §3 gates (nativeAtLeast/nativePlatform): `npm test` green.
+- Bridge script, Update→JSON contract, capture-thread tuning marshal, OAuth callback parse/
+  rewrite/inject + single-delivery: `:app:testDebugUnitTest` green.
+- Framework-bound pieces (WebView host, Custom Tab, file chooser) are build-verified.
+
+**On-device smoke (Task 6) is pending the owner** — same as Plan 1's Task 10, it needs a real
+Pixel. The checklist is in `android/README.md` ("On-device smoke"). Until it runs, the shell is
+proven to compile and its logic is unit-tested, but the live WebView/bridge/OAuth/file-chooser
+paths are unverified on hardware.
+
+## Shell app (Plan 2) — on-device smoke PASSED (2026-10-25, Pixel 7)
+
+Ran on the Pixel 7. All core paths work; the device run caught and fixed real bugs.
+- **Measurement + save:** Pixel read the Hamilton at +0.9 s/day, amplitude 287, beat error 0.67 ms
+  (21600 bph), saved correctly to `measurement_sessions` + `timegrapher_results` (rate/amp/BE all
+  intact) — the full mic→engine→bridge→web→Supabase path. In the Hamilton's normal range vs prior
+  iOS readings (positional variation).
+- **Sign-in:** Google completes via the Custom Tab and the session lands in the app; the Apple flow
+  launches correctly (owner didn't finish it — forgotten password, not a bug).
+- **UI:** modals, nav, and layout render correctly; top/bottom insets correct.
+
+Bugs found and fixed on device (committed on the branch):
+- `100vh` resolved to 0 (every vh-sized modal collapsed) because the WebView was inside
+  SwipeRefreshLayout, a nested-scroll parent — removed it (also drops the draft-discarding
+  pull-to-refresh the review flagged).
+- Edge-to-edge insets: content under the status/gesture bars, then over-padded — now a FrameLayout
+  wrapper pads sides/nav/keyboard and the page's own env(safe-area-inset-top) handles the top.
+
+Not re-verified on device (fine, low-risk): process-death restore, external-link-opens-externally,
+foreign-WAV replay. Pull-to-refresh is removed (idle-reload + back-nav remain; no manual refresh).

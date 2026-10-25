@@ -1,29 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Package visibility (targetSdk 30+): lets the file chooser resolve a camera app. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.VIDEO_CAPTURE" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="false"
         android:label="WRotate"
         android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-        <!-- configChanges: a rotation must not recreate the activity mid-session (the
-             capture thread and core belong to this instance). -->
+        <!-- The shell is the launcher: a WebView over live wrotate.com. configChanges keeps the
+             activity (and its capture thread) alive across rotation/ui changes mid-measurement. -->
         <activity
-            android:name=".HarnessActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:name=".ShellActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- OAuth Custom Tab return: wrotate://auth-callback#access_token=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wrotate" android:host="auth-callback" />
+            </intent-filter>
         </activity>
+        <!-- Kept for engine debugging; reachable via `adb shell am start`, no longer the launcher. -->
+        <activity
+            android:name=".HarnessActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="false" />
 
         <provider
             android:name=".LogProvider"
             android:authorities="com.wrotate.app.logs"
             android:exported="false"
             android:grantUriPermissions="true" />
+
+        <!-- Camera-capture temp files handed to the WebView file chooser. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.wrotate.app.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

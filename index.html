@@ -6186,7 +6186,7 @@ function _sendBootTiming() {
     // — and this runs after the feed has rendered, so it never competes with
     // the load it measures. Spec: sql/2026-09-18-boot-timings.sql.
     if (currentUser) {
-      db.rpc('record_boot_timing', { p: { ...payload, platform: _tgHasNative() ? 'ios' : 'web' } })
+      db.rpc('record_boot_timing', { p: { ...payload, platform: nativePlatform() } })
         .then(({ error }) => { if (error) console.warn('[WRotate] record_boot_timing:', error.message); }, () => {});
     }
   } catch (e) { /* telemetry must never break boot */ }
@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.09.46';
+const APP_VERSION = '25.10.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8366,6 +8366,23 @@ function iosAtLeast(ver, min) {
     if (x !== y) return x > y;
   }
   return true;
+}
+
+// Platform-neutral capability gate. Reads _nativeAppVersion (set by the iOS and
+// Android shells on the shared version line), falling back to _iosAppVersion so
+// iOS builds predating the shell edit keep passing. VERBATIM mirror in wrotate_test.js.
+function nativeAtLeast(min) {
+  var w = (typeof window !== 'undefined') ? window : null;
+  var ver = (w && (w._nativeAppVersion || w._iosAppVersion)) || '';
+  return iosAtLeast(ver, min);
+}
+
+// Which shell is running: the explicit flag, else inferred iOS, else plain web.
+function nativePlatform() {
+  var w = (typeof window !== 'undefined') ? window : null;
+  if (w && w._nativePlatform) return w._nativePlatform;
+  if (w && w._iosAppVersion) return 'ios';
+  return 'web';
 }
 
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
@@ -32200,7 +32217,7 @@ function _pzMode() { return safeLS.get('pz_mode') === 'measurement' ? 'measureme
 // docs/archive/standard-engine-selector-retired-2026-10-25.md.
 // (There is no web engine — both engines live in the native app, so no flag can
 // force Pro V2 outside a 2.1+ build. The tg_dev_knobs flag only shows the raw knob panel.)
-function _native21() { return _tgHasNative() && iosAtLeast(window._iosAppVersion, '2.1'); }
+function _native21() { return _tgHasNative() && nativeAtLeast('2.1'); }
 function _proV2Available() { return _native21(); }
 function _tgAlgo() {
   return _proV2Available() ? 'tg' : 'original';   // 'original' only where Pro V2 isn't in the binary
@@ -32703,7 +32720,7 @@ window._tgNativeCallback = function(data) {
       const _isProV2 = isMsr && _tgAlgo() === 'tg';
       let _beShown = null;
       if (_isProV2) {
-        if (iosAtLeast(window._iosAppVersion, '2.3') && data.beatError != null) _beShown = data.beatError;
+        if (nativeAtLeast('2.3') && data.beatError != null) _beShown = data.beatError;
       } else {
         _beShown = _msrStableBeatError(data);
       }
@@ -33986,7 +34003,7 @@ let _q2LastBand = null;   // residual band (s/day) from the last incrSettle — 
 // The admin tg_quality_v2 flag forces it on for testing on any build.
 const _TG_V2_MIN_BUILD = '2.0';
 function _tgV2Convergence() {
-  return featureFlag('tg_quality_v2') || iosAtLeast(window._iosAppVersion, _TG_V2_MIN_BUILD);
+  return featureFlag('tg_quality_v2') || nativeAtLeast(_TG_V2_MIN_BUILD);
 }
 
 // Quick/Accurate -> incrSettle params; every field overridable by a q2_* localStorage knob (live tuning).
