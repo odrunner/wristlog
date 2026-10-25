@@ -56,7 +56,7 @@ class AudioCapture(
     private val core: TimegrapherCore,
     private val log: (String) -> Unit,
     private val onState: (String) -> Unit,
-) {
+) : CaptureHandle {
     companion object {
         const val REQUESTED_RATE = 48000
         const val FRAMES = 4096
@@ -67,7 +67,7 @@ class AudioCapture(
     private val audioManager = appContext.getSystemService(AudioManager::class.java)
 
     val source: Int
-    val sourceTag: String
+    override val sourceTag: String
 
     init {
         val supported = audioManager.getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED) == "true"
@@ -77,7 +77,7 @@ class AudioCapture(
     }
 
     /** The rate the current recorder actually delivers (48000 unless the device rejected it). */
-    @Volatile var sampleRate: Double = 0.0
+    @Volatile override var sampleRate: Double = 0.0
         private set
 
     // Handed between threads only across Thread.start / Thread.join (see the contract above).
@@ -110,7 +110,7 @@ class AudioCapture(
      * Builds the recorder on the caller's thread so [sampleRate] is known on return; the
      * caller then passes it to core.start. Returns false (with a log line) on failure.
      */
-    fun open(): Boolean {
+    override fun open(): Boolean {
         if (appContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             log("[TGAUDIO OPEN FAILED] RECORD_AUDIO not granted")
             return false
@@ -126,7 +126,7 @@ class AudioCapture(
     }
 
     /** Starts recording and the capture thread. [onBuffer] receives mono floats [0, n) on that thread. */
-    fun start(onBuffer: (FloatArray, Int) -> Unit) {
+    override fun start(onBuffer: (FloatArray, Int) -> Unit) {
         val r = checkNotNull(record) { "open() first" }
         synchronized(lock) { running = true; focusLost = false; lossEvents = 0 }
         requestFocus() // after the reset, so a loss delivered right away is not wiped
@@ -141,7 +141,7 @@ class AudioCapture(
      * Stops capture. Returns true once the capture thread has exited (after which the caller
      * may touch the core again); false if it did not exit within 2 s.
      */
-    fun stop(): Boolean {
+    override fun stop(): Boolean {
         synchronized(lock) { running = false; lock.notifyAll() }
         val t = thread
         thread = null

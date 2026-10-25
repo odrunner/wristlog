@@ -1,16 +1,22 @@
 package com.wrotate.app
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import android.view.WindowManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.wrotate.engine.TimegrapherCore
+import org.json.JSONObject
 
 /**
  * The WRotate Android shell: one Activity hosting a WebView that loads live wrotate.com, mirroring
@@ -26,10 +32,17 @@ class ShellActivity : ComponentActivity() {
     private var pausedAtMs = 0L
     private val idleReloadMs = 30 * 60 * 1000L
 
-    /** Set by the measurement task to receive `timegrapher` postMessages (raw JSON). */
-    var onTimegrapher: ((String) -> Unit)? = null
     /** Set by the sign-in task to receive `auth` postMessages (raw JSON). */
     var onAuth: ((String) -> Unit)? = null
+
+    private lateinit var measurement: MeasurementController
+    private var pendingStartJson: String? = null
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val json = pendingStartJson; pendingStartJson = null
+            if (granted && json != null) measurement.handleTimegrapherMessage(json)
+            else if (!granted) callJs(BridgeMessages.error("Microphone permission denied. Allow it in Settings to measure."))
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +77,38 @@ class ShellActivity : ComponentActivity() {
             }
         })
 
+        measurement = buildMeasurement()
+
         if (savedInstanceState == null) webView.loadUrl(SITE_URL)
+    }
+
+    private fun buildMeasurement(): MeasurementController {
+        val core = TimegrapherCore(analysisExecutor = null)
+        val capture = AudioCapture(
+            this, core,
+            log = { line -> Log.i("WRotateTG", line) },
+            onState = { state -> callJs(BridgeMessages.interruption(state)) },
+        )
+        return MeasurementController(
+            core = core,
+            capture = capture,
+            emit = { json -> callJs(json) },
+            deviceModel = tuneSafeModel(Build.MODEL),
+            onMeasuringChange = { on -> setKeepScreenOn(on) },
+        )
+    }
+
+    /** Runs on the UI thread. A `start` needs the mic permission first; everything else passes through. */
+    private fun routeTimegrapher(json: String) {
+        val action = try { JSONObject(json).optString("action") } catch (e: Exception) { "" }
+        if (action == "start" &&
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingStartJson = json
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        measurement.handleTimegrapherMessage(json)
     }
 
     override fun onPause() {
@@ -106,7 +150,7 @@ class ShellActivity : ComponentActivity() {
         fun post(handler: String, json: String) {
             when (handler) {
                 "haptic" -> vibrate()
-                "timegrapher" -> onTimegrapher?.invoke(json)
+                "timegrapher" -> runOnUiThread { routeTimegrapher(json) }
                 "auth" -> onAuth?.invoke(json)
             }
         }
