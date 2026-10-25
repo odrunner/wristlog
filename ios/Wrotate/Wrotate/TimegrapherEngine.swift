@@ -1,7 +1,7 @@
 import AVFoundation
 import Accelerate
 
-// TG_ENGINE_REV: 1
+// TG_ENGINE_REV: 2
 /// Measures watch accuracy via Goertzel + autocorrelation at a known BPH.
 ///
 /// Algorithm: user provides BPH → we know the exact tick frequency.
@@ -213,6 +213,7 @@ class TimegrapherEngine {
     private var smoothedRate: Double? = nil
     private var lastUpdateLogRegN: Int = 0
     private var rateHistory: [(time: Double, rate: Double)] = []  // recent rates for stability check
+    private var lastRateSeenSec: Double = -1                      // wall time of the last non-nil rate (stability-honesty gap drop)
     private var regNMinimum: Int = 10                // minimum regression points before showing rate
     private var stabilityWindow: Double = 15.0       // seconds to check stability over
     private var stabilityThreshold: Double = 3.0     // s/day — rate must stay within this range
@@ -382,7 +383,8 @@ class TimegrapherEngine {
                     tgMaxWin: Double? = nil, tgAgree: Double? = nil,
                     tgPeriodFit: Int? = nil, tgHoldOnLock: Bool? = nil, tgAmpMin: Double? = nil,
                     tgConfirmBand: Double? = nil, tgGuardMode: Int? = nil,
-                    tgGateMaxRej: Double? = nil, tgAcquireMax: Double? = nil) {
+                    tgGateMaxRej: Double? = nil, tgAcquireMax: Double? = nil,
+                    tgStabFresh: Int? = nil, tgBphDecisive: Double? = nil) {
         if let v = tgPeriodFit, v >= 0, v <= 2 { self.tgPeriodFit = v }
         if let v = tgHoldOnLock { self.tgHoldOnLock = v }
         if let v = tgAmpMin, v >= 40, v <= 200 { tgAmpMinDeg = v }
@@ -392,6 +394,8 @@ class TimegrapherEngine {
         if let v = tgGuardMode, v >= 0, v <= 1 { self.tgGuardMode = v }
         if let v = tgGateMaxRej, v > 0, v <= 1 { self.tgGateMaxRej = v }
         if let v = tgAcquireMax, v >= 10, v <= 120 { self.tgAcquireMaxSec = v }
+        if let v = tgStabFresh, v >= 0, v <= 1 { self.tgStabFresh = v }
+        if let v = tgBphDecisive, v >= 1, v <= 5 { self.tgBphDecisive = v }
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         if let v = tgSigma, v > 0 { tgSigmaGate = v }
         if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
@@ -430,7 +434,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg) periodFit=\(self.tgPeriodFit) holdOnLock=\(self.tgHoldOnLock) ampMin=\(tgAmpMinDeg) confirmBand=\(self.tgConfirmBand) guardMode=\(self.tgGuardMode) gateMaxRej=\(self.tgGateMaxRej) acquireMax=\(self.tgAcquireMaxSec)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg) periodFit=\(self.tgPeriodFit) holdOnLock=\(self.tgHoldOnLock) ampMin=\(tgAmpMinDeg) confirmBand=\(self.tgConfirmBand) guardMode=\(self.tgGuardMode) gateMaxRej=\(self.tgGateMaxRej) acquireMax=\(self.tgAcquireMaxSec) stabFresh=\(self.tgStabFresh) bphDecisive=\(self.tgBphDecisive)")
     }
 
     // MARK: - Biquad HP filter
@@ -503,7 +507,7 @@ class TimegrapherEngine {
         recentPairDevs = []
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
         bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
-        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false; lastRateSeenSec = -1
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -1230,7 +1234,7 @@ class TimegrapherEngine {
                                         pendingTickCross = false; pendingTickPeakEnergy = 0; plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
                                         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
-                                        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
+                                        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false; lastRateSeenSec = -1
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
                                     lastTickCountCheck = tickCount
@@ -1274,8 +1278,15 @@ class TimegrapherEngine {
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
         let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
+        // Elapsed rewinds whenever tickStartSample moves forward (capture rebuild after a
+        // route change / interruption, or a recalibration restart). The stale markers then
+        // sit ahead of the clock and blank the tg rate + [TGALGO] for the prior session
+        // length (Android-port finding, 2026-10-25).
+        if lastTgComputeSec > wallElapsed { lastTgComputeSec = -1; lastTgLogSec = -1 }
         // tg rate is expensive (FFT over up to 16s of ring) — refresh at most ~2x/sec and cache.
+        var tgRateFresh = false
         if wallElapsed - lastTgComputeSec > 0.5 {
+            tgRateFresh = true
             lastTgComputeSec = wallElapsed
             tgRateCached = computeTgRate()
             // Fold + amplitude compute even when the toggle is off, so silent/shadow
@@ -1303,10 +1314,15 @@ class TimegrapherEngine {
         if let r = candidate {
             smoothedRate = r
             rateForUpdate = (r * 10).rounded() / 10
-            // Track rate history for stability detection
-            rateHistory.append((time: wallElapsed, rate: r))
-            // Prune old entries beyond stability window
-            rateHistory.removeAll { wallElapsed - $0.time > stabilityWindow + 5 }
+            lastRateSeenSec = wallElapsed
+            // Track rate history for stability detection. stability-honesty (tgStabFresh=1):
+            // the tg rate is cached ~0.5s, so counting it once per audio buffer lets a single
+            // reading accrue many "confirmations" — only a fresh compute may join the history.
+            if tgStabFresh == 0 || !useTgAlgo || tgRateFresh {
+                rateHistory.append((time: wallElapsed, rate: r))
+                // Prune old entries beyond stability window
+                rateHistory.removeAll { wallElapsed - $0.time > stabilityWindow + 5 }
+            }
         }
         // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
         if wallElapsed - lastTgLogSec > 2.0 {
@@ -1337,6 +1353,11 @@ class TimegrapherEngine {
                     isStable = spread <= effThresh
                 }
             }
+        }
+        // stability-honesty (tgStabFresh=1): the flag must not survive a rate gap — no rate
+        // for >2s means the engine lost the signal, and "stable" would describe stale data.
+        if tgStabFresh == 1 && isStable && lastRateSeenSec >= 0 && wallElapsed - lastRateSeenSec > 2.0 {
+            isStable = false
         }
         // T1/T3 (dark at ship defaults): a tg session cannot GAIN stability on an
         // unconfirmed lock, nor while the σ-gate is rejecting most windows. The rate
@@ -1417,10 +1438,10 @@ class TimegrapherEngine {
                 }
             }
 
-            // Require: (1) above threshold, (2) decisively better than runner-up (1.5x)
+            // Require: (1) above threshold, (2) decisively better than runner-up (tgBphDecisive, ship 1.5x)
             let elSec = Double(count) / ringSampleRate
-            debugLog("[TGAUTO BPH @ \(String(format: "%.1f", elSec))s] best=\(bestCandidate.bph) ratio=\(String(format: "%.2f", bestCandidate.ratio)) 2nd=\(String(format: "%.2f", secondBestRatio)) threshold=\(peakRatioThreshold) decisive=\(bestCandidate.ratio >= secondBestRatio * 1.5)")
-            if bestCandidate.ratio > Double(peakRatioThreshold) && (secondBestRatio < 1.0 || bestCandidate.ratio >= secondBestRatio * 1.5) {
+            debugLog("[TGAUTO BPH @ \(String(format: "%.1f", elSec))s] best=\(bestCandidate.bph) ratio=\(String(format: "%.2f", bestCandidate.ratio)) 2nd=\(String(format: "%.2f", secondBestRatio)) threshold=\(peakRatioThreshold) decisive=\(bestCandidate.ratio >= secondBestRatio * tgBphDecisive)")
+            if bestCandidate.ratio > Double(peakRatioThreshold) && (secondBestRatio < 1.0 || bestCandidate.ratio >= secondBestRatio * tgBphDecisive) {
                 targetBph = bestCandidate.bph
                 detectedBph = bestCandidate.bph
                 debugLog("[TGAUTO BPH LOCKED] \(bestCandidate.bph)")
@@ -1478,7 +1499,7 @@ class TimegrapherEngine {
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
         bphCorrectionOutliers = []
         // Note: bphCorrectionRejects intentionally NOT cleared — accumulates across recalibrations
-        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false; lastRateSeenSec = -1
         regPoints = []; regN = 0; totalPairsAccepted = 0
         // Start calibration: observe energy for 2s to learn tick amplitude before accepting ticks
         // Always calibrate for 2 seconds regardless of ring rate or JS-supplied value
@@ -1715,6 +1736,8 @@ class TimegrapherEngine {
     private var tgGuardMode = 0         // T2: harmonic-guard disagreement: 0 = median fallback (2.4), 1 = refuse (nil)
     private var tgGateMaxRej = 1.0      // T3: block convergence-GAIN while σ-gate reject fraction (last 10 s) exceeds this; >= 1 = off. Staged target: 0.5
     private var tgAcquireMaxSec = 15.0  // T4: pre-lock runway — zero-tick recals don't consume teardown attempts while tg is evaluating, until this wall time; 15 = off. Staged target: 45
+    private var tgStabFresh = 0         // stability-honesty (2026-10-25): 1 = only fresh tg computes join rateHistory and the stable flag drops across rate gaps; 0 = ship behaviour (every buffer re-counts the ~0.5s-cached rate, flag survives gaps)
+    private var tgBphDecisive = 1.5     // auto-BPH noise gate (2026-10-25): best candidate must beat the runner-up by this ratio before locking; 1.5 = ship behaviour
 
     // T1 state: a lock is CONFIRMED only when a rate measured over audio that shares zero
     // samples with the locking segment agrees within tgConfirmBand. Overlapping windows

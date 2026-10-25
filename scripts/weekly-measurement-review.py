@@ -102,23 +102,25 @@ LEDGER_CACHE = os.path.expanduser("~/.local/share/wrotate-measurement-changelog.
 # the knob exists in a shipped build (iOS 2.10 + the Android build). Remove a line once its
 # knob ships and the auto-picker/loop can trial it. Blockers below are why none has started yet.
 QUEUED_NATIVE_EXPERIMENTS = [
-    ("stability-honesty", "rateStable can latch on AGC-squashed audio at up to ~15 s/d off "
-     "(stability counts every buffer, not fresh readings; flag survives rate gaps). Needs a knob "
-     "to count only fresh readings + drop the flag across gaps. Ship FIRST (most user harm)."),
-    ("autobph-noise-gate", "Auto-BPH can lock 36000 on pure noise. Needs a stricter pre-lock "
-     "confidence knob (watch false-negatives on real 36000 watches)."),
-    ("phaselock-toggle", "psBE telemetry under-reads beat error ~14x at ship defaults (phase-lock "
-     "snaps ticks to prediction). phaseLock is ALREADY tunable on shipped builds — this one needs "
-     "only a ~5-line web trial, no new knob — but still queues behind the single running trial."),
+    ("phaselock-toggle", "READY to trial — start `tgknob_phaselock_1` (--start) when the slot "
+     "frees. Fleet control is OFF (the web payload has always sent phaseLock=false; verified "
+     "in field logs 2026-10-25 — the engine-source 'default ON' never reached users). Treatment "
+     "turns phase-locked tick selection ON; no new build needed. Check rollout-check.py's "
+     "psBE= dependency before starting."),
+    ("stability-honesty", "knob `tg_stabfresh` SHIPPED in code 2026-10-25 (TG_ENGINE_REV 2): "
+     "1 = count only fresh tg computes toward stability + drop the flag across rate gaps. "
+     "Trial `tgknob_stabfresh_1` once 2.10/Android builds have adoption. Ship FIRST (most user harm)."),
+    ("autobph-noise-gate", "knob `tg_bphdecisive` SHIPPED in code 2026-10-25 (TG_ENGINE_REV 2): "
+     "best candidate must beat the runner-up by this ratio (ship 1.5). Trial e.g. "
+     "`tgknob_bphdecisive_2` once builds have adoption (watch false-negatives on real 36000 watches)."),
 ]
-# NOT an experiment: the post-restart blank-rate bug is a deterministic defect with no accuracy
-# trade-off; ship it as a plain knob-guarded fix, don't burn a trial slot on it.
+# The post-restart blank-rate bug (tg rate dead for ~the prior session length after a capture
+# rebuild) was fixed PLAIN, no knob, 2026-10-25: the compute/log markers reset when elapsed rewinds.
 QUEUED_BLOCKERS = [
     "The loop judges/runs ONE trial at a time; the slot is taken until the running trial decides.",
-    "3 of 4 fixes have no knob in the shipped iOS build (no setTuning param) — a trial row with no "
-    "client knob changes nothing. They need iOS 2.10 + the Android build first.",
-    "accuracy_loop.py must report PER-PLATFORM splits (the Android `model=` TGTUNE token exists for "
-    "this) before any knob trial can be read across iOS+Android.",
+    "tg_stabfresh / tg_bphdecisive exist only at TG_ENGINE_REV 2 — they need iOS 2.10 + an Android "
+    "build with adoption before a trial can fill arms (phaselock-toggle is exempt: every shipped "
+    "build echoes and obeys phaseLock).",
 ]
 TMP = "/tmp/wrotate-weekly"
 # "sane" = a believable number. No Weishi ground truth in the field; the per-watch
@@ -581,6 +583,16 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
                   knob=knob, treatment_value=val, control_value=ctrl)
         L.append(f"**Trial under test: `{run['key']}`** — {knob} {ctrl:g} (control) vs {val:g} (treatment), 50/50 since {(run.get('started_at') or '?')[:10]}, week {weeks} of {al.MAX_WEEKS}. All sessions since start; arm read from each session's [TGTUNE] echo.")
         L += al.fmt_arm_table(arms)
+        # Per-platform split (blocker 3 of the Android-port queue): judgement stays pooled,
+        # but once Android sessions exist the engines' shared verdict must be inspectable
+        # per platform — same core, different microphones and audio paths.
+        droid = [s for s in sessions if al.platform_of(s.get("tune")) == "android"]
+        if droid:
+            for plat in ("ios", "android"):
+                sub = al.arm_table([s for s in sessions if al.platform_of(s.get("tune")) == plat],
+                                   knob, val, ctrl, since=(run.get("started_at") or "")[:19])
+                L.append(f"  — {plat} only:")
+                L += ["  " + ln for ln in al.fmt_arm_table(sub)]
         L.append(f"Verdict: **{j['verdict'].upper()}** — {j['reason']}")
         action = j["action"]
         if action == "won":

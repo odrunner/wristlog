@@ -58,6 +58,29 @@ class Arms(unittest.TestCase):
             self.assertEqual(al.tune_value(android, knob), al.tune_value(TUNE_25, knob))
         self.assertEqual(al.tune_value(android, "tg_guardmode"), 1.0)
         self.assertEqual(al.session_arm(android, "tg_stabwin", 6.0, 15.0), "treatment")
+    def test_phaselock_bool_echo(self):
+        # Every shipped build echoes phaseLock=<Bool>/<window>; tune_value maps the Bool to
+        # 1/0 so a tgknob_phaselock_1 trial reads arms without a new binary.
+        pl = TUNE_25 + " phaseLock=false/0.4"
+        self.assertEqual(al.tune_value(pl, "tg_phaselock"), 0.0)
+        self.assertEqual(al.tune_value(pl.replace("phaseLock=false", "phaseLock=true"), "tg_phaselock"), 1.0)
+        self.assertEqual(al.session_arm(pl, "tg_phaselock", 1.0, 0.0), "control")
+        self.assertIsNone(al.tune_value(TUNE_25, "tg_phaselock"))
+
+    def test_rev2_knob_tokens(self):
+        # TG_ENGINE_REV 2 (2026-10-25) appends stabFresh= and bphDecisive=; pre-2.10 builds
+        # lack them, so their sessions fall out of those trials' arms.
+        rev2 = TUNE_25 + " stabFresh=1 bphDecisive=1.5"
+        self.assertEqual(al.tune_value(rev2, "tg_stabfresh"), 1.0)
+        self.assertEqual(al.tune_value(rev2, "tg_bphdecisive"), 1.5)
+        self.assertIsNone(al.tune_value(TUNE_25, "tg_stabfresh"))
+        self.assertIsNone(al.tune_value(TUNE_25, "tg_bphdecisive"))
+
+    def test_platform_of(self):
+        self.assertEqual(al.platform_of(TUNE_25), "ios")
+        self.assertEqual(al.platform_of(TUNE_25 + " cap=vrec model=Pixel_7"), "android")
+        self.assertIsNone(al.platform_of(None))
+
     def test_driftband_from_js_echo(self):
         # tg_driftband (2026-10-04) is a JS-side gate: the client appends its own
         # [TGDRIFT] line to the tick log (native TGTUNE can't know it), and the
@@ -102,6 +125,15 @@ class Arms(unittest.TestCase):
         self.assertEqual(d["tg_stabwin"], 8.0)
         self.assertEqual(d["tg_lift"], 52)
         self.assertEqual(al.effective_defaults(None)["tg_guardmode"], 1)
+
+    def test_effective_defaults_fold_in_archived_won(self):
+        # Archive = tidy, not undo (sql/2026-10-25-archive-keeps-wins.sql): an archived-won
+        # trial still serves, so it is still the control baseline.
+        d = al.effective_defaults([
+            {"key": "tgknob_driftband_6", "status": "archived", "archived_from": "won"},
+            {"key": "tgknob_stabwin_8", "status": "archived", "archived_from": "killed"}])
+        self.assertEqual(d["tg_driftband"], 6.0)
+        self.assertEqual(d["tg_stabwin"], 6)
 
 
 class Judge(unittest.TestCase):

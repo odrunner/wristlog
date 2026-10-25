@@ -158,11 +158,15 @@ class CorePartBTest {
     // across all 12 golden runs; these pin the tg-path lines so drift fails without the harness.
     @Test
     fun tgLinesMatchSwiftGolden() {
+        // Pins regenerated at TG_ENGINE_REV 2 (2026-10-25): the blank-rate restart fix lets tg
+        // computes resume immediately after a recalibration rewind, shifting the compute/log
+        // timeline (one more TGALGO line, different lock-confirm snapshot). Swift harness run
+        // (build2.sh + main.swift beside the archive) was byte-identical to the Kotlin log.
         val s = run(SynthSpec())
-        assertEquals("[TGALGO lock-confirm] r0=+0.0 r1=-0.0 band=6", s.log.single { it.startsWith("[TGALGO lock-confirm]") })
-        assertEquals(43, algoLines(s.log).size)
+        assertEquals("[TGALGO lock-confirm] r0=-0.2 r1=-0.0 band=6", s.log.single { it.startsWith("[TGALGO lock-confirm]") })
+        assertEquals(44, algoLines(s.log).size)
         assertEquals(
-            "[TGALGO @ 87s] useTg=true reg=-0.0 tg=-0.0 amp=nil be=0.01 beOn=0.00 win=16s gate=0 ga=806 fit=2 lc=1 lr=0 ppm=nil",
+            "[TGALGO @ 87s] useTg=true reg=-0.1 tg=-0.0 amp=nil be=0.01 beOn=0.00 win=16s gate=0 ga=817 fit=2 lc=1 lr=0 ppm=nil",
             algoLines(s.log).last(),
         )
         assertEquals(

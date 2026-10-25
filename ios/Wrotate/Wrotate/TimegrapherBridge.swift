@@ -124,7 +124,9 @@ class TimegrapherBridge {
                              tgConfirmBand: body["tgConfirmBand"] as? Double,
                              tgGuardMode: body["tgGuardMode"] as? Int,
                              tgGateMaxRej: body["tgGateMaxRej"] as? Double,
-                             tgAcquireMax: body["tgAcquireMax"] as? Double)
+                             tgAcquireMax: body["tgAcquireMax"] as? Double,
+                             tgStabFresh: body["tgStabFresh"] as? Int,
+                             tgBphDecisive: body["tgBphDecisive"] as? Double)
 
         case "tuningPiezo":
             piezo.setTuning(

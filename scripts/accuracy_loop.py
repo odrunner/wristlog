@@ -21,6 +21,9 @@ FLEET_DEFAULTS = {
     "tg_agreeband": 12, "tg_lift": 52, "tg_ampmin": 90, "tg_confirmband": 999,
     "tg_guardmode": 1, "tg_gatemaxrej": 1, "tg_acquiremax": 15, "tg_periodfit": 2,
     "tg_driftband": 999,   # JS drift gate (2026-10-04); 999 = off
+    "tg_phaselock": 0,     # phase-locked tick selection; fleet OFF — the web payload has always sent false (field logs 2026-10-25: 2800/2800 sessions), the engine-source "default ON" never reached users
+    "tg_stabfresh": 0,     # stability-honesty (TG_ENGINE_REV 2, builds 2.10+): 1 = fresh-only rate history + stable flag drops across rate gaps
+    "tg_bphdecisive": 1.5, # auto-BPH noise gate (TG_ENGINE_REV 2, builds 2.10+): best candidate must beat runner-up by this ratio
 }
 # Knobs that belong to the precision preset: the client applies a trial on these only
 # to users on the default ('balanced') preset, so the analysis must use the same
@@ -36,6 +39,11 @@ _TUNE_FIELD = {
     # JS-side gate: echoed by the client in its own [TGDRIFT] line (native TGTUNE
     # can't know it); the weekly script hands tune_value both lines joined.
     "tg_driftband": ("driftBand", None),
+    # phaseLock=true/0.4 — Bool echo, present on every shipped build; tune_value maps
+    # true/false to 1/0, so a tgknob_phaselock_1 trial reads arms without a new binary.
+    "tg_phaselock": ("phaseLock", 0),
+    # Android-port knobs (TG_ENGINE_REV 2): absent from pre-2.10 echoes → session_arm None.
+    "tg_stabfresh": ("stabFresh", None), "tg_bphdecisive": ("bphDecisive", None),
 }
 
 # Decision rules (spec §3A)
@@ -85,10 +93,22 @@ def tune_value(tune_line, knob):
         if len(parts) <= idx:
             return None
         raw = parts[idx]
+    if raw in ("true", "false"):   # Swift/Kotlin Bool echo (e.g. phaseLock=true/0.4)
+        return 1.0 if raw == "true" else 0.0
     try:
         return float(raw)
     except ValueError:
         return None
+
+
+def platform_of(tune_line):
+    """'android' when the [TGTUNE] echo carries the Android-only model= token, 'ios' for any
+    other echo, None when there is no echo at all. A knob trial that spans both platforms is
+    judged pooled, but the report must show the split (the engines are 1:1 ports, the
+    microphones and audio paths are not)."""
+    if not tune_line:
+        return None
+    return "android" if re.search(r"\bmodel=", tune_line) else "ios"
 
 
 def _close(a, b):

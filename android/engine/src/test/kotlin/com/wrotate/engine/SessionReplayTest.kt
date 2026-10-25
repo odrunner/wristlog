@@ -89,7 +89,10 @@ class SessionReplayTest {
         val be = s.updates.last().beatError
         assertNotNull(be, "beatError null")
         assertTrue(abs(be - 1.5 / 2) <= 0.3 / 2, "beatError=$be (tg convention: half the gap difference)")
-        assertEquals(0.7501651398319685, be, 1e-4)
+        // Swift golden regenerated at TG_ENGINE_REV 2 (2026-10-25): the blank-rate restart fix
+        // lets tg computes resume immediately after a recalibration rewind, shifting the update
+        // timeline. Harness: build2.sh + main.swift beside the archive; logs byte-identical.
+        assertEquals(0.7511057895755661, be, 1e-4)
         assertTrue(s.log.last { it.startsWith("[TGALGO @") }.contains(" be=0.75 beOn=0.75 "))
     }
 
@@ -154,7 +157,8 @@ class SessionReplayTest {
         val s = replaySession(spec, spec.bph, squashed, 4096)
         val stableRates = s.updates.filter { it.rateStable }.mapNotNull { it.rate }
         val runs = stableRates.filterIndexed { i, r -> i == 0 || r != stableRates[i - 1] }
-        assertEquals(listOf(12.0, 16.4, 14.1, 21.4, 16.9, 18.6, 26.8, 3.5), runs, "Swift golden agc-tg1 stable-rate sequence")
+        // Swift golden regenerated at TG_ENGINE_REV 2 (2026-10-25, blank-rate restart fix).
+        assertEquals(listOf(12.3, 16.3, 8.2, 17.9, -3.0), runs, "Swift golden agc-tg1 stable-rate sequence")
         // What does hold: the session ends with no reading and the sigma-gate flags the signal.
         val last = s.updates.last()
         assertNull(last.rate)
