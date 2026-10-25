@@ -289,6 +289,23 @@ export function iosAtLeast(ver, min) {
   return true;
 }
 
+// Platform-neutral capability gate. Reads _nativeAppVersion (set by the iOS and
+// Android shells on the shared version line), falling back to _iosAppVersion so
+// iOS builds predating the shell edit keep passing. VERBATIM mirror in index.html.
+export function nativeAtLeast(min) {
+  var w = (typeof window !== 'undefined') ? window : null;
+  var ver = (w && (w._nativeAppVersion || w._iosAppVersion)) || '';
+  return iosAtLeast(ver, min);
+}
+
+// Which shell is running: the explicit flag, else inferred iOS, else plain web.
+export function nativePlatform() {
+  var w = (typeof window !== 'undefined') ? window : null;
+  if (w && w._nativePlatform) return w._nativePlatform;
+  if (w && w._iosAppVersion) return 'ios';
+  return 'web';
+}
+
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
 // Unknown values fall back to all-time rather than throwing.
 export function periodCutoff(period, today) {
