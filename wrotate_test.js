@@ -3965,7 +3965,7 @@ export const EXP_STATUS_AUDIENCE = {
   draft: 'Not started — nobody is assigned yet.',
   won: 'Rolled out: everyone gets the treatment now.',
   killed: 'Killed: everyone is back on control.',
-  archived: 'Archived: decided, and no longer served to anyone.',
+  archived: 'Archived: hidden from the active list. A won experiment keeps serving its winner; Kill is the brake.',
 };
 export function experimentInfoSections(x, metricLabels) {
   const lbl = k => (metricLabels && metricLabels[k]) || k || '—';

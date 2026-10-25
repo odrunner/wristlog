@@ -536,7 +536,7 @@ def svc_call(url, key, path, method="GET", body=None):
 
 
 def fetch_trials(url, key):
-    rows = svc_call(url, key, "/rest/v1/experiments?key=like.tgknob_*&select=key,name,status,rollout_pct,started_at,decided_at,created_at,hypothesis,last_eval&order=created_at.asc")
+    rows = svc_call(url, key, "/rest/v1/experiments?key=like.tgknob_*&select=key,name,status,archived_from,rollout_pct,started_at,decided_at,created_at,hypothesis,last_eval&order=created_at.asc")
     if isinstance(rows, dict):
         raise RuntimeError(f"experiments read failed: {rows}")
     return rows

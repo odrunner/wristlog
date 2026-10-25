@@ -8249,7 +8249,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.18';
+const APP_VERSION = '25.08.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12303,7 +12303,7 @@ const EXP_STATUS_AUDIENCE = {
   draft: 'Not started — nobody is assigned yet.',
   won: 'Rolled out: everyone gets the treatment now.',
   killed: 'Killed: everyone is back on control.',
-  archived: 'Archived: decided, and no longer served to anyone.',
+  archived: 'Archived: hidden from the active list. A won experiment keeps serving its winner; Kill is the brake.',
 };
 function experimentInfoSections(x, metricLabels) {
   const lbl = k => (metricLabels && metricLabels[k]) || k || '—';
@@ -19345,7 +19345,7 @@ async function loadAdminExperiments() {
   const archivedHtml = archived.length ? `<div class="u-mt-1">
         <button class="btn btn-ghost btn-sm u-c-muted" onclick="adminExpToggleArchived()">${archived.length} archived</button>
         <div id="adm-exp-archived" class="text-meta u-pt-1 u-pr-1-5 u-pb-0 u-pl-1-5" style="display:none;">
-          ${archived.map(x => `<div class="u-pt-0-5 u-pr-0 u-pb-0-5 u-pl-0"><button class="adm-exp-name" data-key="${escAttr(x.key)}" onclick="adminExpInfo(this.dataset.key)" title="What this experiment tested">${escHtml(x.name)}</button> <span class="u-ff-font-mono u-fs-xs">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}</div>`).join('')}
+          ${archived.map(x => `<div class="u-pt-0-5 u-pr-0 u-pb-0-5 u-pl-0"><button class="adm-exp-name" data-key="${escAttr(x.key)}" onclick="adminExpInfo(this.dataset.key)" title="What this experiment tested">${escHtml(x.name)}</button> <span class="u-ff-font-mono u-fs-xs">${escHtml(x.key)}</span>${x.decided_at ? ` · ${escHtml(new Date(x.decided_at).toLocaleDateString())}` : ''}${x.archived_from === 'won' ? ' · still serving' : ''}</div>`).join('')}
         </div></div>` : '';
   // Stacked cards (not a table) so it fits a phone: identity → metrics grid → verdict → actions row.
   const cell = (label, val) => `<div><div class="text-caption-xs u-tt-uppercase u-ls-tight">${label}</div><div>${val}</div></div>`;

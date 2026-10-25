@@ -109,11 +109,15 @@ def session_arm(tune_line, knob, treat_value, control_value):
 
 def effective_defaults(experiments):
     """Fleet defaults with every won tgknob_* trial folded in (a won trial serves
-    treatment to 100%, so its value IS the control baseline for the next trial)."""
+    treatment to 100%, so its value IS the control baseline for the next trial).
+    An archived-won trial still serves (archive = tidy, not undo; sql/2026-10-25),
+    so it folds in the same way — missing this is how tgknob_driftband_6's win was
+    judged against the wrong baseline for two weeks."""
     d = dict(FLEET_DEFAULTS)
     for e in experiments or []:
         p = parse_trial_key(e.get("key"))
-        if p and e.get("status") == "won":
+        won = e.get("status") == "won" or (e.get("status") == "archived" and e.get("archived_from") == "won")
+        if p and won:
             d[p[0]] = p[1]
     return d
 
