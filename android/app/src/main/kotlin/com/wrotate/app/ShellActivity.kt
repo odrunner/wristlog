@@ -24,7 +24,6 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wrotate.engine.TimegrapherCore
 import org.json.JSONObject
 import java.io.File
@@ -39,7 +38,6 @@ import java.io.File
 class ShellActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var refresh: SwipeRefreshLayout
     private var pausedAtMs = 0L
     private val idleReloadMs = 30 * 60 * 1000L
 
@@ -79,11 +77,18 @@ class ShellActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Debug builds only: lets chrome://inspect attach to the WebView for diagnosis.
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
+
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            // Honor the page's <meta viewport width=device-width> like Chrome does; without these
+            // the layout viewport is wrong and the vh-sized modals/sheets collapse (found on device).
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
             addJavascriptInterface(AndroidBridge(), "AndroidBridge")
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
@@ -97,7 +102,6 @@ class ShellActivity : ComponentActivity() {
                 }
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
-                    refresh.isRefreshing = false
                     pageLoaded = true
                     pendingInjectJs?.let { view.evaluateJavascript(it, null); pendingInjectJs = null }
                 }
@@ -131,18 +135,14 @@ class ShellActivity : ComponentActivity() {
             }
         }
 
-        refresh = SwipeRefreshLayout(this).apply {
-            addView(webView)
-            setOnRefreshListener { webView.reload() }
-            // Only pull-to-refresh at the true top of the page, so a drag inside a scrolled
-            // modal (e.g. the compose-post sheet) does not reload and discard a draft.
-            setOnChildScrollUpCallback { _, _ -> webView.scrollY > 0 }
-        }
-        setContentView(refresh)
+        // The WebView is the content view directly. It must NOT sit inside a nested-scrolling
+        // parent (e.g. SwipeRefreshLayout): that leaves its height unconstrained for CSS, so
+        // `100vh` resolves to 0 and every vh-sized modal collapses (found on device 2026-10-25).
+        setContentView(webView)
 
         // targetSdk 35 is edge-to-edge by default; pad for the system bars and keyboard so the
         // page's header/footer are not under the status bar / gesture nav / IME.
-        ViewCompat.setOnApplyWindowInsetsListener(refresh) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
