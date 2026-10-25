@@ -13,10 +13,18 @@
         <activity
             android:name=".ShellActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- OAuth Custom Tab return: wrotate://auth-callback#access_token=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wrotate" android:host="auth-callback" />
             </intent-filter>
         </activity>
         <!-- Kept for engine debugging; reachable via `adb shell am start`, no longer the launcher. -->

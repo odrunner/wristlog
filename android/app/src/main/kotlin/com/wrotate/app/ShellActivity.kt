@@ -1,19 +1,23 @@
 package com.wrotate.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import android.view.WindowManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wrotate.engine.TimegrapherCore
 import org.json.JSONObject
@@ -36,6 +40,7 @@ class ShellActivity : ComponentActivity() {
     var onAuth: ((String) -> Unit)? = null
 
     private lateinit var measurement: MeasurementController
+    private lateinit var authHandler: AuthHandler
     private var pendingStartJson: String? = null
     private val micPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -62,6 +67,16 @@ class ShellActivity : ComponentActivity() {
                     super.onPageFinished(view, url)
                     refresh.isRefreshing = false
                 }
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    val u = request.url
+                    // Google blocks OAuth inside a WebView: hand the Supabase authorize URL to a
+                    // Chrome Custom Tab (mirror iOS decidePolicyFor + handleOAuth).
+                    if (u.host == "api.wrotate.com" && (u.path ?: "").contains("/auth/v1/authorize")) {
+                        authHandler.startOAuth(u.toString())
+                        return true
+                    }
+                    return false
+                }
             }
         }
 
@@ -78,8 +93,26 @@ class ShellActivity : ComponentActivity() {
         })
 
         measurement = buildMeasurement()
+        authHandler = AuthHandler(
+            openCustomTab = { url -> CustomTabsIntent.Builder().build().launchUrl(this, Uri.parse(url)) },
+            inject = { js -> runOnUiThread { webView.evaluateJavascript(js, null) } },
+        )
 
         if (savedInstanceState == null) webView.loadUrl(SITE_URL)
+        handleAuthIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthIntent(intent)
+    }
+
+    private fun handleAuthIntent(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme == "wrotate" && data.host == "auth-callback") {
+            authHandler.onCallback(data.toString())
+        }
     }
 
     private fun buildMeasurement(): MeasurementController {
