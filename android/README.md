@@ -46,3 +46,12 @@ JS runs as-is. `HarnessActivity` remains for engine debugging (launch via
    receives `platform='android'`.
 3. Sign in with Google and with Apple — the Custom Tab completes and the session lands in the app.
 4. Add a watch photo via the file chooser (gallery and camera).
+
+### Added by the final-review fix pass (verify on device)
+- OAuth: cold-start return (app process killed behind the Custom Tab) still signs in; a forged
+  `wrotate://auth-callback` from another app does nothing.
+- Process death: returning from the camera/Custom Tab under memory pressure restores the page (not blank).
+- External links (non-wrotate.com) open in the browser, not inside the app.
+- Edge-to-edge: header/footer clear the status bar and gesture nav; the keyboard doesn't cover inputs.
+- Pull-to-refresh does not fire (and discard a draft) while a scrolled modal is open.
+- File chooser offers gallery + camera, honors video and multi-select where the input allows.
