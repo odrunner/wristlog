@@ -154,6 +154,8 @@ struct WebView: UIViewRepresentable {
                 window._wrotateNativeBridgeInstalled = true;
                 window._wrotateNativeTimegrapher = true;
                 window._iosAppVersion = '\(appVersion)';
+                window._nativePlatform = 'ios';
+                window._nativeAppVersion = '\(appVersion)';
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
