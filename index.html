@@ -4557,6 +4557,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" class="field field-compact"></label>
         <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" class="field field-compact"></label>
         <label>Drift band s/d (999=off)<input type="number" step="1" id="tg-knob-driftband" oninput="onTgKnob('tg_driftband',this.value)" class="field field-compact"></label>
+        <label>Stab fresh (2.10+)<select id="tg-knob-stabfresh" onchange="onTgKnob0('tg_stabfresh',this.value)" class="field field-compact"><option value="0">ship</option><option value="1">fresh-only</option></select></label>
+        <label>BPH decisive x (2.10+)<input type="number" step="0.5" id="tg-knob-bphdecisive" oninput="onTgKnob('tg_bphdecisive',this.value)" class="field field-compact"></label>
+        <label>Phase lock<select id="tg-knob-phaselock" onchange="onTgKnob0('tg_phaselock',this.value)" class="field field-compact"><option value="0">off (fleet)</option><option value="1">on</option></select></label>
       </div>
       </details>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
@@ -8249,7 +8252,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.27';
+const APP_VERSION = '25.09.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -32177,6 +32180,9 @@ function initTgSourceSelector() {
       set('tg-knob-gatemaxrej', _tgKnob('tg_gatemaxrej', 1));
       set('tg-knob-acquiremax', _tgKnob('tg_acquiremax', 15));
       set('tg-knob-driftband', _tgKnob('tg_driftband', 999));
+      set('tg-knob-stabfresh', String(_tgKnob0('tg_stabfresh', 0)));
+      set('tg-knob-bphdecisive', _tgKnob('tg_bphdecisive', 1.5));
+      set('tg-knob-phaselock', String(_tgKnob0('tg_phaselock', 0)));
     } else knobPanel.style.display = 'none';
   }
   initPzTunePanel();
@@ -34633,7 +34639,11 @@ function sendMsrTuning() {
     maxBphCorrections: Number(document.getElementById('msr-tune-max-bph-corrections').value),
     noiseFloorMult: Number(document.getElementById('msr-tune-noise-floor-mult').value),
     peakDetectGate: Number(document.getElementById('msr-tune-peak-detect-gate').value),
-    phaseLock: document.getElementById('msr-tune-phase-lock').value === '1',
+    // phaselock-toggle (2026-10-25): the fleet runs OFF — the hidden input ships '0' and the
+    // remote timegrapher_tuning row only reaches tg_quality_v2 users (field logs: 2800/2800
+    // sessions phaseLock=false). _tgKnob0 lets a tgknob_phaselock_1 trial turn it on for the
+    // treatment arm on SHIPPED builds; localStorage stays the personal override.
+    phaseLock: _tgKnob0('tg_phaselock', document.getElementById('msr-tune-phase-lock').value === '1' ? 1 : 0) === 1,
     phaseLockWindow: Number(document.getElementById('msr-tune-phase-lock-window').value),
     phaseLockMaxMiss: Number(document.getElementById('msr-tune-phase-lock-max-miss').value),
     // tg detection-core knobs (localStorage, admin panel next to the algo selector)
@@ -34657,7 +34667,11 @@ function sendMsrTuning() {
     tgConfirmBand: _tgKnob('tg_confirmband', 999), // T1 disjoint-segment confirm band (s/d); 999 = off. Refuted 2026-08-23 — shadow keeps logging lc=/lr=
     tgGuardMode: _tgKnob0('tg_guardmode', 1),   // T2: 0 = median fallback (2.4), 1 = refuse — fleet default since 2026-08-23 (2.5+ binaries); under A/B via tgknob_guardmode_0 from 2026-08-30
     tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1),     // T3 convergence block above this σ-reject fraction; 1 = off
-    tgAcquireMax: _tgKnob('tg_acquiremax', 15)     // T4 pre-lock runway seconds; 15 = off
+    tgAcquireMax: _tgKnob('tg_acquiremax', 15),    // T4 pre-lock runway seconds; 15 = off
+    // Android-port knobs (2026-10-25, engines at TG_ENGINE_REV 2 / builds 2.10+; older
+    // builds ignore unknown keys). Defaults = ship behaviour, so both stay dark until a trial.
+    tgStabFresh: _tgKnob0('tg_stabfresh', 0),      // stability-honesty: 1 = fresh-only rate history + stable flag drops across rate gaps
+    tgBphDecisive: _tgKnob('tg_bphdecisive', 1.5)  // auto-BPH noise gate: best candidate must beat runner-up by this ratio
   });
 }
 // ── Knob trials (self-healing accuracy loop; mirrored verbatim in wrotate_test.js) ──
