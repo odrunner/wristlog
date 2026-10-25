@@ -55,3 +55,19 @@ A single same-position live A/B (watch dial-up, unmoved, Pixel then iPhone) woul
 end-to-end and rule out any `vrec` capture bias in the live rate. The replay cannot settle that,
 since the recording already went through `vrec`; but rate derives from tick timing, which voice
 processing does not systematically shift, and the clean convergence + low beat error here bear that out.
+
+---
+
+# Shell app (Plan 2) — status
+
+The Android shell (WebView over wrotate.com + measurement bridge + sign-in + photo uploads)
+was built task-by-task with unit tests and clean `:app:assembleDebug`:
+- Web §3 gates (nativeAtLeast/nativePlatform): `npm test` green.
+- Bridge script, Update→JSON contract, capture-thread tuning marshal, OAuth callback parse/
+  rewrite/inject + single-delivery: `:app:testDebugUnitTest` green.
+- Framework-bound pieces (WebView host, Custom Tab, file chooser) are build-verified.
+
+**On-device smoke (Task 6) is pending the owner** — same as Plan 1's Task 10, it needs a real
+Pixel. The checklist is in `android/README.md` ("On-device smoke"). Until it runs, the shell is
+proven to compile and its logic is unit-tested, but the live WebView/bridge/OAuth/file-chooser
+paths are unverified on hardware.
