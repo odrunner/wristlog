@@ -133,6 +133,18 @@ number (≥ 2.3; match iOS), so the validated Pro V2 engine runs. Stamping the A
 tab would appear but silently fall back to the legacy engine with beat error hidden, defeating the
 port. [Decided: capability version on the shared line, independent of Play Store versionName.]
 
+**`nativeAtLeast(min)` falls back to `_iosAppVersion` when `_nativeAppVersion` is unset, so NO iOS
+Swift change is required and there is no iOS regression regardless of build adoption.** Every
+shipped iOS build already sets `_iosAppVersion`; the generalized gates therefore keep passing on
+old and new iOS alike without the shell setting anything. The neutral flag is strictly needed only
+for Android (which has no `_iosAppVersion`). Optional, not load-bearing: one line in
+`WebView.swift` to set `window._nativePlatform='ios'` explicitly rather than inferring it from
+`_iosAppVersion`; it could ride the queued 2.10 build but the project does not require it, so 2.10
+is not gated on this work. Also fix the one telemetry spot that hardcodes the platform
+(`record_boot_timing` ~index.html:6189: `platform: _tgHasNative() ? 'ios' : 'web'`) to read
+`_nativePlatform` (inferring 'ios' when `_iosAppVersion` is set and the flag is absent), so Android
+sessions label as 'android' instead of 'ios'.
+
 ### 4. Shell plumbing (mirror iOS behavior)
 
 - Load live wrotate.com once in `onCreate`; do not auto-reload; reload on
@@ -159,11 +171,18 @@ port. [Decided: capability version on the shared line, independent of Play Store
 - Versioning: how `_nativeAppVersion` is stamped (BuildConfig) and how the iOS side also sets
   the neutral flags during the transition.
 
-## Cross-session dependency
+## Current state this plan builds on (as of 2026-10-25)
 
-The legacy "Standard" measurement engine is being retired app-wide in a separate, parallel
-effort. This plan does **not** depend on that retirement completing first — the bridge ignores
-`algo` and runs tg regardless. But both this plan's §3 web edit and the retirement touch
-`index.html` (the retirement removes the engine toggle + legacy `_tgAlgo`/'original' JS; this
-plan's only web edit is the §3 neutral-flag gate generalization). Whoever executes this plan
-should rebase on the retirement if it has landed, and coordinate the two `index.html` edits.
+- **Standard engine retired** (`821a3325`): every 2.1+ native build runs Pro V2 (tg). `_tgAlgo()`
+  is now effectively always 'tg' for native, so the bridge's `algo` field is vestigial — accept
+  and ignore it (already specified in §1).
+- **Engine is `TG_ENGINE_REV` 2** (`57e6f29f`): the blank-rate restart fix, the stability /
+  auto-BPH knobs (`tgStabFresh`, `tgBphDecisive`), and the phase-lock A/B plumbing landed in BOTH
+  engines in lockstep, so the Kotlin `TimegrapherCore` the bridge wires is REV 2. The `tuning`
+  action already carries these knobs (§1), so no bridge change is needed for them.
+- **No neutral flags exist yet** (`_nativeAppVersion` / `_nativePlatform` / `nativeAtLeast` are
+  absent), so §3 is net-new. `_tgHasNative()` is already platform-neutral (Android lights up the
+  Measure feature via `_wrotateNativeTimegrapher`); the remaining version gates (`_native21`, the
+  beat-error ≥2.3 gate) still read `_iosAppVersion` and are what §3 generalizes.
+- **iOS 2.10 is queued.** This project requires no Swift change (see §3's fallback), so 2.10 does
+  not wait on it; an optional one-line `_nativePlatform='ios'` injection could ride it if desired.
