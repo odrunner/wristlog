@@ -77,6 +77,14 @@ class ShellActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Let the page draw under the display cutout so its viewport-fit=cover + env(safe-area-inset-*)
+        // top handling (index.html header) works like iOS, instead of us double-insetting the top.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+
         // Debug builds only: lets chrome://inspect attach to the WebView for diagnosis.
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
 
@@ -135,16 +143,18 @@ class ShellActivity : ComponentActivity() {
             }
         }
 
-        // The WebView is the content view directly. It must NOT sit inside a nested-scrolling
-        // parent (e.g. SwipeRefreshLayout): that leaves its height unconstrained for CSS, so
-        // `100vh` resolves to 0 and every vh-sized modal collapses (found on device 2026-10-25).
-        setContentView(webView)
-
-        // targetSdk 35 is edge-to-edge by default; pad for the system bars and keyboard so the
-        // page's header/footer are not under the status bar / gesture nav / IME.
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+        // Wrap the WebView in a plain FrameLayout and pad THAT for the system bars / keyboard
+        // (targetSdk 35 is edge-to-edge by default, so without this the nav sits under the status
+        // bar and gesture bar). FrameLayout is not a nested-scrolling parent, so — unlike
+        // SwipeRefreshLayout — it keeps the WebView's height constrained and `100vh` correct.
+        val root = android.widget.FrameLayout(this).apply { addView(webView) }
+        setContentView(root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            // Top is handled by the page itself (env(safe-area-inset-top)); we only inset the sides,
+            // the bottom nav bar, and the keyboard.
+            v.setPadding(bars.left, 0, bars.right, maxOf(bars.bottom, ime.bottom))
             insets
         }
 
