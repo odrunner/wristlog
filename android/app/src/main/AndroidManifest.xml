@@ -48,6 +48,16 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+        <!-- Shortcut trampoline: static shortcuts launch with NEW_TASK|CLEAR_TASK, which aimed at
+             ShellActivity would destroy a running session on every warm tap. This owns its own
+             task, absorbs the clear, and re-enters the shell via onNewIntent. -->
+        <activity
+            android:name=".QuickActionActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Share target: receive an image from any app, park it, open the shell (iOS share
              extension parity). Translucent so the share sheet hands straight to the shell. -->
         <activity

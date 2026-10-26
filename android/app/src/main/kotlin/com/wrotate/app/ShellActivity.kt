@@ -230,10 +230,9 @@ class ShellActivity : ComponentActivity() {
         if (data.scheme == "wrotate" && data.host == "auth-callback") {
             authHandler.onCallback(data.toString())
         }
-        QuickActions.parse(data.toString())?.let {
-            pendingQuickAction = it
-            if (pageLoaded) runOnUiThread { drainPending() }
-        }
+        // Held here, drained by onResume (which always follows onNewIntent) or onPageFinished —
+        // draining immediately as well double-evaluated the pending share.
+        QuickActions.parse(data.toString())?.let { pendingQuickAction = it }
     }
 
     private fun launchPhotoChooser(params: WebChromeClient.FileChooserParams): Boolean {

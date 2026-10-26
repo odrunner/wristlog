@@ -8,6 +8,11 @@ package com.wrotate.app
  * the next page load or foreground.
  */
 object ShareHandoff {
+    /** Decode sample size: cap catastrophic images (50-200 MP) near a 2.5k long edge while
+     *  leaving ordinary photos at full resolution. */
+    fun sampleSize(longEdge: Int, maxEdge: Int = 2560): Int =
+        if (longEdge <= maxEdge) 1 else maxOf(1, longEdge / maxEdge)
+
     /** The base64 alphabet never breaks out of the JS literal (produced with Base64.NO_WRAP). */
     fun injectionJs(b64: String): String =
         "(function(){ if (typeof handleSharedImage !== 'function') return false; " +
@@ -22,7 +27,9 @@ class PendingShare(
     fun drain(evaluate: (js: String, onResult: (String?) -> Unit) -> Unit) {
         val b64 = load() ?: return
         evaluate(ShareHandoff.injectionJs(b64)) { result ->
-            if (result == "\"true\"" || result == "true") clear()
+            // evaluateJavascript returns the JSON encoding: the IIFE's boolean true is `true`.
+            // A JSON string "true" is page data, not ownership — keep the share.
+            if (result == "true") clear()
         }
     }
 }

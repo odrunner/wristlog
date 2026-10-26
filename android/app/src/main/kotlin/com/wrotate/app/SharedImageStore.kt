@@ -23,9 +23,15 @@ object SharedImageStore {
     fun loadB64(context: Context): String? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val path = prefs.getString(KEY, null) ?: return null
-        val file = File(path)
-        if (!file.exists()) { prefs.edit().remove(KEY).apply(); return null }
-        return Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+        return try {
+            val file = File(path)
+            if (!file.exists()) { prefs.edit().remove(KEY).apply(); return null }
+            Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+        } catch (t: Throwable) {
+            // Unreadable pending image must never crash a WebViewClient callback; drop it.
+            prefs.edit().remove(KEY).apply()
+            null
+        }
     }
 
     fun clear(context: Context) {

@@ -9,7 +9,7 @@
             android:action="android.intent.action.VIEW"
             android:data="wrotate://quick/logwear"
             android:targetPackage="com.wrotate.app"
-            android:targetClass="com.wrotate.app.ShellActivity" />
+            android:targetClass="com.wrotate.app.QuickActionActivity" />
     </shortcut>
     <shortcut
         android:shortcutId="measure"
@@ -20,7 +20,7 @@
             android:action="android.intent.action.VIEW"
             android:data="wrotate://quick/measure"
             android:targetPackage="com.wrotate.app"
-            android:targetClass="com.wrotate.app.ShellActivity" />
+            android:targetClass="com.wrotate.app.QuickActionActivity" />
     </shortcut>
     <shortcut
         android:shortcutId="post"
@@ -31,6 +31,6 @@
             android:action="android.intent.action.VIEW"
             android:data="wrotate://quick/post"
             android:targetPackage="com.wrotate.app"
-            android:targetClass="com.wrotate.app.ShellActivity" />
+            android:targetClass="com.wrotate.app.QuickActionActivity" />
     </shortcut>
 </shortcuts>
