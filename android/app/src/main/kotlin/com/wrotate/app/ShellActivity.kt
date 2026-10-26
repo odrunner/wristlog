@@ -114,6 +114,7 @@ class ShellActivity : ComponentActivity() {
                     super.onPageFinished(view, url)
                     pageLoaded = true
                     pendingInjectJs?.let { view.evaluateJavascript(it, null); pendingInjectJs = null }
+                    drainPending()
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val u = request.url
@@ -192,6 +193,18 @@ class ShellActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleAuthIntent(intent)
+    }
+
+    // Pending hand-offs (shared image; quick actions ride the same hook), drained on every page
+    // load and on foreground — the iOS ContentView.drainPending() pattern. The share stays stored
+    // until the page answers `true` (see PendingShare), so an early drain never loses it.
+    private val pendingShare by lazy {
+        PendingShare(load = { SharedImageStore.loadB64(this) }, clear = { SharedImageStore.clear(this) })
+    }
+
+    private fun drainPending() {
+        if (!isWrotateHost(currentHost)) return
+        pendingShare.drain { js, onResult -> webView.evaluateJavascript(js) { onResult(it) } }
     }
 
     private fun handleAuthIntent(intent: Intent?) {
@@ -288,7 +301,9 @@ class ShellActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (pausedAtMs != 0L && System.currentTimeMillis() - pausedAtMs > idleReloadMs) {
-            webView.reload()
+            webView.reload() // drainPending() runs from this load's onPageFinished
+        } else if (pageLoaded) {
+            drainPending()
         }
         pausedAtMs = 0L
     }
