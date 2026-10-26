@@ -21,8 +21,8 @@ android {
         applicationId = "com.wrotate.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.2"
+        versionCode = 5
+        versionName = "1.1"
         // Capability version on the shared iOS numbering line (NOT the Play Store versionName),
         // injected as window._nativeAppVersion so the measurement gates (>=2.0/2.1/2.3) clear.
         buildConfigField("String", "NATIVE_CAPABILITY_VERSION", "\"2.10\"")
@@ -66,6 +66,8 @@ dependencies {
     implementation("androidx.activity:activity:1.9.3")
     implementation("androidx.browser:browser:1.8.0")
     implementation("com.google.android.play:review:2.0.2")
+    // play:review drags in fragment:1.1.0, which release lint rejects for the ActivityResult APIs.
+    implementation("androidx.fragment:fragment:1.6.2")
     testImplementation(kotlin("test-junit"))
     // Real org.json so JVM unit tests exercise the message-parse path (android.jar stubs it).
     testImplementation("org.json:json:20231013")
