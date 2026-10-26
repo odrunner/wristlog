@@ -335,6 +335,18 @@ class ShellActivity : ComponentActivity() {
         }
     }
 
+    /** Play in-app review, fire-and-forget (iOS SKStoreReviewController parity): Play decides
+     *  whether a sheet actually shows, and every failure is silently dropped. */
+    private fun launchPlayReview() {
+        try {
+            val manager = com.google.android.play.core.review.ReviewManagerFactory.create(this)
+            manager.requestReviewFlow().addOnSuccessListener { info ->
+                manager.launchReviewFlow(this, info)
+            }
+        } catch (e: Exception) {
+        }
+    }
+
     private fun vibrate() {
         val v = getSystemService(Vibrator::class.java) ?: return
         v.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
@@ -350,6 +362,11 @@ class ShellActivity : ComponentActivity() {
                 "haptic" -> vibrate()
                 "timegrapher" -> runOnUiThread { routeTimegrapher(json) }
                 "auth" -> {} // web→native auth notifications are unused on Android v1 (no push)
+                // requestReview launches the Play sheet; every other action the page may post
+                // (requestPushPermission, openAppSettings) is deliberately a no-op until push.
+                "appAction" -> if (BridgeMessages.parseAppAction(json) == "requestReview") {
+                    runOnUiThread { launchPlayReview() }
+                }
             }
         }
     }

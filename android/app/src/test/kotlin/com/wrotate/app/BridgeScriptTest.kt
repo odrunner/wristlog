@@ -14,10 +14,12 @@ class BridgeScriptTest {
     }
 
     @Test
-    fun installsThreeHandlersForwardingToNative() {
+    fun installsTheHandlersForwardingToNative() {
         val js = buildBridgeScript("2.10")
         assertTrue(js.contains("messageHandlers"), "messageHandlers object")
-        for (h in listOf("timegrapher", "haptic", "auth")) {
+        // appAction is the page's ONLY gate for the in-app review prompt (index.html
+        // maybeShowReviewPrompt checks the handler exists) — registering it turns reviews on.
+        for (h in listOf("timegrapher", "haptic", "auth", "appAction")) {
             assertTrue(js.contains("'$h'"), "handler $h listed")
         }
         assertTrue(js.contains("postMessage"), "exposes postMessage")

@@ -10,6 +10,13 @@ import com.wrotate.engine.Update
  */
 object BridgeMessages {
 
+    /** The `action` of a web→native appAction post ({"action":"requestReview"}), or null. */
+    fun parseAppAction(json: String): String? = try {
+        org.json.JSONObject(json).optString("action", "").ifEmpty { null }
+    } catch (e: Exception) {
+        null
+    }
+
     fun started(): String = "{\"event\":\"started\"}"
     fun pong(): String = "{\"event\":\"pong\"}"
     fun error(message: String): String = "{\"event\":\"error\",\"message\":${str(message)}}"

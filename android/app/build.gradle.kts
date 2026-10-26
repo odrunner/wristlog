@@ -65,6 +65,7 @@ dependencies {
     implementation("androidx.core:core:1.13.1")
     implementation("androidx.activity:activity:1.9.3")
     implementation("androidx.browser:browser:1.8.0")
+    implementation("com.google.android.play:review:2.0.2")
     testImplementation(kotlin("test-junit"))
     // Real org.json so JVM unit tests exercise the message-parse path (android.jar stubs it).
     testImplementation("org.json:json:20231013")
