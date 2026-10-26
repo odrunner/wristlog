@@ -47,9 +47,7 @@ Free to use. Sign in with Google or Apple.
     - Feature graphic: 1024 x 500 PNG
     - Phone screenshots: minimum 2, recommend 6-8 at 1080 x 2400
 [ ] Category: App -> Lifestyle
-[ ] Contact email: a public support address is required. ozgurdogan@gmail.com
-    works; a cleaner option is adding support@wrotate.com in Cloudflare Email
-    Routing first (ask Claude).
+[ ] Contact email (public): admin@bereket.work
 [ ] Privacy policy URL: https://wrotate.com/privacy   (already live)
 
 ================================================================
