@@ -25,9 +25,25 @@ The APK lands in `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Install on a device
 
+The working setup: Claude builds the APK on the Mac Mini; the Pixel is installed from the
+**MacBook Pro** over USB. Copy the fresh APK across first:
+
 ```
-~/Library/Android/sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+# on the MacBook Pro
+rsync ozgurdogan@192.168.1.246:"~/Documents/Claude\ project/watch\ tracker/android/app/build/outputs/apk/debug/app-debug.apk" ~/Downloads/
+~/Library/Android/sdk/platform-tools/adb install -r ~/Downloads/app-debug.apk
 ```
+
+(`adb install -r` also works directly on the Mac Mini if the phone is plugged in there.)
+
+**Play-testing caveat (app is on the Play Store test track since 2026-10-25):** debug and release
+share the applicationId `com.wrotate.app` with no debug suffix, so a sideloaded debug APK
+**cannot install over a Play-installed copy** — signatures differ (Play App Signing), and
+`adb install -r` fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Either uninstall the Play copy
+first (`adb uninstall com.wrotate.app` — clears app data, so you re-sign-in), or ship the change
+through Play: bump `versionCode` in `app/build.gradle.kts`, `./gradlew :app:bundleRelease`
+(needs `keystore.properties`), upload `app/build/outputs/bundle/release/app-release.aab` to the
+Play Console test track.
 
 ## The shell app (Plan 2)
 

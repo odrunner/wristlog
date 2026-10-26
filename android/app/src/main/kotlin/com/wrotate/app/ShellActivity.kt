@@ -53,7 +53,7 @@ class ShellActivity : ComponentActivity() {
 
     // WebView file chooser (add-watch-photo / avatar / share-to-feed file inputs).
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
-    private var cameraImageUri: Uri? = null
+    private var captureCandidates: List<Pair<Uri, File>> = emptyList()
     private val fileChooser =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val cb = filePathCallback; filePathCallback = null
@@ -62,9 +62,11 @@ class ShellActivity : ComponentActivity() {
                 result.resultCode != RESULT_OK -> null
                 result.data?.data != null || result.data?.clipData != null ->
                     WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
-                cameraImageUri != null -> arrayOf(cameraImageUri!!) // camera wrote to our uri; data is null
-                else -> null
+                // Camera wrote into one of our pre-created temp files; data comes back null.
+                else -> pickWrittenCapture(captureCandidates.map { it.first to it.second.length() })
+                    ?.let { arrayOf(it) }
             }
+            captureCandidates = emptyList()
             cb.onReceiveValue(uris)
         }
     private val micPermission =
@@ -198,14 +200,15 @@ class ShellActivity : ComponentActivity() {
     }
 
     private fun launchPhotoChooser(params: WebChromeClient.FileChooserParams): Boolean {
-        cameraImageUri = null
         val content = params.createIntent() // honors the input's acceptTypes + multiple
         val types = params.acceptTypes.joinToString(",")
         val wantsImage = types.isBlank() || types.contains("image") || types.contains("*/*")
         val wantsVideo = types.contains("video") || types.contains("*/*")
         val extras = ArrayList<Intent>()
-        if (wantsImage) buildCaptureIntent(MediaStore.ACTION_IMAGE_CAPTURE, ".jpg")?.let { extras.add(it) }
-        if (wantsVideo) buildCaptureIntent(MediaStore.ACTION_VIDEO_CAPTURE, ".mp4")?.let { extras.add(it) }
+        val candidates = ArrayList<Pair<Uri, File>>()
+        if (wantsImage) buildCaptureIntent(MediaStore.ACTION_IMAGE_CAPTURE, ".jpg", candidates)?.let { extras.add(it) }
+        if (wantsVideo) buildCaptureIntent(MediaStore.ACTION_VIDEO_CAPTURE, ".mp4", candidates)?.let { extras.add(it) }
+        captureCandidates = candidates
         val chooser = Intent(Intent.ACTION_CHOOSER).apply {
             putExtra(Intent.EXTRA_INTENT, content)
             putExtra(Intent.EXTRA_TITLE, "Add a photo")
@@ -220,14 +223,15 @@ class ShellActivity : ComponentActivity() {
         }
     }
 
-    private fun buildCaptureIntent(action: String, suffix: String): Intent? {
+    private fun buildCaptureIntent(action: String, suffix: String, candidates: MutableList<Pair<Uri, File>>): Intent? {
         val capture = Intent(action)
         if (capture.resolveActivity(packageManager) == null) return null
         return try {
             val file = File.createTempFile("capture_", suffix, cacheDir)
-            cameraImageUri = FileProvider.getUriForFile(this, "com.wrotate.app.fileprovider", file)
-            capture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+            val uri = FileProvider.getUriForFile(this, "com.wrotate.app.fileprovider", file)
+            capture.putExtra(MediaStore.EXTRA_OUTPUT, uri)
             capture.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            candidates.add(uri to file)
             capture
         } catch (e: Exception) {
             null
