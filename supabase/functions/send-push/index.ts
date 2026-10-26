@@ -24,9 +24,11 @@ import {
   parseApnsReason,
   resolveActorName,
   stripPemArmor,
+  splitByPlatform,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
+import { sendFcm } from "../_shared/fcm.ts";
 
 // APNs configuration
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
@@ -149,12 +151,11 @@ serve(async (req) => {
       });
     }
 
-    // Look up recipient's device tokens
+    // Look up recipient's device tokens (both platforms; routed per row below)
     const { data: tokens, error: tokensError } = await supabase
       .from("device_tokens")
-      .select("token")
-      .eq("user_id", user_id)
-      .eq("platform", "ios");
+      .select("token, platform")
+      .eq("user_id", user_id);
 
     if (tokensError || !tokens || tokens.length === 0) {
       return new Response(
@@ -202,43 +203,58 @@ serve(async (req) => {
       .eq("user_id", user_id)
       .eq("is_read", false);
 
+    const route = buildRoute(type, ref_id, actor_id);
     const payload = buildAlertPayload(message, {
       badge: unreadCount,
-      route: buildRoute(type, ref_id, actor_id),
+      route,
       userId: user_id,
       notifId: dbRecord.id,
       type,
     });
 
-    // Create APNs JWT
-    const jwt = await createAPNsJWT();
+    const { ios: iosTokens, android: androidTokens } = splitByPlatform(tokens);
 
-    // Send to all devices
+    // iOS → APNs, exactly as before
+    const jwt = iosTokens.length > 0 ? await createAPNsJWT() : "";
     const results = await Promise.all(
-      tokens.map((t: { token: string }) => sendPush(t.token, payload, jwt))
+      iosTokens.map((t: { token: string }) => sendPush(t.token, payload, jwt))
     );
 
-    // Prune tokens APNs will never accept again — 410 Unregistered plus the
-    // 400s (BadDeviceToken / DeviceTokenNotForTopic) that used to accumulate
-    // untouched. Scoped to this recipient: the same physical device may be
-    // legitimately registered to nobody else, but deleting by token alone would
+    // Android → FCM (same message, same route payload as data)
+    const fcmResults = await Promise.all(
+      androidTokens.map(async (t: { token: string }) => ({
+        token: t.token,
+        ...(await sendFcm(t.token, message, {
+          route: route.route,
+          id: route.id,
+          uid: user_id,
+          n: dbRecord.id,
+          t: type,
+        })),
+      }))
+    );
+
+    // Prune tokens the providers will never accept again — APNs 410/BadDeviceToken
+    // and FCM UNREGISTERED alike. Scoped to this recipient: the same physical device
+    // may be legitimately registered to nobody else, but deleting by token alone would
     // reach across accounts on a shared-token row we haven't purged yet.
-    const dead = results.filter((r) => isDeadToken(r.status, r.reason));
+    const dead = [
+      ...results.filter((r) => isDeadToken(r.status, r.reason)).map((r) => r.token),
+      ...fcmResults.filter((r) => r.dead).map((r) => r.token),
+    ];
     if (dead.length > 0) {
       await supabase
         .from("device_tokens")
         .delete()
         .eq("user_id", user_id)
-        .in("token", dead.map((r) => r.token));
-      console.log(
-        `[send-push] Pruned ${dead.length} dead tokens (${dead.map((r) => r.reason ?? r.status).join(", ")})`
-      );
+        .in("token", dead);
+      console.log(`[send-push] Pruned ${dead.length} dead tokens`);
     }
 
     return new Response(
       JSON.stringify({
-        sent: results.filter((r) => r.success).length,
-        failed: results.filter((r) => !r.success).length,
+        sent: results.filter((r) => r.success).length + fcmResults.filter((r) => r.success).length,
+        failed: results.filter((r) => !r.success).length + fcmResults.filter((r) => !r.success).length,
         cleaned: dead.length,
       }),
       { status: 200 }

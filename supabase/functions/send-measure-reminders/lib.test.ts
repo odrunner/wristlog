@@ -38,8 +38,12 @@ Deno.test("versionAtLeast / routeFor — routes only for 2.6+ tokens", () => {
   assertEquals(versionAtLeast("2.5", "2.6"), false);
   assertEquals(versionAtLeast("", "2.6"), false);
   assertEquals(versionAtLeast(null, "2.6"), false);
-  assertEquals(routeFor("2.5", "track", "w1", "u1"), undefined);
-  assertEquals(routeFor("2.6", "track", "w1", "u1"), { w: { route: "track", id: "w1", uid: "u1" } });
+  assertEquals(routeFor("ios", "2.5", "track", "w1", "u1"), undefined);
+  assertEquals(routeFor("ios", "2.6", "track", "w1", "u1"), { w: { route: "track", id: "w1", uid: "u1" } });
+  // Android: every token that can exist belongs to a push-capable build — route always attaches,
+  // whatever the (Play-line) version says.
+  assertEquals(routeFor("android", "1.2", "track", "w1", "u1"), { w: { route: "track", id: "w1", uid: "u1" } });
+  assertEquals(routeFor("android", null, "track", "w1", "u1"), { w: { route: "track", id: "w1", uid: "u1" } });
 });
 
 Deno.test("buildAlertPayload — extra merges into the root, aps untouched", () => {

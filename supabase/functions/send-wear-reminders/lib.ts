@@ -60,7 +60,11 @@ export function versionAtLeast(v: string | null | undefined, min: string): boole
 // Only builds >= 2.6 route unknown `w.route` values through JS (openPushRoute); older
 // builds open the bell for anything but post/profile/club/badges. So a route object is
 // attached per token, never blanket.
-export function routeFor(appVersion: string | null | undefined, route: string, id: string | null, uid: string): Record<string, unknown> | undefined {
+// Android tokens only ever come from push-capable builds (no pre-push Android build
+// registered one), so the route always attaches there; its app_version is on the Play
+// 1.x line and must never be compared against the iOS 2.6 gate.
+export function routeFor(platform: string | null | undefined, appVersion: string | null | undefined, route: string, id: string | null, uid: string): Record<string, unknown> | undefined {
+  if (platform === "android") return { w: { route, id, uid } };
   return versionAtLeast(appVersion, "2.6") ? { w: { route, id, uid } } : undefined;
 }
 

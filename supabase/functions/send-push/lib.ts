@@ -233,3 +233,12 @@ export function stripPemArmor(pem: string): string {
 export function apnsDeviceUrl(host: string, token: string): string {
   return `${host}/3/device/${token}`;
 }
+
+// Token rows split by send transport. Rows predating the platform column are iOS.
+export function splitByPlatform<T extends { platform?: string | null }>(
+  rows: T[],
+): { ios: T[]; android: T[] } {
+  const ios: T[] = [], android: T[] = [];
+  for (const r of rows) (r.platform === "android" ? android : ios).push(r);
+  return { ios, android };
+}

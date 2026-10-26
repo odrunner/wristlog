@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { apnsHost, buildBadgePushMessage, createAPNsJWT, sendPush } from "./lib.ts";
 import { serviceKey, publishableKey } from "../_shared/keys.ts";
+import { sendFcm } from "../_shared/fcm.ts";
 
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
@@ -67,13 +68,14 @@ serve(async (req) => {
     const admin = createClient(supabaseUrl, svcKey);
     const { data: tokens } = await admin
       .from("device_tokens")
-      .select("token")
-      .eq("user_id", user.id)
-      .eq("platform", "ios");
+      .select("token, platform")
+      .eq("user_id", user.id);
 
     if (!tokens || tokens.length === 0) {
       return json({ skipped: "no device tokens" }, 200);
     }
+    const iosTokens = tokens.filter((t: { platform?: string | null }) => t.platform !== "android");
+    const androidTokens = tokens.filter((t: { platform?: string | null }) => t.platform === "android");
 
     const { count: unreadCount } = await admin
       .from("notifications")
@@ -81,22 +83,31 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .eq("is_read", false);
 
-    const jwt = await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID);
+    const jwt = iosTokens.length > 0 ? await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID) : "";
     const results = await Promise.all(
-      tokens.map((t: { token: string }) =>
+      iosTokens.map((t: { token: string }) =>
         sendPush(t.token, message, jwt, APNS_HOST, { badge: unreadCount, userId: user.id })
       ),
     );
+    const fcmResults = await Promise.all(
+      androidTokens.map(async (t: { token: string }) => ({
+        token: t.token,
+        ...(await sendFcm(t.token, message, { route: "badges", uid: user.id, t: "badge_earned" })),
+      })),
+    );
 
-    // Clean up Apple-rejected (410) tokens.
-    const expired = results.filter((r) => r.status === 410).map((r) => r.token);
+    // Clean up provider-rejected tokens (APNs 410 / FCM UNREGISTERED), scoped to this user.
+    const expired = [
+      ...results.filter((r) => r.status === 410).map((r) => r.token),
+      ...fcmResults.filter((r) => r.dead).map((r) => r.token),
+    ];
     if (expired.length > 0) {
-      await admin.from("device_tokens").delete().in("token", expired);
+      await admin.from("device_tokens").delete().eq("user_id", user.id).in("token", expired);
     }
 
     return json({
-      sent: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
+      sent: results.filter((r) => r.success).length + fcmResults.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length + fcmResults.filter((r) => !r.success).length,
       cleaned: expired.length,
     }, 200);
   } catch (err) {

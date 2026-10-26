@@ -11,6 +11,7 @@ import {
   isValidRecord,
   parseApnsReason,
   resolveActorName,
+  splitByPlatform,
   stripPemArmor,
 } from "./lib.ts";
 
@@ -233,4 +234,15 @@ Deno.test("buildMessage returns null for badge_earned (webhook must not push bad
 Deno.test("share_comment pushes the commenter's name and routes to the bell", () => {
   assertEquals(buildMessage("share_comment", "Sarah", "c1"), { title: "WRotate", body: "Sarah commented on a link you shared" });
   assertEquals(buildRoute("share_comment", "c1", null), { route: "bell", id: null });
+});
+
+Deno.test("splitByPlatform — android rows separate, missing platform means legacy ios", () => {
+  const { ios, android } = splitByPlatform([
+    { token: "a", platform: "ios" },
+    { token: "b", platform: "android" },
+    { token: "c" },
+    { token: "d", platform: null },
+  ]);
+  assertEquals(ios.map((r) => r.token), ["a", "c", "d"]);
+  assertEquals(android.map((r) => r.token), ["b"]);
 });

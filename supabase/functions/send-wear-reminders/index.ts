@@ -8,6 +8,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { sendEmail } from "../_shared/mailer.ts";
+import { sendFcm } from "../_shared/fcm.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
@@ -75,16 +76,23 @@ serve(async (req) => {
         const mail = buildReminderEmail(lw ? { brand: esc(lw.brand), name: esc(lw.name) } : null);
         if (t.channel === "push") {
           const { data: toks } = await supabase.from("device_tokens")
-            .select("token, app_version").eq("user_id", t.user_id).eq("platform", "ios");
+            .select("token, app_version, platform").eq("user_id", t.user_id);
           if (!toks || !toks.length) continue;
-          if (!jwt) jwt = await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID);
-          // Tap → Track with the one-tap "wearing it again?" banner (2.6+ only, per token).
-          const results = await Promise.all(
-            toks.map((x: { token: string; app_version?: string | null }) =>
-              sendPush(x.token, push, jwt!, APNS_HOST, routeFor(x.app_version, "track", t.last_watch_id ?? null, t.user_id))),
-          );
+          const iosToks = toks.filter((x: { platform?: string | null }) => x.platform !== "android");
+          const androidToks = toks.filter((x: { platform?: string | null }) => x.platform === "android");
+          if (iosToks.length && !jwt) jwt = await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID);
+          // Tap → Track with the one-tap "wearing it again?" banner (iOS 2.6+ per token;
+          // every android token is from a push-capable build, so routes always attach).
+          const results = await Promise.all([
+            ...iosToks.map((x: { token: string; app_version?: string | null }) =>
+              sendPush(x.token, push, jwt!, APNS_HOST, routeFor("ios", x.app_version, "track", t.last_watch_id ?? null, t.user_id))),
+            ...androidToks.map(async (x: { token: string }) => {
+              const r = await sendFcm(x.token, push, { route: "track", id: t.last_watch_id ?? null, uid: t.user_id });
+              return { token: x.token, success: r.success, status: r.dead ? 410 : r.status };
+            }),
+          ]);
           const expired = results.filter((r) => r.status === 410).map((r) => r.token);
-          if (expired.length) await supabase.from("device_tokens").delete().in("token", expired);
+          if (expired.length) await supabase.from("device_tokens").delete().eq("user_id", t.user_id).in("token", expired);
           if (!results.some((r) => r.success)) { failed++; continue; }
           pushed++;
         } else {
