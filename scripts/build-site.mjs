@@ -18,6 +18,7 @@ export const SITE_FILES = [
   'index.html',
   'open.html',
   'privacy.html',
+  'delete-account.html', // Play data-safety: public account-deletion steps
   'terms.html',
   'p/',
   'profile/',
