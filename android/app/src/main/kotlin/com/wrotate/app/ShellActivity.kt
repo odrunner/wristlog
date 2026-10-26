@@ -103,6 +103,7 @@ class ShellActivity : ComponentActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                     super.onPageStarted(view, url, favicon)
+                    runOnUiThread { errorOverlay.visibility = android.view.View.GONE }
                     pageLoaded = false
                     currentHost = url?.let { Uri.parse(it).host }
                     // Install the bridge shim only on our own origin.
@@ -115,6 +116,16 @@ class ShellActivity : ComponentActivity() {
                     pageLoaded = true
                     pendingInjectJs?.let { view.evaluateJavascript(it, null); pendingInjectJs = null }
                     drainPending()
+                }
+                override fun onReceivedError(
+                    view: WebView,
+                    request: WebResourceRequest,
+                    error: android.webkit.WebResourceError,
+                ) {
+                    super.onReceivedError(view, request, error)
+                    if (LoadErrorPolicy.showOverlay(request.isForMainFrame)) {
+                        runOnUiThread { errorOverlay.visibility = android.view.View.VISIBLE }
+                    }
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val u = request.url
@@ -151,6 +162,8 @@ class ShellActivity : ComponentActivity() {
         // bar and gesture bar). FrameLayout is not a nested-scrolling parent, so — unlike
         // SwipeRefreshLayout — it keeps the WebView's height constrained and `100vh` correct.
         val root = android.widget.FrameLayout(this).apply { addView(webView) }
+        errorOverlay = buildErrorOverlay()
+        root.addView(errorOverlay)
         setContentView(root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -333,6 +346,40 @@ class ShellActivity : ComponentActivity() {
         runOnUiThread {
             webView.evaluateJavascript("if(window._tgNativeCallback)window._tgNativeCallback($json);", null)
         }
+    }
+
+    private lateinit var errorOverlay: android.view.View
+
+    /** Full-screen load-error state with retry (iOS OfflineView parity); hidden on page start. */
+    private fun buildErrorOverlay(): android.view.View {
+        val dp = resources.displayMetrics.density
+        val column = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(0xFFFFFFFF.toInt())
+            isClickable = true // swallow touches so the error page behind is inert
+        }
+        column.addView(android.widget.TextView(this).apply {
+            text = "No Connection"
+            textSize = 20f
+            setTextColor(0xFF222222.toInt())
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        })
+        column.addView(android.widget.TextView(this).apply {
+            text = "Check your internet connection and try again."
+            textSize = 14f
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, (8 * dp).toInt(), 0, (24 * dp).toInt())
+        })
+        column.addView(android.widget.Button(this).apply {
+            text = "Try Again"
+            setOnClickListener {
+                errorOverlay.visibility = android.view.View.GONE
+                webView.reload()
+            }
+        })
+        column.visibility = android.view.View.GONE
+        return column
     }
 
     /** Play in-app review, fire-and-forget (iOS SKStoreReviewController parity): Play decides
