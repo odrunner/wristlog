@@ -139,9 +139,13 @@ you come in.
 If you have an Android phone (or know someone who does), joining takes two
 minutes:
 
-1. Open this link on the Android phone: [OPT-IN LINK]
-2. Tap "Become a tester", then install WRotate from Google Play.
-3. Keep it installed for the next two weeks - that is genuinely all it
+1. Reply to this email with the Google account address you use on your
+   Android phone, so we can add you to the tester list (Google requires it).
+2. Once we confirm, open https://play.google.com/apps/testing/com.wrotate.app
+   on the phone and tap "Become a tester".
+3. Install WRotate from Google Play:
+   https://play.google.com/store/apps/details?id=com.wrotate.app
+4. Keep it installed for the next two weeks - that is genuinely all it
    takes. Using it is even better, and we would love your feedback.
 
 Your iPhone app is unaffected - your account works on both.
@@ -163,8 +167,9 @@ and wears, optional social feed. Free, sign in with Google.
 
 Google requires new apps to run a 14-day closed test with 12+ testers
 before public launch. If you're willing to install it and keep it for two
-weeks, here's the opt-in link: [OPT-IN LINK]
-
-Open it on your Android phone, tap "Become a tester", install from Play.
+weeks: DM me the Google account email on your Android phone (Google gates
+the test by email list), I'll add you within hours, then open
+https://play.google.com/apps/testing/com.wrotate.app on the phone, tap
+"Become a tester", and install from Play.
 Feedback very welcome - especially measurement results vs. a real
 timegrapher if you have one.
