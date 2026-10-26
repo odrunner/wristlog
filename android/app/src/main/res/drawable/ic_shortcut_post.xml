@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plus in a circle (mirrors iOS plus.circle). Monochrome glyph. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF444444"
+        android:strokeWidth="2"
+        android:pathData="M12,3 a9,9 0 1,0 0,18 a9,9 0 1,0 0,-18 M12,8 L12,16 M8,12 L16,12" />
+</vector>

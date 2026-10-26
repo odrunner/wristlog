@@ -201,9 +201,14 @@ class ShellActivity : ComponentActivity() {
     private val pendingShare by lazy {
         PendingShare(load = { SharedImageStore.loadB64(this) }, clear = { SharedImageStore.clear(this) })
     }
+    @Volatile private var pendingQuickAction: String? = null
 
     private fun drainPending() {
         if (!isWrotateHost(currentHost)) return
+        pendingQuickAction?.let { action ->
+            pendingQuickAction = null
+            QuickActions.dispatchJs(action)?.let { webView.evaluateJavascript(it, null) }
+        }
         pendingShare.drain { js, onResult -> webView.evaluateJavascript(js) { onResult(it) } }
     }
 
@@ -211,6 +216,10 @@ class ShellActivity : ComponentActivity() {
         val data = intent?.data ?: return
         if (data.scheme == "wrotate" && data.host == "auth-callback") {
             authHandler.onCallback(data.toString())
+        }
+        QuickActions.parse(data.toString())?.let {
+            pendingQuickAction = it
+            if (pageLoaded) runOnUiThread { drainPending() }
         }
     }
 

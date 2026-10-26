@@ -38,6 +38,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wrotate" android:host="auth-callback" />
             </intent-filter>
+            <!-- Launcher shortcuts land here as wrotate://quick/<action>. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="wrotate" android:host="quick" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
         <!-- Share target: receive an image from any app, park it, open the shell (iOS share
              extension parity). Translucent so the share sheet hands straight to the shell. -->
