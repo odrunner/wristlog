@@ -85,3 +85,4 @@ if someone used advanced settings show that it's not default anymore
 measurement advance settings
 measurement v2
 
+Android foreground push shows no banner (background works): check whether the notification lands silently in the shade (channel importance DEFAULT -> no heads-up; fix = HIGH-importance channel, needs new channel id since importance is fixed after creation) or never posts at all (PushService.onMessageReceived not running). Parked 2026-10-26 during push UAT.
