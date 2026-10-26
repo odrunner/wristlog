@@ -1,0 +1,172 @@
+WROTATE — GOOGLE PLAY LAUNCH CHECKLIST (created 2026-10-26)
+Phase A = store listing + declarations (do anytime, required before production).
+Phase B = closed testing (starts the 14-day clock — do first).
+Console home: play.google.com/console -> WRotate -> Dashboard -> "Set up your app" tasks.
+
+================================================================
+PHASE A — STORE LISTING (Grow -> Store presence -> Main store listing)
+================================================================
+
+[ ] App name:
+WRotate
+
+[ ] Short description (80 chars max):
+Your watch collection, wear log, and a real timegrapher - all in one app.
+
+[ ] Full description (paste as-is, edit freely):
+WRotate turns your phone into a watch accuracy tool and keeps your whole
+collection in one place.
+
+MEASURE LIKE A TIMEGRAPHER
+Place your watch on the phone's microphone and WRotate listens to the
+movement's ticks. You get rate (seconds per day), beat error, and amplitude
+in about 17 seconds - the numbers a professional timegrapher gives you.
+Audio is processed on your device in real time and never recorded or
+uploaded.
+
+YOUR COLLECTION
+Add watches from a photo - WRotate identifies the brand and model for you.
+Track specs, references, straps, and value estimates. Keep a wishlist.
+
+WEAR TRACKING
+Log what you wear each day and see which watches actually get wrist time,
+with stats and streaks over any period.
+
+SHARE IT (IF YOU WANT)
+Post wrist shots to the feed, follow other collectors, or keep everything
+private. Visibility is per post: public, followers, or close friends.
+
+REMINDERS THAT RESPECT YOU
+Optional notifications for wear logging and re-measuring a watch after a
+few weeks - one tap to turn off.
+
+Free to use. Sign in with Google or Apple.
+
+[ ] Graphics (ask Claude to render these - same pipeline as the App Store set):
+    - App icon: 512 x 512 PNG (from ios/app-icon.svg)
+    - Feature graphic: 1024 x 500 PNG
+    - Phone screenshots: minimum 2, recommend 6-8 at 1080 x 2400
+[ ] Category: App -> Lifestyle
+[ ] Contact email: a public support address is required. ozgurdogan@gmail.com
+    works; a cleaner option is adding support@wrotate.com in Cloudflare Email
+    Routing first (ask Claude).
+[ ] Privacy policy URL: https://wrotate.com/privacy   (already live)
+
+================================================================
+PHASE A — POLICY FORMS (Monitor and improve -> Policy -> App content)
+================================================================
+
+[ ] Privacy policy: https://wrotate.com/privacy
+
+[ ] App access:
+    Choose "All or some functionality is restricted" -> add instructions:
+    "Sign in with any Google or Apple account. Accounts are free and all
+    features are available immediately after sign-in. No special test
+    credentials are required."
+
+[ ] Ads: No, the app does not contain ads.
+
+[ ] Content rating (IARC questionnaire) - answer honestly, these apply:
+    - Category: Social / Communication (has user-generated content)
+    - Violence / sexuality / drugs / gambling: No to all
+    - User-generated content: YES
+      - Users can share text/images: yes (posts, comments)
+      - Moderation: yes - in-app reporting, user blocking, and content
+        removal exist
+    - Personal info shared: users can choose to share (profiles/posts)
+    Expected result: Teen / 13+ equivalent.
+
+[ ] Target audience: 13 and over (do NOT tick any under-13 group).
+    "Appeals to children": No.
+
+[ ] News app: No.   [ ] COVID tracing/status: No.
+[ ] Government app: No.   [ ] Financial features: None.
+
+[ ] Data safety form - answers:
+    Does your app collect or share user data? YES (collect), NO (share).
+    Encrypted in transit: YES.
+    Deletion mechanism: YES - in-app account deletion removes all data.
+
+    Data types collected:
+    - Personal info -> Email address + Name:
+      collected, required for app functionality (account), not shared.
+    - Photos and videos -> Photos:
+      collected (user uploads watch photos/posts), optional, not shared
+      publicly except as the user chooses to post.
+    - App activity -> Other user-generated content:
+      collected (posts, comments, wear logs), optional, not shared.
+    - Device or other IDs:
+      collected (push notification token), optional (only if notifications
+      are enabled), not shared.
+    - Audio: NOT collected. Microphone audio is processed ephemerally
+      on-device for watch measurement and is never recorded, stored, or
+      transmitted. (Play's rules: ephemeral processing = not "collected".)
+
+================================================================
+PHASE B — CLOSED TESTING (the 14-day clock; see chat for the walkthrough)
+================================================================
+
+[ ] Promote the 1.2 release: Testing -> Internal testing -> Releases ->
+    Promote release -> Closed testing (the default "Alpha" track is fine).
+[ ] Closed track -> Testers tab -> create email list "WRotate beta",
+    add tester emails (you can add more later).
+[ ] Same page -> select countries (add all, or at least US/CA/EU/TR).
+[ ] Roll out the release. Copy the OPT-IN LINK from the Testers tab and
+    give it to Claude (the drafts below carry a placeholder for it).
+[ ] Recruit 15-20 testers (12 is the minimum; dropouts reset nothing if
+    you stay above 12): the Reddit users who asked, friends, iOS users
+    with Android phones.
+[ ] Testers must: open the opt-in link, tap "accept", install from Play,
+    and KEEP THE APP INSTALLED + stay opted in for 14 unbroken days.
+[ ] Watch the opted-in count on the closed track page. After 14 days above
+    12, the Dashboard shows "Apply for production access" -> apply.
+
+----------------------------------------------------------------
+BROADCAST DRAFT (paste into Admin -> Broadcast; sending = your click)
+----------------------------------------------------------------
+Subject:
+WRotate for Android is ready - we need 12 testers
+
+Heading:
+Help us launch on Android
+
+Body:
+WRotate now runs on Android - the full app: the timegrapher, your
+collection, wear tracking, and the feed, with notifications.
+
+Before Google lets a new app launch publicly, it requires a closed test:
+at least 12 testers who keep the app installed for 14 days. That is where
+you come in.
+
+If you have an Android phone (or know someone who does), joining takes two
+minutes:
+
+1. Open this link on the Android phone: [OPT-IN LINK]
+2. Tap "Become a tester", then install WRotate from Google Play.
+3. Keep it installed for the next two weeks - that is genuinely all it
+   takes. Using it is even better, and we would love your feedback.
+
+Your iPhone app is unaffected - your account works on both.
+
+Thanks for helping us get WRotate into more collectors' hands.
+
+----------------------------------------------------------------
+REDDIT DRAFT (post or DM to the users who asked; personal voice)
+----------------------------------------------------------------
+Title:
+WRotate (watch timegrapher + collection app) is now on Android - looking
+for beta testers
+
+Body:
+A few of you asked for an Android version of WRotate - it's ready.
+Same app as iOS: measure your watch's accuracy with the phone mic
+(rate/beat error/amplitude, like a timegrapher), track your collection
+and wears, optional social feed. Free, sign in with Google.
+
+Google requires new apps to run a 14-day closed test with 12+ testers
+before public launch. If you're willing to install it and keep it for two
+weeks, here's the opt-in link: [OPT-IN LINK]
+
+Open it on your Android phone, tap "Become a tester", install from Play.
+Feedback very welcome - especially measurement results vs. a real
+timegrapher if you have one.
