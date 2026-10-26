@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.19.47';
+const APP_VERSION = '26.07.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16476,6 +16476,13 @@ async function handleNewPostPhotos(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
   input.value = '';
+  // Diagnostic (2026-10-26, Android camera-capture bug): record exactly what the
+  // file chooser handed the page — size 0 means an empty native temp file, real
+  // bytes in an .mp4 mean the camera recorded video. Remove once verified.
+  if (currentUser && !_isDemoMode) {
+    db.from('feature_events').insert({ user_id: currentUser.id, event: 'np_files_received',
+      meta: { files: files.map(f => ({ n: f.name, t: f.type, s: f.size })) } }).then(() => {});
+  }
   const wasEmpty = newPostFiles.length === 0;
   const slots = 6 - newPostFiles.length;
   if (files.length > slots) toast('Maximum 6 photos and videos per post', 'error');
