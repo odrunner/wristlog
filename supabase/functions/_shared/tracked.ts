@@ -16,17 +16,19 @@ export { MIN_TRACKED_APP_VERSION, TRACKED_CONFIG_SET } from "./tracked-lib.ts";
 // deno-lint-ignore no-explicit-any
 type Db = any;
 
-// Which of these users have an iOS 2.6+ install on record.
+// Which of these users have an iOS 2.6+ install on record AND no Android install.
+// No app_version filter: a version-less Android row must still arrive so it can veto.
 export async function fetchTrackedUids(db: Db, uids: string[]): Promise<Set<string>> {
   if (!uids || uids.length === 0) return new Set();
   try {
     const { data, error } = await db
       .from("device_tokens")
-      .select("user_id, app_version")
-      .in("user_id", uids)
-      .not("app_version", "is", null);
+      .select("user_id, app_version, platform")
+      .in("user_id", uids);
     if (error) return new Set();
-    return trackedUidSet(data as Array<{ user_id: string; app_version: string | null }>);
+    return trackedUidSet(
+      data as Array<{ user_id: string; app_version: string | null; platform?: string | null }>,
+    );
   } catch {
     return new Set();
   }

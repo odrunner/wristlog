@@ -5,16 +5,20 @@ import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { fetchTrackedUids, trackedConfigSet, TRACKED_CONFIG_SET } from "./tracked.ts";
 
 // Minimal stand-in for the PostgREST builder chain used by fetchTrackedUids:
-// .from().select().in().not() finally resolves to { data, error }.
+// .from().select().in() finally resolves to { data, error }. There is deliberately no
+// app_version not-null filter any more — a version-less android row must still reach
+// trackedUidSet so it can veto (and no `not` stub exists, so reintroducing the filter fails here).
 function stubDb(result: { data?: unknown; error?: unknown } | (() => never)) {
-  const calls: { uids?: string[] } = {};
+  const calls: { uids?: string[]; select?: string } = {};
   const chain = {
-    select: () => chain,
-    in: (_col: string, uids: string[]) => {
-      calls.uids = uids;
+    select: (cols: string) => {
+      calls.select = cols;
       return chain;
     },
-    not: () => (typeof result === "function" ? result() : Promise.resolve(result)),
+    in: (_col: string, uids: string[]) => {
+      calls.uids = uids;
+      return typeof result === "function" ? result() : Promise.resolve(result);
+    },
   };
   return { db: { from: () => chain }, calls };
 }

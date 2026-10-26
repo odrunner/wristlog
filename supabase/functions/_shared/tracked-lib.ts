@@ -30,14 +30,21 @@ export function versionAtLeast(v: string | null | undefined, min: string): boole
 }
 
 // device_tokens rows → the set of user ids eligible for the tracked config set.
-// A user can hold several tokens (old iPhone, reinstall); any 2.6+ row counts —
-// stale rows can't veto, because the AASA/unwrap live in the newest install.
+// A user can hold several tokens (old iPhone, reinstall); any iOS 2.6+ row counts —
+// stale iOS rows can't veto, because the AASA/unwrap live in the newest install.
+// An ANDROID row always vetoes (spec anti-goal): tracked links are rewritten to
+// click.wrotate.com, whose .well-known carries no assetlinks.json, so on Android the
+// email CTA would open the browser instead of the app. Rows without a platform are
+// legacy iOS rows (the column predates Android and defaulted to 'ios').
 export function trackedUidSet(
-  rows: Array<{ user_id: string; app_version: string | null }> | null | undefined,
+  rows: Array<{ user_id: string; app_version: string | null; platform?: string | null }> | null | undefined,
 ): Set<string> {
   const out = new Set<string>();
+  const vetoed = new Set<string>();
   for (const r of rows ?? []) {
-    if (versionAtLeast(r.app_version, MIN_TRACKED_APP_VERSION)) out.add(r.user_id);
+    if (r.platform === "android") vetoed.add(r.user_id);
+    else if (versionAtLeast(r.app_version, MIN_TRACKED_APP_VERSION)) out.add(r.user_id);
   }
+  for (const u of vetoed) out.delete(u);
   return out;
 }
