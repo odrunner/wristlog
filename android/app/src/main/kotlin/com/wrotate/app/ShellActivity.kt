@@ -252,9 +252,12 @@ class ShellActivity : ComponentActivity() {
     }
 
     private fun handlePushTapIntent(intent: Intent?) {
-        val route = intent?.getStringExtra("push_route") ?: return
-        pendingPushTap = route to intent.getStringExtra("push_id")
-        intent.removeExtra("push_route")
+        if (intent == null) return
+        // Foreground taps carry push_-prefixed extras (PushService); background/killed-app taps
+        // carry the FCM data map's raw keys (route/id) — the system builds that intent itself.
+        val tap = PushPayload.tapRoute { k -> intent.getStringExtra(k) } ?: return
+        pendingPushTap = tap
+        for (k in listOf("push_route", "route", "push_id", "id")) intent.removeExtra(k)
     }
 
     private fun launchPhotoChooser(params: WebChromeClient.FileChooserParams): Boolean {
@@ -409,11 +412,14 @@ class ShellActivity : ComponentActivity() {
     // where the permission is auto-granted and no dialog exists).
     private fun onSignedIn(uid: String, accessToken: String) {
         PushRegistrar.onSession(this, uid, accessToken)
-        if (android.os.Build.VERSION.SDK_INT < 33 || pushPermissionGranted()) {
-            reportPushStatus()
-            PushRegistrar.register(this)
-        } else {
-            askPushPermission()
+        val asked = getSharedPreferences("push", MODE_PRIVATE).getBoolean("asked", false)
+        when (PushRegistrar.signInAction(pushPermissionGranted(), asked)) {
+            "register" -> { reportPushStatus(); PushRegistrar.register(this) }
+            // Auto-ask exactly once: supabase-js re-emits SIGNED_IN on every foreground, and
+            // re-launching the dialog there would nag a decliner forever. The settings row's
+            // "Turn on" (requestPushPermission) remains the manual retry.
+            "ask" -> askPushPermission()
+            else -> reportPushStatus()
         }
     }
 

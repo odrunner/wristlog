@@ -88,6 +88,15 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false" />
 
+        <!-- System-displayed (background) notifications: without these they land in FCM's
+             "Miscellaneous" fallback channel and use the full-colour launcher icon as the
+             status-bar glyph. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="reminders" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_shortcut_measure" />
         <!-- FCM deliveries (push plan). Token registration lives in PushRegistrar. -->
         <service
             android:name=".PushService"

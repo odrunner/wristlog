@@ -29,12 +29,14 @@ fun buildBridgeScript(capabilityVersion: String, versionName: String = ""): Stri
     };
   });
   // Auth watcher (iOS WebView.swift parity): the shell needs the session to register push
-  // tokens. The page's supabase client (db) is created later in the page's own scripts, so
-  // poll briefly until it exists.
+  // tokens. The page's client is a top-level `const db` in a classic script — it never becomes
+  // a window property, so the check MUST be `typeof db` (a window-scoped lookup polls forever).
+  // And supabase-js may emit its startup SIGNED_IN before this hook attaches, so an
+  // already-live session is fetched once and posted as SIGNED_IN.
   (function hookAuth() {
     try {
-      if (window.db && window.db.auth && typeof window.db.auth.onAuthStateChange === 'function') {
-        window.db.auth.onAuthStateChange(function(event, session) {
+      if (typeof db !== 'undefined' && db.auth && typeof db.auth.onAuthStateChange === 'function') {
+        var post = function(event, session) {
           try {
             window.webkit.messageHandlers.auth.postMessage({
               event: event,
@@ -42,7 +44,13 @@ fun buildBridgeScript(capabilityVersion: String, versionName: String = ""): Stri
               accessToken: session ? session.access_token : null
             });
           } catch (e) {}
+        };
+        db.auth.onAuthStateChange(function(event, session) {
+          post(event === 'INITIAL_SESSION' && session ? 'SIGNED_IN' : event, session);
         });
+        db.auth.getSession().then(function(r) {
+          if (r && r.data && r.data.session) post('SIGNED_IN', r.data.session);
+        }).catch(function() {});
         return;
       }
     } catch (e) {}

@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.12.38';
+const APP_VERSION = '26.12.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14775,10 +14775,14 @@ function onPushAuthStatus(status) {
   window._pushAuthStatus = status;
   renderPushSettingRow();
   if (currentUser && !_isDemoMode) {
-    const platform = nativePlatform() === 'android' ? 'android' : 'ios';
-    // _nativeVersionName is the Android shell's Play versionName (e.g. '1.2') — never the
-    // iOS-line capability version, which would corrupt per-platform adoption numbers.
-    _bootGate.then(() => db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || window._nativeVersionName || null, p_platform: platform })).then(() => {}, () => {});
+    // iOS keeps the exact 2-arg call shape: it must work against BOTH the old and the new RPC
+    // signature, whichever is live when this page deploys (deploy order stops mattering).
+    // Android sends p_platform + the Play versionName (_nativeVersionName) — never the iOS-line
+    // capability version, which would corrupt per-platform adoption numbers.
+    const args = nativePlatform() === 'android'
+      ? { p_status: status, p_app_version: window._nativeVersionName || null, p_platform: 'android' }
+      : { p_status: status, p_app_version: window._iosAppVersion || null };
+    _bootGate.then(() => db.rpc('record_push_auth_status', args)).then(() => {}, () => {});
   }
 }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).

@@ -46,10 +46,12 @@ export function fcmSendUrl(projectId: string): string {
   return `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 }
 
-/** Dead = the registration token is gone (uninstall/rotation): prune it. Everything else
- *  (quota, auth, 5xx) is a transient failure — never delete a token for those. */
+/** Dead = the registration token is gone (uninstall/rotation): prune it. Everything else is a
+ *  transient failure — never delete a token for those. INVALID_ARGUMENT is deliberately NOT
+ *  dead: FCM also returns it for malformed PAYLOADS, and treating it as a dead token would let
+ *  one payload bug delete every Android token it was sent to. */
 export function isDeadFcmResult(status: number, errorStatus?: string): boolean {
   if (status === 404) return true;
-  if (status === 400 && (errorStatus === "UNREGISTERED" || errorStatus === "INVALID_ARGUMENT")) return true;
+  if (status === 400 && errorStatus === "UNREGISTERED") return true;
   return false;
 }

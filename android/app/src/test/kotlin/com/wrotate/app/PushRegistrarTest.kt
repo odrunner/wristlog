@@ -30,4 +30,14 @@ class PushRegistrarTest {
         assertEquals("android", body.getString("platform"))
         assertEquals("1.2", body.getString("app_version"))
     }
+
+    // Review I2: supabase-js re-emits SIGNED_IN on every foreground and TOKEN_REFRESHED hourly.
+    // The one-shot OS dialog may only ever be auto-launched once; after that, report + register.
+    @Test
+    fun signInActionAsksOnlyOnce() {
+        assertEquals("register", PushRegistrar.signInAction(granted = true, asked = false))
+        assertEquals("register", PushRegistrar.signInAction(granted = true, asked = true))
+        assertEquals("ask", PushRegistrar.signInAction(granted = false, asked = false))
+        assertEquals("report", PushRegistrar.signInAction(granted = false, asked = true))
+    }
 }

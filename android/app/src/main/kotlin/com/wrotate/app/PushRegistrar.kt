@@ -30,6 +30,14 @@ object PushRegistrar {
         else -> "notDetermined"
     }
 
+    /** What sign-in does with push: supabase-js re-emits SIGNED_IN on every foreground and
+     *  TOKEN_REFRESHED hourly — the one-shot OS dialog may only ever be auto-launched once. */
+    fun signInAction(granted: Boolean, asked: Boolean): String = when {
+        granted -> "register"
+        !asked -> "ask"
+        else -> "report"
+    }
+
     fun registrationBody(userId: String, token: String, versionName: String): String =
         org.json.JSONObject()
             .put("user_id", userId)

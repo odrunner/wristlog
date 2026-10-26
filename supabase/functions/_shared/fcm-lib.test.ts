@@ -40,10 +40,12 @@ Deno.test("fcmSendUrl — project-scoped v1 endpoint", () => {
   assertEquals(fcmSendUrl("wrotate"), "https://fcm.googleapis.com/v1/projects/wrotate/messages:send");
 });
 
-Deno.test("isDeadFcmResult — only unregistered/invalid tokens are dead", () => {
+Deno.test("isDeadFcmResult — only unregistered tokens are dead", () => {
   assertEquals(isDeadFcmResult(404, "NOT_FOUND"), true);
   assertEquals(isDeadFcmResult(400, "UNREGISTERED"), true);
-  assertEquals(isDeadFcmResult(400, "INVALID_ARGUMENT"), true);
+  // INVALID_ARGUMENT also fires for malformed PAYLOADS — treating it as a dead token would
+  // let one payload bug delete every Android token it was sent to (review M2, re-graded).
+  assertEquals(isDeadFcmResult(400, "INVALID_ARGUMENT"), false);
   assertEquals(isDeadFcmResult(400, "QUOTA_EXCEEDED"), false);
   assertEquals(isDeadFcmResult(500, "INTERNAL"), false);
   assertEquals(isDeadFcmResult(503, undefined), false);

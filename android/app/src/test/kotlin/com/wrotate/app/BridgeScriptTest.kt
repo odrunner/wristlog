@@ -34,6 +34,13 @@ class BridgeScriptTest {
         assertTrue(js.contains("onAuthStateChange"), "auth watcher installed")
         assertTrue(js.contains("access_token"), "posts the access token")
         assertTrue(js.contains("window._nativeVersionName = '1.2'"), "Play versionName exposed")
+        // The page's supabase client is a top-level `const db` in a classic script — it NEVER
+        // becomes window.db. Waiting on window.db polls forever and push never starts (review C1).
+        assertTrue(js.contains("typeof db !== 'undefined'"), "detects the const, not window.db")
+        assertTrue(!js.contains("window.db"), "window.db never exists")
+        // supabase-js can emit its startup SIGNED_IN before the hook attaches; the session must
+        // still reach native (getSession catch-up / INITIAL_SESSION).
+        assertTrue(js.contains("getSession"), "catches up on an already-live session")
     }
 
     @Test
