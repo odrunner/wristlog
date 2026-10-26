@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.wrotate.app",
+      "sha256_cert_fingerprints": [
+        "BC:EC:4B:F3:3F:DE:F7:91:45:12:25:F2:84:DF:76:D7:EE:54:B4:75:E6:F1:BE:EC:25:B9:E5:B9:AE:52:E2:D0",
+        "6C:3D:35:5F:72:C8:E0:CE:EC:98:04:5B:8C:13:62:D4:9A:69:5E:1D:A7:E9:D9:A9:A4:D7:3C:D3:C2:5C:0C:F4",
+        "E5:F8:5E:34:DA:66:13:8C:44:1A:8E:CC:6B:68:27:07:0F:61:4D:A9:6C:5B:4B:4B:3F:5D:BC:C4:72:EE:9C:CA"
+      ]
+    }
+  }
+]

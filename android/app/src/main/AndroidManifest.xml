@@ -38,6 +38,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wrotate" android:host="auth-callback" />
             </intent-filter>
+            <!-- App links: https://wrotate.com opens the app once Android verifies
+                 /.well-known/assetlinks.json (Play App Signing fingerprints). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="wrotate.com" />
+                <data android:host="www.wrotate.com" />
+            </intent-filter>
             <!-- Launcher shortcuts land here as wrotate://quick/<action>. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
