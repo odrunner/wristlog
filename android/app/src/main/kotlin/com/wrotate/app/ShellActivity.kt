@@ -75,6 +75,12 @@ class ShellActivity : ComponentActivity() {
             if (granted && json != null) safeHandle(json)
             else if (!granted) callJs(BridgeMessages.error("Microphone permission denied. Allow it in Settings to measure."))
         }
+    private val notifPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            getSharedPreferences("push", MODE_PRIVATE).edit().putBoolean("asked", true).apply()
+            reportPushStatus()
+            if (granted) PushRegistrar.register(this)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,7 +114,10 @@ class ShellActivity : ComponentActivity() {
                     currentHost = url?.let { Uri.parse(it).host }
                     // Install the bridge shim only on our own origin.
                     if (isWrotateHost(currentHost)) {
-                        view.evaluateJavascript(buildBridgeScript(BuildConfig.NATIVE_CAPABILITY_VERSION), null)
+                        view.evaluateJavascript(
+                            buildBridgeScript(BuildConfig.NATIVE_CAPABILITY_VERSION, BuildConfig.VERSION_NAME),
+                            null,
+                        )
                     }
                 }
                 override fun onPageFinished(view: WebView, url: String?) {
@@ -195,6 +204,7 @@ class ShellActivity : ComponentActivity() {
         val restored = savedInstanceState != null && webView.restoreState(savedInstanceState) != null
         if (!restored) webView.loadUrl(SITE_URL)
         handleAuthIntent(intent)
+        handlePushTapIntent(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -206,6 +216,7 @@ class ShellActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleAuthIntent(intent)
+        handlePushTapIntent(intent)
     }
 
     // Pending hand-offs (shared image; quick actions ride the same hook), drained on every page
@@ -215,9 +226,14 @@ class ShellActivity : ComponentActivity() {
         PendingShare(load = { SharedImageStore.loadB64(this) }, clear = { SharedImageStore.clear(this) })
     }
     @Volatile private var pendingQuickAction: String? = null
+    @Volatile private var pendingPushTap: Pair<String, String?>? = null
 
     private fun drainPending() {
         if (!isWrotateHost(currentHost)) return
+        pendingPushTap?.let { (route, id) ->
+            pendingPushTap = null
+            PushTapJs.dispatchJs(route, id)?.let { webView.evaluateJavascript(it, null) }
+        }
         pendingQuickAction?.let { action ->
             pendingQuickAction = null
             QuickActions.dispatchJs(action)?.let { webView.evaluateJavascript(it, null) }
@@ -233,6 +249,12 @@ class ShellActivity : ComponentActivity() {
         // Held here, drained by onResume (which always follows onNewIntent) or onPageFinished —
         // draining immediately as well double-evaluated the pending share.
         QuickActions.parse(data.toString())?.let { pendingQuickAction = it }
+    }
+
+    private fun handlePushTapIntent(intent: Intent?) {
+        val route = intent?.getStringExtra("push_route") ?: return
+        pendingPushTap = route to intent.getStringExtra("push_id")
+        intent.removeExtra("push_route")
     }
 
     private fun launchPhotoChooser(params: WebChromeClient.FileChooserParams): Boolean {
@@ -381,6 +403,53 @@ class ShellActivity : ComponentActivity() {
         return column
     }
 
+    // ── Push (FCM) ────────────────────────────────────────────────────────────
+    // Sign-in (spec §3): Android has no provisional state, so the full POST_NOTIFICATIONS ask
+    // happens at sign-in; the token registers once granted (or immediately below API 33,
+    // where the permission is auto-granted and no dialog exists).
+    private fun onSignedIn(uid: String, accessToken: String) {
+        PushRegistrar.onSession(this, uid, accessToken)
+        if (android.os.Build.VERSION.SDK_INT < 33 || pushPermissionGranted()) {
+            reportPushStatus()
+            PushRegistrar.register(this)
+        } else {
+            askPushPermission()
+        }
+    }
+
+    private fun pushPermissionGranted(): Boolean =
+        android.os.Build.VERSION.SDK_INT < 33 ||
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun askPushPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !pushPermissionGranted()) {
+            notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            reportPushStatus()
+            PushRegistrar.register(this)
+        }
+    }
+
+    private fun openNotificationSettings() {
+        try {
+            startActivity(
+                Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName),
+            )
+        } catch (e: Exception) {
+        }
+    }
+
+    /** Pushes the OS permission state into the page (renders the settings row + records the
+     *  per-platform status server-side via onPushAuthStatus → record_push_auth_status). */
+    private fun reportPushStatus() {
+        val asked = getSharedPreferences("push", MODE_PRIVATE).getBoolean("asked", false)
+        val status = PushRegistrar.statusString(pushPermissionGranted(), asked, android.os.Build.VERSION.SDK_INT)
+        val js = "window._pushAuthStatus='$status'; if (typeof onPushAuthStatus==='function') onPushAuthStatus('$status');"
+        runOnUiThread { if (pageLoaded) webView.evaluateJavascript(js, null) else pendingInjectJs = js }
+    }
+
     /** Play in-app review, fire-and-forget (iOS SKStoreReviewController parity): Play decides
      *  whether a sheet actually shows, and every failure is silently dropped. */
     private fun launchPlayReview() {
@@ -407,11 +476,20 @@ class ShellActivity : ComponentActivity() {
             when (handler) {
                 "haptic" -> vibrate()
                 "timegrapher" -> runOnUiThread { routeTimegrapher(json) }
-                "auth" -> {} // web→native auth notifications are unused on Android v1 (no push)
-                // requestReview launches the Play sheet; every other action the page may post
-                // (requestPushPermission, openAppSettings) is deliberately a no-op until push.
-                "appAction" -> if (BridgeMessages.parseAppAction(json) == "requestReview") {
-                    runOnUiThread { launchPlayReview() }
+                // Session events drive FCM token registration (iOS PushManager parity).
+                "auth" -> BridgeMessages.parseAuthEvent(json)?.let { (event, uid, token) ->
+                    when (event) {
+                        "SIGNED_IN", "TOKEN_REFRESHED" -> if (uid != null && token != null) {
+                            runOnUiThread { onSignedIn(uid, token) }
+                        }
+                        "SIGNED_OUT" -> PushRegistrar.onSignedOut(this@ShellActivity)
+                    }
+                }
+                "appAction" -> when (BridgeMessages.parseAppAction(json)) {
+                    "requestReview" -> runOnUiThread { launchPlayReview() }
+                    "requestPushPermission" -> runOnUiThread { askPushPermission() }
+                    "openAppSettings" -> runOnUiThread { openNotificationSettings() }
+                    else -> {} // unknown actions stay a safe no-op
                 }
             }
         }

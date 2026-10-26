@@ -26,6 +26,16 @@ class BridgeScriptTest {
         assertTrue(js.contains("AndroidBridge.post"), "forwards to the native interface")
     }
 
+    // Push: the shell must learn the session (userId + access token) to register FCM tokens —
+    // iOS gets this from WebView.swift's injected onAuthStateChange watcher; Android mirrors it.
+    @Test
+    fun watchesAuthStateAndExposesPlayVersionName() {
+        val js = buildBridgeScript("2.10", "1.2")
+        assertTrue(js.contains("onAuthStateChange"), "auth watcher installed")
+        assertTrue(js.contains("access_token"), "posts the access token")
+        assertTrue(js.contains("window._nativeVersionName = '1.2'"), "Play versionName exposed")
+    }
+
     @Test
     fun doesNotClobberExistingWebkit() {
         val js = buildBridgeScript("2.10")

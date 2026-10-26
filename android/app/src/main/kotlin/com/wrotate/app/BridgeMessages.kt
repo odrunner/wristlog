@@ -10,6 +10,16 @@ import com.wrotate.engine.Update
  */
 object BridgeMessages {
 
+    /** A web→native auth event ({"event","userId","accessToken"}) as (event, userId, accessToken),
+     *  or null when malformed. userId/accessToken are null for SIGNED_OUT. */
+    fun parseAuthEvent(json: String): Triple<String, String?, String?>? = try {
+        val o = org.json.JSONObject(json)
+        val event = o.optString("event", "").ifEmpty { null }
+        event?.let { Triple(it, o.optString("userId", "").ifEmpty { null }, o.optString("accessToken", "").ifEmpty { null }) }
+    } catch (e: Exception) {
+        null
+    }
+
     /** The `action` of a web→native appAction post ({"action":"requestReview"}), or null. */
     fun parseAppAction(json: String): String? = try {
         org.json.JSONObject(json).optString("action", "").ifEmpty { null }

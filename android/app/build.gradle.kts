@@ -26,6 +26,13 @@ android {
         // Capability version on the shared iOS numbering line (NOT the Play Store versionName),
         // injected as window._nativeAppVersion so the measurement gates (>=2.0/2.1/2.3) clear.
         buildConfigField("String", "NATIVE_CAPABILITY_VERSION", "\"2.10\"")
+        // Firebase client identifiers (public by design, same class as the Supabase publishable
+        // key). Checked in so builds never need the gitignored google-services.json — FirebaseApp
+        // is initialized manually in WrotateApp, no google-services gradle plugin.
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"wrotate\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"1:747436743194:android:ce12922dc69e1ec0f38fa3\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"AIzaSyBD6r28VsidfycDayO8D9gS7ozGE_5_yCE\"")
+        buildConfigField("String", "FIREBASE_SENDER_ID", "\"747436743194\"")
     }
 
     buildFeatures {
@@ -69,6 +76,7 @@ dependencies {
     // play:review drags in fragment:1.1.0, which release lint rejects for the ActivityResult APIs.
     implementation("androidx.fragment:fragment:1.6.2")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("com.google.firebase:firebase-messaging:24.1.0")
     testImplementation(kotlin("test-junit"))
     // Real org.json so JVM unit tests exercise the message-parse path (android.jar stubs it).
     testImplementation("org.json:json:20231013")

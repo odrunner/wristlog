@@ -21,3 +21,23 @@ class AppActionTest {
         assertNull(BridgeMessages.parseAppAction(""))
     }
 }
+
+class AuthEventTest {
+    @Test
+    fun parsesSignedInWithSession() {
+        val e = BridgeMessages.parseAuthEvent("""{"event":"SIGNED_IN","userId":"u-1","accessToken":"tok.a-b_c"}""")
+        kotlin.test.assertEquals(Triple("SIGNED_IN", "u-1", "tok.a-b_c"), e)
+    }
+
+    @Test
+    fun parsesSignedOutWithoutSession() {
+        val e = BridgeMessages.parseAuthEvent("""{"event":"SIGNED_OUT"}""")
+        kotlin.test.assertEquals(Triple("SIGNED_OUT", null, null), e)
+    }
+
+    @Test
+    fun malformedAuthEventsAreNull() {
+        assertNull(BridgeMessages.parseAuthEvent("not json"))
+        assertNull(BridgeMessages.parseAuthEvent("""{"noevent":1}"""))
+    }
+}
