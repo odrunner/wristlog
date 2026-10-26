@@ -174,6 +174,8 @@ class ShellActivity : ComponentActivity() {
                     if (pageLoaded) webView.evaluateJavascript(js, null) else pendingInjectJs = js
                 }
             },
+            exchange = TokenExchange::exchange,
+            ioExecutor = { body -> Thread(body, "pkce-exchange").start() },
         )
 
         val restored = savedInstanceState != null && webView.restoreState(savedInstanceState) != null
