@@ -21,8 +21,8 @@ android {
         applicationId = "com.wrotate.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.1.1"
+        versionCode = 7
+        versionName = "1.2"
         // Capability version on the shared iOS numbering line (NOT the Play Store versionName),
         // injected as window._nativeAppVersion so the measurement gates (>=2.0/2.1/2.3) clear.
         buildConfigField("String", "NATIVE_CAPABILITY_VERSION", "\"2.10\"")
