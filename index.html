@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.12.29';
+const APP_VERSION = '26.12.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14764,15 +14764,21 @@ function badgeRevealNames(names, shown = 8) {
 // times and tapped twice; it is gone. 2.3–2.5 builds keep the bridge action.
 function _pushBridge() { return window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appAction; }
 function _pushBridgeAvailable() {
+  // Android shells report a status string on load once they have push (1.2+); the version
+  // gate stays iOS-shaped because _nativeAppVersion rides the iOS capability line there.
+  if (nativePlatform() === 'android') return !!_pushBridge() && typeof window._pushAuthStatus === 'string';
   return !!_pushBridge() && iosAtLeast(window._iosAppVersion, '2.3');
 }
 // Native calls this when it evaluates the OS notification status; the latest status is
-// recorded server-side so quiet → prominent / off can be measured over time.
+// recorded server-side, per platform, so quiet → prominent / off can be measured over time.
 function onPushAuthStatus(status) {
   window._pushAuthStatus = status;
   renderPushSettingRow();
   if (currentUser && !_isDemoMode) {
-    _bootGate.then(() => db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || null })).then(() => {}, () => {});
+    const platform = nativePlatform() === 'android' ? 'android' : 'ios';
+    // _nativeVersionName is the Android shell's Play versionName (e.g. '1.2') — never the
+    // iOS-line capability version, which would corrupt per-platform adoption numbers.
+    _bootGate.then(() => db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || window._nativeVersionName || null, p_platform: platform })).then(() => {}, () => {});
   }
 }
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
