@@ -1,5 +1,6 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import {
+  buildAdminEmail,
   buildIssueBody,
   buildIssuePayload,
   buildIssueTitle,
@@ -95,4 +96,81 @@ Deno.test("buildIssuePayload — assembles title, body, labels", () => {
   assertEquals(payload.labels, ["bug"]);
   assertEquals(payload.body.includes("Jane"), false);
   assertStringIncludes(payload.body, "boom");
+});
+
+// ---- buildAdminEmail ----
+
+Deno.test("buildAdminEmail — subject carries type and title", () => {
+  const { subject } = buildAdminEmail(
+    { type: "feature", title: 'Please add "Zelos" to the WRotate brand list.' },
+    "Jane",
+    "2026-06-01T00:00:00Z",
+  );
+  assertEquals(subject, 'New feedback (feature): Please add "Zelos" to the WRotate brand list.');
+});
+
+Deno.test("buildAdminEmail — subject fallbacks for missing type/title", () => {
+  const { subject } = buildAdminEmail({}, "anonymous", "2026-06-01T00:00:00Z");
+  assertEquals(subject, "New feedback (feedback): Untitled");
+});
+
+Deno.test("buildAdminEmail — html renders all fields incl. reporter (private mail)", () => {
+  const { html } = buildAdminEmail(
+    {
+      type: "bug",
+      title: "App crashes on save",
+      details: "Steps to reproduce...",
+      app_version: "1.2.3",
+      browser: "Safari/17.0",
+      created_at: "2026-05-30T10:00:00Z",
+    },
+    "Jane Doe",
+    "2026-06-01T00:00:00Z",
+  );
+  assertStringIncludes(html, "Jane Doe"); // unlike the public GitHub issue, this mail is admin-only
+  assertStringIncludes(html, "App crashes on save");
+  assertStringIncludes(html, "Steps to reproduce...");
+  assertStringIncludes(html, "1.2.3");
+  assertStringIncludes(html, "Safari/17.0");
+  assertStringIncludes(html, "2026-05-30T10:00:00Z");
+  assertStringIncludes(html, "GitHub issue"); // bug rows say an issue was opened too
+  assertStringIncludes(html, "https://wrotate.com/open"); // CTA must be /open, never the bare root
+  assertEquals(html.includes('href="https://wrotate.com"'), false);
+});
+
+Deno.test("buildAdminEmail — non-bug html has no GitHub note; nowIso fallback", () => {
+  const { html } = buildAdminEmail({ type: "feature" }, "anonymous", "2026-06-01T00:00:00Z");
+  assertEquals(html.includes("GitHub issue"), false);
+  assertStringIncludes(html, "2026-06-01T00:00:00Z");
+  assertStringIncludes(html, "No details provided");
+});
+
+Deno.test("buildAdminEmail — escapes untrusted HTML in every user field", () => {
+  const { subject, html } = buildAdminEmail(
+    {
+      type: "feature",
+      title: '<img src=x onerror=alert(1)>',
+      details: '<script>alert("xss")</script> & "quotes"',
+      browser: "<b>evil</b>",
+    },
+    '<i>name</i>',
+    "2026-06-01T00:00:00Z",
+  );
+  assertEquals(html.includes("<script>"), false);
+  assertEquals(html.includes("<img src=x"), false);
+  assertEquals(html.includes("<i>name</i>"), false);
+  assertEquals(html.includes("<b>evil</b>"), false);
+  assertStringIncludes(html, "&lt;script&gt;");
+  // subject is a header, not HTML — newlines stripped, length capped
+  assertEquals(subject.includes("\n"), false);
+});
+
+Deno.test("buildAdminEmail — long details are capped", () => {
+  const { html } = buildAdminEmail(
+    { details: "x".repeat(9000) },
+    "anonymous",
+    "2026-06-01T00:00:00Z",
+  );
+  assertStringIncludes(html, "…(truncated)");
+  assertEquals(html.length < 9000, true);
 });

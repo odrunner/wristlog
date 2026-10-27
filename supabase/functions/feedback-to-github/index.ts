@@ -1,21 +1,26 @@
 // Supabase Edge Function: feedback-to-github
 // Triggered by Database Webhook on INSERT into feedback table.
-// Creates a GitHub Issue for bug reports so Claude Code can auto-fix them.
+// 1. Emails the admin about EVERY new feedback row (feature, bug, brand request).
+// 2. Creates a GitHub Issue for bug reports so Claude Code can auto-fix them.
 //
 // Required Supabase secrets (set via `supabase secrets set`):
 //   GITHUB_PAT         — fine-grained GitHub PAT with Issues write permission
 //   GITHUB_REPO        — "odrunner/wrotate-feedback" (PRIVATE since 2026-09-25; the app repo is public)
+//   ADMIN_EMAIL        — admin address for the alert email (shared with new-user-alert)
+//   SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_REGION / SES_CONFIG_SET — see _shared/ses.ts
 //   SUPABASE_URL       — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY — auto-provided
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
-import { buildIssuePayload, isBugReport } from "./lib.ts";
+import { buildAdminEmail, buildIssuePayload, isBugReport, resolveUsername } from "./lib.ts";
+import { sendEmail } from "../_shared/mailer.ts";
 import { serviceKey } from "../_shared/keys.ts";
-import { triggerSecretOk } from "../_shared/trigger-auth.ts";
+import { isFresh, triggerSecretOk } from "../_shared/trigger-auth.ts";
 
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT") ?? "";
 const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wrotate-feedback";
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
 serve(async (req) => {
   // Called only by our DB trigger (webhook_with_secret), which sends the
@@ -52,10 +57,40 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
 
+    // Admin alert email — every feedback type, not just bugs. Best-effort: a
+    // mail failure must not block the GitHub issue (and vice versa). isFresh
+    // keeps a replayed old feedback id from re-emailing (same guard as
+    // new-user-alert); the GitHub path has its own protections and is unchanged.
+    let emailed = false;
+    if (ADMIN_EMAIL && isFresh(dbRecord.created_at, Date.now())) {
+      try {
+        let username = "anonymous";
+        if (dbRecord.user_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("username, display_name")
+            .eq("id", dbRecord.user_id)
+            .maybeSingle();
+          username = resolveUsername(profile);
+        }
+        const { subject, html } = buildAdminEmail(dbRecord, username, new Date().toISOString());
+        const result = await sendEmail({
+          from: "WRotate <notifications@wrotate.com>",
+          to: [ADMIN_EMAIL],
+          subject,
+          html,
+        });
+        if (result.ok) emailed = true;
+        else console.error("[feedback-to-github] admin email failed:", result.error);
+      } catch (e) {
+        console.error("[feedback-to-github] admin email threw:", e);
+      }
+    }
+
     // Only process bug reports — skip feature requests
     if (!isBugReport(dbRecord)) {
       return new Response(
-        JSON.stringify({ skipped: "not a bug report", type: dbRecord.type }),
+        JSON.stringify({ skipped: "not a bug report", type: dbRecord.type, emailed }),
         { status: 200 }
       );
     }
@@ -103,6 +138,7 @@ serve(async (req) => {
         success: true,
         issue_number: issue.number,
         issue_url: issue.html_url,
+        emailed,
       }),
       { status: 200 }
     );
