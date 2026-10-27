@@ -26,7 +26,23 @@ describe('w/ page canonical rewrite', () => {
     expect(wpage).toContain("if (m.slug && m.slug !== slug) history.replaceState(null, '', '/w/?m=' + encodeURIComponent(m.slug));");
   });
   it('still sets the canonical link from the RETURNED slug', () => {
-    expect(wpage).toContain("document.getElementById('canonical-link').href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`");
+    expect(wpage).toContain("canon.href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`");
+  });
+  it('ships no static canonical — a fixed href would mark every slug a duplicate of one URL', () => {
+    expect(wpage).not.toMatch(/<link rel="canonical"/);
+  });
+});
+
+describe('model hub crawl graph (w/all/)', () => {
+  const hub = readFileSync(join(root, 'w', 'all', 'index.html'), 'utf8');
+  it('lists exactly the sitemap model slugs — both come from gen-sitemap.mjs, so drift means a stale regen', () => {
+    const smSlugs = [...sitemap.matchAll(/\/w\/\?m=([a-z0-9-]+)<\/loc>/g)].map(m => m[1]).sort();
+    const hubSlugs = [...hub.matchAll(/href="\/w\/\?m=([a-z0-9-]+)"/g)].map(m => m[1]).sort();
+    expect(hubSlugs).toEqual(smSlugs);
+  });
+  it('is in the sitemap and every watch page links back to it', () => {
+    expect(sitemap).toContain('https://wrotate.com/w/all/</loc>');
+    expect(wpage).toContain('href="/w/all/"');
   });
 });
 

@@ -7,7 +7,9 @@
   <title>WRotate Watch Model</title>
   <meta name="robots" content="index, follow">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <link rel="canonical" id="canonical-link" href="https://wrotate.com/">
+  <!-- No static canonical: this file serves every /w/?m= slug, so a fixed href
+       would tell crawlers each model page is a duplicate of that one URL. The
+       per-model canonical is injected in load() once the model resolves. -->
   <meta property="og:site_name" content="WRotate">
   <meta property="og:type" content="website">
   <meta id="og-title" property="og:title" content="WRotate Watch Model">
@@ -36,6 +38,8 @@
     #page { max-width: var(--size-120); margin: 0 auto; min-height: 100vh; background: var(--bg); }
     #loading, #notfound { color: var(--muted); padding: var(--space-12) var(--space-5); font-size: var(--fs-md); text-align: center; }
     #notfound a { color: var(--gold-lt); }
+    #site-footer { padding: var(--space-8) var(--space-5); text-align: center; font-size: var(--fs-sm); }
+    #site-footer a { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -43,6 +47,7 @@
     <div id="loading">Loading…</div>
     <div id="notfound" style="display:none;">This model page doesn&#8217;t exist (yet). <a href="https://wrotate.com">WRotate</a></div>
     <div id="model-page-content"></div>
+    <footer id="site-footer"><a href="/w/all/">Browse all watch models</a></footer>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js" integrity="sha384-NRo2jhGGHu91p1IOcVC3UWI5Vnd+xGXfD/8N7Hr9+aGTK0d/Pl0i+kUZsB/zIlrK" crossorigin="anonymous"></script>
   <script src="/model-page.js?v=f7a7733f"></script>
@@ -106,7 +111,10 @@
       if (m.slug && m.slug !== slug) history.replaceState(null, '', '/w/?m=' + encodeURIComponent(m.slug));
       const { data: st } = await db.rpc('model_stats', { p_model_id: m.id });
       document.title = `${m.brand} ${m.name} — WRotate`;
-      document.getElementById('canonical-link').href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
+      const canon = document.createElement('link');
+      canon.rel = 'canonical';
+      canon.href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
+      document.head.appendChild(canon);
       document.getElementById('og-title').content = `${m.brand} ${m.name} — WRotate`;
       if (m.hero_image) document.getElementById('og-image').content = m.hero_image;
       ctx = { m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], loggedIn: false, publicMode: true };
