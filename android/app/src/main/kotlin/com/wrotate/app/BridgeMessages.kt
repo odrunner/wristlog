@@ -20,6 +20,15 @@ object BridgeMessages {
         null
     }
 
+    /** The unread count of a web→native BADGE_UPDATE post ({"event":"BADGE_UPDATE","count":N}),
+     *  or null for any other message. A missing count reads as 0 (iOS WebView.swift parity). */
+    fun parseBadgeCount(json: String): Int? = try {
+        val o = org.json.JSONObject(json)
+        if (o.optString("event") == "BADGE_UPDATE") o.optInt("count", 0) else null
+    } catch (e: Exception) {
+        null
+    }
+
     /** The `action` of a web→native appAction post ({"action":"requestReview"}), or null. */
     fun parseAppAction(json: String): String? = try {
         org.json.JSONObject(json).optString("action", "").ifEmpty { null }

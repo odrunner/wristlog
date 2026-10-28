@@ -73,6 +73,21 @@ class BridgeMessagesTest {
     }
 
     @Test
+    fun parseBadgeCountReadsBadgeUpdateEvents() {
+        assertEquals(0, BridgeMessages.parseBadgeCount("""{"event":"BADGE_UPDATE","count":0}"""))
+        assertEquals(3, BridgeMessages.parseBadgeCount("""{"event":"BADGE_UPDATE","count":3}"""))
+        // iOS parity (WebView.swift): a missing count reads as 0.
+        assertEquals(0, BridgeMessages.parseBadgeCount("""{"event":"BADGE_UPDATE"}"""))
+    }
+
+    @Test
+    fun parseBadgeCountRejectsOtherAndMalformedMessages() {
+        assertEquals(null, BridgeMessages.parseBadgeCount("""{"event":"SIGNED_IN","userId":"u"}"""))
+        assertEquals(null, BridgeMessages.parseBadgeCount("""{"count":2}"""))
+        assertEquals(null, BridgeMessages.parseBadgeCount("not json"))
+    }
+
+    @Test
     fun errorInterruptionPongShapes() {
         assertTrue(BridgeMessages.error("no mic").contains("\"event\":\"error\""))
         assertTrue(BridgeMessages.error("no mic").contains("\"message\":\"no mic\""))

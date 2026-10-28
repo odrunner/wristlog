@@ -1,6 +1,7 @@
 package com.wrotate.app
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -489,6 +490,12 @@ class ShellActivity : ComponentActivity() {
                             runOnUiThread { onSignedIn(uid, token) }
                         }
                         "SIGNED_OUT" -> PushRegistrar.onSignedOut(this@ShellActivity)
+                        // The page posts BADGE_UPDATE when its unread count changes; 0 means the
+                        // user just viewed their notifications, so the delivered ones (and the
+                        // launcher dot they keep alive) are stale — iOS clears via setBadgeCount.
+                        "BADGE_UPDATE" -> if (BridgeMessages.parseBadgeCount(json) == 0) {
+                            getSystemService(NotificationManager::class.java)?.cancelAll()
+                        }
                     }
                 }
                 "appAction" -> when (BridgeMessages.parseAppAction(json)) {
