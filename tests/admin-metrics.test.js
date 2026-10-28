@@ -129,9 +129,12 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).not.toContain("db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500)");
   });
 
-  it('keeps only users with at least one record, posts included', () => {
+  it('keeps users with at least one record (posts included) plus 30-day-new signups', () => {
+    // A recent signup with no activity yet must still appear — the admin reads
+    // the table to see who just arrived, not only who already did something.
     expect(html).toMatch(/const hasRecord = \(u\) => \(u\.watches \+ u\.wears \+ u\.posts \+ u\.priceChecks \+ u\.enhances \+ u\.measurements\) > 0;/);
-    expect(html).toContain('.map(toProfileItem).filter(hasRecord);');
+    expect(html).toMatch(/const isNewSignup = \(u\) => u\.joinedAt >= Date\.now\(\) - 30 \* 24 \* 3600000;/);
+    expect(html).toContain('.map(toProfileItem).filter(u => hasRecord(u) || isNewSignup(u));');
   });
 
   it('counts standalone posts per user from admin_user_stats', () => {
@@ -142,7 +145,7 @@ describe('Totals card day-over-day deltas', () => {
   });
 
   it('the users table heading shows the filtered count against the user total', () => {
-    expect(html).toMatch(/usersTitle = `Users with a record \(\$\{profileList\.length\} of \$\{extUsers\}\)`/);
+    expect(html).toMatch(/usersTitle = `Users with a record or new ≤30d \(\$\{profileList\.length\} of \$\{extUsers\}\)`/);
   });
 
   it('internal accounts keep their own unfiltered table', () => {

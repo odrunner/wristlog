@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.07';
+const APP_VERSION = '27.20.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19937,16 +19937,20 @@ async function loadAdminStats() {
       _newEnh: newEnhByUser[p.id] || 0,
       _newMsr: newMsrByUser[p.id] || 0,
     });
-    // Only users who have actually done something: a watch, a wear, a standalone
-    // post, a price check, an enhance or a measurement. Signups with nothing
-    // recorded are all-zero rows that push everyone else off the screen and make
-    // the sortable columns useless. Internal accounts keep their own table, unfiltered.
+    // Users who have actually done something: a watch, a wear, a standalone
+    // post, a price check, an enhance or a measurement. Older signups with
+    // nothing recorded are all-zero rows that push everyone else off the screen
+    // and make the sortable columns useless — but a RECENT signup with no
+    // activity yet is exactly who the admin needs to see (did onboarding land?),
+    // so anyone who joined in the last 30 days stays regardless of activity.
+    // Internal accounts keep their own table, unfiltered.
     const hasRecord = (u) => (u.watches + u.wears + u.posts + u.priceChecks + u.enhances + u.measurements) > 0;
-    const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem).filter(hasRecord);
+    const isNewSignup = (u) => u.joinedAt >= Date.now() - 30 * 24 * 3600000;
+    const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem).filter(u => hasRecord(u) || isNewSignup(u));
     const internalList = internalProfiles.map(toProfileItem);
     // The heading names both figures so the filtered row count can't be mistaken
     // for the user total on the card above it.
-    const usersTitle = `Users with a record (${profileList.length} of ${extUsers})`;
+    const usersTitle = `Users with a record or new ≤30d (${profileList.length} of ${extUsers})`;
 
     // "w/w +1.2% · m/m +6.7%" for a per-user average: relative change in
     // (metric / users) vs 7d and 30d ago, 1 decimal. Empty when the RPC failed
