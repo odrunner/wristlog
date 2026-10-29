@@ -8246,7 +8246,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.03';
+const APP_VERSION = '28.20.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17852,7 +17852,7 @@ async function followSuggestAct(btn) {
 async function maybeRenderFollowSuggest() {
   const slot = document.getElementById('follow-suggest-slot');
   if (!slot) return;
-  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) {
+  if (!currentUser || _isDemoMode) {
     if (slot.innerHTML) { slot.innerHTML = ''; delete slot.dataset.key; }
     return;
   }
@@ -17864,16 +17864,12 @@ async function maybeRenderFollowSuggest() {
   if (!visible) { slot.innerHTML = ''; delete slot.dataset.key; return; }
   renderFollowSuggestCard(slot, list, { title: 'People to follow', surface: 'feed', dismissable: true });
 }
-// The feed_page() path renders the feed once, BEFORE get_experiments() resolves
-// (boot clears the arms and the fetch waits for the boot gate), so without this the
-// card could never appear on a boot load in that arm.
-document.addEventListener('experiments:loaded', () => { maybeRenderFollowSuggest(); });
 // Right after a watch is added: a popup with the people who own that same model, if
 // any. The model link is set by a DB trigger once the row syncs, so this looks twice
 // (3 s, then 8 s), and it waits until no other sheet or modal is open (the photo flow's
 // result sheet, the fun-fact modal) so it never lands on top of something else.
 async function showFollowSuggestAfterAdd(watchId) {
-  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) return;
+  if (!currentUser || _isDemoMode) return;
   invalidateFollowSuggestions();
   let owners = [];
   for (const delay of [3000, 5000]) {
@@ -17901,7 +17897,7 @@ async function showFollowSuggestAfterAdd(watchId) {
 async function renderDiscoverSuggested() {
   const el = document.getElementById('discover-suggested');
   if (!el) return;
-  if (!currentUser || _isDemoMode || !experiment('follow_suggest')) { el.innerHTML = ''; return; }
+  if (!currentUser || _isDemoMode) { el.innerHTML = ''; return; }
   const open = _followSuggOpen(await loadFollowSuggestions());
   if (!open.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="eyebrow eyebrow-muted stack-2-5">Suggested</div>`
@@ -19164,10 +19160,28 @@ function renderDevFlags() {
     </div>`;
   }).join('');
 }
+// The Dev tab lists only experiments still RUNNING. A won or killed experiment keeps
+// being served by get_experiments() (archive = tidy, not undo — sql/2026-10-25), so
+// EXPERIMENTS holds decided keys forever; forcing an arm on one is only a trap (a
+// stale forced control on a won key silently reverts this account). Opening the tab
+// fetches statuses, hides decided keys and drops their leftover overrides. Statuses
+// unknown (RPC failed) → fail open and show everything.
+let _devRunningKeys = null;
+async function loadDevExperiments() {
+  try {
+    const { data, error } = await db.rpc('admin_experiments_list');
+    if (error) throw error;
+    _devRunningKeys = new Set((data || []).filter(x => x.status === 'running').map(x => x.key));
+    for (const k of Object.keys(EXPERIMENTS)) {
+      if (!_devRunningKeys.has(k)) safeLS.remove('exp_force_' + k);
+    }
+  } catch (e) { _devRunningKeys = null; }
+  renderDevExperiments();
+}
 function renderDevExperiments() {
   const el = document.getElementById('admin-dev-experiments');
   if (!el) return;
-  const keys = Object.keys(EXPERIMENTS);
+  const keys = Object.keys(EXPERIMENTS).filter(k => !_devRunningKeys || _devRunningKeys.has(k));
   if (!keys.length) { el.innerHTML = '<div class="text-meta u-pt-2 u-pr-0 u-pb-2 u-pl-0">No running experiments.</div>'; return; }
   el.innerHTML = `<div class="u-pt-2 u-pr-0 u-pb-2-5 u-pl-0"><button class="chip" onclick="resetEnhanceNudgeState()">Reset nudge state</button>
     <span class="text-meta u-ml-1-5">clears the once-per-watch and once-per-day gates for my account</span></div>` + keys.map(k => {
@@ -19195,6 +19209,7 @@ function switchAdminTab(tab) {
   if (tab === 'promos') loadPromoAdmin();
   if (tab === 'models') loadAdminModels();
   if (tab === 'experiments') loadAdminExperiments();
+  if (tab === 'dev') loadDevExperiments();
 }
 
 let _adminModels = [];
@@ -24237,9 +24252,9 @@ function renderCollection(force) {
   const enhAllBtn = document.getElementById('coll-enhance-all-btn');
   if (enhAllBtn) {
     enhAllBtn.style.display = currentUser ? 'inline-flex' : 'none';
-    // A/B enhance_nudge: name the number of watches still missing their specs.
+    // Name the number of watches still missing their specs (enhance_nudge, won 2026-10).
     const enhLbl = enhAllBtn.querySelector('.wl-actions-text');
-    const enhN = experiment('enhance_nudge') ? watches.filter(needsEnhance).length : 0;
+    const enhN = watches.filter(needsEnhance).length;
     if (enhLbl) enhLbl.textContent = enhN > 0 ? `Enhance ${enhN}` : 'Enhance';
   }
   syncCollViewBtn();
@@ -25673,9 +25688,9 @@ function warrantyStatus(w) {
 const _tagNow = { d: null, ts: 0 }; // cached Date for tags — refreshed every 60s
 function _getTagNow() { const t = Date.now(); if (t - _tagNow.ts > 60000) { _tagNow.d = new Date(); _tagNow.ts = t; } return _tagNow.d; }
 
-// A/B enhance_nudge: muted per-card affordance to fill in the missing specs.
+// Muted per-card affordance to fill in the missing specs (enhance_nudge, won 2026-10).
 function enhChipHTML(w) {
-  if (!experiment('enhance_nudge') || !needsEnhance(w)) return '';
+  if (!needsEnhance(w)) return '';
   return `<button type="button" class="enh-chip" title="Add movement, case size and history" data-wid="${escAttr(w.id)}" onclick="event.stopPropagation();enhanceFromGrid(this.dataset.wid)">&#65291; details</button>`;
 }
 
@@ -29503,8 +29518,8 @@ function enhanceScoped(watchId, surface) {
 }
 function enhanceFromNudge(watchId, surface) { enhNudgeMarkSeen(watchId); enhanceScoped(watchId, surface || 'nudge'); }
 function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }
-// Slim inline card at the top of whichever page is showing. No-op in control.
-// True when a nudge for this watch would render right now (treatment, gated, slot on the
+// Slim inline card at the top of whichever page is showing.
+// True when a nudge for this watch would render right now (gated, slot on the
 // active page). Lets the review prompt yield so the two never compete for the same moment.
 // Admin Dev tab: forget every nudge gate for the signed-in account (UX testing).
 function resetEnhanceNudgeState() {
@@ -29515,7 +29530,7 @@ function resetEnhanceNudgeState() {
   toast('Nudge state reset');
 }
 function enhanceNudgeWouldShow(watch) {
-  if (!watch || !experiment('enhance_nudge')) return false;
+  if (!watch) return false;
   const dayKey = enhNudgeDayKey();
   if (!dayKey) return false;
   if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(dayKey), today: todayStr() })) return false;

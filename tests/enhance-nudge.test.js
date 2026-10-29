@@ -48,11 +48,14 @@ describe('shouldNudgeEnhance', () => {
 });
 
 describe('enhance_nudge wiring in index.html', () => {
-  it('gates every treatment surface behind experiment("enhance_nudge")', () => {
-    expect(html).toContain("if (!watch || !experiment('enhance_nudge')) return false;");
+  // enhance_nudge WON 2026-10-24: the experiment() branch is gone and the treatment
+  // path ships to everyone (CLAUDE.md: Roll out = code cleanup).
+  it('ships every nudge surface unconditionally — no experiment() gate left', () => {
+    expect(html).not.toContain("experiment('enhance_nudge')");
+    expect(html).toContain('if (!watch) return false;');
     expect(html).toContain("if (!enhanceNudgeWouldShow(watch)) return;");
-    expect(html).toContain("if (!experiment('enhance_nudge') || !needsEnhance(w)) return '';");
-    expect(html).toContain("const enhN = experiment('enhance_nudge') ? watches.filter(needsEnhance).length : 0;");
+    expect(html).toContain("if (!needsEnhance(w)) return '';");
+    expect(html).toContain('const enhN = watches.filter(needsEnhance).length;');
   });
 
   it('logs an enhance_run feature_event from every Enhance entry point', () => {

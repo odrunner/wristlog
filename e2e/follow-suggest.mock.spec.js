@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES } from './helpers.js';
 
-// A/B `follow_suggest`: treatment shows a "People to follow" card at the top of the Feed,
-// tiles with a reason line and Follow / Request per the target's privacy. Control: nothing.
+// `follow_suggest` WON 2026-10-24 and its experiment() branch is gone: every user gets
+// the "People to follow" card at the top of the Feed, tiles with a reason line and
+// Follow / Request per the target's privacy. get_experiments is mocked EMPTY so a
+// regression back to experiment gating fails these tests.
 
 const SUGG = [
   { id: 'u-omega', username: 'omegafan', display_name: 'Omega Fan', avatar_url: null, profile_privacy: 'public',
@@ -11,11 +13,11 @@ const SUGG = [
     reason: 'liked', model_brand: null, model_name: null, likes: 3, followers: 0 },
 ];
 
-async function boot(page, variant) {
+async function boot(page) {
   await mockSupabase(page);
   // Registered after mockSupabase so they win over the catch-all /rest/v1/** net.
   await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant }]),
+    status: 200, contentType: 'application/json', body: '[]',
   }));
   await page.route('**/rest/v1/rpc/follow_suggestions*', r => r.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify(SUGG),
@@ -23,12 +25,11 @@ async function boot(page, variant) {
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  await expect.poll(() => page.evaluate(() => EXPERIMENTS.follow_suggest)).toBe(variant);
   await page.evaluate(() => renderFeed());
 }
 
-test('treatment: card with one tile per suggestion, reason copy, Follow vs Request', async ({ page }) => {
-  await boot(page, 'treatment');
+test('card with one tile per suggestion, reason copy, Follow vs Request — no experiment arm needed', async ({ page }) => {
+  await boot(page);
   const card = page.locator('#follow-sugg-feed');
   await expect(card).toBeVisible();
   await expect(card.locator('.eyebrow')).toHaveText('People to follow');
@@ -40,8 +41,8 @@ test('treatment: card with one tile per suggestion, reason copy, Follow vs Reque
   await expect(tiles.nth(1).locator('.follow-btn')).toHaveText('Request');
 });
 
-test('treatment: dismiss hides the card and remembers it', async ({ page }) => {
-  await boot(page, 'treatment');
+test('dismiss hides the card and remembers it', async ({ page }) => {
+  await boot(page);
   await expect(page.locator('#follow-sugg-feed')).toBeVisible();
   await page.locator('#follow-sugg-feed .follow-sugg-close').click();
   await expect(page.locator('#follow-sugg-feed')).toHaveCount(0);
@@ -54,39 +55,21 @@ test('treatment: dismiss hides the card and remembers it', async ({ page }) => {
 });
 
 test('account change drops the cached suggestions and exposure flags', async ({ page }) => {
-  await boot(page, 'treatment');
+  await boot(page);
   await expect(page.locator('#follow-sugg-feed')).toBeVisible();
   const st = await page.evaluate(() => { clearUserState(); return { list: _followSugg, at: _followSuggAt, shown: _followSuggShown.size, rpc: _feedViaRpc, partial: feedPartial }; });
   expect(st).toEqual({ list: null, at: 0, shown: 0, rpc: false, partial: false });
 });
 
-test('control: no card, no RPC call', async ({ page }) => {
-  let calls = 0;
-  await mockSupabase(page);
-  await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant: 'control' }]),
-  }));
-  await page.route('**/rest/v1/rpc/follow_suggestions*', r => { calls++; r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); });
-  await injectSession(page);
-  await page.goto('/');
-  await waitForAppBoot(page);
-  await expect.poll(() => page.evaluate(() => EXPERIMENTS.follow_suggest)).toBe('control');
-  await page.evaluate(() => renderFeed());
-  await page.waitForTimeout(400);
-  await expect(page.locator('#follow-sugg-feed')).toHaveCount(0);
-  expect(calls).toBe(0);
-});
-
-test('treatment: after adding a watch, a popup lists the owners of that model', async ({ page }) => {
+test('after adding a watch, a popup lists the owners of that model', async ({ page }) => {
   const W = SAMPLE_WATCHES[0];
   const owners = [{ ...SUGG[0], via_watch_id: W.id, model_brand: W.brand, model_name: W.name }, { ...SUGG[1], reason: 'same_model', via_watch_id: W.id, model_brand: W.brand, model_name: W.name }];
   await mockSupabase(page, { watches: [W] });
-  await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ key: 'follow_suggest', variant: 'treatment' }]) }));
+  await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route('**/rest/v1/rpc/follow_suggestions*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(owners) }));
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  await expect.poll(() => page.evaluate(() => EXPERIMENTS.follow_suggest)).toBe('treatment');
   await navigateTo(page, 'collection');
   page.evaluate((id) => showFollowSuggestAfterAdd(id), W.id);
   const modal = page.locator('#follow-sugg-modal');

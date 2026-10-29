@@ -1,45 +1,39 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES } from './helpers.js';
 
-// A/B `enhance_nudge`. Treatment adds two collection-grid affordances for a watch
-// with none of caseDiameter / caliber / background: a "＋ details" chip on the card
-// and a count on the header Enhance button. Control is today's UI, untouched.
+// `enhance_nudge` WON 2026-10-24 and its experiment() branch is gone: EVERY user
+// gets the two collection-grid affordances for a watch with none of
+// caseDiameter / caliber / background — a "＋ details" chip on the card and a
+// count on the header Enhance button — plus the inline nudge card. get_experiments
+// is mocked EMPTY so a regression back to experiment gating fails these tests.
 //
 // SAMPLE_WATCHES[0] carries no specs columns at all, so it "needs enhance".
 
 const BARE_WATCH = [SAMPLE_WATCHES[0]];
 
-async function boot(page, variant) {
+async function boot(page) {
   await mockSupabase(page, { watches: BARE_WATCH });
   // Registered after mockSupabase so it wins over the catch-all /rest/v1/** net.
   await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({
-    status: 200, contentType: 'application/json',
-    body: JSON.stringify([{ key: 'enhance_nudge', variant }]),
+    status: 200, contentType: 'application/json', body: '[]',
   }));
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  await expect.poll(() => page.evaluate(() => EXPERIMENTS.enhance_nudge)).toBe(variant);
   await navigateTo(page, 'collection');
   await page.evaluate(() => renderCollection(true));
 }
 
-test('treatment shows the ＋ details chip and counts the watches on the header button', async ({ page }) => {
-  await boot(page, 'treatment');
+test('shows the ＋ details chip and counts the watches on the header button with no experiment arm', async ({ page }) => {
+  await boot(page);
   const chip = page.locator('#watches-grid .enh-chip');
   await expect(chip).toHaveCount(1);
   await expect(chip).toHaveText('＋ details');
   await expect(page.locator('#coll-enhance-all-btn .wl-actions-text')).toHaveText('Enhance 1');
 });
 
-test('control shows no chip and the plain Enhance label', async ({ page }) => {
-  await boot(page, 'control');
-  await expect(page.locator('#watches-grid .enh-chip')).toHaveCount(0);
-  await expect(page.locator('#coll-enhance-all-btn .wl-actions-text')).toHaveText('Enhance');
-});
-
-test('treatment renders the nudge card into the active page, and Not now removes it', async ({ page }) => {
-  await boot(page, 'treatment');
+test('renders the nudge card into the active page, and Not now removes it', async ({ page }) => {
+  await boot(page);
   await page.evaluate(() => maybeShowEnhanceNudge(watches[0], 'add'));
   const card = page.locator('#page-collection .enhance-nudge-slot #enhance-nudge-card');
   await expect(card).toContainText('Rolex Submariner Date is missing its details');
@@ -53,14 +47,8 @@ test('treatment renders the nudge card into the active page, and Not now removes
   await expect(page.locator('#enhance-nudge-card')).toHaveCount(0);
 });
 
-test('control never renders the nudge card', async ({ page }) => {
-  await boot(page, 'control');
-  await page.evaluate(() => maybeShowEnhanceNudge(watches[0], 'add'));
-  await expect(page.locator('#enhance-nudge-card')).toHaveCount(0);
-});
-
 test('a chip click on a watch that was enhanced meanwhile toasts instead of running', async ({ page }) => {
-  await boot(page, 'treatment');
+  await boot(page);
   await expect(page.locator('#watches-grid .enh-chip')).toHaveCount(1);
   // The chip was rendered before the specs arrived (another device, a sync).
   await page.evaluate(() => { watches[0].caseDiameter = '41mm'; enhanceFromGrid(watches[0].id); });
@@ -72,7 +60,7 @@ test('a chip click on a watch that was enhanced meanwhile toasts instead of runn
 });
 
 test('the gating keys are namespaced to the signed-in user', async ({ page }) => {
-  await boot(page, 'treatment');
+  await boot(page);
   await page.evaluate(() => maybeShowEnhanceNudge(watches[0], 'add'));
   await page.locator('#enhance-nudge-card').getByRole('button', { name: 'Not now' }).click();
   const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('enhnudge')).sort());
