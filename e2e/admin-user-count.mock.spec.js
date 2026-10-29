@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 // string-match test cannot.
 const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 
-test('the Users total counts every profile; the table lists only users with a record', async ({ page }) => {
+test('the Users total counts every profile; the table lists users with a record or new ≤30d signups', async ({ page }) => {
   await page.goto('/');
   const users = await page.evaluate(async (adminId) => {
     currentUser = { id: adminId };
@@ -21,7 +21,10 @@ test('the Users total counts every profile; the table lists only users with a re
       created_at: new Date(Date.now() - ageHours * 3600e3).toISOString(),
     });
     const all = [];
-    for (let i = 0; i < 508; i++) all.push(mkProfile('ext-' + i, 10 + i));
+    // Ages spread past the 30-day (720 h) window, or the new-signup rule would
+    // admit every profile and the has-a-record filter would go untested:
+    // i = 0..177 is ≤30 days old, i = 178..507 is older.
+    for (let i = 0; i < 508; i++) all.push(mkProfile('ext-' + i, 10 + i * 4));
     all.push(mkProfile('int-recent-1', 0.5), mkProfile('int-recent-2', 1.5));
     for (let i = 0; i < 4; i++) all.push(mkProfile('int-old-' + i, 1000 + i));
     all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -31,9 +34,10 @@ test('the Users total counts every profile; the table lists only users with a re
     INTERNAL_IDS = new Set(internalIds);
     loadInternalIds = async () => { INTERNAL_IDS = new Set(internalIds); };
 
-    // Activity: the 120 newest external profiles have a watch, 30 older ones have
-    // only a standalone post (which `wears` does not count), everyone else is an
-    // empty signup. 150 of the 508 external users should reach the table.
+    // Activity: the 120 newest external profiles have a watch (all inside the
+    // 30-day window anyway), the 30 OLDEST have only a standalone post (which
+    // `wears` does not count), everyone else is an empty signup. The table keeps
+    // the 178 new signups (record or not) + the 30 old post-only users = 208.
     const withWatch = all.filter((p) => p.id.startsWith('ext-')).slice(0, 120).map((p) => p.id);
     const withPostOnly = all.filter((p) => p.id.startsWith('ext-')).slice(-30).map((p) => p.id);
     const userStats = all.map((p) => ({
@@ -86,9 +90,10 @@ test('the Users total counts every profile; the table lists only users with a re
 
   // 514 profiles - 6 internal = 508, NOT the 498 the capped page would give.
   expect(users.usersRow).toContain('508');
-  // 120 with a watch + 30 whose only activity is a standalone post. The 30 are
-  // the OLDEST profiles, so they also prove the table is no longer a newest-N page.
-  expect(users.tableTitle).toBe('Users with a record (150 of 508)');
-  expect(users.bodyRows).toBe(150);
+  // 178 signups ≤30 days old (activity or not) + 30 old profiles whose only
+  // activity is a standalone post. The 30 are the OLDEST profiles, so they also
+  // prove the table is no longer a newest-N page; the 300 old empty signups stay out.
+  expect(users.tableTitle).toBe('Users with a record or new ≤30d (208 of 508)');
+  expect(users.bodyRows).toBe(208);
   expect(users.internalTitle).toBe('Internal Accounts (6)');
 });
