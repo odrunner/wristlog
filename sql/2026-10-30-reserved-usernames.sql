@@ -103,7 +103,19 @@ INSERT INTO public.reserved_usernames (name, note) VALUES
   ('odogan',      'founder'),
   ('muge',        'family'),
   ('mugedogan',   'family'),
-  ('muge_dogan',  'family')
+  ('muge_dogan',  'family'),
+  ('mina',        'family'),
+  ('minadogan',   'family'),
+  ('mina_dogan',  'family'),
+  ('beliz',       'family'),
+  ('belizdogan',  'family'),
+  ('beliz_dogan', 'family'),
+  ('timur',       'family'),
+  ('timurdogan',  'family'),
+  ('timur_dogan', 'family'),
+  ('alp',         'family'),
+  ('alpdogan',    'family'),
+  ('alp_dogan',   'family')
 ON CONFLICT (name) DO NOTHING;
 
 -- Impersonation / platform handles (exact)
