@@ -17,6 +17,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const SITE_FILES = [
   'index.html',
   'open.html',
+  '404.html', // GitHub Pages serves this for unknown paths (default was GitHub-branded)
   'privacy.html',
   'delete-account.html', // Play data-safety: public account-deletion steps
   'terms.html',

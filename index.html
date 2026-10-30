@@ -3219,12 +3219,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </button>
     <button id="admin-nav-btn" class="admin-nav-btn" onclick="showAdminPage()" title="Admin" style="display:none;" aria-label="Admin portal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <nav aria-label="Main navigation">
-      <button class="active" aria-current="page" data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
-      <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
-      <button               data-page="collection"   onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
-      <button id="nav-measure-btn" data-page="measure" onclick="nav(this)" style="display:none;"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
-      <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
-      <button               data-page="stats"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
+      <button class="active" aria-current="page" data-page="feed" aria-label="Feed"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
+      <button               data-page="track" aria-label="Track"       onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
+      <button               data-page="collection" aria-label="Collection"  onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
+      <button id="nav-measure-btn" data-page="measure" aria-label="Measure" onclick="nav(this)" style="display:none;"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
+      <button               data-page="wishlist" aria-label="Wishlist"    onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
+      <button               data-page="stats" aria-label="Stats"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
     </nav>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
@@ -5258,7 +5258,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="text-meta u-tt-uppercase u-ls-tight u-mb-1-5">Manual Entry</div>
           <div class="u-cols-1fr-1fr u-gap-2 u-mb-2 u-d-grid">
             <div>
-              <label for="tg-rate-input" class="caption-xs">Rate (s/day) *</label>
+              <label for="tg-rate-input" class="caption-xs">Rate (s/day)</label>
               <input type="number" id="tg-rate-input" step="0.1" placeholder="" class="text-default u-w-100pct u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface">
             </div>
             <div>
@@ -5296,7 +5296,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="modal-actions u-fw--nowrap u-gap-1-5">
       <button id="save-watch-btn" class="btn btn-primary btn-grow" onclick="saveWatch()">Save</button>
-      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-gold-deep u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">⭐ Enhance</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-gold-deep u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">★ Enhance</button>
       <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" class="u-fw-medium u-ff-inherit u-cur-pointer u-ws-nowrap u-bg-badge-bg u-bd-0p5px-solid-badge-border u-c-gold-deep u-fs-sm u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-r-btn" style="display:none;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
@@ -6096,7 +6096,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="badge-detail-modal" class="overlay hidden" style="z-index:var(--z-modal-top);"><div class="modal u-bdc-badge-border u-maxw-90 u-bg-badge-bg" style="position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
 <div id="badge-reveal-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="badge-reveal-title">
   <div class="modal u-bdc-badge-border u-maxw-85 u-bg-badge-bg u-ta-center">
-    <div class="modal-title u-justify-center u-c-badge-text" id="badge-reveal-title">🎉 <span id="badge-reveal-count"></span></div>
+    <div class="modal-title u-justify-center u-c-badge-text" id="badge-reveal-title"><span id="badge-reveal-count"></span></div>
     <div id="badge-reveal-medallions" class="u-gap-1-5 u-fw--wrap u-justify-center u-mt-3 u-mr-0 u-mb-1-5 u-ml-0 u-d-flex"></div>
     <div id="badge-reveal-names" class="u-fs-base u-c-badge-text u-op-soft u-mb-4 u-lh-body"></div>
     <div class="u-gap-2 u-d-flex">
@@ -8020,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.17';
+const APP_VERSION = '30.09.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12880,7 +12880,7 @@ function openFactModal(watch, factText) {
   const eyebrow = document.getElementById('fact-modal-eyebrow');
   if (!card || !eyebrow || !watch || !factText) return;
   _factModalWatchId = watch.id;
-  eyebrow.textContent = `💡 Fun fact · ${watch.brand} ${watch.name}`;
+  eyebrow.textContent = `Fun fact · ${watch.brand} ${watch.name}`;
   card.innerHTML = funFactCardHTML({ fact: factText });
   document.getElementById('fact-modal').classList.remove('hidden');
   notePromoModalShown();
@@ -16114,7 +16114,7 @@ async function saveEditPost() {
     attachFunFact(log, watches.find(w => w.id === finalWatchId) || null).then(factText => {
       if (!factText) return;
       if (fi) { fi.fact = factText; refreshFeedCard(editPostLogId); }
-      toast('💡 ' + factText);
+      toast(factText);
     });
   }
   closeEditPost();
@@ -16818,7 +16818,7 @@ async function saveNewPost() {
   // Fire-and-forget fun fact for ANY watch-tagged post (wears AND measurement shares —
   // the fact is about the watch) — never blocks. Same-day gate keeps it consistent with
   // a wear of the same watch that day.
-  if (postedWatch) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast('💡 ' + factText); });
+  if (postedWatch) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast(factText); });
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
@@ -18749,7 +18749,7 @@ A wishlist is worth keeping:
 
 // Two long-shipped collection features most members have never opened: multi-image
 // posts and Enhance / price checks. Button labels here match the live UI — inside a
-// watch it reads "⭐ Enhance" and "Check price", not the older What's New wording.
+// watch it reads "★ Enhance" and "Check price", not the older What's New wording.
 function seedCollectionExtrasDraft() {
   const FLAG = 'wr_seed_collection_extras_draft_v1';
   if (safeLS.get(FLAG)) return;
@@ -18762,7 +18762,7 @@ function seedCollectionExtrasDraft() {
     heading: 'Six photos to a post — and specs filled in for you',
     body: `<b>Post up to six photos.</b> A post isn’t one shot any more. Pick several at once, or add more with the <b>+</b> button, then drag the thumbnails to reorder — the first is your hero. In the feed, tapping it opens a fullscreen swipe viewer. The wrist shot, the dial, the caseback and the clasp can all live on one post.
 
-<b>Let us fill in the details.</b> Open any watch and tap <b>⭐ Enhance</b> — we’ll fill in the specs, dimensions, caliber and a bit of the model’s history. The <b>Enhance</b> button in your collection header does every watch in one go, and nothing saves until you’ve reviewed it.
+<b>Let us fill in the details.</b> Open any watch and tap <b>★ Enhance</b> — we’ll fill in the specs, dimensions, caliber and a bit of the model’s history. The <b>Enhance</b> button in your collection header does every watch in one go, and nothing saves until you’ve reviewed it.
 
 <b>And what it’s all worth.</b> Inside a watch, <b>Check price</b> gives an AI market estimate. The <b>$</b> button in the collection header prices your whole collection at once. Values are kept over time, so you can see which way your collection is moving.
 
@@ -21259,7 +21259,7 @@ async function approveOfficialDraft(draftId) {
     const logId = crypto.randomUUID();
     let storedUrl = draft.image_url || null; // already a Supabase Storage URL
     // Step 2: create the log entry
-    const attribution = draft.source_url ? `\n📸 Source: ${draft.source_url}` : '';
+    const attribution = draft.source_url ? `\nSource: ${draft.source_url}` : '';
     const caption = (draft.caption || '') + attribution;
     const { error: logErr } = await db.from('logs').insert({
       id: logId,
@@ -22247,7 +22247,7 @@ async function saveLog() {
   // Fire-and-forget: fun-fact pick/generation (cold models take several seconds
   // of grounded AI) must never delay the log confirmation. attachFunFact
   // self-persists logEntry.factId and never throws; the delight toast fires when ready.
-  attachFunFact(logEntry, _factWatch).then(factText => { if (factText) toast('💡 ' + factText); });
+  attachFunFact(logEntry, _factWatch).then(factText => { if (factText) toast(factText); });
   closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
@@ -24790,7 +24790,7 @@ function renderStorySection() {
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
     el.innerHTML = `<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">
-      <button type="button" class="btn btn-primary btn-block u-bg-gold-deep u-c-white u-fw-medium" onclick="enhanceSingleWatch()">⭐ Enhance with AI</button>
+      <button type="button" class="btn btn-primary btn-block u-bg-gold-deep u-c-white u-fw-medium" onclick="enhanceSingleWatch()">★ Enhance with AI</button>
     </div>`;
     return;
   }
@@ -24807,7 +24807,7 @@ function renderStorySection() {
     html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Functions</div>`;
     html += `<div class="badge-body">${escHtml(fns)}</div>`;
   }
-  html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-gold-deep u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">⭐ Re-enhance</button></div>`;
+  html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-gold-deep u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">★ Re-enhance</button></div>`;
   html += '</div>';
   el.innerHTML = html;
 }
@@ -25518,7 +25518,7 @@ function quickLog(watchId) {
   haptic('success');
   maybeDeferredPushAsk();
   // Fire-and-forget fun fact (mirrors saveLog / saveNewPost) — never blocks logging.
-  attachFunFact(qEntry, watches.find(x => x.id === watchId) || null).then(factText => { if (factText) toast('💡 ' + factText); });
+  attachFunFact(qEntry, watches.find(x => x.id === watchId) || null).then(factText => { if (factText) toast(factText); });
 }
 
 // ── Today's Pick log modal ────────────────────────────────────────────────────
@@ -26373,7 +26373,7 @@ function skipRec() {
 // Daily fun-fact delight card, shown after logging a wear (mirrored in wrotate_test.js).
 function funFactCardHTML({ fact }) {
   if (!fact || !String(fact).trim()) return '';
-  return `<div class="funfact-card"><span class="funfact-bulb">💡</span><span class="funfact-text">${escHtml(fact)}</span></div>`;
+  return `<div class="funfact-card"><span class="funfact-bulb"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span><span class="funfact-text">${escHtml(fact)}</span></div>`;
 }
 
 // Fun-fact footnote row for the feed card — always visible, clamped to 3 lines,
@@ -26625,8 +26625,8 @@ function renderStatsRow(fl) {
   if (cvs.pricedCount) {
     const bits = [];
     bits.push(cvs.daysSinceChecked == null ? 'never checked' : cvs.daysSinceChecked === 0 ? 'checked today' : cvs.daysSinceChecked === 1 ? 'checked yesterday' : `checked ${cvs.daysSinceChecked}d ago`);
-    if (cvs.staleCount) bits.push(`${cvs.staleCount} stale`);
-    if (cvs.unpricedCount) bits.push(`${cvs.unpricedCount} unpriced`);
+    if (cvs.staleCount) bits.push(`${cvs.staleCount} outdated`);
+    if (cvs.unpricedCount) bits.push(`${cvs.unpricedCount} missing`);
     valFresh = `<div class="text-caption u-mt-1-5">${bits.join(' · ')}${valTap ? ' · <span class="text-gold-strong">Update</span>' : ''}</div>`;
   } else if (valTap) {
     valFresh = `<div class="u-fs-xs u-c-gold-text u-fw-semibold u-mt-1-5">Check values</div>`;
@@ -29077,7 +29077,7 @@ async function enhanceSingleWatch() {
   } finally {
     renderStorySection();
     const fb = document.getElementById('footer-enhance-btn');
-    if (fb) { fb.disabled = false; fb.textContent = '⭐ Enhance'; }
+    if (fb) { fb.disabled = false; fb.textContent = '★ Enhance'; }
   }
 }
 
@@ -29095,7 +29095,7 @@ function showEnhancePreview(pending) {
   panel.id = 'enh-preview-panel';
   panel.className = 'enh-preview';
   panel.innerHTML = `
-    <div class="enh-preview-title">⭐ Enhance Preview — ${pending.length} detail${pending.length !== 1 ? 's' : ''}</div>
+    <div class="enh-preview-title">★ Enhance Preview — ${pending.length} detail${pending.length !== 1 ? 's' : ''}</div>
     <div class="enh-preview-list">${rows}</div>
     <div class="enh-preview-note">Only empty fields will be filled. Your existing data won't change.</div>
     <div class="enh-preview-actions">
@@ -31477,13 +31477,13 @@ async function shareApp() {
   const intro = name ? `${name} invited you to` : `You're invited to`;
   const text = `${intro} WRotate — the watch collection tracker for enthusiasts.
 
-⌚ Track every wear with photos & notes
-🎯 Measure your watch's accuracy with the built-in timegrapher
-📊 Market value & collection stats
-👥 Follow collectors, like & comment on wears
-🔒 Share securely with close friends or go public
+- Track every wear with photos & notes
+- Measure your watch's accuracy with the built-in timegrapher
+- Market value & collection stats
+- Follow collectors, like & comment on wears
+- Share securely with close friends or go public
 
-${handle ? `Find me @${handle} — ` : ''}Join free 👉 https://wrotate.com`;
+${handle ? `Find me @${handle} — ` : ''}Join free: https://wrotate.com`;
   if (navigator.share) {
     try {
       await navigator.share({ text });
@@ -31683,8 +31683,13 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   // The fullscreen image viewer sits above any modal and handles its own
-  // Escape — don't also close the modal underneath it.
-  if (document.querySelector('.img-viewer-overlay')) return;
+  // Escape — don't also close the modal underneath it. _viewerOpen (set
+  // synchronously, unlike the rAF-deferred .visible class) covers the viewer
+  // being up when this handler runs first; e._viewerHandled covers the
+  // viewer's own handler closing it first on this same keypress. Checking
+  // the element's mere presence swallowed the Escape meant for the modal
+  // below during the 200ms close fade.
+  if (e._viewerHandled || _viewerOpen) return;
   const open = [...document.querySelectorAll('.overlay:not(.hidden)')];
   if (!open.length) return;
   const top = open[open.length - 1];
@@ -35642,6 +35647,7 @@ setTimeout(() => {
 
 // ── Fullscreen image viewer ───────────────────────────────────────────────
 let _viewerOverlay = null;
+let _viewerOpen = false;
 let _viewerUrls = [];
 let _viewerIdx = 0;
 
@@ -35651,6 +35657,7 @@ function openImageViewer(urls, startIdx) {
   _viewerIdx = startIdx || 0;
   if (!_viewerOverlay) _buildViewer();
   _renderViewer();
+  _viewerOpen = true;
   document.body.appendChild(_viewerOverlay);
   requestAnimationFrame(() => _viewerOverlay.classList.add('visible'));
   document.addEventListener('keydown', _viewerKeydown);
@@ -35710,13 +35717,14 @@ function viewerJump(idx) { _viewerIdx = idx; _renderViewer(); }
 
 function closeImageViewer() {
   if (!_viewerOverlay) return;
+  _viewerOpen = false;
   _viewerOverlay.classList.remove('visible');
   document.removeEventListener('keydown', _viewerKeydown);
   setTimeout(() => { if (_viewerOverlay?.parentNode) _viewerOverlay.parentNode.removeChild(_viewerOverlay); }, 200);
 }
 
 function _viewerKeydown(e) {
-  if (e.key === 'Escape') closeImageViewer();
+  if (e.key === 'Escape') { e._viewerHandled = true; closeImageViewer(); }
   else if (e.key === 'ArrowLeft') viewerNav(-1);
   else if (e.key === 'ArrowRight') viewerNav(1);
 }

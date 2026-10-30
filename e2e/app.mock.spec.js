@@ -2041,6 +2041,28 @@ test.describe('Watch preview modal structure (mocked)', () => {
     await expect(page.locator('#watch-preview-modal')).toBeVisible();
   });
 
+  test('second Escape during the viewer close fade still closes the modal', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(img => {
+      previewWatch({ id: 'test', brand: 'Rolex', name: 'Submariner', ref: '', url: '', image: img, color: '#1a1a2e' });
+    }, TINY_IMG);
+    await expect(page.locator('#watch-preview-modal')).toBeVisible();
+    await page.locator('#wpm-thumb img.img-thumb-tap').click();
+    await expect(page.locator('.img-viewer-overlay')).toBeVisible();
+
+    // First Escape starts the viewer's 200ms close fade; the second lands
+    // while the overlay element is still in the DOM. It used to be swallowed
+    // (the modal handler bailed on the overlay's mere presence) — it must
+    // close the preview modal.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#watch-preview-modal')).toBeHidden();
+  });
+
   test('edit-watch modal shows a tappable thumbnail that opens the viewer', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);

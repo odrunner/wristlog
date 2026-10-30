@@ -176,8 +176,7 @@
     function renderError(msg) {
       document.getElementById('main-content').innerHTML = `
         <div class="state-wrap">
-          <div class="state-icon">🔒</div>
-          <div class="state-title">Post not found</div>
+          <div class="state-title">This post isn't available</div>
           <div class="state-sub">${esc(msg)}</div>
           <div class="cta-wrap u-mt-4"><a href="https://wrotate.com/" class="u-c-gold-text u-fw-semibold">Open WRotate</a></div>
         </div>`;
@@ -225,7 +224,7 @@
         : '';
 
       const watchChipHtml = trimmedWatch
-        ? `<div class="post-watch">${watch?.image ? `<img ${thumbSrcAttrs(watch.image, esc)} alt="">` : '⌚'} ${esc(trimmedWatch)}</div>`
+        ? `<div class="post-watch">${watch?.image ? `<img ${thumbSrcAttrs(watch.image, esc)} alt="">` : ''} ${esc(trimmedWatch)}</div>`
         : '';
 
       document.getElementById('main-content').innerHTML = `
@@ -253,7 +252,6 @@
     function renderSignIn(logId) {
       document.getElementById('main-content').innerHTML = `
         <div class="state-wrap">
-          <div class="state-icon">🔒</div>
           <div class="state-title">Sign in to view this post</div>
           <div class="state-sub">This post was shared with specific people. Sign in to WRotate to see if it was shared with you.</div>
           <div class="cta-wrap u-mt-5">
@@ -298,7 +296,7 @@
       // No row: either signed-out (RLS needs auth.uid()) or signed-in but not allowed.
       const { data: { session } } = await db.auth.getSession();
       if (session) {
-        renderError('This post is private, or no longer available.');
+        renderError('It may be private, or it may have been removed.');
       } else {
         renderSignIn(logId);
       }
