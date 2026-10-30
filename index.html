@@ -8020,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.59';
+const APP_VERSION = '30.13.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8535,16 +8535,21 @@ async function checkUsernameAvailability(username, statusElId) {
   const statusEl = document.getElementById(statusElId);
   if (!statusEl) return;
   _lastCheckedUsername = username;
-  const { data, error } = await db.from('profiles')
-    .select('id')
-    .eq('username', username)
-    .neq('id', currentUser.id)
-    .limit(1);
+  // Reserved check fails OPEN on error — the profiles trigger is the backstop
+  // and rejects a reserved name at save time with a clear message.
+  const [{ data, error }, reservedRes] = await Promise.all([
+    db.from('profiles').select('id').eq('username', username).neq('id', currentUser.id).limit(1),
+    db.rpc('is_username_reserved', { p_name: username }),
+  ]);
   // Guard: user may have typed more while we were waiting
   if (_lastCheckedUsername !== username) return;
   if (error) {
     statusEl.textContent = 'Could not check — try again';
     statusEl.className = 'username-status invalid';
+    _usernameAvailable = false;
+  } else if (reservedRes && !reservedRes.error && reservedRes.data === true) {
+    statusEl.textContent = 'This username is reserved';
+    statusEl.className = 'username-status taken';
     _usernameAvailable = false;
   } else if (data && data.length > 0) {
     statusEl.textContent = 'Already taken';
@@ -9418,8 +9423,10 @@ async function saveProfileFromPage() {
     loadAndRenderProfile(currentUser.id);
     checkAndAwardBadges('profile');
   } else {
-    // Handle unique constraint violation from DB
-    if (error.message && error.message.includes('username')) {
+    // Handle unique constraint violation / reserved-name trigger from DB
+    if (error.message && error.message.includes('reserved')) {
+      toast('This username is reserved', 'error');
+    } else if (error.message && error.message.includes('username')) {
       toast('Username is already taken', 'error');
     } else {
       toast('Save failed — ' + error.message, 'error');
