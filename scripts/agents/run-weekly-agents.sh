@@ -100,6 +100,17 @@ fi
   (cd "$REPO" && . "$HOME/.config/supabase/env" && export SUPABASE_ACCESS_TOKEN &&
     npx supabase link --project-ref "$PROJECT_REF") || true
 
+# Install test dependencies so the allowlisted `npm test` / `npm run test:e2e`
+# actually run (bugs blocker 2026-10-26: the clone never had node_modules, so
+# both exited 127 and the weekly QA ran with no suite signal since 10-22).
+# --ignore-scripts: this clone tracks the PUBLIC repo — never execute package
+# install scripts here. Playwright's browser fetch is the one explicit step
+# (a no-op once the chromium build is cached). A failure is logged, not fatal:
+# the bugs agent will report the suites unrunnable, as before.
+echo "[$(date)] installing test deps (npm ci --ignore-scripts)"
+(cd "$REPO" && npm ci --ignore-scripts && npx playwright install chromium) ||
+  echo "[$(date)] WARNING: test dependency install failed — suites will be unrunnable"
+
 run_agent() {
   local name="$1"
   local report="$REPORTS/$name.md"
