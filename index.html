@@ -2715,10 +2715,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
         Continue with Apple
       </button>
-      <!-- Demo entry removed 2026-10-15 to measure its effect on signups
-           (docs/demo-entry-removal-2026-10-15.md). bootDemoMode() and the
-           demo account stay live for existing sessions; restore = revert
-           the removal commit. -->
+      <!-- Demo entry removed 2026-10-15; the demo was fully retired 2026-10-30.
+           Code archived in docs/archive/demo-mode-2026-10-30.md. -->
     </div>
     <div class="landing-fine-print">
       100% free · No ads · No credit card<br>
@@ -3257,15 +3255,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <button id="feed-post-fab" class="feed-post-fab" onclick="openNewPost()" title="New Post" aria-label="New Post"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 
 <main id="main-content" tabindex="-1">
-
-  <!-- ════ DEMO MODE BANNER ════ -->
-  <div id="demo-banner" class="row-between demo-banner hidden u-bg-linear-gradient-135deg-demo-gold-demo-gold-deep u-c-demo-ink u-pt-2-5 u-pr-5 u-pb-2-5 u-pl-5 u-mt-calc-1-3 u-mr-3 u-mb-2 u-ml-3 u-gap-3 u-fs-base u-fw-semibold u-r- u-sh-shadow-2">
-    <span class="grow-clip">Demo Mode — explore a sample collection. Nothing here is saved.</span>
-    <div class="row u-shrink-0">
-      <button onclick="showDemoSignupModal()" class="u-bg-demo-ink u-c-paper u-bd-none u-r-btn u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-fs-sm u-cur-pointer u-ff-inherit u-fw-semibold u-ws-nowrap">Sign Up Free</button>
-      <button onclick="exitDemoMode()" class="u-bg-mix-demo-ink-10 u-bd-1px-solid-color-mix-in-srgb-demo-ink-30pct-transparent u-c-demo-ink u-r-btn u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-fs-sm u-cur-pointer u-ff-inherit u-ws-nowrap">Exit</button>
-    </div>
-  </div>
 
   <!-- ════ GLOBAL REMINDER BANNER ════ -->
   <div id="reminder-banner" class="reminder-banner hidden" role="status">
@@ -4519,8 +4508,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Measure content (shown when user has watches) -->
     <div id="measure-content" style="display:none;">
-      <!-- Watch + BPH selection — compact row (hidden in demo: the demo account's
-           seeded watches would read as "pick a demo Rolex to measure your own watch") -->
+      <!-- Watch + BPH selection — compact row -->
       <div id="msr-select-row" class="u-cols-1fr-auto u-gap-2 u-mb-3 u-d-grid">
         <select id="msr-watch-select" aria-label="Watch to measure" onchange="onMsrWatchChange()" class="text-default u-w-100pct u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface"></select>
         <select id="msr-bph-select" aria-label="Beat rate" onchange="onMsrBphChange()" class="text-default u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface">
@@ -4533,8 +4521,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <option value="36000">36,000</option>
         </select>
       </div>
-      <!-- Demo mode: replaces the watch selector — the run is free, the save is the ask -->
-      <div id="msr-demo-note" class="text-secondary u-mb-3 u-ta-center hidden">Measuring your watch &mdash; sign up free to keep readings.</div>
       <!-- Input source (admin-gated by tg_piezo; hidden by default) -->
       <select id="tg-input-source" onchange="onTgSourceChange()" class="text-default u-w-100pct u-mb-3 u-pt-2 u-pr-2 u-pb-2 u-pl-2 u-r-btn u-bd-1px-solid-border u-bg-surface" style="display:none;">
         <option value="mic">iPhone mic</option>
@@ -4729,8 +4715,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
         </div>
       </div>
-      <!-- Demo post-reading signup ask is a MODAL (showDemoMeasureModal) since
-           2026-10-11 UAT round 2: the inline block sat below the tab-bar fold. -->
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
       <div id="msr-history-hint" class="card u-mt-4 u-pt-3 u-pr-4 u-pb-3 u-pl-4 u-cur-pointer" style="display:none;" onclick="openMsrHistory('hint_card')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory('hint_card');}">
         <div class="u-items-baseline u-justify-space-between u-gap-2 u-d-flex">
@@ -6279,7 +6263,6 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 let currentUser = null; // set after sign-in
 let _isDemoMode = false;
-const DEMO_USER_EMAIL = 'demo@wrotate.com';
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
@@ -7488,222 +7471,13 @@ async function devLogin(which) {
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
 
-// ── Demo mode ───────────────────────────────────────────────────────────────
-function demoGuard() {
-  if (!_isDemoMode) return false;
-  showDemoSignupModal();
-  return true;
-}
-
-function showDemoSignupModal() {
-  if (document.getElementById('demo-signup-modal')) return;
-  const m = document.createElement('div');
-  m.id = 'demo-signup-modal';
-  m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--black) 50%, transparent);';
-  m.innerHTML = `
-    <div class="u-bg-bg u-r-lg u-pt-8 u-pr-8 u-pb-8 u-pl-8 u-maxw-85 u-w-90pct u-ta-center u-sh-shadow-4">
-      <div class="u-fs-2xl u-fw-bold u-c-text u-mb-1">Like what you see?</div>
-      <div class="text-secondary u-mb-6">Sign up free to start tracking your own collection.</div>
-      <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-1px-solid-google-line u-bg-white u-c-google-ink u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-2">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-        Continue with Google
-      </button>
-      <button onclick="exitDemoMode();setTimeout(signInWithApple,300)" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-none u-bg-black u-c-white u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-3">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
-        Continue with Apple
-      </button>
-      <button onclick="closeDemoSignupModal()" class="btn-plain u-fs-base u-ff-inherit">Keep exploring</button>
-    </div>`;
-  m.addEventListener('click', (e) => { if (e.target === m) closeDemoSignupModal(); });
-  document.body.appendChild(m);
-}
-
-function closeDemoSignupModal() {
-  const m = document.getElementById('demo-signup-modal');
-  if (m) m.remove();
-}
-
-async function bootDemoMode() {
-  showAuthError('');
-  try {
-    const resp = await fetch(SUPABASE_URL + '/functions/v1/demo-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY }
-    });
-    const data = await resp.json();
-    if (!data.access_token) { showAuthError('Demo login failed'); return; }
-    const { error } = await db.auth.setSession({
-      access_token: data.access_token, refresh_token: data.refresh_token
-    });
-    if (error) { showAuthError('Demo login failed: ' + error.message); return; }
-    _isDemoMode = true;
-    safeLS.set('wrotate_demo', '1');
-  } catch(e) {
-    showAuthError('Demo login failed: ' + e.message);
-  }
-}
-
-function exitDemoMode() {
-  _isDemoMode = false;
-  safeLS.remove('wrotate_demo');
-  signOut();
-}
-
-// ── Demo measurement (2026-10-11) ────────────────────────────────────────────
-// A demo visitor may RUN the timegrapher (on-device, free); Keep/Share/History
-// stay gated. Every run is telemetered to feature_events as `demo_measure`
-// under the demo account (internal — excluded from external metrics) with a
-// per-device id, and surfaced on Admin → Traffic ("Demo Measure" card) so
-// abuse is never silent. Flip the cap below if that card shows abuse.
-const DEMO_MEASURE_CAP = 3;   // 0 = no cap; N = block the start after N completed runs/device
-const DEMO_MSR_RUNS_KEY = 'wrotate_demo_msr_runs';
-const DEMO_MSR_SIGNUP_KEY = 'wrotate_demo_msr_signup';
-const DEMO_DEVICE_KEY = 'wrotate_demo_did';
-
-function _demoDeviceId() {
-  let v = safeLS.get(DEMO_DEVICE_KEY);
-  if (!v) { v = crypto.randomUUID(); safeLS.set(DEMO_DEVICE_KEY, v); }
-  return v;
-}
-
-function _demoRunsCompleted() {
-  return parseInt(safeLS.get(DEMO_MSR_RUNS_KEY) || '0', 10) || 0;
-}
-
-// phase: started | completed | capped | cta_signup | cta_dismissed | converted
-function _demoMeasureEvent(phase, extra) {
-  try {
-    if (!currentUser) return;
-    db.from('feature_events').insert({
-      user_id: currentUser.id,
-      event: 'demo_measure',
-      meta: { phase, did: _demoDeviceId(), ...(extra || {}) },
-    }).then(() => {}, () => {});
-    if (window.posthog) posthog.capture('demo_measure_' + phase, extra || {});
-  } catch (_) {}
-}
-
-// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
-function demoMeasureAllowed({ isDemo, completedRuns, cap }) {
-  if (!isDemo) return { allow: true, capped: false };
-  const c = Number(cap);
-  if (!Number.isFinite(c) || c <= 0) return { allow: true, capped: false };
-  const runs = Number(completedRuns);
-  const done = Number.isFinite(runs) ? runs : 0;
-  if (done >= c) return { allow: false, capped: true };
-  return { allow: true, capped: false };
-}
-
-// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
-function demoMeasureCta(rate) {
-  const r = Number(rate);
-  if (rate == null || !Number.isFinite(r)) {
-    return { title: 'Measure complete', sub: 'Sign up free to save your readings:' };
-  }
-  const mag = Math.abs(r).toFixed(1);
-  const rateStr = (mag === '0.0' ? '' : r > 0 ? '+' : '-') + mag;
-  return {
-    title: `Your watch is running ${rateStr} s/day`,
-    sub: 'Sign up free to save this reading:',
-  };
-}
-
-function demoRateBand(rate) {
-  const r = Number(rate);
-  if (rate == null || !Number.isFinite(r)) return 'none';
-  const a = Math.abs(r);
-  if (a <= 5) return 'le5';
-  if (a <= 15) return 'le15';
-  return 'gt15';
-}
-
-// Reading finished in demo: count the run, log it, and pop the signup modal
-// (instead of the save section, which demo never sees). Short delay so the
-// completed dial renders first — the number on screen is what the modal quotes.
-function demoMeasureComplete(rate, wasConverged) {
-  try { safeLS.set(DEMO_MSR_RUNS_KEY, String(_demoRunsCompleted() + 1)); } catch (_) {}
-  _demoMeasureEvent('completed', { rate_band: demoRateBand(rate), converged: !!wasConverged });
-  setTimeout(() => showDemoMeasureModal(rate), 500);
-}
-
-// UAT 2026-10-11 round 2: the inline CTA under the Measure button sat below the
-// tab-bar fold and one line of copy didn't say why to sign up. A modal can't be
-// missed, and dismissing it DISCARDS the reading — save-or-lose, stated plainly
-// on the button.
-function showDemoMeasureModal(rate) {
-  if (document.getElementById('demo-measure-modal')) return;
-  const cta = demoMeasureCta(rate);
-  const m = document.createElement('div');
-  m.id = 'demo-measure-modal';
-  m.style.cssText = 'position:fixed;inset:0;z-index:var(--z-popover);display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--black) 50%, transparent);';
-  m.innerHTML = `
-    <div class="u-bg-bg u-r-lg u-pt-8 u-pr-8 u-pb-8 u-pl-8 u-maxw-85 u-w-90pct u-ta-center u-sh-shadow-4">
-      <div class="u-fs-2xl u-fw-bold u-c-text u-mb-1">${escHtml(cta.title)}</div>
-      <div class="text-secondary u-mb-3">${escHtml(cta.sub)}</div>
-      <div class="panel u-pt-2-5 u-pr-4 u-pb-2-5 u-pl-4 u-mb-4 u-ta-left">
-        <div class="text-secondary u-fs-sm u-mb-1">&middot; Accuracy history for every watch you own</div>
-        <div class="text-secondary u-fs-sm u-mb-1">&middot; Drift charts &mdash; see if it gets worse over time</div>
-        <div class="text-secondary u-fs-sm">&middot; A reminder when it&rsquo;s time to measure again</div>
-      </div>
-      <button onclick="demoMeasureSignup('google')" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-1px-solid-google-line u-bg-white u-c-google-ink u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-2">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-        Continue with Google
-      </button>
-      <button onclick="demoMeasureSignup('apple')" class="row u-justify-center u-w-100pct u-pt-3 u-pr-3 u-pb-3 u-pl-3 u-r- u-bd-none u-bg-black u-c-white u-fs-md u-fw-medium u-cur-pointer u-ff-inherit u-mb-3">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="currentColor"/></svg>
-        Continue with Apple
-      </button>
-      <button onclick="dismissDemoMeasureModal()" class="btn-plain u-fs-base u-ff-inherit">Discard reading</button>
-    </div>`;
-  // No backdrop-tap dismissal: dismissing discards the reading, and a stray
-  // tap outside the dialog must not wipe a ~20s measurement. Only the explicit
-  // "Discard reading" button discards.
-  document.body.appendChild(m);
-}
-
-function dismissDemoMeasureModal() {
-  const m = document.getElementById('demo-measure-modal');
-  if (m) m.remove();
-  demoWipeReading();
-  _demoMeasureEvent('cta_dismissed');
-}
-
-// Dismissing the modal discards the reading — the result leaves the screen
-// entirely (HUD, badges, scatter, beat scope, status), back to READY. The
-// reading is the thing an account would have saved; it doesn't linger free.
-function demoWipeReading() {
-  _msrLastRate = null; _msrLastBe = null; _msrFoldedBE = null;
-  _msrLastBph = null; _msrScatterData = []; _msrLastCumDev = 0;
-  const canvas = document.getElementById('msr-scatter-plot');
-  if (canvas) { const ctx = canvas.getContext('2d'); if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
-  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
-  set('msr-live-rate', el => { el.textContent = '—'; });
-  set('msr-live-be', el => { el.textContent = '—'; });
-  set('msr-live-amp-wrap', el => { el.style.display = 'none'; });
-  set('msr-detected-bph', el => { el.style.display = 'none'; });
-  set('msr-converged-badge', el => { el.style.display = 'none'; });
-  set('msr-preliminary-badge', el => { el.style.display = 'none'; });
-  set('msr-beat-scope-panel', el => { el.style.display = 'none'; });
-  set('msr-signal-bars', el => { el.style.display = 'none'; });
-  set('msr-save-section', el => { el.style.display = 'none'; });
-  set('msr-status-text', el => { el.textContent = ' '; el.style.color = ''; });
-  set('msr-idle-overlay', el => { el.style.display = 'flex'; });
-  const btnLabel = document.getElementById('msr-btn-label');
-  if (btnLabel) btnLabel.textContent = 'Measure';
-}
-
-function demoMeasureSignup(provider) {
-  _demoMeasureEvent('cta_signup', { provider });
-  const m = document.getElementById('demo-measure-modal');
-  if (m) m.remove();
-  // Tag the funnel row before signIn's own (same-source) call — 5-min dedup
-  // keeps this one, so demo-measure signups are countable in page_visits.
-  trackVisit({ utm_source: 'signin_' + provider, utm_medium: 'funnel', utm_content: 'demo_measure', path: '/signin' });
-  try { safeLS.set(DEMO_MSR_SIGNUP_KEY, '1'); } catch (_) {}
-  exitDemoMode();
-  setTimeout(provider === 'apple' ? signInWithApple : signInWithGoogle, 300);
-}
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Demo mode — RETIRED 2026-10-30 ──────────────────────────────────────────────
+// The demo (shared alexrivera account + pre-signup demo measure) is dead for
+// now. All removed code lives in docs/archive/demo-mode-2026-10-30.md with
+// revival steps. The ~70 demoGuard() call sites and _isDemoMode checks are
+// kept in place (inert — _isDemoMode is never set true) so revival is a
+// paste-back, not 70 scattered re-edits.
+function demoGuard() { return false; }
 
 async function signInWithGoogle() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'google' });
@@ -8246,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.08.41';
+const APP_VERSION = '30.09.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20953,12 +20727,6 @@ function nav(btn) {
       if (gear) gear.style.display = _tgHasNative() ? '' : 'none';
       const histBtn = document.getElementById('msr-history-btn');
       if (histBtn) histBtn.style.display = (currentUser && !_isDemoMode) ? '' : 'none';
-      // Demo: the visitor measures THEIR watch — the demo account's seeded
-      // collection makes no sense in the selector, so swap it for one line.
-      const selRow = document.getElementById('msr-select-row');
-      if (selRow) selRow.classList.toggle('hidden', _isDemoMode);
-      const demoNote = document.getElementById('msr-demo-note');
-      if (demoNote) demoNote.classList.toggle('hidden', !_isDemoMode);
       updateMsrModeIndicator();
       initTgSourceSelector();
     }
@@ -32125,8 +31893,6 @@ resetUserDataReady();
 
 function clearUserState() {
   _isDemoMode = false;
-  const demoBanner = document.getElementById('demo-banner');
-  if (demoBanner) demoBanner.classList.add('hidden');
   // Audit F3: without this, a session-expiry sign-out kept the previous
   // account's experiment arms (incl. tgknob_* trial knobs) live for whoever
   // signs in next on this device, until get_experiments() resolved — or
@@ -33258,14 +33024,6 @@ async function loadTgHistory() {
     .eq('user_id', currentUser.id).eq('watch_id', _tgWatchId)
     .order('created_at', { ascending: false }).limit(20);
   if (error || !data || data.length === 0) { listEl.innerHTML = '<div class="note">No readings yet.</div>'; updateAccuracySummary(); loadUnsavedReadings(); return; }
-  // Demo mode: hide all readings, prompt sign-up
-  if (_isDemoMode) {
-    listEl.innerHTML = `<div class="u-ta-center u-pt-4 u-pr-0 u-pb-4 u-pl-0">
-      <div class="text-secondary u-mb-2">Sign up to track your watch accuracy.</div>
-      <button onclick="showDemoSignupModal()" class="u-pt-2 u-pr-5 u-pb-2 u-pl-5 u-r-btn u-bd-none u-bg-gold u-c-white u-fs-base u-fw-semibold u-cur-pointer u-ff-inherit">Sign up free</button>
-    </div>`;
-    return;
-  }
   listEl.innerHTML = data.map(r => {
     const d = new Date(r.created_at);
     const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -34843,13 +34601,6 @@ function toggleMsrListen() {
   _migrateProV2Precision();   // no-op once stamped; guarantees no run uses stale preset knobs
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen('user_stopped'); return; }
-  // Demo may RUN a measurement (2026-10-11) — the engine is on-device and the
-  // reading is the signup argument. Only a non-zero DEMO_MEASURE_CAP gates it.
-  if (_isDemoMode) {
-    const gate = demoMeasureAllowed({ isDemo: true, completedRuns: _demoRunsCompleted(), cap: DEMO_MEASURE_CAP });
-    if (!gate.allow) { _demoMeasureEvent('capped'); showDemoSignupModal(); return; }
-    _demoMeasureEvent('started');
-  }
   markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
   _msrKeptReading = null;   // new session — the next converged reading is a new history row
   try {
@@ -35153,11 +34904,8 @@ function stopMsrListen(reason) {
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'flex';
   }
-  // Keep save section visible if we have data. In demo the save section never
-  // shows — the post-reading signup ask (with the live number) takes its place.
-  if (_msrLastRate != null && _isDemoMode) {
-    demoMeasureComplete(_msrLastRate, wasConverged);
-  } else if (_msrLastRate != null) {
+  // Keep save section visible if we have data.
+  if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
     const sign = _msrLastRate >= 0 ? '+' : '';
     document.getElementById('msr-rate-input').value = sign + _msrLastRate.toFixed(1);
@@ -35532,13 +35280,11 @@ async function bootApp(user) {
   // If the user came here to sign in for a shared non-public post (stashed by the
   // /p/ viewer when they were signed out), forward them back to it now that a
   // session exists — the in-app viewer lets RLS decide if they're allowed to see it.
-  if (user.email !== DEMO_USER_EMAIL) {
-    const _pendingSharedPost = safeLS.get('wrotate_pending_post');
-    if (_pendingSharedPost) {
-      safeLS.remove('wrotate_pending_post');
-      window.location.replace('/p/?id=' + encodeURIComponent(_pendingSharedPost));
-      return;
-    }
+  const _pendingSharedPost = safeLS.get('wrotate_pending_post');
+  if (_pendingSharedPost) {
+    safeLS.remove('wrotate_pending_post');
+    window.location.replace('/p/?id=' + encodeURIComponent(_pendingSharedPost));
+    return;
   }
   clearUserState();
   resetUserDataReady();
@@ -35559,14 +35305,6 @@ async function bootApp(user) {
       .then(() => { safeLS.remove('_wrotate_visit_id'); })
       .catch(() => {});
   }
-  // Check if this is a demo session
-  if (user.email === DEMO_USER_EMAIL) _isDemoMode = true;
-  const demoBanner = document.getElementById('demo-banner');
-  if (demoBanner) demoBanner.classList.toggle('hidden', !_isDemoMode);
-  if (_isDemoMode) {
-    const soBtn = document.getElementById('signout-btn');
-    if (soBtn) { soBtn.textContent = 'Exit Demo'; soBtn.onclick = exitDemoMode; }
-  }
   if (window.posthog && !_isDemoMode) posthog.identify(user.id, { email: user.email });
   if (!_isDemoMode) _bootGate.then(() => { if (currentUser?.id === user.id) _pingPresence(); });
   // Force scroll to top — iOS PWA restores previous scroll position on launch
@@ -35583,12 +35321,6 @@ async function bootApp(user) {
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
-  // Demo→signup funnel: a real session starting after a demo-measure CTA tap
-  // closes the loop — logged once under the NEW account, keyed to the device.
-  if (!_isDemoMode && safeLS.get(DEMO_MSR_SIGNUP_KEY) === '1') {
-    safeLS.remove(DEMO_MSR_SIGNUP_KEY);
-    _demoMeasureEvent('converted');
-  }
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
