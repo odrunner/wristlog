@@ -248,86 +248,121 @@ struct WebView: UIViewRepresentable {
             return nil
         }
 
-        // MARK: OAuth
+        // MARK: OAuth (PKCE — weekly security audit F1, mirrors Android 369f0fe1)
+
+        /// Rewrite `redirect_to` to our custom scheme AND attach the code challenge, so GoTrue
+        /// returns a one-time `?code=` instead of tokens in the fragment. The custom-scheme
+        /// callback is claimable by any app on the device; a code without the in-process
+        /// verifier is useless to an interceptor.
+        static func pkceAuthorizeURL(_ url: URL, challenge: String) -> URL? {
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+            var queryItems = (components.queryItems ?? []).map { item in
+                item.name == "redirect_to"
+                    ? URLQueryItem(name: "redirect_to", value: "wrotate://auth-callback")
+                    : item
+            }
+            queryItems.append(URLQueryItem(name: "code_challenge", value: challenge))
+            queryItems.append(URLQueryItem(name: "code_challenge_method", value: "s256"))
+            components.queryItems = queryItems
+            return components.url
+        }
+
+        /// Pull the PKCE auth code from the callback URL's query; nil if absent or unsafe.
+        /// GoTrue auth codes are UUIDs; anything outside this charset is a forgery attempt.
+        static func parseAuthCode(_ url: URL) -> String? {
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value,
+                  code.range(of: "^[A-Za-z0-9-]+$", options: .regularExpression) != nil
+            else { return nil }
+            return code
+        }
+
+        /// JS that hands the session to the page. Supabase tokens are base64url/JWT (letters,
+        /// digits, '.', '_', '-'); anything else is an injection attempt — return nil rather
+        /// than interpolate it into the setSession JS literal.
+        static func sessionInjectionJS(accessToken: String, refreshToken: String) -> String? {
+            let safe = "^[A-Za-z0-9._-]+$"
+            guard accessToken.range(of: safe, options: .regularExpression) != nil,
+                  refreshToken.range(of: safe, options: .regularExpression) != nil
+            else { return nil }
+            return """
+            (function() {
+                if (typeof db !== 'undefined' && db.auth) {
+                    db.auth.setSession({
+                        access_token: '\(accessToken)',
+                        refresh_token: '\(refreshToken)'
+                    }).then(function(result) {
+                        if (result.error) {
+                            console.error('[WRotate] setSession error:', result.error.message);
+                        } else {
+                            console.log('[WRotate] Session set successfully');
+                            window.location.reload();
+                        }
+                    });
+                } else {
+                    window.location.hash = 'access_token=\(accessToken)&refresh_token=\(refreshToken)';
+                    window.location.reload();
+                }
+                return true;
+            })();
+            """
+        }
+
+        private func injectSession(_ js: String) {
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js) { _, error in
+                    if let error = error {
+                        print("[WRotate] OAuth JS error: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
 
         private func handleOAuth(url: URL) {
-            // Rewrite the redirect_to parameter to use our custom URL scheme
-            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-            var queryItems = components.queryItems ?? []
+            // One verifier per flow, captured by the completion below — it never leaves the
+            // process, and ASWebAuthenticationSession only fires for a flow this app started.
+            let verifier = Pkce.generateVerifier()
+            guard let authorizeURL = Self.pkceAuthorizeURL(url, challenge: Pkce.challenge(verifier)) else { return }
 
-            // Replace redirect_to with our custom scheme
-            queryItems = queryItems.map { item in
-                if item.name == "redirect_to" {
-                    return URLQueryItem(name: "redirect_to", value: "wrotate://auth-callback")
-                }
-                return item
-            }
-            components.queryItems = queryItems
-
-            guard let modifiedURL = components.url else { return }
-
-            oauthManager.startOAuthFlow(authURL: modifiedURL) { [weak self] callbackURL in
-                guard let callbackURL = callbackURL else {
+            oauthManager.startOAuthFlow(authURL: authorizeURL) { [weak self] callbackURL in
+                guard let self = self, let callbackURL = callbackURL else {
                     print("[WRotate] OAuth: no callback URL received")
                     return
                 }
 
-                print("[WRotate] OAuth callback: \(callbackURL.absoluteString.prefix(80))...")
-
-                // Extract the fragment (access_token, refresh_token, etc.)
-                // The callback URL looks like: wrotate://auth-callback#access_token=...&refresh_token=...
-                let fragment = callbackURL.fragment ?? ""
-                print("[WRotate] OAuth fragment length: \(fragment.count)")
-
-                if !fragment.isEmpty {
-                    // Parse the fragment to extract access_token and refresh_token
-                    var params: [String: String] = [:]
-                    for pair in fragment.split(separator: "&") {
-                        let kv = pair.split(separator: "=", maxSplits: 1)
-                        if kv.count == 2 {
-                            params[String(kv[0])] = String(kv[1])
+                if let code = Self.parseAuthCode(callbackURL) {
+                    // URLSession calls back off the main thread; injectSession hops back.
+                    TokenExchange.exchange(code: code, verifier: verifier) { tokens in
+                        guard let tokens = tokens,
+                              let js = Self.sessionInjectionJS(accessToken: tokens.accessToken,
+                                                               refreshToken: tokens.refreshToken) else {
+                            print("[WRotate] OAuth: code exchange failed")
+                            return
                         }
+                        print("[WRotate] OAuth: injecting session via JS (pkce)")
+                        self.injectSession(js)
                     }
-
-                    guard let accessToken = params["access_token"],
-                          let refreshToken = params["refresh_token"] else {
-                        print("[WRotate] OAuth: missing tokens in fragment")
-                        return
-                    }
-
-                    // Inject JS to set the session directly — much more reliable than URL reload
-                    let js = """
-                    (function() {
-                        if (typeof db !== 'undefined' && db.auth) {
-                            db.auth.setSession({
-                                access_token: '\(accessToken)',
-                                refresh_token: '\(refreshToken)'
-                            }).then(function(result) {
-                                if (result.error) {
-                                    console.error('[WRotate] setSession error:', result.error.message);
-                                } else {
-                                    console.log('[WRotate] Session set successfully');
-                                    window.location.reload();
-                                }
-                            });
-                        } else {
-                            window.location.hash = '\(fragment)';
-                            window.location.reload();
-                        }
-                        return true;
-                    })();
-                    """
-                    print("[WRotate] OAuth: injecting session via JS")
-                    DispatchQueue.main.async {
-                        self?.webView?.evaluateJavaScript(js) { _, error in
-                            if let error = error {
-                                print("[WRotate] OAuth JS error: \(error.localizedDescription)")
-                            }
-                        }
-                    }
-                } else {
-                    print("[WRotate] OAuth: empty fragment!")
+                    return
                 }
+
+                // Transitional safety net: implicit-flow tokens in the fragment (challenge
+                // params dropped or an old server). Same charset guard as the PKCE path.
+                let fragment = callbackURL.fragment ?? ""
+                var params: [String: String] = [:]
+                for pair in fragment.split(separator: "&") {
+                    let kv = pair.split(separator: "=", maxSplits: 1)
+                    if kv.count == 2 {
+                        params[String(kv[0])] = String(kv[1])
+                    }
+                }
+                guard let accessToken = params["access_token"],
+                      let refreshToken = params["refresh_token"],
+                      let js = Self.sessionInjectionJS(accessToken: accessToken, refreshToken: refreshToken) else {
+                    print("[WRotate] OAuth: no code and no usable tokens in callback")
+                    return
+                }
+                print("[WRotate] OAuth: injecting session via JS (fragment fallback)")
+                self.injectSession(js)
             }
         }
 
