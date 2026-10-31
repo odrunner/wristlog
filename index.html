@@ -8020,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.16.50';
+const APP_VERSION = '30.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8589,6 +8589,7 @@ async function saveUsernamePrompt() {
   const { valid } = validateUsername(raw);
   if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
   const displayName = (document.getElementById('up-display-name').value || '').trim();
+  if (!checkContent(displayName).clean) { toast('Your display name contains inappropriate content. Please revise.', 'error'); return; }
   const btn = document.getElementById('up-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
   const updates = { username: raw, username_set: true };
@@ -9387,6 +9388,8 @@ async function saveProfileFromPage() {
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
+  if (!checkContent(name).clean) { toast('Your display name contains inappropriate content. Please revise.', 'error'); return; }
+  if (!checkContent(bio).clean)  { toast('Your bio contains inappropriate content. Please revise.', 'error'); return; }
 
   // Username validation
   const usernameInput = document.getElementById('pp-username');

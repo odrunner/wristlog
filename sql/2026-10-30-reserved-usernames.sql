@@ -94,6 +94,34 @@ INSERT INTO public.reserved_usernames (name, is_pattern, note) VALUES
   ('wristlog', true, 'old internal product name')
 ON CONFLICT (name) DO NOTHING;
 
+-- Profanity / slurs / hate (substring patterns — block anywhere in the name).
+-- Only unambiguous words: nothing short like 'ass' or 'dick' that sits inside
+-- normal usernames (dickens_fan, spiceman stay allowed — Scunthorpe problem).
+INSERT INTO public.reserved_usernames (name, is_pattern, note) VALUES
+  ('fuck',      true, 'profanity'),
+  ('shit',      true, 'profanity'),
+  ('bitch',     true, 'profanity'),
+  ('cunt',      true, 'profanity'),
+  ('asshole',   true, 'profanity'),
+  ('dickhead',  true, 'profanity'),
+  ('wanker',    true, 'profanity'),
+  ('whore',     true, 'profanity'),
+  ('slut',      true, 'profanity'),
+  ('rapist',    true, 'profanity'),
+  ('pedophile', true, 'profanity'),
+  ('porn',      true, 'profanity'),
+  ('penis',     true, 'profanity'),
+  ('nigger',    true, 'slur'),
+  ('nigga',     true, 'slur'),
+  ('faggot',    true, 'slur'),
+  ('tranny',    true, 'slur'),
+  ('kike',      true, 'slur'),
+  ('chink',     true, 'slur'),
+  ('retard',    true, 'slur'),
+  ('nazi',      true, 'hate'),
+  ('hitler',    true, 'hate')
+ON CONFLICT (name) DO NOTHING;
+
 -- Founder + family (exact)
 INSERT INTO public.reserved_usernames (name, note) VALUES
   ('ozgur',       'founder'),
