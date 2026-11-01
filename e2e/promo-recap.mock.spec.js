@@ -197,6 +197,37 @@ test.describe('month-in-review card — the conditional slides', () => {
     await expect(q(page, '.promo-recap-slide').nth(3)).toContainText('Jul 1 – Jul 4');
   });
 
+  // The pattern slide: monthRecap's ladder picks one habit per month. The
+  // ladder itself is unit-tested; what matters here is each of its two
+  // layouts rendering, in place, without disturbing the rest of the deck.
+  test('the pattern slide names a weekday-signature watch', async ({ page }) => {
+    await mount(page, { logs: [
+      { watchId: 'a', date: '2026-07-04', useCase: 'work', id: 'd1' },
+      { watchId: 'a', date: '2026-07-11', useCase: 'work', id: 'd2' },
+      { watchId: 'a', date: '2026-07-18', useCase: 'work', id: 'd3' },
+      { watchId: 'b', date: '2026-07-07', useCase: 'work', id: 'd4' },
+      { watchId: 'c', date: '2026-07-22', useCase: 'work', id: 'd5' },
+    ] });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your Saturday watch', 'Your rhythm']);
+    await expect(q(page, '.promo-recap-slide').nth(3)).toContainText('Overseas Dual Time');
+    await expect(q(page, '.promo-recap-slide').nth(3)).toContainText('worn 3 of 4 Saturdays');
+  });
+
+  test('the pattern slide shows a follow-up pair as first/then', async ({ page }) => {
+    await mount(page, { logs: [
+      { watchId: 'a', date: '2026-07-01', useCase: 'work', id: 'q1' },
+      { watchId: 'b', date: '2026-07-02', useCase: 'work', id: 'q2' },
+      { watchId: 'a', date: '2026-07-04', useCase: 'work', id: 'q3' },
+      { watchId: 'b', date: '2026-07-05', useCase: 'work', id: 'q4' },
+      { watchId: 'a', date: '2026-07-08', useCase: 'work', id: 'q5' },
+      { watchId: 'b', date: '2026-07-09', useCase: 'work', id: 'q6' },
+    ] });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top two', 'Your one-two', 'Your rhythm']);
+    const slide = q(page, '.promo-recap-slide').nth(3);
+    await expect(slide.locator('.promo-recap-podium-name')).toHaveText(['Overseas Dual Time', 'Speedmaster']);
+    await expect(slide).toContainText('3 times this month');
+  });
+
   test('the top-post slide appears once a post has a like, with its photo', async ({ page }) => {
     await mount(page, { likes: { p5: 7, p1: 2 } });
     await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your top post', 'Your rhythm']);

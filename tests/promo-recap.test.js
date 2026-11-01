@@ -5,6 +5,8 @@ import { dirname, join } from 'path';
 import {
   monthRecap, promoSlotEpoch, eligiblePromoSlots,
   RECAP_WINDOW_DAYS, RECAP_MIN_WEARS, RECAP_MIN_WATCHES, RECAP_MIN_STREAK,
+  RECAP_PATTERN_MIN_DOW, RECAP_PATTERN_COMEBACK_DAYS,
+  RECAP_PATTERN_MIN_RUN, RECAP_PATTERN_MIN_PAIR,
 } from '../wrotate_test.js';
 
 // "Your month in review" — the automated promo card.
@@ -540,7 +542,119 @@ describe('recap constants match between index.html and the test mirror', () => {
     ['RECAP_MIN_WEARS',   RECAP_MIN_WEARS],
     ['RECAP_MIN_WATCHES', RECAP_MIN_WATCHES],
     ['RECAP_MIN_STREAK',  RECAP_MIN_STREAK],
+    ['RECAP_PATTERN_MIN_DOW',       RECAP_PATTERN_MIN_DOW],
+    ['RECAP_PATTERN_COMEBACK_DAYS', RECAP_PATTERN_COMEBACK_DAYS],
+    ['RECAP_PATTERN_MIN_RUN',       RECAP_PATTERN_MIN_RUN],
+    ['RECAP_PATTERN_MIN_PAIR',      RECAP_PATTERN_MIN_PAIR],
   ])('%s', (name, mirrored) => {
     expect(appValue(name)).toBe(mirrored);
+  });
+});
+
+// ── the pattern slide ────────────────────────────────────────────────────────
+// One insight per month, picked down a fixed ladder: day signature → comeback
+// → back-to-back run → follow-up pair. Each rung is gated so the claim is
+// never vacuous, and `pattern` is null when nothing qualifies — an absent
+// slide beats a weak one.
+describe('monthRecap — the pattern ladder', () => {
+  // July 2026: the 4th, 11th, 18th and 25th are its four Saturdays.
+  const SATS = ['2026-07-04', '2026-07-11', '2026-07-18'];
+  // Spread filler that clears the 5-wear/2-watch gates without tripping any
+  // rung itself: distinct weekdays, no consecutive days, no repeats.
+  const FILLER = [L('b', '2026-07-07'), L('c', '2026-07-22')];
+  // Same job for the comeback tests, which spend one wear on the returning
+  // watch: four more spread across three other watches.
+  const JULY_FIXED = [L('x', '2026-07-01'), L('y', '2026-07-07'),
+                      L('x', '2026-07-16'), L('z', '2026-07-22')];
+
+  it('names a day-signature watch worn on 3 of the month\'s 4 Saturdays', () => {
+    const r = july({ logs: [...SATS.map((d) => L('s', d)), ...FILLER],
+                     watches: [W('s'), W('b'), W('c')] });
+    expect(r.pattern).toEqual({ kind: 'dow', watchId: 's', dow: 6, hit: 3, of: 4 });
+  });
+
+  it('two of four Saturdays is not a signature', () => {
+    const r = july({ logs: [L('s', SATS[0]), L('s', SATS[1]), ...FILLER, L('b', '2026-07-09')],
+                     watches: [W('s'), W('b'), W('c')] });
+    expect(r.pattern).toBeNull();
+  });
+
+  // A watch worn most of the month "owns" every weekday — that is not an
+  // insight. The signature share of the weekday must be at least double the
+  // watch's share of the whole month.
+  it('an everyday watch does not own a weekday', () => {
+    const daily = [];
+    for (let dd = 1; dd <= 28; dd++) daily.push(L('a', `2026-07-${String(dd).padStart(2, '0')}`));
+    const r = july({ logs: [...daily, L('b', '2026-07-30')],
+                     watches: [W('a'), W('b')] });
+    // 28 straight days IS a back-to-back run, so the ladder falls through to
+    // that rather than claiming a weekday.
+    expect(r.pattern).toEqual({ kind: 'run', watchId: 'a', days: 28,
+                                start: '2026-07-01', end: '2026-07-28' });
+  });
+
+  it('a comeback names the watch and its days away', () => {
+    const r = july({ logs: [L('c', '2026-03-01'), L('c', '2026-07-10'), ...JULY_FIXED],
+                     watches: [W('c'), W('x'), W('y'), W('z')] });
+    expect(r.pattern).toEqual({ kind: 'comeback', watchId: 'c', gapDays: 131 });
+  });
+
+  it('a short absence is not a comeback', () => {
+    const r = july({ logs: [L('c', '2026-06-01'), L('c', '2026-07-10'), ...JULY_FIXED],
+                     watches: [W('c'), W('x'), W('y'), W('z')] });
+    expect(r.pattern).toBeNull();
+  });
+
+  it('a first-ever wear is not a comeback', () => {
+    const r = july({ logs: [L('c', '2026-07-10'), ...JULY_FIXED],
+                     watches: [W('c'), W('x'), W('y'), W('z')] });
+    expect(r.pattern).toBeNull();
+  });
+
+  it('three consecutive days on one watch is a back-to-back run', () => {
+    // The standing July fixture already carries one: watch a on the 1st–3rd.
+    expect(july().pattern).toEqual({ kind: 'run', watchId: 'a', days: 3,
+                                     start: '2026-07-01', end: '2026-07-03' });
+  });
+
+  it('two consecutive days is not a run', () => {
+    const r = july({ logs: [L('a', '2026-07-01'), L('a', '2026-07-02'),
+                            L('b', '2026-07-09'), L('b', '2026-07-16'), L('c', '2026-07-22')],
+                     watches: JULY_WATCHES });
+    expect(r.pattern).toBeNull();
+  });
+
+  it('a dominant follow-up pair is the last rung', () => {
+    // Wear-day sequence a,b,a,b,a,b: a→b three times, b→a twice.
+    const r = july({ logs: [L('a', '2026-07-01'), L('b', '2026-07-02'),
+                            L('a', '2026-07-04'), L('b', '2026-07-05'),
+                            L('a', '2026-07-08'), L('b', '2026-07-09')],
+                     watches: JULY_WATCHES });
+    expect(r.pattern).toEqual({ kind: 'pair', fromId: 'a', toId: 'b', count: 3 });
+  });
+
+  it('a tied follow-up is not a pattern — "most" must be true', () => {
+    // a→b and a→c three times each; nothing else qualifies.
+    const dates = ['01', '03', '05', '07', '09', '11', '13', '15', '17', '19', '21', '23'];
+    const seq = ['a', 'b', 'a', 'c', 'a', 'b', 'a', 'c', 'a', 'b', 'a', 'c'];
+    const r = july({ logs: seq.map((id, i) => L(id, `2026-07-${dates[i]}`)),
+                     watches: JULY_WATCHES });
+    expect(r.pattern).toBeNull();
+  });
+
+  it('a day wearing two watches breaks the follow-up chain', () => {
+    // Without the double-wear on the 4th this is the dominant-pair fixture.
+    const r = july({ logs: [L('a', '2026-07-01'), L('b', '2026-07-02'),
+                            L('a', '2026-07-04'), L('c', '2026-07-04'), L('b', '2026-07-05'),
+                            L('a', '2026-07-08'), L('b', '2026-07-09')],
+                     watches: JULY_WATCHES });
+    expect(r.pattern).toBeNull();
+  });
+
+  it('the ladder prefers the day signature over a run', () => {
+    const run = [L('r', '2026-07-20'), L('r', '2026-07-21'), L('r', '2026-07-22')];
+    const r = july({ logs: [...SATS.map((d) => L('s', d)), ...run],
+                     watches: [W('s'), W('r')] });
+    expect(r.pattern.kind).toBe('dow');
   });
 });

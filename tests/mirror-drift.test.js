@@ -80,6 +80,7 @@ const ADAPTED = [
   // byte-identical check can't run. tests/promo-recap.test.js asserts the two
   // copies carry the same values instead.
   'RECAP_WINDOW_DAYS', 'RECAP_MIN_WEARS', 'RECAP_MIN_WATCHES', 'RECAP_MIN_STREAK',
+  'RECAP_PATTERN_MIN_DOW', 'RECAP_PATTERN_COMEBACK_DAYS', 'RECAP_PATTERN_MIN_RUN', 'RECAP_PATTERN_MIN_PAIR',
   'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',

@@ -2758,6 +2758,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="u-maxh-60vh" style="overflow-y:auto;">
       <div class="stack-3">
+        <span class="eyebrow eyebrow-muted">November 2026</span>
+      </div>
+      <div class="stack-3">
+        <div class="item-title">Your Month&#8217;s Pattern</div>
+        <div class="body-muted">The month-in-review card can now spot a habit in your wear log and give it a slide of its own: the watch that owned your Saturdays, a comeback after months in the box, a run of days back to back on one watch, or the watch you most often reach for next. One pattern per month, and only when the numbers genuinely back it up &#8212; no slide beats a stretched claim.</div>
+      </div>
+      <div class="stack-3">
         <span class="eyebrow eyebrow-muted">October 2026</span>
       </div>
       <div class="stack-3">
@@ -4350,7 +4357,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">&#8212;</div>
             <div class="help-step-body">
               <div class="help-step-title">Your Month in Review</div>
-              <div class="help-step-desc">In the first ten days of each month, a card lands in your feed recapping the month just gone &#8212; swipe it left to right. It covers your total wears, your most-worn watch, your top three, how the month compared with the one before, your most-liked post, watches that joined the rotation, and your longest run of logged days. A slide only appears when there&#8217;s something on it, so the deck is shorter some months. It needs at least 5 wears across 2 watches to show up at all, and it builds itself from your wear log &#8212; the same numbers as Monthly Review on this page. <strong>Share</strong> sends it as a link anyone can open without an account; a watch you&#8217;ve marked private still counts in the totals but is never named or pictured there.</div>
+              <div class="help-step-desc">In the first ten days of each month, a card lands in your feed recapping the month just gone &#8212; swipe it left to right. It covers your total wears, your most-worn watch, your top three, how the month compared with the one before, your most-liked post, watches that joined the rotation, your longest run of logged days, and one spotted pattern &#8212; the watch that owned a weekday, a comeback after months away, days back to back on one watch, or the watch you most often reach for next. A slide only appears when there&#8217;s something on it, so the deck is shorter some months. It needs at least 5 wears across 2 watches to show up at all, and it builds itself from your wear log &#8212; the same numbers as Monthly Review on this page. <strong>Share</strong> sends it as a link anyone can open without an account; a watch you&#8217;ve marked private still counts in the totals but is never named or pictured there.</div>
             </div>
           </div>
           <div class="help-step">
@@ -8020,7 +8027,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.17.09';
+const APP_VERSION = '01.06.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13010,6 +13017,11 @@ const RECAP_WINDOW_DAYS = 10;   // shown on the 1st–10th; the card can never g
 const RECAP_MIN_WEARS   = 5;    // below this a "review" is embarrassing, not delightful
 const RECAP_MIN_WATCHES = 2;    // one watch all month is a slide, not a story
 const RECAP_MIN_STREAK  = 3;    // below this a "streak" slide reads as a rebuke
+// The pattern-slide ladder (see the pattern block in monthRecap):
+const RECAP_PATTERN_MIN_DOW       = 3;   // weekday hits for a day signature
+const RECAP_PATTERN_COMEBACK_DAYS = 60;  // days away for a comeback
+const RECAP_PATTERN_MIN_RUN       = 3;   // consecutive days for a one-watch run
+const RECAP_PATTERN_MIN_PAIR      = 3;   // repeats for a follow-up pair
 
 // The epoch a local impression count is recorded under. For a normal slot that
 // is updated_at, which is what makes the admin's "Reset impressions" re-arm the
@@ -13159,12 +13171,101 @@ function monthRecap({ now, logs, watches, likes }) {
     }
   }
 
+  // ── this month's pattern ──
+  // One insight, picked down a fixed ladder — day signature, then comeback,
+  // then back-to-back run, then follow-up pair — each rung gated so the claim
+  // is never vacuous. null when nothing qualifies: an absent slide beats a
+  // weak one. All rungs read the DEDUPED wear days (a watch worn twice in one
+  // day is one day of that watch), and iteration is over sorted ids so ties
+  // resolve the same way everywhere.
+  const wearDates = {};
+  for (const l of mLogs) (wearDates[l.watchId] = wearDates[l.watchId] || new Set()).add(l.date);
+  const patternIds = Object.keys(wearDates).sort();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let pattern = null;
+
+  // Day signature: worn on RECAP_PATTERN_MIN_DOW+ of the month's calendar
+  // <weekday>s, and disproportionately — the weekday share must be at least
+  // DOUBLE the watch's share of the whole month, or a watch worn most days
+  // would "own" every weekday, which is no insight at all. Integer-form
+  // comparison (hit·daysInMonth ≥ 2·of·wearDays) so no float wobble.
+  const dowTotals = [0, 0, 0, 0, 0, 0, 0];
+  for (let dd = 1; dd <= daysInMonth; dd++) dowTotals[new Date(year, month, dd).getDay()]++;
+  for (const id of patternIds) {
+    const perDow = [0, 0, 0, 0, 0, 0, 0];
+    for (const dt of wearDates[id]) perDow[new Date(dt + 'T12:00:00').getDay()]++;
+    for (let dow = 0; dow < 7; dow++) {
+      const hit = perDow[dow], of = dowTotals[dow];
+      if (hit < RECAP_PATTERN_MIN_DOW) continue;
+      if (hit * daysInMonth < 2 * of * wearDates[id].size) continue;
+      if (!pattern || hit > pattern.hit) pattern = { kind: 'dow', watchId: id, dow, hit, of };
+    }
+  }
+
+  // Comeback: this month's first wear of a watch last worn 60+ days before
+  // it. The previous wear is looked up across ALL logs, not just this month's
+  // slice — that gap is the whole point of the slide.
+  if (!pattern) {
+    for (const id of patternIds) {
+      const first = [...wearDates[id]].sort()[0];
+      let prevWear = null;
+      for (const l of (logs || [])) {
+        if (!isWearEntry(l) || l.watchId !== id || !l.date) continue;
+        if (l.date < first && (!prevWear || l.date > prevWear)) prevWear = l.date;
+      }
+      if (!prevWear) continue;
+      const gap = Math.round((new Date(first + 'T12:00:00') - new Date(prevWear + 'T12:00:00')) / 86400000);
+      if (gap < RECAP_PATTERN_COMEBACK_DAYS) continue;
+      if (!pattern || gap > pattern.gapDays) pattern = { kind: 'comeback', watchId: id, gapDays: gap };
+    }
+  }
+
+  // Back-to-back run: the longest stretch of consecutive calendar days on ONE
+  // watch. Strict > keeps the earliest run of a length, and the sorted id
+  // walk keeps ties deterministic.
+  if (!pattern) {
+    for (const id of patternIds) {
+      let run2 = 0, prevDt = null;
+      for (const dt of [...wearDates[id]].sort()) {
+        run2 = (prevDt && addDaysStr(prevDt, 1) === dt) ? run2 + 1 : 1;
+        prevDt = dt;
+        if (run2 >= RECAP_PATTERN_MIN_RUN && (!pattern || run2 > pattern.days)) {
+          pattern = { kind: 'run', watchId: id, days: run2, start: addDaysStr(dt, -(run2 - 1)), end: dt };
+        }
+      }
+    }
+  }
+
+  // Follow-up pair: "after X you wear Y" over consecutive single-watch wear
+  // days. A day wearing two watches breaks the chain rather than guessing,
+  // and "most" is enforced — a tied follow-up to the same watch kills the
+  // claim instead of arbitrarily picking one.
+  if (!pattern) {
+    const byDate = {};
+    for (const l of mLogs) (byDate[l.date] = byDate[l.date] || new Set()).add(l.watchId);
+    const seq = [...days].sort().map((dt) => byDate[dt].size === 1 ? [...byDate[dt]][0] : null);
+    const pairs = {};
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i] && seq[i - 1] && seq[i] !== seq[i - 1]) {
+        const k = seq[i - 1] + '|' + seq[i];
+        pairs[k] = (pairs[k] || 0) + 1;
+      }
+    }
+    const ranked = Object.keys(pairs).sort((a, b) => pairs[b] - pairs[a] || (a < b ? -1 : 1));
+    const bestPair = ranked[0];
+    if (bestPair && pairs[bestPair] >= RECAP_PATTERN_MIN_PAIR) {
+      const fromId = bestPair.split('|')[0];
+      const rival = ranked.find((k) => k !== bestPair && k.split('|')[0] === fromId && pairs[k] === pairs[bestPair]);
+      if (!rival) pattern = { kind: 'pair', fromId, toId: bestPair.split('|')[1], count: pairs[bestPair] };
+    }
+  }
+
   return {
     period, year, month, windowStart,
     totalWears, wearDays: days.size, uniqueCount, top,
     topUC, topUCWears: topUC ? ucm[topUC] : 0,
     topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
-    prev, streak, arrivals, topPost,
+    prev, streak, arrivals, topPost, pattern,
   };
 }
 
@@ -13734,6 +13835,51 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
       <div class="promo-recap-cover-line">days in a row</div>
       <div class="promo-recap-hero-sub">${escHtml(span(recap.streak.start))} – ${escHtml(span(recap.streak.end))}</div>
     </div>`);
+  }
+
+  // ── this month's pattern ──
+  // One spotted habit per month (monthRecap's ladder picks it): a weekday
+  // signature, a comeback, a back-to-back run, or a follow-up pair. The watch
+  // lookup can only miss if the collection changed mid-session; the slide is
+  // simply skipped rather than rendered half-empty.
+  if (recap.pattern) {
+    const p = recap.pattern;
+    if (p.kind === 'pair') {
+      const from = wOf(p.fromId), to = wOf(p.toId);
+      if (from && to) {
+        slides.push(`<div class="promo-recap-slide">
+          <div class="promo-recap-slide-lbl">Your one-two</div>
+          <div class="promo-recap-podium">
+            <div class="promo-recap-podium-item">
+              ${recapThumb(from, 'promo-recap-thumb--podium')}
+              <div class="promo-recap-podium-name">${escHtml(from.name || '')}</div>
+              <div class="promo-recap-podium-count">first</div>
+            </div>
+            <div class="promo-recap-podium-item">
+              ${recapThumb(to, 'promo-recap-thumb--podium')}
+              <div class="promo-recap-podium-name">${escHtml(to.name || '')}</div>
+              <div class="promo-recap-podium-count">then</div>
+            </div>
+          </div>
+          <div class="promo-recap-hero-sub">${p.count} times this month</div>
+        </div>`);
+      }
+    } else {
+      const pw = wOf(p.watchId);
+      if (pw) {
+        const lbl = p.kind === 'dow' ? `Your ${DOW[p.dow]} watch`
+          : p.kind === 'comeback' ? 'The comeback' : 'Back to back';
+        const sub = p.kind === 'dow' ? `worn ${p.hit} of ${p.of} ${DOW[p.dow]}s`
+          : p.kind === 'comeback' ? `first wear in ${p.gapDays} days`
+          : `${p.days} days in a row`;
+        slides.push(`<div class="promo-recap-slide">
+          <div class="promo-recap-slide-lbl">${escHtml(lbl)}</div>
+          ${recapThumb(pw, 'promo-recap-thumb--hero')}
+          <div class="promo-recap-hero-name">${escHtml(pw.name || '')}</div>
+          <div class="promo-recap-hero-sub">${escHtml(sub)}</div>
+        </div>`);
+      }
+    }
   }
 
   const rows = [`<div class="promo-recap-row"><span>Days logged</span><b>${recap.wearDays}</b></div>`];

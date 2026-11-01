@@ -3540,6 +3540,11 @@ export const RECAP_WINDOW_DAYS = 10;
 export const RECAP_MIN_WEARS   = 5;
 export const RECAP_MIN_WATCHES = 2;
 export const RECAP_MIN_STREAK  = 3;
+// The pattern-slide ladder (see the pattern block in monthRecap):
+export const RECAP_PATTERN_MIN_DOW       = 3;   // weekday hits for a day signature
+export const RECAP_PATTERN_COMEBACK_DAYS = 60;  // days away for a comeback
+export const RECAP_PATTERN_MIN_RUN       = 3;   // consecutive days for a one-watch run
+export const RECAP_PATTERN_MIN_PAIR      = 3;   // repeats for a follow-up pair
 
 export function promoSlotEpoch(slot, recap) {
   if (slot && slot.variant === 'recap') {
@@ -3681,12 +3686,101 @@ export function monthRecap({ now, logs, watches, likes }) {
     }
   }
 
+  // ── this month's pattern ──
+  // One insight, picked down a fixed ladder — day signature, then comeback,
+  // then back-to-back run, then follow-up pair — each rung gated so the claim
+  // is never vacuous. null when nothing qualifies: an absent slide beats a
+  // weak one. All rungs read the DEDUPED wear days (a watch worn twice in one
+  // day is one day of that watch), and iteration is over sorted ids so ties
+  // resolve the same way everywhere.
+  const wearDates = {};
+  for (const l of mLogs) (wearDates[l.watchId] = wearDates[l.watchId] || new Set()).add(l.date);
+  const patternIds = Object.keys(wearDates).sort();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let pattern = null;
+
+  // Day signature: worn on RECAP_PATTERN_MIN_DOW+ of the month's calendar
+  // <weekday>s, and disproportionately — the weekday share must be at least
+  // DOUBLE the watch's share of the whole month, or a watch worn most days
+  // would "own" every weekday, which is no insight at all. Integer-form
+  // comparison (hit·daysInMonth ≥ 2·of·wearDays) so no float wobble.
+  const dowTotals = [0, 0, 0, 0, 0, 0, 0];
+  for (let dd = 1; dd <= daysInMonth; dd++) dowTotals[new Date(year, month, dd).getDay()]++;
+  for (const id of patternIds) {
+    const perDow = [0, 0, 0, 0, 0, 0, 0];
+    for (const dt of wearDates[id]) perDow[new Date(dt + 'T12:00:00').getDay()]++;
+    for (let dow = 0; dow < 7; dow++) {
+      const hit = perDow[dow], of = dowTotals[dow];
+      if (hit < RECAP_PATTERN_MIN_DOW) continue;
+      if (hit * daysInMonth < 2 * of * wearDates[id].size) continue;
+      if (!pattern || hit > pattern.hit) pattern = { kind: 'dow', watchId: id, dow, hit, of };
+    }
+  }
+
+  // Comeback: this month's first wear of a watch last worn 60+ days before
+  // it. The previous wear is looked up across ALL logs, not just this month's
+  // slice — that gap is the whole point of the slide.
+  if (!pattern) {
+    for (const id of patternIds) {
+      const first = [...wearDates[id]].sort()[0];
+      let prevWear = null;
+      for (const l of (logs || [])) {
+        if (!isWearEntry(l) || l.watchId !== id || !l.date) continue;
+        if (l.date < first && (!prevWear || l.date > prevWear)) prevWear = l.date;
+      }
+      if (!prevWear) continue;
+      const gap = Math.round((new Date(first + 'T12:00:00') - new Date(prevWear + 'T12:00:00')) / 86400000);
+      if (gap < RECAP_PATTERN_COMEBACK_DAYS) continue;
+      if (!pattern || gap > pattern.gapDays) pattern = { kind: 'comeback', watchId: id, gapDays: gap };
+    }
+  }
+
+  // Back-to-back run: the longest stretch of consecutive calendar days on ONE
+  // watch. Strict > keeps the earliest run of a length, and the sorted id
+  // walk keeps ties deterministic.
+  if (!pattern) {
+    for (const id of patternIds) {
+      let run2 = 0, prevDt = null;
+      for (const dt of [...wearDates[id]].sort()) {
+        run2 = (prevDt && addDaysStr(prevDt, 1) === dt) ? run2 + 1 : 1;
+        prevDt = dt;
+        if (run2 >= RECAP_PATTERN_MIN_RUN && (!pattern || run2 > pattern.days)) {
+          pattern = { kind: 'run', watchId: id, days: run2, start: addDaysStr(dt, -(run2 - 1)), end: dt };
+        }
+      }
+    }
+  }
+
+  // Follow-up pair: "after X you wear Y" over consecutive single-watch wear
+  // days. A day wearing two watches breaks the chain rather than guessing,
+  // and "most" is enforced — a tied follow-up to the same watch kills the
+  // claim instead of arbitrarily picking one.
+  if (!pattern) {
+    const byDate = {};
+    for (const l of mLogs) (byDate[l.date] = byDate[l.date] || new Set()).add(l.watchId);
+    const seq = [...days].sort().map((dt) => byDate[dt].size === 1 ? [...byDate[dt]][0] : null);
+    const pairs = {};
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i] && seq[i - 1] && seq[i] !== seq[i - 1]) {
+        const k = seq[i - 1] + '|' + seq[i];
+        pairs[k] = (pairs[k] || 0) + 1;
+      }
+    }
+    const ranked = Object.keys(pairs).sort((a, b) => pairs[b] - pairs[a] || (a < b ? -1 : 1));
+    const bestPair = ranked[0];
+    if (bestPair && pairs[bestPair] >= RECAP_PATTERN_MIN_PAIR) {
+      const fromId = bestPair.split('|')[0];
+      const rival = ranked.find((k) => k !== bestPair && k.split('|')[0] === fromId && pairs[k] === pairs[bestPair]);
+      if (!rival) pattern = { kind: 'pair', fromId, toId: bestPair.split('|')[1], count: pairs[bestPair] };
+    }
+  }
+
   return {
     period, year, month, windowStart,
     totalWears, wearDays: days.size, uniqueCount, top,
     topUC, topUCWears: topUC ? ucm[topUC] : 0,
     topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
-    prev, streak, arrivals, topPost,
+    prev, streak, arrivals, topPost, pattern,
   };
 }
 
