@@ -16,10 +16,10 @@ describe('Watches is launched', () => {
     expect(src).not.toContain('applyWatchDbFlag');
   });
 
-  it('the feed Watches button is visible and marked Beta', () => {
+  it('the feed Watches button is visible, without the Beta tag (removed 2026-11-01 — it crowded the feed button row)', () => {
     const btn = src.match(/<button id="feed-watches-btn"[^>]*>[\s\S]*?<\/button>/)[0];
     expect(btn).not.toContain('display:none');
-    expect(btn).toContain('tag-beta');
+    expect(btn).not.toContain('tag-beta');
   });
 });
 
