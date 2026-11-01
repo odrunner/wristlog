@@ -210,15 +210,14 @@ test.describe('promo feed injection (mocked)', () => {
     expect(ids).toEqual(['p1']);   // p1 back, p2 never got a chance
   });
 
-  test('a slot that hit its impression cap this session keeps its session budget after a full DOM replace', async ({ page }) => {
-    // Regression: the prune loop used to only guard against re-adding a slot
-    // that still had a live DOM node, but not "seen and now capped" — a slot
-    // that reached its max_impressions during the session would still get pruned from
-    // _promoPlaced by the NEXT full re-render (any loadFeed past the 60s
-    // cache), refunding its max_per_session budget slot to a DIFFERENT,
-    // fresh slot. Reproduces the reviewer's repro verbatim: cap-hit p1 +
-    // re-render with max_per_session:1 must yield zero cards, not a p2
-    // substitute.
+  test('a slot that hit its impression cap this session keeps its placement after a full DOM replace', async ({ page }) => {
+    // Two regressions guarded at once. (1) The original reviewer's repro: the
+    // cap-hit slot's budget must never be refunded to a DIFFERENT, fresh slot
+    // — p2 must not appear. (2) The 2026-11-01 flash: the cap-hit slot ITSELF
+    // must come back after the wipe. Its own just-logged impression used to
+    // trip the cap on the reclaim pass, so the last allowed showing of every
+    // card lived exactly one re-render — a sub-second flash. An owned slot
+    // (one in _promoBudgetUsed) now skips the frequency gates on reclaim.
     await setup(page, {
       config: { max_per_session: 1 },
       slots: [
@@ -243,7 +242,13 @@ test.describe('promo feed injection (mocked)', () => {
         `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
       window.injectPromoCards();
     });
-    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
+    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(1);
+    const back = await page.evaluate(() => ({
+      ids: [...document.querySelectorAll('#feed-list .promo-card')].map((n) => n.dataset.promoId),
+      impressions: window.__events.filter((e) => e.row.event === 'impression').length,
+    }));
+    expect(back.ids).toEqual(['p1']);        // p1 itself, never a p2 substitute
+    expect(back.impressions).toBe(1);        // the reclaim logs no second impression
   });
 
   test("reviewer's scenario: a reclaiming card keeps its ORIGINAL position when a lower-priority slot goes ineligible", async ({ page }) => {

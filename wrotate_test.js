@@ -3784,9 +3784,22 @@ export function monthRecap({ now, logs, watches, likes }) {
   };
 }
 
-export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
+export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts, owned }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
+
+  // `owned` is the caller's session budget set (injectPromoCards'
+  // _promoBudgetUsed): slots that already paid for their placement and are
+  // being RECLAIMED after a DOM wipe, not placed anew. An owned slot skips the
+  // two FREQUENCY gates — the impression cap and suppress_after_modal — and
+  // nothing else. Without the cap skip, the mount that logs the cap-hitting
+  // impression is wiped by the next feed re-render and refused back, so the
+  // last allowed showing of every card was a sub-second flash (prod,
+  // 2026-11-01). The modal skip mirrors notePromoModalShown(), which
+  // deliberately leaves an impressed card in place — a re-render must not
+  // undo that. Existence gates (status, window, audience, the recap itself)
+  // still apply: ownership never outlives the slot.
+  const ownedIds = owned instanceof Set ? owned : new Set(owned || []);
 
   // Two counts, one pass. `seen` is the all-time count every normal slot is
   // capped against; `seenWindow` counts only impressions inside the CURRENT
@@ -3815,7 +3828,7 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     // screen this session. The recap is exempt (mirrors the app — see
     // index.html for the full rationale): the fun-fact modal is daily and the
     // recap comes round twelve times a year.
-    if (cfg.suppress_after_modal && modalShown && !isRecap) return false;
+    if (cfg.suppress_after_modal && modalShown && !isRecap && !ownedIds.has(s.id)) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without
@@ -3840,7 +3853,7 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     // must not let the cap silently reset every new session — the local
     // mirror stays bounded even when every write this session failed.
     const count = Math.max((isRecap ? seenWindow : seen)[s.id] || 0, effectiveLocal);
-    return count < cap;
+    return ownedIds.has(s.id) || count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||
     String(b.created_at || '').localeCompare(String(a.created_at || ''))

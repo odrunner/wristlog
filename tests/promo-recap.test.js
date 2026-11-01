@@ -448,6 +448,17 @@ describe('eligiblePromoSlots — recap slots', () => {
     expect(run({ events })).toEqual([]);
   });
 
+  // The reclaim case (prod, 2026-11-01): the recap's own cap-hitting impression
+  // must not stop injectPromoCards() from re-mounting it after a feed re-render.
+  it('an owned recap at the window cap is still eligible', () => {
+    const events = [{ slot_id: 's1', event: 'impression', created_at: '2026-08-01T09:00:00Z' }];
+    expect(run({ events, owned: new Set(['s1']) }).map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('ownership never outlives the recap itself', () => {
+    expect(run({ ctx: { recap: null }, owned: new Set(['s1']) })).toEqual([]);
+  });
+
   // The whole point of the windowed count: an all-time count would retire the
   // card permanently after its first month and nothing would bring it back.
   it('does not let LAST month\'s impressions bound this month\'s card', () => {

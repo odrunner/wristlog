@@ -129,6 +129,45 @@ describe('eligiblePromoSlots', () => {
     expect(run({ events: [{ slot_id: 'other', event: 'impression' }, { slot_id: 's1', event: 'click' }] })).toHaveLength(1);
   });
 
+  // `owned` is injectPromoCards' session budget set: a slot that already paid
+  // for its placement is being RECLAIMED after a DOM wipe, not placed anew, so
+  // it is re-screened only for existence (status, window, audience), never for
+  // the frequency gates. Without this, a mount that logs the cap-hitting
+  // impression is wiped by the next feed re-render and refused back — the last
+  // allowed showing of every card was a sub-second flash (prod, 2026-11-01).
+  describe('owned slots — reclaim bypasses frequency gates only', () => {
+    it('an owned slot at the impression cap is still eligible', () => {
+      const seen = [1, 2, 3].map(() => ({ slot_id: 's1', event: 'impression' }));
+      expect(run({ events: seen, owned: new Set(['s1']) })).toHaveLength(1);
+    });
+
+    it('an owned slot at the cap via localCounts alone is still eligible', () => {
+      expect(run({ events: [], localCounts: { s1: 3 }, owned: new Set(['s1']) })).toHaveLength(1);
+    });
+
+    it('an owned slot survives a modal with suppression on', () => {
+      expect(run({ modalShown: true, owned: new Set(['s1']) })).toHaveLength(1);
+    });
+
+    it('ownership of a DIFFERENT slot bypasses nothing', () => {
+      const seen = [1, 2, 3].map(() => ({ slot_id: 's1', event: 'impression' }));
+      expect(run({ events: seen, owned: new Set(['other']) })).toEqual([]);
+    });
+
+    it('ownership does not resurrect an archived slot', () => {
+      expect(run({ slots: [slot({ status: 'archived' })], owned: new Set(['s1']) })).toEqual([]);
+    });
+
+    it('ownership does not extend a closed window', () => {
+      expect(run({ slots: [slot({ ends_at: '2026-07-01T00:00:00Z' })], owned: new Set(['s1']) })).toEqual([]);
+    });
+
+    it('accepts a plain array as well as a Set', () => {
+      const seen = [1, 2, 3].map(() => ({ slot_id: 's1', event: 'impression' }));
+      expect(run({ events: seen, owned: ['s1'] })).toHaveLength(1);
+    });
+  });
+
   it('sorts by priority descending', () => {
     const out = run({ slots: [slot({ id: 'lo', priority: 1 }), slot({ id: 'hi', priority: 9 })] });
     expect(out.map((s) => s.id)).toEqual(['hi', 'lo']);
