@@ -53,7 +53,7 @@ const VERBATIM = [
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'deferredPushAskMode', 'followSuggestReason', 'followSuggestVisible',
   'fillCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',
-  'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
+  'npIdentifyWait', 'siblingWithCap', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
   'promoSlotPositions', 'PROMO_AUDIENCES', 'monthRecap', 'promoSlotEpoch',
   'toggleWishSelection', 'folderSelectionState', 'toggleWishFolderSelection',
   'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',

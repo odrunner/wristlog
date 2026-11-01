@@ -3454,6 +3454,20 @@ export function npIdentifyWait(inFlight, taggedWatchId, capMs, sleep) {
   return Promise.race([Promise.resolve(inFlight).catch(() => {}), sleep(capMs)]).then(() => {});
 }
 
+// Siblings are best-effort, but Promise.all had them on the Posting… critical
+// path: on Android WebView the card's decode→re-encode leg measured 4–13 s
+// against <0.2 s on iPhone (edge logs, 2026-10-31), so the post save sat behind
+// an upload the feed can already live without (missing sibling → onerror
+// fallback to the original). Cap the wait instead: the sibling keeps running
+// past the cap — it still lands, or its own catch cleans up — the caller just
+// stops waiting for it. onLate fires only when the cap genuinely lost; a
+// settled sibling must not report late just because its timer also fired.
+export function siblingWithCap(p, capMs, sleep, onLate) {
+  let settled = false;
+  const guarded = Promise.resolve(p).then(v => { settled = true; return v; }, () => { settled = true; });
+  return Promise.race([guarded, sleep(capMs).then(() => { if (!settled && onLate) onLate(); })]);
+}
+
 // A post can be created untagged and get its watch tagged afterwards (Edit
 // post) — most often when the New Post AI identification hadn't landed yet.
 // saveNewPost/saveLog/quickLog all attach a fact at creation time, so that

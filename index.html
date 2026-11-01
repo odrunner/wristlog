@@ -8020,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.08.03';
+const APP_VERSION = '31.17.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27296,6 +27296,29 @@ function validateImageFile(file) {
   return false;
 }
 
+// Siblings are best-effort, but Promise.all had them on the Posting… critical
+// path: on Android WebView the card's decode→re-encode leg measured 4–13 s
+// against <0.2 s on iPhone (edge logs, 2026-10-31), so the post save sat behind
+// an upload the feed can already live without (missing sibling → onerror
+// fallback to the original). Cap the wait instead: the sibling keeps running
+// past the cap — it still lands, or its own catch cleans up — the caller just
+// stops waiting for it. onLate fires only when the cap genuinely lost; a
+// settled sibling must not report late just because its timer also fired.
+function siblingWithCap(p, capMs, sleep, onLate) {
+  let settled = false;
+  const guarded = Promise.resolve(p).then(v => { settled = true; return v; }, () => { settled = true; });
+  return Promise.race([guarded, sleep(capMs).then(() => { if (!settled && onLate) onLate(); })]);
+}
+const SIBLING_WAIT_MS = 1500;
+
+// A capped-out sibling is invisible unless it later fails, so count it —
+// answers "how often do cards finish late or get lost?" with a query, not a guess.
+function logSiblingLate(label, path) {
+  if (!currentUser || _isDemoMode) return;
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'sibling_upload_late', meta: { label, path } })
+    .then(() => {}, () => {});
+}
+
 // Upload an image blob to Supabase Storage: resize → upload → return public URL.
 // For folders rendered as small chips/avatars (THUMB_FOLDERS) a 240 px
 // `<name>_thumb.jpg` sibling is written alongside, so the feed/profile can show
@@ -27321,12 +27344,15 @@ async function uploadImage(blob, path) {
           return db.storage.from('media').remove([sPath]).catch(() => {});
         })
     : Promise.resolve();
+  const _wait = ms => new Promise(r => setTimeout(r, ms));
   const [{ data, error }] = await Promise.all([
     db.storage.from('media').upload(path, resized, {
       cacheControl: '31536000', upsert: true, contentType: 'image/jpeg',
     }),
-    sibling(thumbPathFor(path), THUMB_MAX, THUMB_QUALITY, 'thumb'),
-    sibling(cardPathFor(path), CARD_MAX, CARD_QUALITY, 'card'),
+    siblingWithCap(sibling(thumbPathFor(path), THUMB_MAX, THUMB_QUALITY, 'thumb'),
+      SIBLING_WAIT_MS, _wait, () => logSiblingLate('thumb', path)),
+    siblingWithCap(sibling(cardPathFor(path), CARD_MAX, CARD_QUALITY, 'card'),
+      SIBLING_WAIT_MS, _wait, () => logSiblingLate('card', path)),
   ]);
   if (error) throw new Error('Upload failed: ' + error.message);
   const { data: urlData } = db.storage.from('media').getPublicUrl(path);
