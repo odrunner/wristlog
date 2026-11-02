@@ -48,7 +48,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:host="wrotate.com" />
-                <data android:host="www.wrotate.com" />
+                <!-- www.wrotate.com removed 2026-11-02: GitHub Pages 301s www -> apex, and
+                     Google's assetlinks verifier never follows redirects, so the host could
+                     not verify (Play Console "Link not working"). Nothing links to www. -->
             </intent-filter>
             <!-- Launcher shortcuts land here as wrotate://quick/<action>. -->
             <intent-filter>
