@@ -937,10 +937,10 @@ test.describe('Clubs page (mocked)', () => {
 
   // Launched the same day: Watches (the model database) replaces Clubs as the
   // visible feed-header destination, marked Beta.
-  test('the feed Watches button is visible, marked Beta, and opens Explore', async ({ page }) => {
+  test('the feed Watches button is visible, no Beta tag, and opens Explore', async ({ page }) => {
     const btn = page.locator('#feed-watches-btn');
     await expect(btn).toBeVisible();
-    await expect(btn.locator('.tag-beta')).toHaveText(/beta/i);
+    await expect(btn.locator('.tag-beta')).toHaveCount(0);
     await btn.click();
     await expect(page.locator('#page-explore')).toBeVisible();
   });

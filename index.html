@@ -2773,7 +2773,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">Watches</div>
-        <div class="body-muted">A browsable watch database, now open to everyone: tap <strong>Watches</strong> at the top of the Feed to explore models &#8212; search by name or reference, or filter by brand. Every model gets its own page with photos, history and fun facts, and who on WRotate owns one. From a watch in your collection, tap <strong>See this model</strong> to jump straight to its page. It&#8217;s a beta: the database grows as members add watches.</div>
+        <div class="body-muted">A browsable watch database, now open to everyone: tap <strong>Watches</strong> at the top of the Feed to explore models &#8212; search by name or reference, or filter by brand. Every model gets its own page with photos, history and fun facts, and who on WRotate owns one. From a watch in your collection, tap <strong>See this model</strong> to jump straight to its page. The database grows as members add watches.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">No Watch Today</div>
@@ -3395,8 +3395,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-explore" class="page">
+    <div class="stack-4">
+      <button class="btn btn-md btn-ghost" onclick="goHome()">← Back</button>
+    </div>
     <div class="row-between u-mb-3-5">
-      <h1 class="u-fs-xl u-fw-bold">Watches <span class="tag-beta">Beta</span></h1>
+      <h1 class="u-fs-xl u-fw-bold">Watches</h1>
     </div>
     <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
@@ -3406,7 +3409,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="explore-more-wrap" class="u-ta-center u-mt-4" style="display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
-    <div id="explore-empty" class="empty" style="display:none;">No models match that search.</div>
+    <div id="explore-empty" class="empty" style="display:none;">No models found. The database grows as members add watches to their collections.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -4202,7 +4205,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       <!-- ── WATCHES (model database) ── -->
       <div class="help-section">
-        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches <span class="tag-beta">Beta</span></div>
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</div>
         <div class="help-card">
           <div class="help-step">
             <div class="help-step-num">1</div>
@@ -4218,7 +4221,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there.</div>
             </div>
           </div>
-          <div class="help-tip">Watches is in beta &#8212; the database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
+          <div class="help-tip">The database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
         </div>
       </div>
 
@@ -8555,7 +8558,7 @@ async function checkUsernameAvailability(username, statusElId) {
     statusEl.className = 'username-status invalid';
     _usernameAvailable = false;
   } else if (reservedRes && !reservedRes.error && reservedRes.data === true) {
-    statusEl.textContent = 'This username is reserved';
+    statusEl.textContent = 'This username isn’t available';
     statusEl.className = 'username-status taken';
     _usernameAvailable = false;
   } else if (data && data.length > 0) {
@@ -9435,7 +9438,7 @@ async function saveProfileFromPage() {
   } else {
     // Handle unique constraint violation / reserved-name trigger from DB
     if (error.message && error.message.includes('reserved')) {
-      toast('This username is reserved', 'error');
+      toast('This username isn’t available', 'error');
     } else if (error.message && error.message.includes('username')) {
       toast('Username is already taken', 'error');
     } else {
@@ -20958,7 +20961,7 @@ async function loadExploreModels(reset) {
   if (reset) grid.innerHTML = '<div class="empty u-col-1-1">Loading…</div>';
   const { data, error } = await db.rpc('browse_watch_models', {
     p_q: _exploreQ || null, p_brand: _exploreBrand, p_limit: EXPLORE_PAGE_SIZE, p_offset: _exploreOffset });
-  if (error) { grid.innerHTML = `<div class="empty u-col-1-1">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
+  if (error) { grid.innerHTML = '<div class="empty u-col-1-1">Couldn\u2019t load the watch database. Check your connection and try again.<br><button class="btn btn-md btn-ghost u-mt-3" onclick="loadExploreModels(true)">Retry</button></div>'; return; }
   const rows = data || [];
   const cards = rows.map(m => `
     <div class="watch-card explore-card u-cur-pointer" data-mid="${escAttr(m.id)}" onclick="openModelPage(this.dataset.mid)">
