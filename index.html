@@ -8030,7 +8030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.12.29';
+const APP_VERSION = '01.18.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18473,7 +18473,7 @@ function _reviewGetThresholds() {
   };
 }
 
-function shouldShowReviewPrompt(source) {
+function shouldShowReviewPrompt(source, msrRate) {
   if (!currentUser) return false;
   // Check cooldown: don't show if dismissed/completed recently
   const lastAction = safeLS.get('wristlog_review_last');
@@ -18499,6 +18499,11 @@ function shouldShowReviewPrompt(source) {
   }
   if (source === 'measurement') {
     const msrCount = parseInt(safeLS.get('wristlog_msr_count') || '0');
+    // Experiment review_first_good_msr: ask on the FIRST good converged
+    // measurement (|rate| <= 15 s/day) instead of the fifth measurement.
+    if (experiment('review_first_good_msr') && typeof msrRate === 'number' && Math.abs(msrRate) <= 15) {
+      return msrCount >= 1;
+    }
     return msrCount >= th.measurements;
   }
   if (source === 'enhance') return true;
@@ -18516,7 +18521,7 @@ function _logReviewEvent(event) {
   } catch (_) { /* ignore */ }
 }
 
-function maybeShowReviewPrompt(source) {
+function maybeShowReviewPrompt(source, msrRate) {
   // Direct Apple rating sheet (2026-10-10). The old two-step pre-prompt gate
   // halved the funnel (208 users shown → 102 reached Apple's dialog) and its
   // feedback branch caught 3 users in six months — the standalone Send
@@ -18524,7 +18529,7 @@ function maybeShowReviewPrompt(source) {
   // respects the user's In-App Ratings & Reviews setting; our call is silently
   // ignored when it shouldn't appear. Web has no system sheet → no-op.
   if (_isDemoMode) return;   // never burn one of Apple's ~3/yr sheets on a demo visitor
-  if (!shouldShowReviewPrompt(source)) return;
+  if (!shouldShowReviewPrompt(source, msrRate)) return;
   const isNative = !!window.webkit?.messageHandlers?.appAction;
   if (!isNative) return;
   _reviewTriggerSource = source;
@@ -35102,7 +35107,7 @@ function stopMsrListen(reason) {
       try {
         const n = parseInt(safeLS.get('wristlog_msr_count') || '0') + 1;
         safeLS.set('wristlog_msr_count', String(n));
-        maybeShowReviewPrompt('measurement');
+        maybeShowReviewPrompt('measurement', r);
       } catch (_) { /* storage unavailable */ }
     }
   } else if (statusText) {
