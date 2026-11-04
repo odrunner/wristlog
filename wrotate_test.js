@@ -4228,3 +4228,26 @@ export function orderCommentsForDisplay(allComments, likeCounts, showAll) {
   if (pin && newest && list[topIdx].id !== newest.id) return [list[topIdx], newest];
   return list.slice(-2);
 }
+
+// App Store rating movement for the admin Traffic tab. `rows` are
+// appstore_ratings snapshots (any order, newest-first from PostgREST); the
+// delta compares the latest snapshot with the OLDEST one inside the window,
+// so a three-day-old history shows movement instead of waiting for day
+// `days`. `span` is the real number of days the delta covers.
+export function ratingsDelta(rows, days) {
+  const list = (rows || []).filter(r => r && r.snapshot_date)
+    .sort((a, b) => (a.snapshot_date < b.snapshot_date ? 1 : -1));
+  if (list.length < 2) return null;
+  const t0 = Date.parse(list[0].snapshot_date + 'T00:00:00Z');
+  let base = null;
+  for (const r of list.slice(1)) {
+    if ((t0 - Date.parse(r.snapshot_date + 'T00:00:00Z')) / 86400000 <= days) base = r;
+    else break;
+  }
+  if (!base) return null;
+  return {
+    us: list[0].us - base.us,
+    total: list[0].total - base.total,
+    span: Math.round((t0 - Date.parse(base.snapshot_date + 'T00:00:00Z')) / 86400000),
+  };
+}

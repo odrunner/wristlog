@@ -726,6 +726,157 @@ def write_history(day, total, searches, engines=None):
         f.write("\n".join(lines) + "\n")
 
 
+# ── App Store ratings snapshot ──────────────────────────────────────────────
+# Apple exposes rating DATES nowhere (ASC shows only the current totals; the
+# API's dates cover written reviews only), so whether anything — the 10-10
+# direct sheet, the review_first_good_msr experiment — moves the needle is
+# visible only if we snapshot the counts daily. Public lookup API, no auth,
+# one call per storefront, paced under Apple's ~20/min limit. `total` is the
+# sum across TRACKED storefronts; ASC's all-countries figure can run slightly
+# higher. Snapshots land in ~/.local/share (email deltas) AND the
+# appstore_ratings table (admin Traffic tab) — sql/2026-11-03-appstore-ratings.sql.
+RATINGS_HISTORY_FILE = os.path.expanduser("~/.local/share/wrotate-ratings-history.log")
+APP_BUNDLE_ID = "com.wrotate.Wrotate"
+RATING_STOREFRONTS = [
+    "us", "ca", "gb", "au", "nz", "ie",
+    "de", "fr", "it", "es", "pt", "nl", "be", "ch", "at",
+    "se", "no", "dk", "fi", "pl", "ro", "tr",
+    "sa", "ae", "eg", "kr", "jp", "id", "in", "br", "mx", "bs",
+]
+
+
+def parse_rating_lookup(data):
+    """One storefront's lookup payload -> {"count", "avg"}, or None when the
+    app has no listing there. A listed app can lack the rating fields — that
+    is a real zero, not a failure."""
+    results = (data or {}).get("results") or []
+    if not results:
+        return None
+    r = results[0]
+    avg = r.get("averageUserRating")
+    return {"count": int(r.get("userRatingCount") or 0),
+            "avg": float(avg) if avg is not None else None}
+
+
+def prev_ratings_row(lines, day):
+    """Newest history row strictly before `day` — a same-day rerun must diff
+    against yesterday's line, never against its own earlier run."""
+    best = None
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        d = row.get("date")
+        if not d or d >= day:
+            continue
+        if best is None or d > best["date"]:
+            best = row
+    return best
+
+
+def ratings_email_line(row, prev):
+    if prev is None:
+        return (f"App Store ratings: US {row['us']} · tracked worldwide "
+                f"{row['total']} · first snapshot")
+    return (f"App Store ratings: US {row['us']} "
+            f"({row['us'] - prev['us']:+d} since {prev['date']}) · "
+            f"tracked worldwide {row['total']} ({row['total'] - prev['total']:+d})")
+
+
+def fetch_ratings(day):
+    """Snapshot across RATING_STOREFRONTS. A failed non-US storefront is
+    skipped; a failed US lookup aborts the whole snapshot (a zero-US row
+    would corrupt every later delta)."""
+    by_country = {}
+    avg_us = None
+    us_ok = False
+    for c in RATING_STOREFRONTS:
+        try:
+            got = parse_rating_lookup(curl_json(
+                f"https://itunes.apple.com/lookup?bundleId={APP_BUNDLE_ID}&country={c}",
+                retries=2))
+        except Exception:
+            got = None
+        if c == "us":
+            us_ok = got is not None
+            avg_us = got["avg"] if got else None
+        if got and got["count"]:
+            by_country[c] = got["count"]
+        time.sleep(3)  # lookup API allows ~20 calls/min per IP
+    if not us_ok:
+        return None
+    return {"date": day, "us": by_country.get("us", 0),
+            "total": sum(by_country.values()), "avg_us": avg_us,
+            "by_country": by_country}
+
+
+def write_ratings_history(row):
+    lines = []
+    if os.path.exists(RATINGS_HISTORY_FILE):
+        with open(RATINGS_HISTORY_FILE) as f:
+            lines = [x for x in f.read().splitlines() if x.strip()]
+
+    def keeps(line):   # drop any earlier line for the same day (rerun replaces)
+        try:
+            return json.loads(line).get("date") != row["date"]
+        except ValueError:
+            return True
+    lines = [x for x in lines if keeps(x)]
+    lines.append(json.dumps(row))
+    lines.sort()       # "date" is the first key, so lexical sort is date order
+    os.makedirs(os.path.dirname(RATINGS_HISTORY_FILE), exist_ok=True)
+    with open(RATINGS_HISTORY_FILE, "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def push_ratings_snapshot(row):
+    """Upsert the snapshot into appstore_ratings for the admin Traffic tab.
+    Missing service creds = quietly skipped (the email still carries the line)."""
+    url, key = supabase_creds()
+    if not url or not key:
+        print("[ratings] no service creds — admin table not updated")
+        return False
+    curl_json(
+        f"{url}/rest/v1/appstore_ratings?on_conflict=snapshot_date",
+        headers=[f"apikey: {key}", f"Authorization: Bearer {key}",
+                 "Content-Type: application/json",
+                 "Prefer: resolution=merge-duplicates,return=representation"],
+        method="POST",
+        body=json.dumps({"snapshot_date": row["date"], "us": row["us"],
+                         "total": row["total"], "avg_us": row["avg_us"],
+                         "by_country": row["by_country"]}),
+    )
+    return True
+
+
+def ratings_section(today_iso):
+    """Fetch + persist + format, fail-soft: a ratings hiccup must never cost
+    the cost report itself. Returns the HTML fragment for the email."""
+    try:
+        row = fetch_ratings(today_iso)
+        if not row:
+            print("App Store ratings: US lookup failed — snapshot skipped")
+            return ("<p style='color:#888;font-size:12px;'>App Store ratings: "
+                    "lookup failed — snapshot skipped today.</p>")
+        prev_lines = []
+        if os.path.exists(RATINGS_HISTORY_FILE):
+            with open(RATINGS_HISTORY_FILE) as f:
+                prev_lines = f.read().splitlines()
+        line = ratings_email_line(row, prev_ratings_row(prev_lines, today_iso))
+        avg = f" · avg {row['avg_us']:.2f}" if row.get("avg_us") else ""
+        print(line + avg)
+        write_ratings_history(row)
+        push_ratings_snapshot(row)
+        return f"<p style='color:#666;font-size:13px;'>{line}{avg}</p>"
+    except Exception as e:
+        print(f"[ratings] failed: {e}")
+        return ""
+
+
 def send_email(subject, html):
     auth = curl_json(
         f"{BASE_URL}/auth/v1/token?grant_type=password",
@@ -786,6 +937,7 @@ def main():
                 for r in st["reasons"][:5]:
                     print(f"   ! {r}")
     print(f"web searches: {y_searches}  ({search_origin(y_searches, engines)})")
+    ratings_html = ratings_section(today.strftime("%Y-%m-%d"))
     prs = open_autofix_prs()
     if prs is None:
         print("auto-fix PRs waiting: UNKNOWN — could not read the PR list")
@@ -854,6 +1006,7 @@ def main():
     <p style="color:#666;font-size:13px;">{engine_html}</p>
     <p style="color:#888;font-size:12px;">Web searches: <b>{y_searches}</b>
     &mdash; {search_origin(y_searches, engines)}.</p>
+    {ratings_html}
     <h3>Last {DAYS} days</h3>
     <table style="border-collapse:collapse;font-family:monospace;font-size:13px;">
       <tr style="border-bottom:1px solid #ccc;">

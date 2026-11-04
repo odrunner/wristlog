@@ -8030,7 +8030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.05.41';
+const APP_VERSION = '03.20.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20265,7 +20265,7 @@ async function renderAdminTraffic() {
   if (!el) return;
   el.innerHTML = '<div class="note">Loading traffic…</div>';
   try {
-    const [trafficR, emailEventsR, clickR, bootR, watchR, exploreR, modelAppR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, clickR, bootR, watchR, exploreR, modelAppR, ratingsR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats'),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
@@ -20286,6 +20286,9 @@ async function renderAdminTraffic() {
       // the PostHog events, internal accounts excluded by the RPC.
       db.rpc('admin_feature_event_stats', { p_event: 'explore_viewed' }),
       db.rpc('admin_feature_event_stats', { p_event: 'model_page_viewed' }),
+      // App Store rating snapshots, written daily by cost-report.py. ~31
+      // narrow rows, admin-only RLS (sql/2026-11-03-appstore-ratings.sql).
+      db.from('appstore_ratings').select('snapshot_date,us,total,avg_us').order('snapshot_date', { ascending: false }).limit(31),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -20364,6 +20367,7 @@ async function renderAdminTraffic() {
     // which derives DAU/WAU/MAU from 12 activity sources.
     el.innerHTML = `
       ${renderEmailHealth(emailEventsR.data || {})}
+      ${renderAppStoreRatings((ratingsR && !ratingsR.error) ? ratingsR.data : null)}
       ${watchHtml}
       ${(bootR && !bootR.error) ? firstLoadCardHtml(bootR.data) : ''}
       ${sourceRows ? `<div class="admin-card">
@@ -20391,6 +20395,52 @@ async function renderAdminTraffic() {
       <button class="btn btn-ghost u-fs-sm" onclick="renderAdminTraffic()">↻ Retry</button>
     </div>`;
   }
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// App Store rating movement for the admin Traffic tab. `rows` are
+// appstore_ratings snapshots (any order, newest-first from PostgREST); the
+// delta compares the latest snapshot with the OLDEST one inside the window,
+// so a three-day-old history shows movement instead of waiting for day
+// `days`. `span` is the real number of days the delta covers.
+function ratingsDelta(rows, days) {
+  const list = (rows || []).filter(r => r && r.snapshot_date)
+    .sort((a, b) => (a.snapshot_date < b.snapshot_date ? 1 : -1));
+  if (list.length < 2) return null;
+  const t0 = Date.parse(list[0].snapshot_date + 'T00:00:00Z');
+  let base = null;
+  for (const r of list.slice(1)) {
+    if ((t0 - Date.parse(r.snapshot_date + 'T00:00:00Z')) / 86400000 <= days) base = r;
+    else break;
+  }
+  if (!base) return null;
+  return {
+    us: list[0].us - base.us,
+    total: list[0].total - base.total,
+    span: Math.round((t0 - Date.parse(base.snapshot_date + 'T00:00:00Z')) / 86400000),
+  };
+}
+
+// App Store ratings — snapshotted daily at 9:15 by cost-report.py into
+// appstore_ratings (sql/2026-11-03-appstore-ratings.sql). Apple shows only
+// the CURRENT totals (no rating dates anywhere, ASC included), so this table
+// is the only time series — it's how we judge whether the 10-10 direct sheet
+// or review_first_good_msr actually moves ratings. `us` = the number on the
+// US product page; `total` = all tracked storefronts (≈ ASC all-countries).
+function renderAppStoreRatings(rows) {
+  if (!rows || !rows.length) return '';
+  const latest = rows[0];
+  const sign = n => (n >= 0 ? '+' : '') + n;
+  const d7 = ratingsDelta(rows, 7), d30 = ratingsDelta(rows, 30);
+  const row = (label, value, sub) => `<div class="u-justify-space-between u-items-baseline u-fs-base u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdb-1px-solid-border u-d-flex"><span>${label}</span><span class="u-fw-semibold"><span class="text-gold">${value}</span>${sub ? `<span class="text-meta u-ml-1">${sub}</span>` : ''}</span></div>`;
+  const dsub = d => d ? `${sign(d.us)} US · ${sign(d.total)} all · ${d.span}d` : 'needs a second snapshot';
+  return `<div class="admin-card">
+    <div class="eyebrow stack-2">App Store Ratings</div>
+    ${row('US storefront', latest.us, latest.avg_us ? `avg ${latest.avg_us}` : '')}
+    ${row('Tracked worldwide', latest.total, `as of ${escHtml(latest.snapshot_date)}`)}
+    ${row('Movement (7d)', dsub(d7), '')}
+    ${d30 && d7 && d30.span > d7.span ? row('Movement (30d)', dsub(d30), '') : ''}
+  </div>`;
 }
 
 // SES account health, rendered at the TOP of the Traffic page. Deliberately its

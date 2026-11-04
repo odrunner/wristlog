@@ -362,5 +362,83 @@ class GateCandidateLadders(unittest.TestCase):
         self.assertEqual(dupes, {"tg_confirmband=6"})
 
 
+class AppStoreRatingsHelpers(unittest.TestCase):
+    """Daily App Store rating snapshot (added 2026-11-03).
+
+    Apple exposes no rating dates anywhere — ASC shows only the current total —
+    so judging the 10-10 direct-sheet change or the review_first_good_msr
+    experiment needs a daily snapshot. These cover the pure parsing/formatting
+    half; the iTunes fetch and the Supabase upsert are IO and stay untested.
+    """
+
+    def _ns(self):
+        ns = {"json": json}
+        exec(_extract("cost-report.py", "def parse_rating_lookup", "def fetch_ratings("), ns)
+        return ns
+
+    # ── parse_rating_lookup ── the iTunes lookup payload for one storefront
+
+    def test_parses_count_and_average(self):
+        got = self._ns()["parse_rating_lookup"](
+            {"resultCount": 1, "results": [{"userRatingCount": 35, "averageUserRating": 4.86}]})
+        self.assertEqual(got, {"count": 35, "avg": 4.86})
+
+    def test_app_not_listed_in_storefront_is_none(self):
+        self.assertIsNone(self._ns()["parse_rating_lookup"]({"resultCount": 0, "results": []}))
+        self.assertIsNone(self._ns()["parse_rating_lookup"]({}))
+
+    def test_missing_rating_fields_count_as_zero(self):
+        got = self._ns()["parse_rating_lookup"]({"resultCount": 1, "results": [{"trackId": 1}]})
+        self.assertEqual(got, {"count": 0, "avg": None})
+
+    # ── prev_ratings_row ── baseline for the email's day-over-day delta
+
+    def test_picks_the_newest_row_before_today(self):
+        lines = [
+            json.dumps({"date": "2026-10-30", "us": 33, "total": 39}),
+            json.dumps({"date": "2026-11-01", "us": 35, "total": 41}),
+            json.dumps({"date": "2026-11-03", "us": 36, "total": 43}),
+        ]
+        got = self._ns()["prev_ratings_row"](lines, "2026-11-03")
+        self.assertEqual(got["date"], "2026-11-01")
+
+    def test_same_day_rerun_ignores_todays_own_line(self):
+        lines = [json.dumps({"date": "2026-11-03", "us": 36, "total": 43})]
+        self.assertIsNone(self._ns()["prev_ratings_row"](lines, "2026-11-03"))
+
+    def test_skips_blank_and_malformed_lines(self):
+        lines = ["", "not json", json.dumps({"us": 1}),
+                 json.dumps({"date": "2026-11-01", "us": 35, "total": 41})]
+        got = self._ns()["prev_ratings_row"](lines, "2026-11-03")
+        self.assertEqual(got["us"], 35)
+
+    def test_none_when_no_history(self):
+        self.assertIsNone(self._ns()["prev_ratings_row"]([], "2026-11-03"))
+
+    # ── ratings_email_line ── the one-liner in the daily cost email
+
+    def test_first_snapshot_has_no_deltas(self):
+        line = self._ns()["ratings_email_line"](
+            {"date": "2026-11-03", "us": 35, "total": 41, "avg_us": 4.86}, None)
+        self.assertIn("US 35", line)
+        self.assertIn("worldwide 41", line)
+        self.assertIn("first snapshot", line)
+        self.assertNotIn("+", line)
+
+    def test_deltas_against_the_previous_snapshot(self):
+        line = self._ns()["ratings_email_line"](
+            {"date": "2026-11-03", "us": 36, "total": 43, "avg_us": 4.86},
+            {"date": "2026-11-01", "us": 35, "total": 41})
+        self.assertIn("US 36 (+1 since 2026-11-01)", line)
+        self.assertIn("worldwide 43 (+2)", line)
+
+    def test_zero_and_negative_deltas_are_shown_signed(self):
+        line = self._ns()["ratings_email_line"](
+            {"date": "2026-11-03", "us": 34, "total": 41, "avg_us": None},
+            {"date": "2026-11-02", "us": 35, "total": 41})
+        self.assertIn("US 34 (-1 since 2026-11-02)", line)
+        self.assertIn("worldwide 41 (+0)", line)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

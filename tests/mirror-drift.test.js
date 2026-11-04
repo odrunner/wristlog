@@ -59,7 +59,7 @@ const VERBATIM = [
   'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',
   'collShareItems', 'collSharePrivateCount', 'groupCommentsByToken',
   'resolveExperiment', 'experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric',
-  'parseTgTrialKey', 'tgTrialKnobs', 'resolveTgKnob',
+  'parseTgTrialKey', 'tgTrialKnobs', 'resolveTgKnob', 'ratingsDelta',
   'shouldNudgeEnhance', 'orderCommentsForDisplay',
   'experimentInfoSections', 'EXP_OWNER_AUDIENCE', 'EXP_STATUS_AUDIENCE',
 ];
