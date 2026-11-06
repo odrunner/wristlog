@@ -393,6 +393,14 @@
 .empty-compact { padding: var(--space-6) var(--space-4); font-size: var(--fs-base); }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3-5); }
 .form-row-3 > .form-group { min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+/* private messages: a thread's bubbles (own right, theirs left), a shared-post card, and the composer pinned above the tab bar */
+.dm-msg { display: flex; align-items: flex-end; gap: var(--space-1); margin-bottom: var(--space-2); }
+.dm-msg-own { flex-direction: row-reverse; }
+.dm-msg-pending { opacity: var(--opacity-soft); }
+.dm-bubble { max-width: 80%; min-width: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--border); overflow-wrap: anywhere; }
+.dm-msg-own .dm-bubble { background: var(--gold-dim); border-color: var(--gold); }
+.dm-card { padding: var(--space-2); }
+.dm-composer { position: sticky; bottom: 0; z-index: var(--z-raised); background: var(--bg); padding: var(--space-2) 0; }
 @media (max-width: 760px) {
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
 }
@@ -401,6 +409,7 @@
   .modal-actions { flex-wrap: wrap; gap: var(--space-2); }
   /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4) to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays at 32: the toolbars noted below were measured to fit on one line at that size, and raising it re-breaks them. */ .btn { min-height: var(--size-11); }
   .btn-sm { min-height: var(--size-8); padding: var(--space-1-5) var(--space-3); }
+  /* the DM composer sits on the phone tab bar, not under it */ .dm-composer { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ══ Text styles and layout helpers ══

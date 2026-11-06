@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=f205c8ac">
+  <link rel="stylesheet" href="/design-system.css?v=468e93d2">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -3416,15 +3416,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-messages" class="page">
-    <div class="stack-4">
-      <button class="btn btn-md btn-ghost" onclick="goHome()">← Back</button>
+    <div id="dm-inbox-view">
+      <div class="stack-4">
+        <button class="btn btn-md btn-ghost" onclick="goHome()">← Back</button>
+      </div>
+      <div class="row-between u-mb-3-5">
+        <h1 class="u-fs-xl u-fw-bold">Messages</h1>
+      </div>
+      <div id="dm-requests"></div>
+      <div id="dm-list"></div>
+      <div id="dm-empty" class="empty hidden">No messages yet. Open a member's profile and tap Message to start a conversation.</div>
     </div>
-    <div class="row-between u-mb-3-5">
-      <h1 class="u-fs-xl u-fw-bold">Messages</h1>
+    <div id="dm-thread-view" class="hidden">
+      <div class="stack-4">
+        <button class="btn btn-md btn-ghost" onclick="openMessagesPage()">← Messages</button>
+      </div>
+      <div id="dm-thread-head" class="row stack-4"></div>
+      <div id="dm-thread-msgs"></div>
+      <div id="dm-composer" class="dm-composer"></div>
     </div>
-    <div id="dm-requests"></div>
-    <div id="dm-list"></div>
-    <div id="dm-empty" class="empty hidden">No messages yet. Open a member's profile and tap Message to start a conversation.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -8046,7 +8056,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.02';
+const APP_VERSION = '05.18.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15725,6 +15735,7 @@ function closeReport() {
 
 async function submitReport() {
   if (demoGuard()) return;
+  if (_reportTargetType === 'message') return submitDmReport();   // DM report (openDmReport)
   const btn = document.getElementById('report-submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
 
@@ -20502,6 +20513,14 @@ function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
 
 // ── Private messages: inbox, requests, badge (flag 'dms') ───────────────
 let dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
+// Open thread: { id, status, requesterId, otherId, profile, messages (server rows,
+// ascending), pending (optimistic sends), lastAt (newest server created_at) } or null.
+let _dmThread = null;
+let _dmThreadSeq = 0;           // bumps on every open/close: a slow load for an old thread is dropped
+let _dmThreadPollId = null;
+let _dmPendingSeq = 0;
+const _dmLogCards = new Map();  // shared_log_id -> card HTML (fetched once per session)
+let _dmCardGen = 0;             // bumps on sign-out: a shared-post fetch from A's session is dropped
 
 function dmEnabled() { return !!currentUser && featureFlag('dms'); }
 
@@ -20534,16 +20553,44 @@ function dmClearState() {
   updateDmBadge(0);
   const b = document.getElementById('dm-btn');
   if (b) b.classList.add('hidden');
+  // Thread view: A's conversation must never survive into B's session.
+  dmStopThreadPoll();
+  _dmThread = null;
+  _dmThreadSeq++;
+  _dmLogCards.clear();
+  _dmCardGen++;
+  dmShowView('inbox');
+  ['dm-thread-head', 'dm-thread-msgs', 'dm-composer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
-function openMessagesPage() {
-  if (demoGuard()) return;
-  if (!dmEnabled()) return;
+function dmActivatePage() {
+  if (document.getElementById('page-messages').classList.contains('active')) return;
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-messages').classList.add('active');
+}
+
+// 'inbox' or 'thread' — the two halves of #page-messages.
+function dmShowView(view) {
+  const inbox = document.getElementById('dm-inbox-view');
+  const thread = document.getElementById('dm-thread-view');
+  if (inbox) inbox.classList.toggle('hidden', view !== 'inbox');
+  if (thread) thread.classList.toggle('hidden', view !== 'thread');
+}
+
+function openMessagesPage() {
+  if (demoGuard()) return;
+  if (!dmEnabled()) return;
+  dmStopThreadPoll();
+  _dmThread = null;
+  _dmThreadSeq++;
+  dmActivatePage();
+  dmShowView('inbox');
   loadDmInbox();
 }
 
@@ -20602,7 +20649,7 @@ function renderDmInbox(state) {
 
   listEl.innerHTML = st.conversations.map(c => {
     const unread = Number(c.unread) > 0;
-    return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" data-id="${escAttr(c.id)}" onclick="if (typeof openDmThread === 'function') openDmThread(this.dataset.id)">
+    return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" data-id="${escAttr(c.id)}" onclick="openDmThread(this.dataset.id)">
       <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(c.profile)}</div>
       <div class="grow-clip">
         <div class="row-between">
@@ -20623,13 +20670,417 @@ async function respondDmRequest(convId, accept) {
   const { error } = await db.rpc('dm_respond', { p_conversation: convId, p_accept: !!accept });
   if (error) { toast(dmErrorText(error.message), 'error'); return; }
   await loadDmInbox();
-  if (accept && typeof openDmThread === 'function') openDmThread(convId);  // Task 6 removes this guard
+  if (accept) openDmThread(convId);
 }
 
 async function blockDmRequester(userId, name) {
   if (!userId) return;
   await blockUser(userId, name);
   loadDmInbox();
+}
+
+// ── Private messages: thread view (flag 'dms') ──────────────────────────
+const DM_PAGE = 50;
+const DM_POLL_MS = 10000;
+
+function dmThreadIsOpen() {
+  const page = document.getElementById('page-messages');
+  const view = document.getElementById('dm-thread-view');
+  return !!(_dmThread && page && page.classList.contains('active') && view && !view.classList.contains('hidden'));
+}
+
+function dmStopThreadPoll() {
+  if (_dmThreadPollId) { clearInterval(_dmThreadPollId); _dmThreadPollId = null; }
+}
+
+// Polls only while the thread is on screen and the tab is visible (the
+// visibilitychange handler stops it on hide and restarts it on show).
+function dmStartThreadPoll() {
+  dmStopThreadPoll();
+  if (!dmThreadIsOpen() || document.visibilityState !== 'visible') return;
+  _dmThreadPollId = setInterval(dmPollTick, DM_POLL_MS);
+}
+
+function dmPollTick() {
+  // Leaving by the tab bar or any other page switch never passes through this
+  // file, so the tick itself notices the thread is gone and stops.
+  if (!dmEnabled() || !dmThreadIsOpen()) { dmStopThreadPoll(); return; }
+  if (document.visibilityState !== 'visible') return;
+  dmFetchNewMessages();
+}
+
+function dmProfileFromState(convId) {
+  const all = [].concat(dmState.conversations, dmState.requestsIn, dmState.requestsOut);
+  const hit = all.find(c => c && c.id === convId);
+  return (hit && hit.profile) || null;
+}
+
+async function dmMarkRead(convId) {
+  try {
+    const { error } = await db.rpc('dm_mark_read', { p_conversation: convId });
+    if (!error) loadDmUnread();
+  } catch (_) { /* read state is best-effort; the next open retries */ }
+}
+
+async function openDmThread(convId) {
+  if (!dmEnabled()) return;
+  if (!convId) return;
+  const seq = ++_dmThreadSeq;
+  dmStopThreadPoll();
+  _dmThread = null;
+  dmActivatePage();
+  dmShowView('thread');
+  window.scrollTo(0, 0);
+  document.getElementById('dm-thread-head').innerHTML = '';
+  document.getElementById('dm-composer').innerHTML = '';
+  const msgsEl = document.getElementById('dm-thread-msgs');
+  msgsEl.innerHTML = '<div class="note-md">Loading…</div>';
+
+  const myId = currentUser.id;
+  let convRes, msgRes;
+  try {
+    [convRes, msgRes] = await Promise.all([
+      db.from('dm_conversations').select('id, user_lo, user_hi, requester_id, status').eq('id', convId).maybeSingle(),
+      db.from('dm_messages').select('*').eq('conversation_id', convId)
+        .order('created_at', { ascending: false }).limit(DM_PAGE),
+    ]);
+  } catch (_) { convRes = { error: true }; msgRes = { error: true }; }
+  if (seq !== _dmThreadSeq) return;
+  const conv = convRes.data;
+  if (convRes.error || msgRes.error || !conv) {
+    msgsEl.innerHTML = '<div class="empty">This conversation is unavailable.</div>';
+    return;
+  }
+  const otherId = conv.user_lo === myId ? conv.user_hi : conv.user_lo;
+  let profile = dmProfileFromState(convId);
+  if (!profile) {
+    const { data } = await db.from('profiles').select('id, username, display_name, avatar_url').eq('id', otherId).maybeSingle();
+    if (seq !== _dmThreadSeq) return;
+    profile = data || { id: otherId };
+  }
+  const messages = (msgRes.data || []).slice().reverse();
+  _dmThread = {
+    id: convId, status: conv.status, requesterId: conv.requester_id, otherId, profile,
+    messages, pending: [],
+    lastAt: messages.length ? messages[messages.length - 1].created_at : null,
+  };
+  renderDmThreadHead();
+  renderDmComposer();
+  renderDmThread(true);
+  dmMarkRead(convId);
+  dmStartThreadPoll();
+}
+
+// Messages newer than the last rendered one (plus the status while it is not
+// yet accepted, so "Waiting for X to accept" flips when they do).
+async function dmFetchNewMessages() {
+  const t = _dmThread;
+  if (!t) return;
+  let q = db.from('dm_messages').select('*').eq('conversation_id', t.id);
+  if (t.lastAt) q = q.gt('created_at', t.lastAt);
+  let msgRes, convRes = null;
+  try {
+    [msgRes, convRes] = await Promise.all([
+      q.order('created_at', { ascending: true }).limit(DM_PAGE),
+      t.status !== 'accepted'
+        ? db.from('dm_conversations').select('status').eq('id', t.id).maybeSingle()
+        : Promise.resolve(null),
+    ]);
+  } catch (_) { return; }
+  if (_dmThread !== t) return;
+  if (convRes && convRes.data && convRes.data.status !== t.status) {
+    t.status = convRes.data.status;
+    renderDmComposer();
+  }
+  if (msgRes.error || !msgRes.data) return;
+  const have = new Set(t.messages.map(m => m.id));
+  const fresh = msgRes.data.filter(m => m && !have.has(m.id));
+  if (!fresh.length) return;
+  t.messages = t.messages.concat(fresh)
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  t.lastAt = t.messages[t.messages.length - 1].created_at;
+  renderDmThread(true);
+  const myId = currentUser && currentUser.id;
+  if (fresh.some(m => m.sender_id !== myId) && dmThreadIsOpen() && document.visibilityState === 'visible') {
+    dmMarkRead(t.id);
+  }
+}
+
+function renderDmThreadHead() {
+  const t = _dmThread;
+  const el = document.getElementById('dm-thread-head');
+  if (!t || !el) return;
+  el.innerHTML = `<div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(t.profile)}</div>
+    <span class="u-fw-bold">${escHtml(dmWho(t.profile))}</span>`;
+}
+
+function renderDmComposer() {
+  const t = _dmThread;
+  const el = document.getElementById('dm-composer');
+  if (!t || !el) return;
+  const myId = currentUser && currentUser.id;
+  if (t.status === 'pending' && t.requesterId === myId) {
+    el.innerHTML = `<div class="note u-ta-center">Waiting for ${escHtml(dmWho(t.profile))} to accept</div>`;
+    return;
+  }
+  if (t.status === 'declined' && t.requesterId === myId) {
+    el.innerHTML = `<div class="note u-ta-center">${escHtml(dmErrorText('dm_declined'))}</div>`;
+    return;
+  }
+  const prev = document.getElementById('dm-input');
+  const draft = prev ? prev.value : '';
+  const note = t.status === 'pending' ? '<div class="caption stack-1-5">Replying accepts the request</div>' : '';
+  el.innerHTML = `${note}<div class="row">
+      <input type="text" id="dm-input" class="grow-clip" aria-label="Message" placeholder="Message…" maxlength="2000" autocomplete="off" onkeydown="dmComposerKey(event)">
+      <button class="comment-send-btn" aria-label="Send message" onclick="dmSubmitComposer()">↑</button>
+    </div>`;
+  if (draft) document.getElementById('dm-input').value = draft;
+}
+
+function dmComposerKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    dmSubmitComposer();
+  }
+}
+
+async function dmSubmitComposer() {
+  const t = _dmThread;
+  const input = document.getElementById('dm-input');
+  if (!t || !input) return;
+  const v = dmValidateBody(input.value, false);
+  if (!v.ok) {
+    if (v.error === 'too_long') toast(dmErrorText('dm_bad_body'), 'error');
+    return;
+  }
+  input.value = '';
+  let ok;
+  if (t.status === 'declined' && t.requesterId !== (currentUser && currentUser.id)) {
+    // The person who declined writes again: dm_send refuses a declined row,
+    // dm_start revives it.
+    try { await startDmWith(t.otherId, v.body, null); ok = true; }
+    catch (e) { toast(dmErrorText(e && e.message), 'error'); ok = false; }
+    if (ok && _dmThread === t) openDmThread(t.id);
+  } else {
+    ok = !!(await sendDmMessage(t.id, v.body, null));
+  }
+  // A failed send must not lose what was typed.
+  const now = document.getElementById('dm-input');
+  if (!ok && now && !now.value && _dmThread === t) now.value = v.body;
+}
+
+function dmDayLabel(key) {
+  const [y, m, d] = String(key).split('-').map(Number);
+  const day = new Date(y, m - 1, d);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  const opts = { month: 'short', day: 'numeric' };
+  if (diff > 1 && diff < 7) opts.weekday = 'long';
+  if (day.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+  return day.toLocaleDateString(undefined, opts);
+}
+
+function dmTimeLabel(iso) {
+  const d = new Date(iso);
+  return Number.isFinite(d.getTime()) ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+}
+
+function dmSharedPlaceholder(text) {
+  return `<div class="panel dm-card caption">${escHtml(text)}</div>`;
+}
+
+function dmSharedCardHtml(log, w) {
+  const img = displayImageFor(log.photo_url);
+  const thumb = img
+    ? `<div class="u-w-12 u-h-12 u-shrink-0"><img ${thumbSrcAttrs(img)} alt="" class="img-cover u-r-sm"></div>`
+    : '';
+  const title = w ? [w.brand, w.name].filter(Boolean).join(' ') : '';
+  const notes = (log.notes || '').trim();
+  const excerpt = notes ? (notes.length > 90 ? notes.slice(0, 90) + '…' : notes) : '';
+  return `<div class="panel dm-card row u-cur-pointer" data-log="${escAttr(log.id)}" onclick="scrollToFeedPost(this.dataset.log)">
+      ${thumb}
+      <div class="grow-clip">
+        <div class="u-fw-bold">${escHtml(title || 'Shared post')}</div>
+        ${excerpt ? `<div class="caption">${escHtml(excerpt)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+// Fetch a shared post once per session; RLS decides whether the viewer may see
+// it. Not visible (deleted, private, blocked) -> "Post unavailable".
+function dmLoadSharedCard(logId) {
+  if (!logId || _dmLogCards.has(logId)) return;
+  _dmLogCards.set(logId, null);   // in flight
+  const gen = _dmCardGen;
+  const fill = (html) => {
+    document.querySelectorAll('#dm-thread-msgs .dm-shared').forEach(n => {
+      if (n.dataset.log === logId) n.innerHTML = html;
+    });
+  };
+  (async () => {
+    let html;
+    try {
+      const { data: log, error } = await db.from('logs').select('id, watch_id, photo_url, notes').eq('id', logId).maybeSingle();
+      if (error) throw error;
+      if (!log) {
+        html = dmSharedPlaceholder('Post unavailable');
+      } else {
+        let w = null;
+        if (log.watch_id) {
+          const r = await db.from('watches').select('brand, name').eq('id', log.watch_id).maybeSingle();
+          w = r.data || null;
+        }
+        html = dmSharedCardHtml(log, w);
+      }
+    } catch (_) {
+      if (gen !== _dmCardGen) return;
+      _dmLogCards.delete(logId);    // transient: the next render tries again
+      fill(dmSharedPlaceholder('Post unavailable'));
+      return;
+    }
+    if (gen !== _dmCardGen) return;
+    _dmLogCards.set(logId, html);
+    fill(html);
+  })();
+}
+
+function dmMessageHtml(m, pending) {
+  const id = escAttr(m.id);
+  const text = m.body ? `<div class="u-ws-pre-wrap">${escHtml(m.body)}</div>` : '';
+  const cached = m.sharedLogId ? _dmLogCards.get(m.sharedLogId) : null;
+  const shared = m.sharedLogId
+    ? `<div class="dm-shared${m.body ? ' u-mt-1-5' : ''}" data-log="${escAttr(m.sharedLogId)}">${cached || dmSharedPlaceholder('Loading post…')}</div>`
+    : '';
+  const time = `<div class="caption-xs u-mt-1">${pending ? 'Sending…' : escHtml(dmTimeLabel(m.createdAt))}</div>`;
+  const menu = pending ? '' : `<button class="btn-plain" aria-label="Message options" onclick="dmToggleMsgMenu(this)">&#8942;</button>
+      <button class="btn btn-xs btn-ghost${m.own ? ' btn-ghost-danger' : ''} hidden" data-id="${id}" onclick="${m.own ? 'deleteDmMessage' : 'openDmReport'}(this.dataset.id)">${m.own ? 'Delete' : 'Report'}</button>`;
+  return `<div class="dm-msg${m.own ? ' dm-msg-own' : ''}${pending ? ' dm-msg-pending' : ''}">
+      <div class="dm-bubble">${text}${shared}${time}</div>
+      ${menu}
+    </div>`;
+}
+
+function renderDmThread(scrollToEnd) {
+  const t = _dmThread;
+  const el = document.getElementById('dm-thread-msgs');
+  if (!t || !el) return;
+  const myId = currentUser && currentUser.id;
+  const items = dmGroupMessages(t.messages, myId);
+  let html = items.map(it => it.kind === 'day'
+    ? `<div class="caption u-ta-center stack-2 u-mt-2">${escHtml(dmDayLabel(it.date))}</div>`
+    : dmMessageHtml(it, false)).join('');
+  html += t.pending.map(p => dmMessageHtml({ id: p.id, own: true, body: p.body, sharedLogId: p.sharedLogId }, true)).join('');
+  el.innerHTML = html || '<div class="empty">No messages yet.</div>';
+  items.forEach(it => { if (it.kind === 'msg' && it.sharedLogId) dmLoadSharedCard(it.sharedLogId); });
+  t.pending.forEach(p => { if (p.sharedLogId) dmLoadSharedCard(p.sharedLogId); });
+  if (scrollToEnd) window.scrollTo(0, document.body.scrollHeight);
+}
+
+function dmToggleMsgMenu(btn) {
+  const action = btn && btn.nextElementSibling;
+  if (action) action.classList.toggle('hidden');
+}
+
+// Send into an existing conversation. Optimistic: the bubble shows at once and
+// is removed again (with the error as a toast) if the server refuses it.
+// Returns { message_id } or null.
+async function sendDmMessage(convId, body, logId) {
+  if (demoGuard()) return null;
+  if (!dmEnabled() || !convId) return null;
+  const v = dmValidateBody(body, !!logId);
+  if (!v.ok) { toast(dmErrorText('dm_bad_body'), 'error'); return null; }
+  const t = (_dmThread && _dmThread.id === convId) ? _dmThread : null;
+  const tempId = 'pending-' + (++_dmPendingSeq);
+  if (t) {
+    t.pending.push({ id: tempId, body: v.body, sharedLogId: logId || null });
+    renderDmThread(true);
+  }
+  let res;
+  try {
+    res = await db.rpc('dm_send', { p_conversation: convId, p_body: v.body, p_log_id: logId || null });
+  } catch (_) { res = { error: { message: '' } }; }
+  if (res.error || !res.data) {
+    if (t) {
+      t.pending = t.pending.filter(p => p.id !== tempId);
+      if (_dmThread === t) renderDmThread(false);
+    }
+    toast(dmErrorText(res.error && res.error.message), 'error');
+    return null;
+  }
+  if (t && _dmThread === t) {
+    if (t.status === 'pending') { t.status = 'accepted'; renderDmComposer(); }   // replying accepted the request
+    await dmFetchNewMessages();       // brings back the real row (server time, real id)
+    t.pending = t.pending.filter(p => p.id !== tempId);
+    if (_dmThread === t) renderDmThread(true);
+  }
+  return res.data;
+}
+
+// Start (or continue) a conversation with a member — the profile Message button
+// and post sharing. Returns { conversation_id, status }; throws Error(code).
+async function startDmWith(userId, body, logId) {
+  if (!dmEnabled()) throw new Error('dm_disabled');
+  if (!userId) throw new Error('dm_not_allowed');
+  const v = dmValidateBody(body, !!logId);
+  if (!v.ok) throw new Error('dm_bad_body');
+  const { data, error } = await db.rpc('dm_start', { p_target: userId, p_body: v.body, p_log_id: logId || null });
+  if (error) throw new Error(error.message || 'dm_error');
+  if (!data || !data.conversation_id) throw new Error('dm_error');
+  return data;
+}
+
+async function deleteDmMessage(messageId) {
+  if (demoGuard()) return;
+  const t = _dmThread;
+  if (!t || !messageId) return;
+  if (!await showConfirm('It will be removed from the conversation.', { title: 'Delete message?', confirmLabel: 'Delete' })) return;
+  // .select() so a delete RLS silently skipped (0 rows) is reported, not assumed.
+  const { data, error } = await db.from('dm_messages').delete().eq('id', messageId).select('id');
+  if (error || !data || !data.length) { toast("Couldn't delete the message.", 'error'); return; }
+  if (_dmThread !== t) return;
+  t.messages = t.messages.filter(m => m.id !== messageId);
+  renderDmThread(false);
+}
+
+// Report reuses the post report modal (reasons, details) but submits through
+// dm_report_message: clients cannot write 'message' reports directly.
+function openDmReport(messageId) {
+  const t = _dmThread;
+  if (!t || !messageId) return;
+  _reportTargetType = 'message';
+  _reportTargetId = messageId;
+  document.getElementById('report-content-type').value = 'message';
+  document.getElementById('report-content-id').value = messageId;
+  document.getElementById('report-user-id').value = t.otherId;
+  document.getElementById('report-details').value = '';
+  setReportReason('inappropriate');
+  document.getElementById('report-context').textContent = 'Reporting: message from ' + dmWho(t.profile);
+  document.getElementById('report-target-section').classList.add('hidden');
+  const btn = document.getElementById('report-submit-btn');
+  btn.disabled = false; btn.textContent = 'Submit Report';
+  document.getElementById('report-modal').classList.remove('hidden');
+}
+
+async function submitDmReport() {
+  const btn = document.getElementById('report-submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  const messageId = _reportTargetId;
+  const reportedUserId = document.getElementById('report-user-id').value;
+  const details = (document.getElementById('report-details').value || '').trim() || null;
+  const { error } = await db.rpc('dm_report_message', { p_message_id: messageId, p_reason: _reportReason, p_details: details });
+  if (error) {
+    toast('Could not submit report', 'error');
+    btn.disabled = false; btn.textContent = 'Submit Report';
+    return;
+  }
+  closeReport();
+  toast('Report submitted. Thanks for letting us know.');
+  if (reportedUserId && currentUser && reportedUserId !== currentUser.id && !blockedUsers.has(reportedUserId)) {
+    const name = (_dmThread && _dmThread.otherId === reportedUserId) ? dmWho(_dmThread.profile) : 'this user';
+    setTimeout(() => blockUser(reportedUserId, name), 1500);
+  }
 }
 
 // App Store ratings — snapshotted daily at 9:15 by cost-report.py into
@@ -31723,7 +32174,7 @@ function openPushRoute(route, id) {
   }
   if (route === 'messages') {
     openMessagesPage();
-    if (id && typeof openDmThread === 'function') openDmThread(id);  // Task 6 removes this guard
+    if (id) openDmThread(id);
     return;
   }
   if (typeof openNotifPanel === 'function') openNotifPanel();
@@ -35987,6 +36438,7 @@ document.addEventListener('visibilitychange', () => {
     if (currentUser) saveSocialCache(); // follows / blocks made this session
     // Pause notification polling while tab is hidden
     if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+    dmStopThreadPoll();   // ...and the open DM thread's
     return;
   }
   if (document.visibilityState !== 'visible') return;
@@ -35995,6 +36447,7 @@ document.addEventListener('visibilitychange', () => {
     loadNotifications();
     window._notifPollId = setInterval(loadNotifications, 30000);
   }
+  if (currentUser && dmThreadIsOpen() && !_dmThreadPollId) { dmFetchNewMessages(); dmStartThreadPoll(); }
   if (currentUser) maybeShowLogAgainBanner();
 
   const bgDuration = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
