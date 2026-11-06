@@ -237,3 +237,18 @@ describe('dms hygiene', () => {
     expect(sql.trimEnd().endsWith("NOTIFY pgrst, 'reload schema';")).toBe(true);
   });
 });
+
+describe('dms RPCs: audit 2026-11-06 hardening', () => {
+  it("dm_start survives two racing first messages: unique_violation adopts the winner's row through the same status ladder", () => {
+    const body = fn('dm_start');
+    expect(body).toMatch(/EXCEPTION WHEN unique_violation THEN/);
+    const handler = body.slice(body.indexOf('EXCEPTION WHEN unique_violation'));
+    expect(handler).toMatch(/FOR UPDATE/);          // re-lock the row the other start created
+    expect(handler).toMatch(/'dm_pending'/);        // same outcomes a pre-existing row gets
+    expect(handler).toMatch(/'dm_declined'/);
+    expect(handler).toMatch(/status = 'accepted'/); // replying to their racing request accepts it
+  });
+  it('dm_inbox caps the conversations payload (the aggregate is otherwise unbounded)', () => {
+    expect(fn('dm_inbox')).toMatch(/LIMIT 100/);
+  });
+});

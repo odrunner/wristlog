@@ -8129,7 +8129,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.18';
+const APP_VERSION = '06.07.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8160,8 +8160,11 @@ async function maybeImportProviderAvatar() {
 function profileInitials(p) {
   if (!p) return '';
   if (p.avatar_url) {
+    // The fallback initials travel as a data attribute: the HTML parser decodes
+    // entities BEFORE the JS engine sees the handler, so initials inlined in a
+    // JS string literal break on names starting with ' or \ (audit 11-06 N3).
     const fb = escAttr((p.display_name||p.username||'').slice(0,2).toUpperCase());
-    return `<img ${thumbSrcAttrs(p.avatar_url)} alt="" class="img-cover" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
+    return `<img ${thumbSrcAttrs(p.avatar_url)} alt="" class="img-cover" data-fb="${fb}" onerror="this.replaceWith(document.createTextNode(this.dataset.fb))">`;
   }
   const name = (p.display_name || p.username || '').trim();
   const parts = name.split(/\s+/);
@@ -20828,12 +20831,17 @@ function updateDmBadge(n) {
   el.classList.toggle('hidden', c <= 0 || !dmEnabled());
 }
 
-async function loadDmUnread() {
+let _dmUnreadAt = 0;
+async function loadDmUnread(force = false) {
   syncDmBtn();
   if (!dmEnabled()) return;
+  // Boot fires this 2-3 times within a second (profile sync, experiments
+  // load, first poll) — coalesce. User actions (mark-read, block) force.
+  if (!force && Date.now() - _dmUnreadAt < 10000) return;
   try {
     const { data, error } = await db.rpc('dm_unread_count');
     if (error) return;
+    _dmUnreadAt = Date.now();
     const prev = dmState.unread;
     dmState.unread = Number(data) || 0;
     updateDmBadge(dmState.unread);
@@ -20889,7 +20897,7 @@ function dmHandleBlock(userId) {
   }
   const pm = document.getElementById('page-messages');
   if (pm && pm.classList.contains('active')) renderDmInbox();
-  if (hadUnread) loadDmUnread();
+  if (hadUnread) loadDmUnread(true);
 }
 
 function dmActivatePage() {
@@ -21068,7 +21076,7 @@ async function dmMarkRead(convId) {
   if (!convId) return;
   try {
     const { error } = await db.rpc('dm_mark_read', { p_conversation: convId });
-    if (!error) loadDmUnread();
+    if (!error) loadDmUnread(true);
   } catch (_) { /* read state is best-effort; the next open retries */ }
 }
 

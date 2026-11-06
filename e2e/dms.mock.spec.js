@@ -296,7 +296,20 @@ test('an unread-count change while the inbox is on screen refreshes the rows', a
   await page.evaluate(() => openMessagesPage());
   await expect(page.locator('#dm-empty')).toBeVisible();
   // A new message lands server-side; the 30s poll picks up the new count.
+  // (The poll interval is past the 10s TTL guard — simulate the elapsed time.)
   await page.route('**/rest/v1/rpc/dm_unread_count*', r => json(r, 1));
-  await page.evaluate(() => loadDmUnread());
+  await page.evaluate(() => { _dmUnreadAt = 0; loadDmUnread(); });
   await expect(page.locator('#dm-list')).toContainText('fresh arrival');
+});
+
+test('badge refetch is TTL-guarded: back-to-back calls cost one request, user actions force through', async ({ page }) => {
+  await boot(page, { inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [] } });
+  let calls = 0;
+  await page.route('**/rest/v1/rpc/dm_unread_count*', r => { calls++; return json(r, 0); });
+  await page.evaluate(() => { _dmUnreadAt = 0; });
+  await page.evaluate(() => loadDmUnread());
+  await page.evaluate(() => loadDmUnread()); // boot-time duplicate — must coalesce
+  expect(calls).toBe(1);
+  await page.evaluate(() => loadDmUnread(true)); // mark-read/block path — always current
+  expect(calls).toBe(2);
 });

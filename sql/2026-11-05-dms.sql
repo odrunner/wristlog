@@ -285,25 +285,48 @@ BEGIN
   END IF;
   -- 6. the pair's existing row
   IF c.id IS NULL THEN
-    -- Auto-accept when the target has signalled trust: they follow the sender, or the two are
-    -- close friends. Close friends = an accepted friend_requests row + mutual follow
-    -- (computeFriendships), which always includes the target following the sender, so this one
-    -- test covers both. An accepted friend request without the follow edge is NOT enough.
-    IF v_target_follows THEN
-      INSERT INTO public.dm_conversations (user_lo, user_hi, requester_id, status, accepted_at)
-      VALUES (LEAST(v_me, p_target), GREATEST(v_me, p_target), v_me, 'accepted', now())
-      RETURNING * INTO c;
-    ELSE
-      -- New requests sent in the last day (auto-accepted ones have accepted_at = created_at).
-      IF (SELECT count(*) FROM public.dm_conversations
-           WHERE requester_id = v_me AND created_at > now() - interval '1 day'
-             AND accepted_at IS DISTINCT FROM created_at) >= 5 THEN
-        RAISE EXCEPTION 'dm_rate_limited';
+    BEGIN
+      -- Auto-accept when the target has signalled trust: they follow the sender, or the two are
+      -- close friends. Close friends = an accepted friend_requests row + mutual follow
+      -- (computeFriendships), which always includes the target following the sender, so this one
+      -- test covers both. An accepted friend request without the follow edge is NOT enough.
+      IF v_target_follows THEN
+        INSERT INTO public.dm_conversations (user_lo, user_hi, requester_id, status, accepted_at)
+        VALUES (LEAST(v_me, p_target), GREATEST(v_me, p_target), v_me, 'accepted', now())
+        RETURNING * INTO c;
+      ELSE
+        -- New requests sent in the last day (auto-accepted ones have accepted_at = created_at).
+        IF (SELECT count(*) FROM public.dm_conversations
+             WHERE requester_id = v_me AND created_at > now() - interval '1 day'
+               AND accepted_at IS DISTINCT FROM created_at) >= 5 THEN
+          RAISE EXCEPTION 'dm_rate_limited';
+        END IF;
+        INSERT INTO public.dm_conversations (user_lo, user_hi, requester_id, status)
+        VALUES (LEAST(v_me, p_target), GREATEST(v_me, p_target), v_me, 'pending')
+        RETURNING * INTO c;
       END IF;
-      INSERT INTO public.dm_conversations (user_lo, user_hi, requester_id, status)
-      VALUES (LEAST(v_me, p_target), GREATEST(v_me, p_target), v_me, 'pending')
-      RETURNING * INTO c;
-    END IF;
+    EXCEPTION WHEN unique_violation THEN
+      -- Two first messages for a new pair raced: FOR UPDATE locks nothing on a
+      -- missing row, so both reached INSERT and the loser lands here after the
+      -- winner commits (audit 2026-11-06 N5). Adopt the winner's row and walk
+      -- the same status ladder a pre-existing row takes below — never leak the
+      -- raw duplicate-key message to the client.
+      SELECT * INTO c FROM public.dm_conversations
+       WHERE user_lo = LEAST(v_me, p_target) AND user_hi = GREATEST(v_me, p_target)
+       FOR UPDATE;
+      IF c.id IS NULL THEN
+        RAISE EXCEPTION 'dm_not_allowed';  -- unreachable; keeps c non-null for the append
+      ELSIF c.status = 'pending' AND c.requester_id = v_me THEN
+        RAISE EXCEPTION 'dm_pending';
+      ELSIF c.status = 'declined' AND c.requester_id = v_me THEN
+        RAISE EXCEPTION 'dm_declined';
+      ELSIF c.status IN ('pending', 'declined') THEN
+        -- Their racing request: my message is a reply, and replying accepts.
+        UPDATE public.dm_conversations SET status = 'accepted', accepted_at = now()
+         WHERE id = c.id
+         RETURNING * INTO c;
+      END IF;
+    END;
   ELSIF c.status = 'pending' AND c.requester_id = v_me THEN
     RAISE EXCEPTION 'dm_pending';
   ELSIF c.status = 'declined' AND c.requester_id = v_me THEN
@@ -482,8 +505,11 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
                           FROM public.dm_messages x WHERE x.conversation_id = c.id
                          ORDER BY x.created_at DESC, x.id DESC LIMIT 1),
                'profile', c.profile) ORDER BY c.last_message_at DESC)
-        FROM mine c
-       WHERE c.status = 'accepted'), '[]'::jsonb));
+        -- Newest 100 only: the aggregate is otherwise unbounded, and each row
+        -- costs a dm_is_unread + last-message subquery (audit 2026-11-06).
+        FROM (SELECT * FROM mine
+               WHERE status = 'accepted'
+               ORDER BY last_message_at DESC LIMIT 100) c), '[]'::jsonb));
 $$;
 REVOKE EXECUTE ON FUNCTION public.dm_inbox() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.dm_inbox() TO authenticated;
