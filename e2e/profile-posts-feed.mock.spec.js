@@ -1,12 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, SAMPLE_WATCHES, FAKE_USER } from './helpers.js';
 
-// Experiment `profile_posts_feed`: the Posts title on a profile page links to the
-// Feed tab filtered to that member, so their posts read as full cards instead of
-// one grid tap at a time. Treatment renders the title as a button; clicking it
-// must query logs WITH a user_id filter (asserted on the request), show the
-// filter bar, and the bar's "Show all posts" must restore the normal feed.
-// Control (no arm) keeps the plain title — the pre-experiment markup.
+// The Posts title on a profile page links to the Feed tab filtered to that
+// member, so their posts read as full cards instead of one grid tap at a time.
+// Clicking it must query logs WITH a user_id filter (asserted on the request),
+// show the filter bar, and the bar's "Show all posts" must restore the normal feed.
 
 const OTHER_USER = 'other-user-111';
 
@@ -38,19 +36,18 @@ async function routeLogsWithUserFilter(page) {
   });
 }
 
-async function boot(page, { treatment }) {
+async function boot(page) {
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: LOGS });
   await routeLogsWithUserFilter(page); // registered after mockSupabase → wins
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  if (treatment) await page.evaluate(() => { EXPERIMENTS.profile_posts_feed = 'treatment'; });
   await page.evaluate(() => viewUserProfile(currentUser.id));
   await page.waitForSelector('#page-profile.active', { timeout: 5_000 });
 }
 
-test('treatment: Posts title links to the feed filtered to that member, and Show all posts clears it', async ({ page }) => {
-  await boot(page, { treatment: true });
+test('Posts title links to the feed filtered to that member, and Show all posts clears it', async ({ page }) => {
+  await boot(page);
 
   const link = page.locator('.profile-posts-link');
   await expect(link).toHaveCount(1);
@@ -74,8 +71,8 @@ test('treatment: Posts title links to the feed filtered to that member, and Show
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 });
 
-test('treatment: leaving the feed for another tab drops the filter', async ({ page }) => {
-  await boot(page, { treatment: true });
+test('leaving the feed for another tab drops the filter', async ({ page }) => {
+  await boot(page);
   await page.locator('.profile-posts-link').click();
   await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by @testuser');
 
@@ -83,10 +80,4 @@ test('treatment: leaving the feed for another tab drops the filter', async ({ pa
   await page.click('nav button[data-page="feed"]');
   await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
-});
-
-test('control: the Posts title stays a plain label', async ({ page }) => {
-  await boot(page, { treatment: false });
-  await expect(page.locator('.profile-posts-link')).toHaveCount(0);
-  await expect(page.locator('#page-profile .profile-page-section-title').filter({ hasText: 'Posts' })).toHaveCount(1);
 });

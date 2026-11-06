@@ -443,7 +443,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-stats-row { display:flex; gap:var(--space-5); justify-content:center; flex-wrap:wrap; margin:var(--space-4) 0 var(--space-5); }
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4) var(--space-5); margin-bottom:var(--space-4); }
     .profile-page-section-title { font-size:var(--fs-sm); font-weight:var(--fw-bold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--gold-text); margin-bottom:var(--space-3-5); }
-    /* Profile → Posts title as a link to the user-filtered feed (experiment profile_posts_feed) */
+    /* Profile → Posts title as a link to the user-filtered feed */
     .profile-posts-link { display:flex; align-items:center; gap:var(--space-1-5); width:100%; text-align:left; padding:0; margin-bottom:var(--space-3-5); }
     .profile-posts-link .profile-page-section-title { margin-bottom:0; }
     .profile-posts-chev { color:var(--gold-text); font-size:var(--fs-md); font-weight:var(--fw-bold); line-height:var(--lh-none); }
@@ -2764,6 +2764,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="stack-3">
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
+      <div class="stack-3">
+        <div class="item-title">Read a Member&#8217;s Posts as a Feed</div>
+        <div class="body-muted">On any profile, tap the <strong>Posts</strong> title above the photo grid to open the feed showing just that member&#8217;s posts &#8212; scroll, like and comment as usual instead of opening grid photos one by one. Tap <strong>Show all posts</strong> at the top to return to your normal feed.</div>
+      </div>
       <div class="stack-3 hidden" id="wn-dms">
         <div class="item-title">Private Messages</div>
         <div class="body-muted">Send a message request from any member&#8217;s profile. Once they accept &#8212; replying accepts &#8212; you can chat and share posts privately. Choose who can reach you under <strong>Privacy</strong>.</div>
@@ -4393,7 +4397,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">Recent Posts grid</div>
-              <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed.</div>
+              <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed &#8212; or tap the <strong>Posts</strong> title to read all of that member&#8217;s posts as a feed of their own.</div>
             </div>
           </div>
         </div>
@@ -8122,7 +8126,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.20.28';
+const APP_VERSION = '05.20.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9390,11 +9394,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   if (recentLogs.length > 0) {
     const cells = recentLogs.map(l => profilePostCellHTML(l, isOwn)).join('');
     const hasMore = recentLogs.length >= 9;
-    // Experiment profile_posts_feed: the title links to the feed filtered to this
-    // member, so their posts can be read as full cards instead of tapped one by one.
-    const postsTitle = experiment('profile_posts_feed')
-      ? `<button type="button" class="btn-plain profile-posts-link" data-pid="${escAttr(profile.id)}" data-uname="${escAttr(profile.username || profile.display_name || '')}" onclick="viewUserFeed(this.dataset.pid, this.dataset.uname)" aria-label="View these posts as a feed"><span class="profile-page-section-title">Posts</span><span class="profile-posts-chev" aria-hidden="true">›</span></button>`
-      : `<div class="profile-page-section-title">Posts</div>`;
+    // The title links to the feed filtered to this member, so their posts can be
+    // read as full cards instead of tapped one by one.
+    const postsTitle = `<button type="button" class="btn-plain profile-posts-link" data-pid="${escAttr(profile.id)}" data-uname="${escAttr(profile.username || profile.display_name || '')}" onclick="viewUserFeed(this.dataset.pid, this.dataset.uname)" aria-label="View these posts as a feed"><span class="profile-page-section-title">Posts</span><span class="profile-posts-chev" aria-hidden="true">›</span></button>`;
     logsHtml = `
       <div class="profile-page-card">
         ${postsTitle}
@@ -12771,7 +12773,7 @@ async function _enrichFeedBatch(batch) {
   }));
 }
 
-// ── User-filtered feed (experiment profile_posts_feed) ──────────────────────
+// ── User-filtered feed ───────────────────────────────────────────────────────
 // Set by viewUserFeed() — the Posts title on a profile page. While set, the Feed
 // tab shows only this member's posts, with a bar at the top to clear it. Cleared
 // by that bar, by navigating to any other tab, or by a grid-cell post jump.
