@@ -14,7 +14,7 @@ const PROFILE = { id: OTHER, username: 'omegafan', display_name: 'Omega Fan', av
 
 // opts.inbox: object, or function(callNo) -> object. opts.messages: rows served by dm_messages.
 async function boot(page, opts = {}) {
-  const state = { respond: [], send: [], inboxCalls: 0, marks: 0, messages: (opts.messages || []).slice() };
+  const state = { respond: [], send: [], start: [], inboxCalls: 0, marks: 0, messages: (opts.messages || []).slice() };
   await mockSupabase(page);
   await page.addInitScript(() => { try { localStorage.setItem('ff_dms', 'true'); } catch (e) {} });
   const R = (name, fn) => page.route(`**/rest/v1/rpc/${name}*`, fn);
@@ -32,7 +32,12 @@ async function boot(page, opts = {}) {
     if (opts.sendGate) await opts.sendGate;
     return json(r, { message_id: 'm-new' });
   });
-  await page.route('**/rest/v1/dm_conversations*', r => json(r, {
+  await R('dm_start', r => {
+    state.start.push(JSON.parse(r.request().postData() || '{}'));
+    if (opts.startError) return r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: opts.startError }) });
+    return json(r, { conversation_id: CONV, status: opts.startStatus || 'accepted' });
+  });
+  await page.route('**/rest/v1/dm_conversations*', r => json(r, opts.conv || {
     id: CONV, user_lo: ME, user_hi: OTHER, requester_id: OTHER, status: 'accepted',
   }));
   await page.route('**/rest/v1/dm_messages*', r => {
@@ -142,4 +147,79 @@ test('composer send shows an optimistic bubble and posts p_conversation / p_body
   await expect(page.locator('#dm-thread-msgs .dm-msg-pending')).toHaveCount(0);
   await expect(page.locator('#dm-thread-msgs .dm-msg-own')).toHaveCount(1);
   await expect(page.locator('#dm-thread-msgs')).toContainText('Sure, DM me a price');
+});
+
+test('header envelope is an SVG icon like the bell, not a text glyph', async ({ page }) => {
+  await boot(page);
+  await expect(page.locator('#dm-btn svg')).toHaveCount(1);
+  expect(await page.locator('#dm-btn').evaluate(b => b.textContent.trim())).toBe('0');   // only the badge text
+});
+
+// Pencil -> New message picker -> person -> new-conversation thread -> first send via dm_start.
+async function startNewFromPicker(page) {
+  await page.evaluate(p => { followingProfiles = [p, { id: 'u-zzz', username: 'zed', display_name: 'Zed Watches' }]; }, PROFILE);
+  await page.locator('#dm-btn').click();
+  await page.locator('#dm-new-btn').click();
+  const modal = page.locator('#dm-new-modal');
+  await expect(modal).toBeVisible();
+  await expect(modal.locator('.notif-item')).toHaveCount(2);
+  await page.locator('#dm-new-search').fill('OMEGA');
+  await expect(modal.locator('.notif-item')).toHaveCount(1);
+  await modal.locator('.notif-item').click();
+  await expect(modal).toBeHidden();
+  await expect(page.locator('#dm-thread-head')).toContainText('Omega Fan');
+  await expect(page.locator('#dm-input')).toBeVisible();
+}
+
+test('new message: picker filters, opens an empty thread, first send binds the conversation', async ({ page }) => {
+  const state = await boot(page, {
+    inbox: (n, st) => st.start.length === 0
+      ? { unread: 0, requests_in: [], requests_out: [], conversations: [] }
+      : { unread: 0, requests_in: [], requests_out: [], conversations: [{
+          id: CONV, last_message_at: iso(0), unread: 0, last: { body: 'Hi there', shared_log_id: null, sender_id: ME, created_at: iso(0) }, profile: PROFILE }] },
+  });
+  await startNewFromPicker(page);
+  // New-conversation mode: no history fetch, no read mark, no poll.
+  expect(state.marks).toBe(0);
+  state.messages.push(msg('m-first', 'Hi there', 0, { sender_id: ME }));
+  await page.locator('#dm-input').fill('Hi there');
+  await page.locator('#dm-input').press('Enter');
+  await expect.poll(() => state.start).toEqual([{ p_target: OTHER, p_body: 'Hi there', p_log_id: null }]);
+  await expect(page.locator('#dm-thread-msgs .dm-msg-own')).toHaveCount(1);
+  await expect(page.locator('#dm-thread-msgs .dm-msg-pending')).toHaveCount(0);
+  await expect(page.locator('#dm-input')).toBeVisible();
+  expect(state.send).toEqual([]);
+});
+
+test('new message to someone who must accept shows the waiting state', async ({ page }) => {
+  await boot(page, {
+    startStatus: 'pending',
+    conv: { id: CONV, user_lo: ME, user_hi: OTHER, requester_id: ME, status: 'pending' },
+    inbox: (n, st) => ({ unread: 0, requests_in: [], conversations: [],
+      requests_out: st.start.length ? [{ id: CONV, created_at: iso(0), profile: PROFILE }] : [] }),
+  });
+  await startNewFromPicker(page);
+  await page.locator('#dm-input').fill('Is the Speedy for sale?');
+  await page.locator('#dm-input').press('Enter');
+  await expect(page.locator('#dm-composer')).toContainText('Waiting for Omega Fan to accept');
+});
+
+test('new message send error keeps the typed text', async ({ page }) => {
+  await boot(page, { startError: 'dm_not_allowed', inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [] } });
+  await startNewFromPicker(page);
+  await page.locator('#dm-input').fill('Hello?');
+  await page.locator('#dm-input').press('Enter');
+  await expect(page.locator('#dm-input')).toHaveValue('Hello?');
+  await expect(page.locator('#dm-thread-msgs .dm-msg-pending')).toHaveCount(0);
+});
+
+test('profile Message button opens the existing thread instead of an inline composer', async ({ page }) => {
+  await boot(page, {
+    messages: [msg('m1', 'hello there', 30)],
+    inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [{
+      id: CONV, last_message_at: iso(30), unread: 0, last: { body: 'hello there', shared_log_id: null, sender_id: OTHER, created_at: iso(30) }, profile: PROFILE }] },
+  });
+  await page.evaluate(id => openDmThreadForUser(id), OTHER);
+  await expect(page.locator('#dm-thread-msgs')).toContainText('hello there');
+  await expect(page.locator('#dm-thread-head')).toContainText('Omega Fan');
 });

@@ -3245,7 +3245,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn hidden" id="dm-btn" onclick="openMessagesPage()" title="Messages" aria-label="Messages">
-        <span aria-hidden="true">&#9993;&#xFE0E;</span><span class="bell-badge hidden" id="dm-badge">0</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span class="bell-badge hidden" id="dm-badge">0</span>
       </button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
@@ -3426,10 +3426,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="row-between u-mb-3-5">
         <h1 class="u-fs-xl u-fw-bold">Messages</h1>
+        <button class="bell-btn" id="dm-new-btn" onclick="openDmNewMessage()" title="New message" aria-label="New message">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+        </button>
       </div>
       <div id="dm-requests"></div>
       <div id="dm-list"></div>
-      <div id="dm-empty" class="empty hidden">No messages yet. Open a member's profile and tap Message to start a conversation.</div>
+      <div id="dm-empty" class="empty hidden">No messages yet. Tap the pencil to start a conversation.</div>
     </div>
     <div id="dm-thread-view" class="hidden">
       <div class="stack-4">
@@ -4312,7 +4315,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Send a message request</div>
-              <div class="help-step-desc">Tap <strong>Message</strong> on any member&#8217;s profile. If they don&#8217;t follow you, your first message goes out as a request and they see it before deciding whether to accept.</div>
+              <div class="help-step-desc">Tap <strong>Message</strong> on any member&#8217;s profile, or the pencil on the Messages page to pick someone you follow. If they don&#8217;t follow you, your first message goes out as a request and they see it before deciding whether to accept.</div>
             </div>
           </div>
           <div class="help-step">
@@ -5414,6 +5417,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="dm-send-list"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeDmSendTo()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="dm-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="dm-new-title">
+  <div class="modal u-maxw-90">
+    <div class="modal-title" id="dm-new-title">New message</div>
+    <div class="form-group stack-4">
+      <input type="text" id="dm-new-search" aria-label="Search people" placeholder="Search by name or username…" oninput="renderDmNewList()" autocomplete="off">
+    </div>
+    <div id="dm-new-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeDmNewMessage()">Cancel</button>
     </div>
   </div>
 </div>
@@ -8105,7 +8121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.19.30';
+const APP_VERSION = '05.19.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9048,7 +9064,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
          ${friendIconHtml}
          ${dmProfileBtnHtml(profile)}
        </div>
-       <div id="dm-profile-compose" class="stack-2 u-mt-2 hidden"></div>
        <div class="u-mt-1-5">
          <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
        </div>`
@@ -20649,6 +20664,7 @@ function dmClearState() {
   _dmInboxAt = 0;
   _dmSendLogId = null;
   { const m = document.getElementById('dm-send-modal'); if (m) m.classList.add('hidden'); }
+  closeDmNewMessage();
   updateDmBadge(0);
   const b = document.getElementById('dm-btn');
   if (b) b.classList.add('hidden');
@@ -20798,6 +20814,8 @@ function dmStopThreadPoll() {
 function dmStartThreadPoll() {
   dmStopThreadPoll();
   if (!dmThreadIsOpen() || document.visibilityState !== 'visible') return;
+  if (!_dmThread.id) return;   // new-conversation screen: nothing to poll until the first send
+
   _dmThreadPollId = setInterval(dmPollTick, DM_POLL_MS);
 }
 
@@ -20816,6 +20834,7 @@ function dmProfileFromState(convId) {
 }
 
 async function dmMarkRead(convId) {
+  if (!convId) return;
   try {
     const { error } = await db.rpc('dm_mark_read', { p_conversation: convId });
     if (!error) loadDmUnread();
@@ -20871,11 +20890,87 @@ async function openDmThread(convId) {
   dmStartThreadPoll();
 }
 
+// The conversation with a member, wherever it stands (profile Message button,
+// New message picker). Existing conversation or request -> openDmThread, which
+// already shows "Waiting for X" / "Replying accepts". None yet -> the thread
+// view in new-conversation mode (_dmThread.id === null): empty history, no poll,
+// no mark-read; the first send goes through dm_start and then binds the real id.
+async function openDmThreadForUser(userId) {
+  if (demoGuard()) return;
+  if (!dmEnabled() || !userId || !currentUser || userId === currentUser.id) return;
+  const seq = ++_dmThreadSeq;
+  dmStopThreadPoll();
+  _dmThread = null;
+  dmActivatePage();
+  dmShowView('thread');
+  window.scrollTo(0, 0);
+  document.getElementById('dm-thread-head').innerHTML = '';
+  document.getElementById('dm-composer').innerHTML = '';
+  document.getElementById('dm-thread-msgs').innerHTML = '<div class="note-md">Loading…</div>';
+
+  // A stale inbox could miss a conversation they started since; dm_start would
+  // still continue it, but opening the real thread shows its history.
+  if (!_dmInboxAt || Date.now() - _dmInboxAt > 60000) {
+    try { await loadDmInbox(); } catch (_) { /* fall through to new-conversation mode */ }
+    if (seq !== _dmThreadSeq) return;
+  }
+  const hit = [].concat(dmState.conversations, dmState.requestsOut, dmState.requestsIn)
+    .find(c => c && c.id && c.profile && c.profile.id === userId);
+  if (hit) { openDmThread(hit.id); return; }
+
+  let profile = followingProfiles.find(p => p && p.id === userId) || null;
+  if (!profile) {
+    try {
+      const { data } = await db.from('profiles').select('id, username, display_name, avatar_url').eq('id', userId).maybeSingle();
+      profile = data || null;
+    } catch (_) { /* header falls back to "Member" */ }
+    if (seq !== _dmThreadSeq) return;
+  }
+  _dmThread = {
+    id: null, status: null, requesterId: null, otherId: userId, profile: profile || { id: userId },
+    messages: [], pending: [], lastAt: null, sending: false,
+  };
+  renderDmThreadHead();
+  renderDmComposer();
+  renderDmThread(false);
+  const inp = document.getElementById('dm-input');
+  if (inp && dmThreadIsOpen()) inp.focus();
+}
+
+// First message from the new-conversation screen. Success binds the returned
+// conversation and reopens it as a real thread (accepted -> normal composer,
+// pending -> "Waiting for X to accept"). Failure keeps the typed text.
+async function dmStartFromNewThread(t, body) {
+  if (t.sending) return false;
+  t.sending = true;
+  const tempId = 'pending-' + (++_dmPendingSeq);
+  t.pending.push({ id: tempId, body, sharedLogId: null });
+  if (_dmThread === t) renderDmThread(true);
+  let res = null;
+  try { res = await startDmWith(t.otherId, body, null); }
+  catch (e) {
+    t.sending = false;
+    t.pending = t.pending.filter(p => p.id !== tempId);
+    if (_dmThread === t) {
+      if (dmThreadIsOpen()) renderDmThread(false);   // left mid-send: no DOM writes
+      toast(dmErrorText(e && e.message), 'error');
+    }
+    return false;
+  }
+  // t.sending stays true: this object is replaced by openDmThread, and until
+  // then a second Enter must not race the reopen.
+  if (_dmThread !== t) return true;      // signed out / opened something else meanwhile
+  t.id = res.conversation_id;            // bound even if they left: a later send continues it
+  try { await loadDmInbox(); } catch (_) { /* openDmThread fetches the profile itself */ }
+  if (_dmThread === t && dmThreadIsOpen()) openDmThread(res.conversation_id);
+  return true;
+}
+
 // Messages newer than the last rendered one (plus the status while it is not
 // yet accepted, so "Waiting for X to accept" flips when they do).
 async function dmFetchNewMessages() {
   const t = _dmThread;
-  if (!t) return;
+  if (!t || !t.id) return;     // new-conversation screen has no history yet
   let q = db.from('dm_messages').select('*').eq('conversation_id', t.id);
   if (t.lastAt) q = q.gt('created_at', t.lastAt);
   let msgRes, convRes = null;
@@ -20929,7 +21024,9 @@ function renderDmComposer() {
   }
   const prev = document.getElementById('dm-input');
   const draft = prev ? prev.value : '';
-  const note = t.status === 'pending' ? '<div class="caption stack-1-5">Replying accepts the request</div>' : '';
+  const note = t.status === 'pending' ? '<div class="caption stack-1-5">Replying accepts the request</div>'
+    // dm_start auto-accepts when the target follows me; otherwise it is a request.
+    : (!t.id && !myFollowers.has(t.otherId)) ? '<div class="caption stack-1-5">They don&#8217;t follow you, so your first message arrives as a request.</div>' : '';
   el.innerHTML = `${note}<div class="row">
       <input type="text" id="dm-input" class="grow-clip" aria-label="Message" placeholder="Message…" maxlength="2000" autocomplete="off" onkeydown="dmComposerKey(event)">
       <button class="comment-send-btn" aria-label="Send message" onclick="dmSubmitComposer()">↑</button>
@@ -20953,9 +21050,12 @@ async function dmSubmitComposer() {
     if (v.error === 'too_long') toast(dmErrorText('dm_bad_body'), 'error');
     return;
   }
+  if (t.sending) return;               // first message (new conversation) still on its way
   input.value = '';
   let ok;
-  if (t.status === 'declined' && t.requesterId !== (currentUser && currentUser.id)) {
+  if (!t.id) {
+    ok = await dmStartFromNewThread(t, v.body);
+  } else if (t.status === 'declined' && t.requesterId !== (currentUser && currentUser.id)) {
     // The person who declined writes again: dm_send refuses a declined row,
     // dm_start revives it.
     try { await startDmWith(t.otherId, v.body, null); ok = true; }
@@ -21141,63 +21241,91 @@ async function dmEnsureInbox() {
   try { await loadDmInbox(); } catch (_) { /* best-effort */ }
 }
 
-// Profile action row: Message / Requested / nothing. The server still enforces
-// (dm_not_allowed, dm_blocked); a hidden button is only a courtesy.
+// Profile action row: Message or nothing. Every visible state opens the thread
+// screen (existing conversation, waiting request, or a new conversation). The
+// server still enforces (dm_not_allowed, dm_blocked); a hidden button is only a
+// courtesy.
 function dmProfileBtnHtml(profile) {
   if (!dmEnabled() || !profile || !profile.id || profile.id === currentUser.id) return '';
   if (blockedUsers.has(profile.id)) return '';
-  const conv = dmState.conversations.find(c => c.profile && c.profile.id === profile.id);
-  if (conv) {
-    return `<button class="btn btn-ghost btn-xs" data-id="${escAttr(conv.id)}" onclick="openDmThread(this.dataset.id)">Message</button>`;
-  }
-  if (dmState.requestsOut.some(r => r.profile && r.profile.id === profile.id)) {
-    return '<button class="btn btn-ghost btn-xs" disabled>Requested</button>';
-  }
+  const known = dmState.conversations.concat(dmState.requestsOut)
+    .some(c => c.profile && c.profile.id === profile.id);
   // dm_privacy 'following' means the TARGET follows ME -> myFollowers.has(target).
-  if (!dmCanMessage(profile, following.has(profile.id), myFollowers.has(profile.id))) return '';
-  return `<button class="btn btn-ghost btn-xs" data-uid="${escAttr(profile.id)}" onclick="dmToggleProfileCompose(this.dataset.uid)">Message</button>`;
+  if (!known && !dmCanMessage(profile, following.has(profile.id), myFollowers.has(profile.id))) return '';
+  return `<button class="btn btn-ghost btn-xs" data-uid="${escAttr(profile.id)}" onclick="openDmThreadForUser(this.dataset.uid)">Message</button>`;
 }
 
-function dmToggleProfileCompose(uid) {
-  const el = document.getElementById('dm-profile-compose');
-  if (!el || !uid) return;
-  if (!el.classList.contains('hidden')) { el.classList.add('hidden'); el.innerHTML = ''; return; }
-  el.dataset.uid = uid;
-  el.innerHTML = `<div class="row">
-      <input type="text" id="dm-profile-input" class="grow-clip" aria-label="First message" placeholder="Write a message…" maxlength="2000" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();dmProfileSend();}">
-      <button class="btn btn-primary btn-xs" id="dm-profile-send" onclick="dmProfileSend()">Send</button>
-    </div>
-    <div class="caption">They get a message request and decide whether to reply.</div>`;
-  el.classList.remove('hidden');
-  const inp = document.getElementById('dm-profile-input');
-  if (inp) inp.focus();
+// ── "New message" picker (Messages page pencil) ──
+// Accepted conversations first, then people you follow not already listed.
+// Pending requests are not excluded here (unlike Send to…): picking one opens
+// its waiting thread.
+function dmNewMessageTargets() {
+  const seen = new Set();
+  const convs = [];
+  for (const c of dmState.conversations) {
+    const id = c.profile && c.profile.id;
+    if (!id || seen.has(id) || blockedUsers.has(id)) continue;
+    seen.add(id);
+    convs.push(c.profile);
+  }
+  const people = [];
+  for (const p of followingProfiles) {
+    if (!p || !p.id || seen.has(p.id) || blockedUsers.has(p.id)) continue;
+    seen.add(p.id);
+    people.push(p);
+  }
+  return { convs, people };
 }
 
-let _dmProfileSending = false;
-async function dmProfileSend() {
-  const el = document.getElementById('dm-profile-compose');
-  const input = document.getElementById('dm-profile-input');
-  const uid = el && el.dataset.uid;
-  if (!el || !input || !uid || _dmProfileSending) return;
-  const v = dmValidateBody(input.value, false);
-  if (!v.ok) { if (v.error === 'too_long') toast(dmErrorText('dm_bad_body'), 'error'); return; }
-  _dmProfileSending = true;
-  const btn = document.getElementById('dm-profile-send');
-  if (btn) btn.disabled = true;
-  try {
-    const res = await startDmWith(uid, v.body, null);
-    el.classList.add('hidden'); el.innerHTML = '';
-    await loadDmInbox();
-    if (res.status === 'accepted') { openDmThread(res.conversation_id); }
-    else {
-      toast('Request sent');
-      delete _profileCache[uid];
-      if (profilePageUserId === uid) loadAndRenderProfile(uid);
-    }
-  } catch (e) {
-    toast(dmErrorText(e && e.message), 'error');   // typed text stays in the box
-    if (btn) btn.disabled = false;
-  } finally { _dmProfileSending = false; }
+let _dmNewOpen = false;
+async function openDmNewMessage() {
+  if (demoGuard()) return;
+  if (!dmEnabled()) return;
+  const modal = document.getElementById('dm-new-modal');
+  const search = document.getElementById('dm-new-search');
+  if (!modal || !search) return;
+  _dmNewOpen = true;
+  search.value = '';
+  modal.classList.remove('hidden');
+  renderDmNewList();
+  search.focus();
+  await dmEnsureInbox();
+  if (_dmNewOpen) renderDmNewList();
+}
+
+function closeDmNewMessage() {
+  _dmNewOpen = false;
+  const modal = document.getElementById('dm-new-modal');
+  if (modal) modal.classList.add('hidden');
+  const list = document.getElementById('dm-new-list');
+  if (list) list.innerHTML = '';
+}
+
+function renderDmNewList() {
+  const list = document.getElementById('dm-new-list');
+  const search = document.getElementById('dm-new-search');
+  if (!list || !_dmNewOpen) return;
+  const q = ((search && search.value) || '').trim().toLowerCase();
+  const match = p => !q || [p.username, p.display_name].some(v => v && String(v).toLowerCase().includes(q));
+  const { convs, people } = dmNewMessageTargets();
+  const c = convs.filter(match), f = people.filter(match);
+  const row = p => `<div class="notif-item u-cur-pointer" role="button" tabindex="0" data-user="${escAttr(p.id)}" onclick="dmNewMessagePick(this.dataset.user)">
+      <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(p)}</div>
+      <div class="grow-clip">
+        <div class="u-fw-bold">${escHtml(dmWho(p))}</div>
+        ${p.username ? `<div class="text-meta">@${escHtml(p.username)}</div>` : ''}
+      </div>
+    </div>`;
+  let html = '';
+  if (c.length) html += `<div class="eyebrow u-mb-2">Conversations</div>${c.map(row).join('')}`;
+  if (f.length) html += `<div class="eyebrow u-mb-2">People you follow</div>${f.map(row).join('')}`;
+  list.innerHTML = html || `<div class="empty">${q ? 'Nobody matches that search.' : 'Follow someone to message them.'}</div>`;
+}
+
+function dmNewMessagePick(userId) {
+  if (!userId) return;
+  closeDmNewMessage();
+  openDmThreadForUser(userId);
 }
 
 // ── Post "Send to…" picker ──
@@ -32833,6 +32961,7 @@ const _overlayCloseMap = {
   'msr-share-popup':     dismissMsrSharePopup,
   'wl-share-modal':      closeWishlistShareSheet,
   'coll-share-modal':    closeCollectionShareSheet,
+  'dm-new-modal':        closeDmNewMessage,
   // Escape counts as a decline here, same as pressing "Not now".
 };
 
