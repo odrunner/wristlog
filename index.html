@@ -8129,7 +8129,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.08';
+const APP_VERSION = '06.07.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12786,20 +12786,27 @@ const USER_FEED_PAGE = 20;
 
 // Same authoritative client-side filters as loadFeed()/loadMoreFeed() apply on
 // top of RLS (blocked → club strip → visibility), for the filtered view's rows.
-function _userFeedStrip(logs) {
-  const myClubIds = myClubs.map(c => c.id);
+// The "Posts by this member" view bypasses the feed_page() RPC and re-applies
+// the feed's visibility ladder client-side. Pure: ctx carries what index.html
+// reads from globals ({ myId, myClubIds, blockedUsers, following, friendships }).
+// Mirror-drift guards this VERBATIM against index.html.
+function userFeedStrip(logs, ctx) {
+  const myClubIds = ctx.myClubIds || [];
   return (logs || [])
-    .filter(l => !blockedUsers.has(l.user_id))
+    .filter(l => !ctx.blockedUsers.has(l.user_id))
     .filter(l => !l.club_id || myClubIds.includes(l.club_id))
     .filter(log => {
-      if (log.user_id === currentUser.id) return true;
+      if (log.user_id === ctx.myId) return true;
       if (log.club_id && myClubIds.includes(log.club_id)) return log.visibility !== 'private';
       if (log.visibility === 'private')   return false;
       if (log.visibility === 'public')    return true;
-      if (log.visibility === 'followers') return following.has(log.user_id);
-      if (log.visibility === 'friends')   return friendships.has(log.user_id);
-      return following.has(log.user_id);
+      if (log.visibility === 'followers') return ctx.following.has(log.user_id);
+      if (log.visibility === 'friends')   return ctx.friendships.has(log.user_id);
+      return ctx.following.has(log.user_id);
     });
+}
+function _userFeedCtx() {
+  return { myId: currentUser.id, myClubIds: myClubs.map(c => c.id), blockedUsers, following, friendships };
 }
 
 function _userFeedQuery(from, to) {
@@ -12819,7 +12826,7 @@ async function _loadUserFilterFeed() {
   _userFeedOffset = (data || []).length;
   feedHasMore = (data || []).length === USER_FEED_PAGE;
   feedLikes = {}; feedComments = {}; feedCommentCounts = {};
-  const batch = _userFeedStrip(data).sort((a, b) => compareFeedLogs(a, b, todayStr()));
+  const batch = userFeedStrip(data, _userFeedCtx()).sort((a, b) => compareFeedLogs(a, b, todayStr()));
   feedItems = await _enrichFeedBatch(batch);
 }
 
@@ -12848,16 +12855,23 @@ async function loadMoreFeed() {
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
   // User-filtered view: simple offset pagination over one member's posts.
   if (feedUserFilter) {
+    // "Show all posts" / tab-away can clear the filter while a page is in
+    // flight — a stale continuation must never splice this member's posts
+    // into the restored full feed. Re-check after every await.
+    const filterId = feedUserFilter.id;
+    const filterGone = () => !feedUserFilter || feedUserFilter.id !== filterId;
     feedLoadingMore = true;
     try {
       const { data, error } = await withTimeout(_userFeedQuery(_userFeedOffset, _userFeedOffset + USER_FEED_PAGE - 1), 8000);
+      if (filterGone()) return;
       if (error) throw error;
       _userFeedOffset += (data || []).length;
       feedHasMore = (data || []).length === USER_FEED_PAGE;
       const shownIds = new Set(feedItems.map(i => i.id));
-      const batch = _userFeedStrip((data || []).filter(l => !shownIds.has(l.id)));
+      const batch = userFeedStrip((data || []).filter(l => !shownIds.has(l.id)), _userFeedCtx());
       if (batch.length) {
         const enriched = await _enrichFeedBatch(batch);
+        if (filterGone()) return;
         feedItems = feedItems.concat(enriched);
         const listEl = document.getElementById('feed-list');
         const sentinel = document.getElementById('feed-load-sentinel');

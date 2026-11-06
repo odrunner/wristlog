@@ -100,3 +100,36 @@ test('leaving the feed for another tab drops the filter', async ({ page }) => {
   await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 });
+
+test('a filtered load-more that lands after "Show all posts" never splices into the full feed', async ({ page }) => {
+  await boot(page);
+  await page.locator('.profile-posts-link').click();
+  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by @testuser');
+
+  // Gate the NEXT filtered logs query; it will answer with a fresh post only
+  // after the filter has been cleared — the stale continuation's payload.
+  let release;
+  const gate = new Promise(r => { release = r; });
+  let gated = 0; // only the first filtered query (the load-more below) is held
+  await page.route('**/rest/v1/logs*', async route => {
+    const url = new URL(route.request().url());
+    if (gated++ > 0 || !(url.searchParams.get('user_id') || '').startsWith('eq.')) return route.fallback();
+    await gate;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+      { id: 'log-own-3', user_id: FAKE_USER.id, watch_id: 'watch-001', date: '2025-03-10',
+        use_case: 'work', notes: 'Stale page from the filtered view', photo_url: null,
+        visibility: 'public', club_id: null, created_at: '2025-03-10T10:00:00Z' },
+    ]) });
+  });
+  await page.evaluate(() => { feedHasMore = true; loadMoreFeed(); });
+
+  // User escapes the filtered view while that page is still in flight.
+  await page.locator('#feed-list .feed-stale').getByRole('button', { name: 'Show all posts' }).click();
+  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
+
+  release();
+  await page.waitForTimeout(300); // let the stale continuation run
+  await expect(page.locator('#feedcard-log-own-3')).toHaveCount(0);
+  expect(await page.evaluate(() => feedItems.some(i => i.id === 'log-own-3'))).toBe(false);
+});

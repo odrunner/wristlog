@@ -4311,3 +4311,23 @@ export function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
   if (p === 'following') return !!theyFollowMe;
   return true;
 }
+
+// The "Posts by this member" view bypasses the feed_page() RPC and re-applies
+// the feed's visibility ladder client-side. Pure: ctx carries what index.html
+// reads from globals ({ myId, myClubIds, blockedUsers, following, friendships }).
+// Mirror-drift guards this VERBATIM against index.html.
+export function userFeedStrip(logs, ctx) {
+  const myClubIds = ctx.myClubIds || [];
+  return (logs || [])
+    .filter(l => !ctx.blockedUsers.has(l.user_id))
+    .filter(l => !l.club_id || myClubIds.includes(l.club_id))
+    .filter(log => {
+      if (log.user_id === ctx.myId) return true;
+      if (log.club_id && myClubIds.includes(log.club_id)) return log.visibility !== 'private';
+      if (log.visibility === 'private')   return false;
+      if (log.visibility === 'public')    return true;
+      if (log.visibility === 'followers') return ctx.following.has(log.user_id);
+      if (log.visibility === 'friends')   return ctx.friendships.has(log.user_id);
+      return ctx.following.has(log.user_id);
+    });
+}
