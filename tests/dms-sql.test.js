@@ -37,9 +37,9 @@ describe('dms policies and grants', () => {
     expect(sql).toMatch(/CREATE POLICY [^;]*ON public\.dm_conversations[^;]*FOR SELECT[^;]*user_lo[^;]*user_hi/);
     expect(sql).toMatch(/CREATE POLICY [^;]*ON public\.dm_messages[^;]*FOR SELECT[^;]*EXISTS \(SELECT 1 FROM public\.dm_conversations/);
   });
-  it('sender-only DELETE on messages; no INSERT or UPDATE policy anywhere', () => {
+  it('sender-only DELETE on messages; no INSERT or UPDATE policy on either dm table', () => {
     expect(sql).toMatch(/CREATE POLICY [^;]*ON public\.dm_messages[^;]*FOR DELETE[^;]*sender_id/);
-    expect(sql).not.toMatch(/FOR (INSERT|UPDATE|ALL)/);
+    expect(sql).not.toMatch(/CREATE POLICY [^;]*ON public\.dm_(conversations|messages)[^;]*FOR (INSERT|UPDATE|ALL)/);
   });
   it('grants SELECT on both and DELETE on messages to authenticated only', () => {
     expect(sql).toMatch(/GRANT SELECT ON public\.dm_conversations TO authenticated/);
@@ -58,6 +58,124 @@ describe('dms notifications and privacy setting', () => {
     expect(sql).toMatch(/ALTER TABLE public\.profiles ADD COLUMN IF NOT EXISTS dm_privacy text NOT NULL DEFAULT 'everyone'/);
     expect(sql).toMatch(/GRANT SELECT \(dm_privacy\), UPDATE \(dm_privacy\) ON public\.profiles TO authenticated/);
     expect(sql).toMatch(/CHECK \(dm_privacy IN \('everyone', ?'following', ?'nobody'\)\)/);
+  });
+});
+// The body of one CREATE FUNCTION statement (header through the closing `$$;`).
+function fn(name) {
+  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+  if (start < 0) return '';
+  return sql.slice(start, sql.indexOf('$$;', sql.indexOf('$$', start) + 2) + 3);
+}
+const PUBLIC_RPCS = ['dm_start', 'dm_send', 'dm_respond', 'dm_mark_read', 'dm_inbox', 'dm_unread_count', 'dm_report_message'];
+describe('dms RPCs: definer, grants, no overloads', () => {
+  for (const name of PUBLIC_RPCS) {
+    it(`${name} is SECURITY DEFINER with a pinned search_path, revoked from anon, granted to authenticated`, () => {
+      const body = fn(name);
+      expect(body).not.toBe('');
+      expect(body).toMatch(/SECURITY DEFINER/);
+      expect(body).toMatch(/SET search_path = public/);
+      expect(sql).toMatch(new RegExp(`REVOKE EXECUTE ON FUNCTION public\\.${name}\\([^)]*\\) FROM PUBLIC, anon;`));
+      expect(sql).toMatch(new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^)]*\\) TO authenticated;`));
+      // one definition only: a second signature would overload and PostgREST answers 300
+      expect(sql.split(`FUNCTION public.${name}(`).length - 1).toBe(3); // CREATE + REVOKE + GRANT
+    });
+  }
+  it('internal helpers are callable by nobody but the definer functions', () => {
+    expect(fn('dm_rate_ok')).toMatch(/SECURITY DEFINER/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_rate_ok\(uuid\) FROM PUBLIC, anon, authenticated;/);
+    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.dm_rate_ok/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_is_blocked\(uuid, uuid\) FROM PUBLIC, anon, authenticated;/);
+    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.dm_is_blocked/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_clean_body\(text, text\) FROM PUBLIC, anon, authenticated;/);
+    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.dm_clean_body/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_is_unread\(uuid, uuid\) FROM PUBLIC, anon, authenticated;/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_append\(uuid, uuid, uuid, text, text, text\) FROM PUBLIC, anon, authenticated;/);
+    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.dm_(is_unread|append)/);
+  });
+});
+describe('dms RPCs: safety rules', () => {
+  it('blocks are checked in both directions (two symmetric EXISTS)', () => {
+    const body = fn('dm_is_blocked');
+    const pairs = [...body.matchAll(/EXISTS \(SELECT 1 FROM public\.user_blocks\s+WHERE blocker_id = (\w+) AND blocked_id = (\w+)\)/g)]
+      .map(m => [m[1], m[2]]);
+    expect(pairs).toHaveLength(2);
+    expect(pairs[1]).toEqual([pairs[0][1], pairs[0][0]]);
+    for (const name of ['dm_start', 'dm_send', 'dm_inbox', 'dm_unread_count']) expect(fn(name)).toMatch(/dm_is_blocked\(/);
+  });
+  it('dm_start carries the dark-launch internal-accounts guard', () => {
+    const body = fn('dm_start');
+    expect(body).toMatch(/-- DARK LAUNCH: remove in enable-for-all release/);
+    expect(body).toMatch(/FROM public\.internal_accounts WHERE user_id = v_me/);
+  });
+  it('dm_start runs its checks in the specified order', () => {
+    const body = fn('dm_start');
+    const order = ["'dm_self'", 'is_suspended', 'DARK LAUNCH', 'dm_is_blocked(', 'dm_privacy', "'dm_pending'", "'dm_declined'"];
+    const at = order.map(s => body.indexOf(s));
+    for (const i of at) expect(i).toBeGreaterThan(-1);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+  it("dm_privacy: 'nobody' always refuses, 'following' needs the target to follow the sender", () => {
+    const body = fn('dm_start');
+    expect(body).toMatch(/v_privacy = 'nobody'/);
+    expect(body).toMatch(/v_privacy = 'following' AND NOT v_target_follows/);
+    expect(body).toMatch(/follower_id = p_target AND f\.following_id = v_me/);
+  });
+  it('auto-accepts on target-follows-sender or close friendship, else pending (rate-limited to 5/day)', () => {
+    const body = fn('dm_start');
+    // close friends (accepted friend request + mutual follow) always include target-follows-sender
+    expect(body).toMatch(/close friends[\s\S]*mutual follow[\s\S]*IF v_target_follows THEN/);
+    expect(body).toMatch(/>= 5 THEN\s+RAISE EXCEPTION 'dm_rate_limited'/);
+    expect(body).toMatch(/'message_request'/);
+  });
+  it('dm_rate_ok enforces 60/hour and 500/day per sender', () => {
+    const body = fn('dm_rate_ok');
+    expect(body).toMatch(/interval '1 hour'\) < 60/);
+    expect(body).toMatch(/interval '1 day'\) < 500/);
+    expect(fn('dm_send')).toMatch(/dm_rate_ok\(v_me\)/);
+  });
+  it('requester cannot act while pending; replying flips pending to accepted', () => {
+    const body = fn('dm_send');
+    expect(body).toMatch(/c\.status = 'pending' AND c\.requester_id = v_me THEN\s+RAISE EXCEPTION 'dm_pending'/);
+    expect(body).toMatch(/SET status = 'accepted', accepted_at = now\(\)/);
+  });
+  it('validates the body: trimmed, at most 2000 chars, not empty unless a post is shared', () => {
+    for (const name of ['dm_start', 'dm_send']) {
+      const body = fn(name);
+      expect(body).toMatch(/dm_clean_body\(p_body, v_log\)/);
+      expect(body).toMatch(/FROM public\.logs WHERE id = v_log/);
+    }
+    const clean = fn('dm_clean_body');
+    expect(clean).toMatch(/btrim/);
+    expect(clean).toMatch(/> 2000/);
+    expect(clean).toMatch(/'dm_bad_body'/);
+  });
+  it('dm_mark_read flips the matching message notifications to read (iOS badge drift)', () => {
+    expect(fn('dm_mark_read')).toMatch(
+      /UPDATE public\.notifications SET is_read = true\s+WHERE user_id = v_me AND type IN \('message', 'message_request'\)\s+AND ref_id = p_conversation::text AND is_read = false/);
+  });
+  it('raises the stable error codes the client switches on', () => {
+    for (const code of ['dm_blocked', 'dm_pending', 'dm_declined', 'dm_rate_limited', 'dm_not_participant', 'dm_bad_body', 'dm_not_allowed'])
+      expect(sql).toContain(`RAISE EXCEPTION '${code}'`);
+  });
+});
+describe('dms RPCs: inbox shape and reporting', () => {
+  it('dm_inbox returns the agreed jsonb keys', () => {
+    const body = fn('dm_inbox');
+    for (const k of ['unread', 'requests_in', 'requests_out', 'conversations', 'first', 'last', 'profile',
+      'body', 'shared_log_id', 'sender_id', 'created_at', 'last_message_at', 'id', 'username', 'display_name', 'avatar_url'])
+      expect(body).toContain(`'${k}'`);
+    expect(body).toMatch(/ORDER BY c\.last_message_at DESC/);
+  });
+  it('dm_report_message snapshots the message server-side into a content_reports row', () => {
+    const body = fn('dm_report_message');
+    expect(body).toMatch(/'dm_not_participant'/);
+    expect(body).toMatch(/INSERT INTO public\.content_reports/);
+    expect(body).toMatch(/'message'/);
+    expect(body).toMatch(/m\.body/);
+  });
+  it("content_reports accepts 'message' but only through the RPC", () => {
+    expect(sql).toMatch(/ADD CONSTRAINT content_reports_content_type_check\s+CHECK \(content_type IN \('log', 'comment', 'message'\)\)/);
+    expect(sql).toMatch(/CREATE POLICY content_reports_message_via_rpc_only ON public\.content_reports\s+AS RESTRICTIVE FOR INSERT TO public\s+WITH CHECK \(content_type <> 'message'\)/);
   });
 });
 describe('dms hygiene', () => {
