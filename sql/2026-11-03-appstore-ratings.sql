@@ -23,13 +23,17 @@ ALTER TABLE public.appstore_ratings ENABLE ROW LEVEL SECURITY;
 -- querying role, and `authenticated` lost table-level SELECT on profiles in
 -- the 2026-09-01 lockdown — every read then fails with "permission denied for
 -- table profiles". The writer is the cost-report script using the service
--- role, which bypasses RLS but still needs its GRANT (Supabase stopped
--- auto-granting new tables 2026-10-30).
+-- role, which bypasses RLS but still needs its GRANT.
 DROP POLICY IF EXISTS appstore_ratings_admin_select ON public.appstore_ratings;
 CREATE POLICY appstore_ratings_admin_select ON public.appstore_ratings
   FOR SELECT TO authenticated
   USING ((SELECT public.is_admin()));
 
+-- This PROJECT's default privileges still hand ALL (incl. INSERT/UPDATE/
+-- TRUNCATE) to anon and authenticated on new tables — Supabase's 2026-10-30
+-- platform change did not switch that off here (live ACL audited 2026-11-06).
+-- Revoke first, then grant only what each role uses (same rule as dms.sql).
+REVOKE ALL ON public.appstore_ratings FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.appstore_ratings TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.appstore_ratings TO service_role;
 
