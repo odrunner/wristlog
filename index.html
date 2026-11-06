@@ -8125,7 +8125,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.22.01';
+const APP_VERSION = '06.04.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19946,6 +19946,9 @@ function _adminStatsBatch2() {
     // What-if sims opened + AI wishlist recommendations (by surface)
     db.rpc('admin_feature_event_stats', { p_event: 'sim_opened' }),
     db.rpc('admin_feature_event_stats', { p_event: 'wl_rec' }),
+    // Private messaging (dm tables are participant-RLS'd, so the counts must
+    // come from the SECURITY DEFINER RPC). Spec: sql/2026-11-06-admin-dm-stats.sql.
+    db.rpc('admin_dm_stats'),
   ]), 20000);
 }
 
@@ -20046,7 +20049,7 @@ async function loadAdminStats() {
     // between formats.
     const avg = (n, d) => d > 0 ? (n / d).toFixed(3) : '0.000';
 
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes] = await b2P;
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes, dmRes] = await b2P;
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
     const dauDod = dauRes.data || {};
@@ -20058,6 +20061,7 @@ async function loadAdminStats() {
     const hist = histRes.data || {};
     const sim = (simRes && simRes.data) || {};
     const wlRec = (wlRecRes && wlRecRes.data) || {};
+    const dms = (dmRes && dmRes.data) || {};
     const ido = idoRes.data || {};
     const idoBy = ido.by_source || {};
     const idoDecided = (Number(idoBy.accepted) || 0) + (Number(idoBy.edited) || 0) + (Number(idoBy.rejected) || 0);
@@ -20146,6 +20150,16 @@ async function loadAdminStats() {
     const pushDevices = Number(push.push_devices) || 0;
     const pushSub = (extUsers > 0 ? Math.round(pushUsers / extUsers * 100) : 0) + '% of users'
       + (pushDevices > 0 ? ' · ' + pushDevices + ' device' + (pushDevices === 1 ? '' : 's') : '');
+    // Private messaging (external users only; a conversation with an internal
+    // account on either side is excluded entirely by the RPC). "DM users" =
+    // distinct participants of any conversation; its delta = users whose FIRST
+    // conversation started in the last 24h (new adopters, not returning ones).
+    const dmSenders = Number(dms.senders_total) || 0;
+    const dmConvs = Number(dms.convs_total) || 0;
+    const dmPending = Number(dms.convs_pending) || 0;
+    const dmUsersSub = dmSenders + ' sender' + (dmSenders === 1 ? '' : 's')
+      + ' · ' + dmConvs + ' conversation' + (dmConvs === 1 ? '' : 's')
+      + (dmPending > 0 ? ' · ' + dmPending + ' pending' : '');
     // Active-user snapshot (DAU/WAU/MAU) — external users whose last activity
     // (same lastActiveByUser that powers the SEEN column) falls within the window.
     const _nowMs = Date.now();
@@ -20381,6 +20395,9 @@ async function loadAdminStats() {
         ${statRow('Friends', friends, dod.friends)}
         ${statRow('Likes', likes, dod.likes)}
         ${statRow('Comments', comments, dod.comments)}
+        ${statRow('DM messages', Number(dms.messages_total) || 0, null,
+          (Number(dms.messages_24h) || 0) + ' (24h)' + inlineDelta((Number(dms.messages_24h) || 0) - (Number(dms.messages_prev24h) || 0), false))}
+        ${statRow('DM users', Number(dms.users_total) || 0, Number(dms.users_24h) || 0, dmUsersSub)}
       </div>
       <div class="admin-card">
         <div class="eyebrow stack-2">Per-User Averages (external)</div>

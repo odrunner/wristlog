@@ -159,6 +159,30 @@ describe('Totals card day-over-day deltas', () => {
   it('statRow renders green only when good, honoring the invert flag', () => {
     expect(html).toMatch(/const good = invert \? delta < 0 : delta > 0;/);
   });
+
+  // Private messaging rows (DMs live for everyone 2026-11-06). The dm tables are
+  // participant-RLS'd, so the counts come from the admin_dm_stats SECURITY DEFINER
+  // RPC (sql/2026-11-06-admin-dm-stats.sql), which also drops any conversation
+  // with an internal account on either side.
+  it('fetches DM stats from the admin_dm_stats RPC in batch 2', () => {
+    expect(html).toContain("db.rpc('admin_dm_stats')");
+    expect(html).toMatch(/snapIdoRes, simRes, wlRecRes, dmRes\] = await b2P;/);
+  });
+
+  it('DM messages row: total stands alone, 24h figure + change vs prior 24h in the sub', () => {
+    expect(html).toMatch(/statRow\('DM messages',\s*Number\(dms\.messages_total\)[^\n]*null,/);
+    expect(html).toMatch(/dms\.messages_24h[^\n]*' \(24h\)' \+ inlineDelta\([^\n]*dms\.messages_prev24h[^\n]*,\s*false\)/);
+  });
+
+  it('DM users row: participants as the value, first-conversation-24h as the delta', () => {
+    expect(html).toMatch(/statRow\('DM users',\s*Number\(dms\.users_total\)[^\n]*Number\(dms\.users_24h\)[^\n]*dmUsersSub\)/);
+  });
+
+  it('DM users sub names senders, conversations and pending requests', () => {
+    expect(html).toMatch(/const dmUsersSub = dmSenders \+ ' sender'/);
+    expect(html).toMatch(/dmConvs \+ ' conversation'/);
+    expect(html).toMatch(/dmPending > 0 \? ' · ' \+ dmPending \+ ' pending' : ''/);
+  });
 });
 
 describe('Email metrics day-over-day', () => {
