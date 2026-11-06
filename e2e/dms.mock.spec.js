@@ -313,3 +313,20 @@ test('badge refetch is TTL-guarded: back-to-back calls cost one request, user ac
   await page.evaluate(() => loadDmUnread(true)); // mark-read/block path — always current
   expect(calls).toBe(2);
 });
+
+test('a rate-limited send keeps the typed text, drops the ghost bubble and says why', async ({ page }) => {
+  await boot(page, {
+    messages: [msg('m1', 'hello there', 30)],
+    inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [{
+      id: CONV, last_message_at: iso(30), unread: 0,
+      last: { body: 'hello there', shared_log_id: null, sender_id: OTHER, created_at: iso(30) }, profile: PROFILE }] },
+  });
+  await page.route('**/rest/v1/rpc/dm_send*', r =>
+    r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'dm_rate_limited' }) }));
+  await page.evaluate(id => openDmThread(id), CONV);
+  await page.locator('#dm-input').fill('One message too many');
+  await page.locator('#dm-input').press('Enter');
+  await expect(page.locator('#toast')).toContainText("You're sending too fast");
+  await expect(page.locator('#dm-input')).toHaveValue('One message too many');
+  await expect(page.locator('#dm-thread-msgs .dm-msg-pending')).toHaveCount(0);
+});
