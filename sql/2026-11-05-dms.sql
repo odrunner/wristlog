@@ -110,8 +110,22 @@ CREATE POLICY content_reports_message_via_rpc_only ON public.content_reports
   AS RESTRICTIVE FOR INSERT TO public
   WITH CHECK (content_type <> 'message');
 
--- dm_rate_ok counts a sender's recent messages.
-CREATE INDEX IF NOT EXISTS idx_dm_messages_sender_created ON public.dm_messages (sender_id, created_at DESC);
+-- Send ledger for dm_rate_ok: one row per message sent, written only by dm_append. Not dm_messages:
+-- senders may DELETE their own messages, so send/delete/repeat would reset the limit. Not
+-- notifications either: policy notifications_delete names the ACTOR as a deleter; today that is
+-- inert only because no SELECT policy shows an actor its sent rows, and one future policy would
+-- silently reopen the hole. RLS on with no policies + no client grants = clients can neither read
+-- nor shrink this table.
+CREATE TABLE IF NOT EXISTS public.dm_send_ledger (
+  sender_id  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE public.dm_send_ledger IS 'DM send counts for rate limiting; definer RPCs only, rows older than a day pruned on send';
+CREATE INDEX IF NOT EXISTS idx_dm_send_ledger_sender_created ON public.dm_send_ledger (sender_id, created_at DESC);
+ALTER TABLE public.dm_send_ledger ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.dm_send_ledger FROM PUBLIC, anon, authenticated;
+-- Superseded by the ledger (was created by the first deploy of this file).
+DROP INDEX IF EXISTS public.idx_dm_messages_sender_created;
 
 -- ── 9. Internal helpers (no EXECUTE for clients; called only from the RPCs below) ──
 CREATE OR REPLACE FUNCTION public.dm_is_blocked(p_a uuid, p_b uuid)
@@ -121,12 +135,12 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 REVOKE EXECUTE ON FUNCTION public.dm_is_blocked(uuid, uuid) FROM PUBLIC, anon, authenticated;
 
--- 60 messages/hour and 500/day per sender.
+-- 60 messages/hour and 500/day per sender, counted from the send ledger (not deletable by clients).
 CREATE OR REPLACE FUNCTION public.dm_rate_ok(p_sender uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT (SELECT count(*) FROM public.dm_messages
+  SELECT (SELECT count(*) FROM public.dm_send_ledger
            WHERE sender_id = p_sender AND created_at > now() - interval '1 hour') < 60
-     AND (SELECT count(*) FROM public.dm_messages
+     AND (SELECT count(*) FROM public.dm_send_ledger
            WHERE sender_id = p_sender AND created_at > now() - interval '1 day') < 500;
 $$;
 REVOKE EXECUTE ON FUNCTION public.dm_rate_ok(uuid) FROM PUBLIC, anon, authenticated;
@@ -157,9 +171,11 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 REVOKE EXECUTE ON FUNCTION public.dm_is_unread(uuid, uuid) FROM PUBLIC, anon, authenticated;
 
--- Append a message: insert it, touch last_message_at + the sender's own read marker, notify the
--- recipient. The notification is inserted as the function owner, so it bypasses the client
--- notifications INSERT policy and does not spend the sender's notification rate budget.
+-- Append a message: insert it, record it in the send ledger, touch last_message_at + the sender's
+-- own read marker (and the sender's own unread message notifications for this conversation: a
+-- target replying without opening the thread must not keep a stale badge), notify the recipient.
+-- The notification is inserted as the function owner, so it bypasses the client notifications
+-- INSERT policy and does not spend the sender's notification rate budget.
 CREATE OR REPLACE FUNCTION public.dm_append(p_conv uuid, p_sender uuid, p_recipient uuid,
                                             p_body text, p_log text, p_type text)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -169,17 +185,40 @@ BEGIN
   INSERT INTO public.dm_messages (conversation_id, sender_id, body, shared_log_id)
   VALUES (p_conv, p_sender, p_body, p_log)
   RETURNING id INTO v_id;
+  DELETE FROM public.dm_send_ledger WHERE sender_id = p_sender AND created_at < now() - interval '1 day';
+  INSERT INTO public.dm_send_ledger (sender_id) VALUES (p_sender);
   UPDATE public.dm_conversations
      SET last_message_at = now(),
          lo_last_read_at = CASE WHEN user_lo = p_sender THEN now() ELSE lo_last_read_at END,
          hi_last_read_at = CASE WHEN user_hi = p_sender THEN now() ELSE hi_last_read_at END
    WHERE id = p_conv;
+  UPDATE public.notifications SET is_read = true
+   WHERE user_id = p_sender AND type IN ('message', 'message_request')
+     AND ref_id = p_conv::text AND is_read = false;
   INSERT INTO public.notifications (user_id, actor_id, type, ref_id)
   VALUES (p_recipient, p_sender, p_type, p_conv::text);
   RETURN v_id;
 END;
 $$;
 REVOKE EXECUTE ON FUNCTION public.dm_append(uuid, uuid, uuid, text, text, text) FROM PUBLIC, anon, authenticated;
+
+-- A block hides the conversation (dm_inbox) and so makes dm_mark_read unreachable; without this the
+-- pair's unread message notifications would inflate the server-computed iOS badge forever.
+-- Marks them read in both directions the moment a block is created.
+CREATE OR REPLACE FUNCTION public.dm_block_clear_notifications()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE public.notifications SET is_read = true
+   WHERE type IN ('message', 'message_request') AND is_read = false
+     AND ((user_id = NEW.blocker_id AND actor_id = NEW.blocked_id)
+       OR (user_id = NEW.blocked_id AND actor_id = NEW.blocker_id));
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.dm_block_clear_notifications() FROM PUBLIC, anon, authenticated;
+DROP TRIGGER IF EXISTS dm_block_clear_notifications ON public.user_blocks;
+CREATE TRIGGER dm_block_clear_notifications AFTER INSERT ON public.user_blocks
+  FOR EACH ROW EXECUTE FUNCTION public.dm_block_clear_notifications();
 
 -- ── 10. Client RPCs ───────────────────────────────────────────────────────────────
 -- Error codes are short and stable; the client switches on them:
@@ -204,10 +243,6 @@ BEGIN
   -- 1. not self
   IF p_target = v_me THEN
     RAISE EXCEPTION 'dm_self';
-  END IF;
-  v_body := public.dm_clean_body(p_body, v_log);
-  IF v_log IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.logs WHERE id = v_log) THEN
-    RAISE EXCEPTION 'dm_bad_log';
   END IF;
   -- 2. sender not suspended
   IF EXISTS (SELECT 1 FROM public.profiles WHERE id = v_me AND is_suspended) THEN
@@ -239,6 +274,12 @@ BEGIN
     IF v_privacy = 'nobody' OR (v_privacy = 'following' AND NOT v_target_follows) THEN
       RAISE EXCEPTION 'dm_not_allowed';
     END IF;
+  END IF;
+  -- Input validation only now, after the guard, block and privacy checks: run first, dm_bad_log vs
+  -- dm_not_enabled would let any signed-in user probe which (private) log ids exist.
+  v_body := public.dm_clean_body(p_body, v_log);
+  IF v_log IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.logs WHERE id = v_log) THEN
+    RAISE EXCEPTION 'dm_bad_log';
   END IF;
   -- 6. the pair's existing row
   IF c.id IS NULL THEN

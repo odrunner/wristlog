@@ -11,7 +11,8 @@ describe('dms tables', () => {
   it('creates both tables with RLS enabled on each', () => {
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.dm_conversations/);
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.dm_messages/);
-    expect(sql.match(/ENABLE ROW LEVEL SECURITY/g)).toHaveLength(2);
+    // dm_conversations, dm_messages, dm_send_ledger
+    expect(sql.match(/ENABLE ROW LEVEL SECURITY/g)).toHaveLength(3);
   });
   it('constrains the pair, status and body length', () => {
     expect(sql).toMatch(/CHECK \(user_lo < user_hi\)/);
@@ -132,6 +133,40 @@ describe('dms RPCs: safety rules', () => {
     expect(body).toMatch(/interval '1 hour'\) < 60/);
     expect(body).toMatch(/interval '1 day'\) < 500/);
     expect(fn('dm_send')).toMatch(/dm_rate_ok\(v_me\)/);
+  });
+  it('rate limit counts a ledger clients cannot shrink (not deletable messages or notifications)', () => {
+    const body = fn('dm_rate_ok');
+    expect(body.match(/FROM public\.dm_send_ledger/g)).toHaveLength(2);
+    expect(body).not.toMatch(/dm_messages|notifications/);
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.dm_send_ledger/);
+    expect(sql).toMatch(/ALTER TABLE public\.dm_send_ledger ENABLE ROW LEVEL SECURITY/);
+    expect(sql).toMatch(/REVOKE ALL ON public\.dm_send_ledger FROM PUBLIC, anon, authenticated/);
+    expect(sql).not.toMatch(/CREATE POLICY [^;]*ON public\.dm_send_ledger/);
+    expect(sql).not.toMatch(/GRANT [^;]*ON public\.dm_send_ledger/);
+    const append = fn('dm_append');
+    expect(append).toMatch(/INSERT INTO public\.dm_send_ledger \(sender_id\) VALUES \(p_sender\)/);
+    expect(append).toMatch(/DELETE FROM public\.dm_send_ledger WHERE sender_id = p_sender AND created_at < now\(\) - interval '1 day'/);
+  });
+  it('a block marks the pair\'s message notifications read in both directions (badge)', () => {
+    expect(sql).toMatch(/CREATE TRIGGER dm_block_clear_notifications AFTER INSERT ON public\.user_blocks\s+FOR EACH ROW EXECUTE FUNCTION public\.dm_block_clear_notifications\(\)/);
+    const body = fn('dm_block_clear_notifications');
+    expect(body).toMatch(/SECURITY DEFINER/);
+    expect(body).toMatch(/UPDATE public\.notifications SET is_read = true\s+WHERE type IN \('message', 'message_request'\) AND is_read = false/);
+    expect(body).toMatch(/\(user_id = NEW\.blocker_id AND actor_id = NEW\.blocked_id\)/);
+    expect(body).toMatch(/\(user_id = NEW\.blocked_id AND actor_id = NEW\.blocker_id\)/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.dm_block_clear_notifications\(\) FROM PUBLIC, anon, authenticated;/);
+  });
+  it('sending marks the sender\'s own message notifications for that conversation read', () => {
+    expect(fn('dm_append')).toMatch(
+      /UPDATE public\.notifications SET is_read = true\s+WHERE user_id = p_sender AND type IN \('message', 'message_request'\)\s+AND ref_id = p_conv::text AND is_read = false/);
+  });
+  it('dm_start validates body/log only after the guard, block and privacy checks (no log-id oracle)', () => {
+    const body = fn('dm_start');
+    const v = body.indexOf('dm_clean_body(');
+    expect(v).toBeGreaterThan(body.indexOf('DARK LAUNCH'));
+    expect(v).toBeGreaterThan(body.indexOf('dm_is_blocked('));
+    expect(v).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
+    expect(body.indexOf('FROM public.logs')).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
   });
   it('requester cannot act while pending; replying flips pending to accepted', () => {
     const body = fn('dm_send');
