@@ -246,3 +246,18 @@ Deno.test("splitByPlatform — android rows separate, missing platform means leg
   assertEquals(ios.map((r) => r.token), ["a", "c", "d"]);
   assertEquals(android.map((r) => r.token), ["b"]);
 });
+
+Deno.test("buildMessage — DM types use the exact alerts and never carry a body preview", () => {
+  assertEquals(buildMessage("message_request", "A", "conv-1")?.body, "A wants to send you a message");
+  assertEquals(buildMessage("message", "A", "conv-1")?.body, "A sent you a message");
+});
+
+Deno.test("buildRoute — DM types route to the conversation", () => {
+  for (const t of ["message", "message_request"]) {
+    assertEquals(buildRoute(t, "conv-1", "actor-1"), { route: "messages", id: "conv-1" });
+  }
+});
+
+Deno.test("buildRoute — DM types fall back to the bell with no conversation id", () => {
+  assertEquals(buildRoute("message", null, "actor-1"), { route: "bell", id: null });
+});

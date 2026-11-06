@@ -17,6 +17,9 @@ export const TYPE_TO_CATEGORY: Record<string, string> = {
   friend_request: "friends",
   friend_accepted: "friends",
   follow_request: "friends",
+  // "message" is deliberately absent: DMs are push-only. Only a first-contact
+  // request is worth an email.
+  message_request: "social",
 };
 
 // Default preferences (matches DB default)
@@ -25,6 +28,7 @@ export const DEFAULT_PREFS: Record<string, boolean> = {
   mentions: true,
   clubs: false,
   friends: true,
+  social: true,
 };
 
 // Merge a user's stored prefs over the defaults. `email_prefs || DEFAULT_PREFS`
@@ -80,6 +84,8 @@ export function buildEmailContent(
       return { subject: `${actorName} wants to follow you`, body: `${actorName} sent you a follow request on WRotate. Open the app to approve or decline.` };
     case "follow_accepted":
       return { subject: `${actorName} accepted your follow request`, body: `${actorName} accepted your follow request. You can now see their posts.` };
+    case "message_request":
+      return { subject: `${actorName} wants to send you a message`, body: `${actorName} wants to send you a message on WRotate. Open the app to accept or decline.` };
     case "friend_request":
       return { subject: `${actorName} sent a close friend request`, body: `${actorName} wants to be your close friend on WRotate. Open the app to respond.` };
     case "friend_accepted":

@@ -44,6 +44,11 @@ export function buildMessage(
       return { title, body: `${actorName} requested to follow you` };
     case "follow_accepted":
       return { title, body: `${actorName} accepted your follow request` };
+    // DM types: never a body preview (privacy) — the alert only says who.
+    case "message_request":
+      return { title, body: `${actorName} wants to send you a message` };
+    case "message":
+      return { title, body: `${actorName} sent you a message` };
     case "friend_request":
       return { title, body: `${actorName} sent you a close friend request` };
     case "friend_accepted":
@@ -115,6 +120,10 @@ export function buildRoute(
     case "club_join_accepted":
     case "club_promoted":
       return to("club", refId);
+    // ref_id is the dm_conversations id.
+    case "message":
+    case "message_request":
+      return to("messages", refId);
     case "badge_earned":
       return { route: "badges", id: null };
     // share_comment opens the Shared-links modal in the panel — not a post,

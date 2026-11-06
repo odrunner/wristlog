@@ -43,7 +43,7 @@ Deno.test("TYPE_TO_CATEGORY — maps known types and omits hearts", () => {
 });
 
 Deno.test("DEFAULT_PREFS — matches DB defaults (clubs off)", () => {
-  assertEquals(DEFAULT_PREFS, { comments: true, mentions: true, clubs: false, friends: true });
+  assertEquals(DEFAULT_PREFS, { comments: true, mentions: true, clubs: false, friends: true, social: true });
 });
 
 Deno.test("isValidRecord — requires user_id and type", () => {
@@ -226,4 +226,24 @@ Deno.test("buildHtmlEmail — without unsubUrl uses the fallback footer text", (
   const html = buildHtmlEmail("S", "B");
   assertEquals(html.includes("Profile &rarr; Notifications"), true);
   assertEquals(html.includes(">Unsubscribe<"), false);
+});
+
+Deno.test("TYPE_TO_CATEGORY — message_request is social; message is push-only", () => {
+  assertEquals(TYPE_TO_CATEGORY["message_request"], "social");
+  assertEquals(TYPE_TO_CATEGORY["message"], undefined);
+  assertEquals(effectivePrefs(null)["social"], true);
+});
+
+Deno.test("buildEmailContent — message_request frames a request, message has no email", () => {
+  const c = buildEmailContent("message_request", "Bob");
+  assertEquals(c?.subject, "Bob wants to send you a message");
+  assertEquals(c?.body, "Bob wants to send you a message on WRotate. Open the app to accept or decline.");
+  assertEquals(buildEmailContent("message", "Bob"), null);
+});
+
+Deno.test("buildHtmlEmail — message_request email links /open and has no CSS variables", () => {
+  const c = buildEmailContent("message_request", "Bob")!;
+  const html = buildHtmlEmail(c.subject, c.body);
+  assertEquals(html.includes('href="https://wrotate.com/open"'), true);
+  assertEquals(html.includes("var(--"), false);
 });
