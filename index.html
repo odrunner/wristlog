@@ -4539,7 +4539,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Block a user</div>
-              <div class="help-step-desc">Tap the three-dot menu on a post and select <strong>Block User</strong>, or go to their profile and tap <strong>Block</strong>. Blocked users won&#8217;t appear in your feed and cannot interact with your content. You can manage your block list from your profile page.</div>
+              <div class="help-step-desc">Tap the three-dot menu on a post and select <strong>Block User</strong>, or go to their profile and choose <strong>Block User</strong> from the three-dot menu. Blocked users won&#8217;t appear in your feed and cannot interact with your content. You can manage your block list from your profile page.</div>
             </div>
           </div>
           <div class="help-step">
@@ -8121,7 +8121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.19.51';
+const APP_VERSION = '05.20.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9063,9 +9063,12 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
          ${friendIconHtml}
          ${dmProfileBtnHtml(profile)}
-       </div>
-       <div class="u-mt-1-5">
-         <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
+         <div class="feed-dots-wrap" style="position:relative;">
+           <button class="btn btn-ghost btn-xs" data-mid="profile-${escAttr(profile.id)}" onclick="event.stopPropagation();toggleFeedMenu(this.dataset.mid)" title="More" aria-label="More options"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+           <div class="feed-menu hidden" id="feed-menu-profile-${escAttr(profile.id)}">
+             <div class="feed-menu-item text-danger" role="button" tabindex="0" data-mid="profile-${escAttr(profile.id)}" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name);closeFeedMenu(this.dataset.mid)">Block User</div>
+           </div>
+         </div>
        </div>`
     : '';
 
@@ -21252,7 +21255,7 @@ function dmProfileBtnHtml(profile) {
     .some(c => c.profile && c.profile.id === profile.id);
   // dm_privacy 'following' means the TARGET follows ME -> myFollowers.has(target).
   if (!known && !dmCanMessage(profile, following.has(profile.id), myFollowers.has(profile.id))) return '';
-  return `<button class="btn btn-ghost btn-xs" data-uid="${escAttr(profile.id)}" onclick="openDmThreadForUser(this.dataset.uid)">Message</button>`;
+  return `<button class="btn btn-ghost btn-xs" data-uid="${escAttr(profile.id)}" onclick="openDmThreadForUser(this.dataset.uid)" title="Message" aria-label="Message"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>`;
 }
 
 // ── "New message" picker (Messages page pencil) ──
