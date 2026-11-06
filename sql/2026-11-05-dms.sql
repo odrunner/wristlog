@@ -226,7 +226,7 @@ CREATE TRIGGER dm_block_clear_notifications AFTER INSERT ON public.user_blocks
 
 -- ── 10. Client RPCs ───────────────────────────────────────────────────────────────
 -- Error codes are short and stable; the client switches on them:
---   dm_self, dm_suspended, dm_not_enabled, dm_blocked, dm_not_allowed, dm_not_found, dm_pending,
+--   dm_self, dm_suspended, dm_blocked, dm_not_allowed, dm_not_found, dm_pending,
 --   dm_declined, dm_not_pending, dm_rate_limited, dm_not_participant, dm_bad_body, dm_bad_log,
 --   dm_bad_reason.
 
@@ -253,18 +253,8 @@ BEGIN
     RAISE EXCEPTION 'dm_suspended';
   END IF;
   -- 3. sender is an internal account
-  -- DARK LAUNCH: remove in enable-for-all release
-  -- Sender must be internal, or hold a live 'dms' beta treatment assignment
-  -- (seeded by sql/2026-11-05-dms-beta.sql; Kill in Admin -> Experiments closes it).
-  IF NOT EXISTS (SELECT 1 FROM public.internal_accounts WHERE user_id = v_me)
-     AND NOT EXISTS (
-       SELECT 1 FROM public.experiment_assignments a
-       JOIN public.experiments e ON e.key = a.experiment_key
-       WHERE a.experiment_key = 'dms' AND a.user_id = v_me
-         AND a.variant = 'treatment' AND e.status IN ('running', 'won')
-     ) THEN
-    RAISE EXCEPTION 'dm_not_enabled';
-  END IF;
+  -- (The dark-launch guard lived here until the enable-for-all release,
+  --  2026-11-06: sql/2026-11-06-dms-enable.sql.)
   -- 4. no block in either direction
   IF public.dm_is_blocked(v_me, p_target) THEN
     RAISE EXCEPTION 'dm_blocked';
@@ -287,8 +277,8 @@ BEGIN
       RAISE EXCEPTION 'dm_not_allowed';
     END IF;
   END IF;
-  -- Input validation only now, after the guard, block and privacy checks: run first, dm_bad_log vs
-  -- dm_not_enabled would let any signed-in user probe which (private) log ids exist.
+  -- Input validation only now, after the block and privacy checks: running it first would let
+  -- a refused sender distinguish dm_bad_log from the refusal and probe which log ids exist.
   v_body := public.dm_clean_body(p_body, v_log);
   IF v_log IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.logs WHERE id = v_log) THEN
     RAISE EXCEPTION 'dm_bad_log';

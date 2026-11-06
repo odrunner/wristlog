@@ -2768,7 +2768,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="item-title">Read a Member&#8217;s Posts as a Feed</div>
         <div class="body-muted">On any profile, tap the <strong>Posts</strong> title above the photo grid to open the feed showing just that member&#8217;s posts &#8212; scroll, like and comment as usual instead of opening grid photos one by one. From the feed, the same view is one tap away: open a post&#8217;s &#8943; menu and choose <strong>Posts by this member</strong>. Tap <strong>Show all posts</strong> at the top to return to your normal feed.</div>
       </div>
-      <div class="stack-3 hidden" id="wn-dms">
+      <div class="stack-3" id="wn-dms">
         <div class="item-title">Private Messages</div>
         <div class="body-muted">Send a message request from any member&#8217;s profile. Once they accept &#8212; replying accepts &#8212; you can chat and share posts privately. Choose who can reach you under <strong>Privacy</strong>.</div>
       </div>
@@ -4313,7 +4313,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <!-- ── MESSAGES ── -->
-      <div class="help-section hidden" id="help-dms">
+      <div class="help-section" id="help-dms">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Messages</div>
         <div class="help-card">
           <div class="help-step">
@@ -6379,7 +6379,6 @@ const FEATURE_FLAGS = {
   tg_dev_knobs: { label: 'Timegrapher: raw engine knob panel (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  dms: { label: 'Private messages (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = safeLS.get('ff_' + name);
@@ -8126,7 +8125,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.20.50';
+const APP_VERSION = '05.21.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18674,11 +18673,9 @@ function showHelpPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-help').classList.add('active');
-  document.getElementById('help-dms').classList.toggle('hidden', !dmEnabled());
 }
 
 function openWhatsNew() {
-  document.getElementById('wn-dms').classList.toggle('hidden', !dmEnabled());
   document.getElementById('whats-new-modal').classList.remove('hidden');
 }
 function closeWhatsNew() {
@@ -20778,19 +20775,12 @@ let _dmPendingSeq = 0;
 const _dmLogCards = new Map();  // shared_log_id -> card HTML (fetched once per session)
 let _dmCardGen = 0;             // bumps on sign-out: a shared-post fetch from A's session is dropped
 
-function dmEnabled() {
-  // Beta gate: personal flag, admin account, or a served 'dms' experiment
-  // treatment (internal accounts are always served control, so the admin
-  // check covers them). Remove with the flag in the enable-for-all release.
-  return !!currentUser && (featureFlag('dms') || experiment('dms') || !!(myProfile && myProfile.is_admin));
-}
+function dmEnabled() { return !!currentUser; }
 
 function syncDmBtn() {
   const b = document.getElementById('dm-btn');
   if (b) b.classList.toggle('hidden', !dmEnabled());
 }
-// Enablement can arrive after sign-in (experiment('dms') loads with get_experiments).
-document.addEventListener('experiments:loaded', () => { loadDmUnread(); });
 
 function updateDmBadge(n) {
   const el = document.getElementById('dm-badge');

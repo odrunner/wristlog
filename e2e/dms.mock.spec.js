@@ -16,7 +16,6 @@ const PROFILE = { id: OTHER, username: 'omegafan', display_name: 'Omega Fan', av
 async function boot(page, opts = {}) {
   const state = { respond: [], send: [], start: [], inboxCalls: 0, marks: 0, messages: (opts.messages || []).slice() };
   await mockSupabase(page);
-  await page.addInitScript(() => { try { localStorage.setItem('ff_dms', 'true'); } catch (e) {} });
   const R = (name, fn) => page.route(`**/rest/v1/rpc/${name}*`, fn);
   await R('get_experiments', r => json(r, []));
   await R('dm_unread_count', r => json(r, opts.unread ?? 0));

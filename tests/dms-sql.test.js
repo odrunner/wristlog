@@ -108,28 +108,22 @@ describe('dms RPCs: safety rules', () => {
     expect(pairs[1]).toEqual([pairs[0][1], pairs[0][0]]);
     for (const name of ['dm_start', 'dm_send', 'dm_inbox', 'dm_unread_count']) expect(fn(name)).toMatch(/dm_is_blocked\(/);
   });
-  it('dm_start carries the dark-launch internal-accounts guard', () => {
+  it('dm_start no longer carries the dark-launch guard (enabled for all 2026-11-06)', () => {
     const body = fn('dm_start');
-    expect(body).toMatch(/-- DARK LAUNCH: remove in enable-for-all release/);
-    expect(body).toMatch(/FROM public\.internal_accounts WHERE user_id = v_me/);
+    expect(body).not.toMatch(/dm_not_enabled/);
+    expect(body).not.toMatch(/internal_accounts/);
+    expect(body).not.toMatch(/experiment_assignments/);
   });
-  it('dm_start also admits a live dms beta treatment assignment', () => {
-    const body = fn('dm_start');
-    expect(body).toMatch(/experiment_assignments a\s+JOIN public\.experiments e ON e\.key = a\.experiment_key/);
-    expect(body).toMatch(/a\.experiment_key = 'dms' AND a\.user_id = v_me/);
-    expect(body).toMatch(/a\.variant = 'treatment' AND e\.status IN \('running', 'won'\)/);
-  });
-  it('the beta seed file is dark, uuid-free and idempotent', () => {
-    const beta = readFileSync(join(root, 'sql', '2026-11-05-dms-beta.sql'), 'utf8');
-    expect(beta).toMatch(/'running', 0, 'active_days'/);
-    expect(beta).toMatch(/ON CONFLICT \(key\) DO NOTHING/);
-    expect(beta).toMatch(/ON CONFLICT \(experiment_key, user_id\) DO UPDATE SET variant = 'treatment'/);
-    expect(beta).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    expect(beta.trimEnd().endsWith("NOTIFY pgrst, 'reload schema';")).toBe(true);
+  it('the enable file retires the beta experiment plumbing', () => {
+    const en = readFileSync(join(root, 'sql', '2026-11-06-dms-enable.sql'), 'utf8');
+    expect(en).toMatch(/DELETE FROM public\.experiment_assignments WHERE experiment_key = 'dms'/);
+    expect(en).toMatch(/DELETE FROM public\.experiments WHERE key = 'dms'/);
+    expect(en).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    expect(en.trimEnd().endsWith("NOTIFY pgrst, 'reload schema';")).toBe(true);
   });
   it('dm_start runs its checks in the specified order', () => {
     const body = fn('dm_start');
-    const order = ["'dm_self'", 'is_suspended', 'DARK LAUNCH', 'dm_is_blocked(', 'dm_privacy', "'dm_pending'", "'dm_declined'"];
+    const order = ["'dm_self'", 'is_suspended', 'dm_is_blocked(', 'dm_privacy', "'dm_pending'", "'dm_declined'"];
     const at = order.map(s => body.indexOf(s));
     for (const i of at) expect(i).toBeGreaterThan(-1);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
@@ -182,7 +176,6 @@ describe('dms RPCs: safety rules', () => {
   it('dm_start validates body/log only after the guard, block and privacy checks (no log-id oracle)', () => {
     const body = fn('dm_start');
     const v = body.indexOf('dm_clean_body(');
-    expect(v).toBeGreaterThan(body.indexOf('DARK LAUNCH'));
     expect(v).toBeGreaterThan(body.indexOf('dm_is_blocked('));
     expect(v).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
     expect(body.indexOf('FROM public.logs')).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
