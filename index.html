@@ -2760,7 +2760,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="stack-3">
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
-      <div class="stack-3">
+      <div class="stack-3 hidden" id="wn-dms">
         <div class="item-title">Private Messages</div>
         <div class="body-muted">Send a message request from any member&#8217;s profile. Once they accept &#8212; replying accepts &#8212; you can chat and share posts privately. Choose who can reach you under <strong>Privacy</strong>.</div>
       </div>
@@ -4305,14 +4305,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <!-- ── MESSAGES ── -->
-      <div class="help-section">
+      <div class="help-section hidden" id="help-dms">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Messages</div>
         <div class="help-card">
           <div class="help-step">
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Send a message request</div>
-              <div class="help-step-desc">Tap <strong>Message</strong> on any member&#8217;s profile. If you don&#8217;t follow each other yet, your first message goes out as a request and the other person sees it before deciding whether to accept.</div>
+              <div class="help-step-desc">Tap <strong>Message</strong> on any member&#8217;s profile. If they don&#8217;t follow you, your first message goes out as a request and they see it before deciding whether to accept.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4333,7 +4333,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Block or report</div>
-              <div class="help-step-desc">Blocking someone also freezes your conversation with them. To report a message, open the menu in the conversation and choose <strong>Report</strong>.</div>
+              <div class="help-step-desc">Blocking someone also ends your conversation with them. To report a message, tap the <strong>three-dot menu</strong> on their message and choose <strong>Report</strong>.</div>
             </div>
           </div>
         </div>
@@ -8105,7 +8105,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.37';
+const APP_VERSION = '05.18.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18498,9 +18498,11 @@ function showHelpPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-help').classList.add('active');
+  document.getElementById('help-dms').classList.toggle('hidden', !dmEnabled());
 }
 
 function openWhatsNew() {
+  document.getElementById('wn-dms').classList.toggle('hidden', !dmEnabled());
   document.getElementById('whats-new-modal').classList.remove('hidden');
 }
 function closeWhatsNew() {
