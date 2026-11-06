@@ -8056,7 +8056,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.14';
+const APP_VERSION = '05.18.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20767,7 +20767,7 @@ async function openDmThread(convId) {
   renderDmThreadHead();
   renderDmComposer();
   renderDmThread(true);
-  dmMarkRead(convId);
+  if (dmThreadIsOpen()) dmMarkRead(convId);   // not if they left while it loaded
   dmStartThreadPoll();
 }
 
@@ -20975,7 +20975,9 @@ function renderDmThread(scrollToEnd) {
   el.innerHTML = html || '<div class="empty">No messages yet.</div>';
   items.forEach(it => { if (it.kind === 'msg' && it.sharedLogId) dmLoadSharedCard(it.sharedLogId); });
   t.pending.forEach(p => { if (p.sharedLogId) dmLoadSharedCard(p.sharedLogId); });
-  if (scrollToEnd) window.scrollTo(0, document.body.scrollHeight);
+  // Only when the thread is on screen: a send that resolves after the user left
+  // must not scroll whatever page they are on now.
+  if (scrollToEnd && dmThreadIsOpen()) window.scrollTo(0, document.body.scrollHeight);
 }
 
 function dmToggleMsgMenu(btn) {
@@ -20991,7 +20993,7 @@ async function sendDmMessage(convId, body, logId) {
   if (!dmEnabled() || !convId) return null;
   const v = dmValidateBody(body, !!logId);
   if (!v.ok) { toast(dmErrorText('dm_bad_body'), 'error'); return null; }
-  const t = (_dmThread && _dmThread.id === convId) ? _dmThread : null;
+  const t = (dmThreadIsOpen() && _dmThread.id === convId) ? _dmThread : null;
   const tempId = 'pending-' + (++_dmPendingSeq);
   if (t) {
     t.pending.push({ id: tempId, body: v.body, sharedLogId: logId || null });
@@ -21021,6 +21023,7 @@ async function sendDmMessage(convId, body, logId) {
 // Start (or continue) a conversation with a member — the profile Message button
 // and post sharing. Returns { conversation_id, status }; throws Error(code).
 async function startDmWith(userId, body, logId) {
+  if (demoGuard()) throw new Error('dm_demo');
   if (!dmEnabled()) throw new Error('dm_disabled');
   if (!userId) throw new Error('dm_not_allowed');
   const v = dmValidateBody(body, !!logId);
