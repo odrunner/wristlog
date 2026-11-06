@@ -8046,7 +8046,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.00';
+const APP_VERSION = '05.18.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8082,8 +8082,8 @@ function profileInitials(p) {
   }
   const name = (p.display_name || p.username || '').trim();
   const parts = name.split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase() || '';
+  if (parts.length >= 2) return escHtml((parts[0][0] + parts[parts.length - 1][0]).toUpperCase());
+  return escHtml(name.slice(0, 2).toUpperCase()) || '';
 }
 // ── Wear leaderboard ───────────────────────────────────────────────────────
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
