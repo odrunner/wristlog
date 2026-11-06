@@ -8105,7 +8105,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.19.21';
+const APP_VERSION = '05.19.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8543,6 +8543,7 @@ async function loadMyProfile() {
     return;
   }
   myProfile = data;
+  loadDmUnread();  // dmEnabled() reads myProfile.is_admin — the sign-in sync ran before it existed
   if (isNewUser) maybeImportProviderAvatar();   // new signups only — no import for existing profiles
   // Capture IANA timezone for server-side daily reminders (writes only when it changes).
   try {
@@ -20620,6 +20621,8 @@ function syncDmBtn() {
   const b = document.getElementById('dm-btn');
   if (b) b.classList.toggle('hidden', !dmEnabled());
 }
+// Enablement can arrive after sign-in (experiment('dms') loads with get_experiments).
+document.addEventListener('experiments:loaded', () => { loadDmUnread(); });
 
 function updateDmBadge(n) {
   const el = document.getElementById('dm-badge');
