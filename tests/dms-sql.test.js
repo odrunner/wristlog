@@ -19,6 +19,9 @@ describe('dms tables', () => {
     expect(sql).toMatch(/UNIQUE ?\(user_lo, user_hi\)/);
     expect(sql).toMatch(/CHECK \(char_length\(body\) <= 2000\)/);
   });
+  it('requester must be one of the pair', () => {
+    expect(sql).toMatch(/CONSTRAINT dm_conversations_requester_in_pair CHECK \(requester_id IN \(user_lo, user_hi\)\)/);
+  });
   it('cascades on account and conversation deletion', () => {
     expect((sql.match(/ON DELETE CASCADE/g) || []).length).toBeGreaterThanOrEqual(3);
   });
@@ -53,6 +56,7 @@ describe('dms notifications and privacy setting', () => {
   });
   it('adds profiles.dm_privacy with a three-value CHECK', () => {
     expect(sql).toMatch(/ALTER TABLE public\.profiles ADD COLUMN IF NOT EXISTS dm_privacy text NOT NULL DEFAULT 'everyone'/);
+    expect(sql).toMatch(/GRANT SELECT \(dm_privacy\), UPDATE \(dm_privacy\) ON public\.profiles TO authenticated/);
     expect(sql).toMatch(/CHECK \(dm_privacy IN \('everyone', ?'following', ?'nobody'\)\)/);
   });
 });

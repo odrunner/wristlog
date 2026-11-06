@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.dm_conversations (
   lo_last_read_at timestamptz,
   hi_last_read_at timestamptz,
   CHECK (user_lo < user_hi),
+  CONSTRAINT dm_conversations_requester_in_pair CHECK (requester_id IN (user_lo, user_hi)),
   CHECK (status IN ('pending', 'accepted', 'declined')),
   UNIQUE (user_lo, user_hi)
 );
@@ -91,5 +92,9 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS dm_privacy text NOT NULL DE
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_dm_privacy_check;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_dm_privacy_check
   CHECK (dm_privacy IN ('everyone', 'following', 'nobody'));
+-- profiles has no table-level grants for authenticated (per-column ACLs), so the new column needs its own.
+-- SELECT for everyone (the client hides the Message button from the target's setting); the own-row RLS
+-- UPDATE policy still limits writes to the owner.
+GRANT SELECT (dm_privacy), UPDATE (dm_privacy) ON public.profiles TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
