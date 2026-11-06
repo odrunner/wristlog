@@ -8105,7 +8105,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.19.08';
+const APP_VERSION = '05.19.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20609,7 +20609,12 @@ let _dmPendingSeq = 0;
 const _dmLogCards = new Map();  // shared_log_id -> card HTML (fetched once per session)
 let _dmCardGen = 0;             // bumps on sign-out: a shared-post fetch from A's session is dropped
 
-function dmEnabled() { return !!currentUser && featureFlag('dms'); }
+function dmEnabled() {
+  // Beta gate: personal flag, admin account, or a served 'dms' experiment
+  // treatment (internal accounts are always served control, so the admin
+  // check covers them). Remove with the flag in the enable-for-all release.
+  return !!currentUser && (featureFlag('dms') || experiment('dms') || !!(myProfile && myProfile.is_admin));
+}
 
 function syncDmBtn() {
   const b = document.getElementById('dm-btn');

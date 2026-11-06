@@ -254,7 +254,15 @@ BEGIN
   END IF;
   -- 3. sender is an internal account
   -- DARK LAUNCH: remove in enable-for-all release
-  IF NOT EXISTS (SELECT 1 FROM public.internal_accounts WHERE user_id = v_me) THEN
+  -- Sender must be internal, or hold a live 'dms' beta treatment assignment
+  -- (seeded by sql/2026-11-05-dms-beta.sql; Kill in Admin -> Experiments closes it).
+  IF NOT EXISTS (SELECT 1 FROM public.internal_accounts WHERE user_id = v_me)
+     AND NOT EXISTS (
+       SELECT 1 FROM public.experiment_assignments a
+       JOIN public.experiments e ON e.key = a.experiment_key
+       WHERE a.experiment_key = 'dms' AND a.user_id = v_me
+         AND a.variant = 'treatment' AND e.status IN ('running', 'won')
+     ) THEN
     RAISE EXCEPTION 'dm_not_enabled';
   END IF;
   -- 4. no block in either direction
