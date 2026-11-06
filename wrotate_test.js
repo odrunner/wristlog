@@ -4251,3 +4251,63 @@ export function ratingsDelta(rows, days) {
     span: Math.round((t0 - Date.parse(base.snapshot_date + 'T00:00:00Z')) / 86400000),
   };
 }
+
+// Private-message helpers (DMs, 2026-11-05). Pure: validation, inbox shaping,
+// day grouping, error copy and the profile Message-button gate.
+export function dmValidateBody(body, hasLog) {
+  const b = typeof body === 'string' ? body.trim() : '';
+  if (!b) return hasLog ? { ok: true, body: '' } : { ok: false, error: 'empty' };
+  if (b.length > 2000) return { ok: false, error: 'too_long' };
+  return { ok: true, body: b };
+}
+
+// dm_inbox() jsonb -> UI state. requests_in[].first may be null (the requester
+// deleted their first message), so callers must treat `first` as optional.
+export function dmInboxToState(raw) {
+  const r = raw || {};
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const ts = (c) => Date.parse(c && c.last_message_at) || 0;
+  return {
+    unread: Number(r.unread) || 0,
+    requestsIn: arr(r.requests_in).map((x) => ({ ...x, first: x.first || null })),
+    requestsOut: arr(r.requests_out),
+    conversations: arr(r.conversations).slice().sort((a, b) => ts(b) - ts(a)),
+  };
+}
+
+// Messages (any order) -> ascending day separators + message items.
+export function dmGroupMessages(messages, myId) {
+  const list = (messages || []).filter((m) => m && Number.isFinite(Date.parse(m.created_at)))
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  const out = [];
+  let day = '';
+  for (const m of list) {
+    const d = new Date(m.created_at);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (key !== day) { day = key; out.push({ kind: 'day', date: key }); }
+    out.push({ kind: 'msg', id: m.id, own: m.sender_id === myId, body: m.body || '', sharedLogId: m.shared_log_id || null, senderId: m.sender_id, createdAt: m.created_at });
+  }
+  return out;
+}
+
+// RPC error code -> plain-language text. dm_blocked is deliberately neutral.
+export function dmErrorText(code) {
+  switch (code) {
+    case 'dm_not_allowed': return "They aren't accepting message requests.";
+    case 'dm_rate_limited': return "You're sending too fast. Try again later.";
+    case 'dm_pending': return 'Your request is waiting for a reply.';
+    case 'dm_declined': return 'This request was declined.';
+    case 'dm_bad_body': return 'Message is empty or too long.';
+    case 'dm_self': return "You can't message yourself.";
+    case 'dm_blocked': return "Couldn't send.";
+    default: return "Couldn't send. Try again.";
+  }
+}
+
+// Whether the profile Message button shows. Missing/unknown privacy = everyone.
+export function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
+  const p = targetProfile && targetProfile.dm_privacy;
+  if (p === 'nobody') return false;
+  if (p === 'following') return !!theyFollowMe;
+  return true;
+}
