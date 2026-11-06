@@ -5369,6 +5369,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 
+<div id="dm-send-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="dm-send-title">
+  <div class="modal u-maxw-90">
+    <div class="modal-title" id="dm-send-title">Send to…</div>
+    <div id="dm-send-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeDmSendTo()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
 <div id="photo-paste-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="photo-paste-modal-title">
   <div class="modal u-maxw-80">
@@ -8056,7 +8066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.19';
+const APP_VERSION = '05.18.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8684,6 +8694,8 @@ async function loadAndRenderProfile(userId) {
   if (!el) return;
 
   _profilePostsOffset = 9; // reset lazy-load offset on profile switch
+  // The Message button needs to know about existing conversations/requests.
+  if (userId !== currentUser?.id) await dmEnsureInbox();
   // Use cached result if fresh (30s TTL)
   const cached = _profileCache[userId];
   if (cached && Date.now() - cached.ts < 30000) {
@@ -8699,7 +8711,7 @@ async function loadAndRenderProfile(userId) {
   // email_prefs is only ever rendered on your OWN profile (the notification
   // toggles), but this one query serves both views — so viewing anyone else used
   // to fetch their notification settings too. Ask for it only when it's ours.
-  const PROFILE_COLS = 'id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility';
+  const PROFILE_COLS = 'id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility, dm_privacy';
   const { data: profile, error: profileErr } = await withTimeout(db.from('profiles')
     .select(PROFILE_COLS)
     .eq('id', userId).single());
@@ -8987,7 +8999,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ? `<div class="row u-mt-3">
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
          ${friendIconHtml}
+         ${dmProfileBtnHtml(profile)}
        </div>
+       <div id="dm-profile-compose" class="stack-2 u-mt-2 hidden"></div>
        <div class="u-mt-1-5">
          <button class="btn btn-ghost btn-xs" style="color:var(--danger-text);" data-uid="${escAttr(profile.id)}" data-name="${escAttr(profile.display_name || profile.username || '')}" onclick="blockUser(this.dataset.uid, this.dataset.name)">Block User</button>
        </div>`
@@ -9052,6 +9066,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         onclick="if(demoGuard())return;selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
     const cur = privacy || 'public';
     const curCol = visibility || 'followers';
+    const curDm = ['everyone','following','nobody'].includes(profile.dm_privacy) ? profile.dm_privacy : 'everyone';
     const prvOpen = safeLS.get('prv-collapse') !== '1';
     return `
     <div class="profile-page-card">
@@ -9090,6 +9105,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </div>
         <div class="text-caption u-mt-1">You can also tap each item in your wishlist to set its visibility individually.</div>
       </div>
+      ${dmEnabled() ? `<div class="form-group stack-3">
+        <label class="u-fs-sm">Who can message me</label>
+        <div class="chips" id="prv-dm-chips">
+          ${pChip('prv-dm-chips','everyone','Everyone',curDm,'dm_privacy')}
+          ${pChip('prv-dm-chips','following','People I follow',curDm,'dm_privacy')}
+          ${pChip('prv-dm-chips','nobody','Nobody',curDm,'dm_privacy')}
+        </div>
+        <div class="text-caption u-mt-1">Controls who can start a new conversation with you.</div>
+      </div>` : ''}
       <div class="form-group u-mb-0">
         <label class="u-fs-sm">Default Post Visibility</label>
         <div class="chips" id="pp-default-vis-chips">
@@ -15318,6 +15342,7 @@ function renderFeedCard(item) {
             ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post" aria-label="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                ${dmEnabled() ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="openDmSendTo('${item.id}');closeFeedMenu('${item.id}')">Send to…</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report a comment</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
@@ -15327,6 +15352,7 @@ function renderFeedCard(item) {
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options" aria-label="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                ${dmEnabled() ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="openDmSendTo('${item.id}');closeFeedMenu('${item.id}')">Send to…</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
                 <div class="feed-menu-item text-danger" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="blockUser(this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
@@ -19628,11 +19654,23 @@ function renderReportCard(r) {
       ${contentPreview}
       ${r.status === 'pending' ? `
         <div class="u-gap-1-5 u-mt-2 u-d-flex">
-          <button class="btn btn-primary btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminConfirmRemoval(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Confirm Removal</button>
-          <button class="btn btn-ghost btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminRestoreContent(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Restore</button>
+          ${r.content_type === 'message' ? `<button class="btn btn-ghost btn-xs" data-rid="${escAttr(r.id)}" onclick="adminDismissReport(this.dataset.rid)">Dismiss</button>` : `<button class="btn btn-primary btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminConfirmRemoval(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Confirm Removal</button>
+          <button class="btn btn-ghost btn-xs" data-rid="${escAttr(r.id)}" data-ctype="${escAttr(r.content_type)}" data-cid="${escAttr(r.content_id)}" onclick="adminRestoreContent(this.dataset.rid,this.dataset.ctype,this.dataset.cid)">Restore</button>`}
           <button class="btn btn-ghost btn-xs u-c-danger-text" data-uid="${escAttr(r.reported_user_id)}" data-name="${escAttr(reportedName)}" onclick="adminSuspendUser(this.dataset.uid,this.dataset.name)">Suspend User</button>
         </div>` : ''}
     </div>`;
+}
+
+// Message reports have no moderation_status (admin_set_moderation doesn't handle
+// them): dismissing only closes the report.
+async function adminDismissReport(reportId) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const { error } = await db.from('content_reports').update({ status: 'dismissed' }).eq('id', reportId);
+  if (error) { toast('Could not dismiss: ' + error.message, 'error'); return; }
+  const r = _adminReportsData.find(x => x.id === reportId);
+  if (r) r.status = 'dismissed';
+  renderAdminReports();
+  toast('Report dismissed');
 }
 
 async function adminConfirmRemoval(reportId, contentType, contentId) {
@@ -20516,6 +20554,7 @@ let dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
 // Open thread: { id, status, requesterId, otherId, profile, messages (server rows,
 // ascending), pending (optimistic sends), lastAt (newest server created_at) } or null.
 let _dmThread = null;
+let _dmInboxAt = 0;             // when dmState was last loaded (0 = never this session)
 let _dmThreadSeq = 0;           // bumps on every open/close: a slow load for an old thread is dropped
 let _dmThreadPollId = null;
 let _dmPendingSeq = 0;
@@ -20550,6 +20589,9 @@ async function loadDmUnread() {
 
 function dmClearState() {
   dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
+  _dmInboxAt = 0;
+  _dmSendLogId = null;
+  { const m = document.getElementById('dm-send-modal'); if (m) m.classList.add('hidden'); }
   updateDmBadge(0);
   const b = document.getElementById('dm-btn');
   if (b) b.classList.add('hidden');
@@ -20599,6 +20641,7 @@ async function loadDmInbox() {
   const { data, error } = await db.rpc('dm_inbox');
   if (error) { toast(dmErrorText(error.message), 'error'); return; }
   dmState = dmInboxToState(data);
+  _dmInboxAt = Date.now();
   updateDmBadge(dmState.unread);
   renderDmInbox(dmState);
 }
@@ -21032,6 +21075,146 @@ async function startDmWith(userId, body, logId) {
   if (error) throw new Error(error.message || 'dm_error');
   if (!data || !data.conversation_id) throw new Error('dm_error');
   return data;
+}
+
+// Load the inbox once per session on demand (profile Message button, Send to…)
+// so dmState isn't empty for someone who never opened Messages.
+async function dmEnsureInbox() {
+  if (!dmEnabled() || _dmInboxAt) return;
+  try { await loadDmInbox(); } catch (_) { /* best-effort */ }
+}
+
+// Profile action row: Message / Requested / nothing. The server still enforces
+// (dm_not_allowed, dm_blocked); a hidden button is only a courtesy.
+function dmProfileBtnHtml(profile) {
+  if (!dmEnabled() || !profile || !profile.id || profile.id === currentUser.id) return '';
+  if (blockedUsers.has(profile.id)) return '';
+  const conv = dmState.conversations.find(c => c.profile && c.profile.id === profile.id);
+  if (conv) {
+    return `<button class="btn btn-ghost btn-xs" data-id="${escAttr(conv.id)}" onclick="openDmThread(this.dataset.id)">Message</button>`;
+  }
+  if (dmState.requestsOut.some(r => r.profile && r.profile.id === profile.id)) {
+    return '<button class="btn btn-ghost btn-xs" disabled>Requested</button>';
+  }
+  // dm_privacy 'following' means the TARGET follows ME -> myFollowers.has(target).
+  if (!dmCanMessage(profile, following.has(profile.id), myFollowers.has(profile.id))) return '';
+  return `<button class="btn btn-ghost btn-xs" data-uid="${escAttr(profile.id)}" onclick="dmToggleProfileCompose(this.dataset.uid)">Message</button>`;
+}
+
+function dmToggleProfileCompose(uid) {
+  const el = document.getElementById('dm-profile-compose');
+  if (!el || !uid) return;
+  if (!el.classList.contains('hidden')) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.dataset.uid = uid;
+  el.innerHTML = `<div class="row">
+      <input type="text" id="dm-profile-input" class="grow-clip" aria-label="First message" placeholder="Write a message…" maxlength="2000" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();dmProfileSend();}">
+      <button class="btn btn-primary btn-xs" id="dm-profile-send" onclick="dmProfileSend()">Send</button>
+    </div>
+    <div class="caption">They get a message request and decide whether to reply.</div>`;
+  el.classList.remove('hidden');
+  const inp = document.getElementById('dm-profile-input');
+  if (inp) inp.focus();
+}
+
+let _dmProfileSending = false;
+async function dmProfileSend() {
+  const el = document.getElementById('dm-profile-compose');
+  const input = document.getElementById('dm-profile-input');
+  const uid = el && el.dataset.uid;
+  if (!el || !input || !uid || _dmProfileSending) return;
+  const v = dmValidateBody(input.value, false);
+  if (!v.ok) { if (v.error === 'too_long') toast(dmErrorText('dm_bad_body'), 'error'); return; }
+  _dmProfileSending = true;
+  const btn = document.getElementById('dm-profile-send');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await startDmWith(uid, v.body, null);
+    el.classList.add('hidden'); el.innerHTML = '';
+    await loadDmInbox();
+    if (res.status === 'accepted') { openDmThread(res.conversation_id); }
+    else {
+      toast('Request sent');
+      delete _profileCache[uid];
+      if (profilePageUserId === uid) loadAndRenderProfile(uid);
+    }
+  } catch (e) {
+    toast(dmErrorText(e && e.message), 'error');   // typed text stays in the box
+    if (btn) btn.disabled = false;
+  } finally { _dmProfileSending = false; }
+}
+
+// ── Post "Send to…" picker ──
+let _dmSendLogId = null;
+let _dmSendBusy = false;
+
+// Accepted conversations first, then followed users not already in any
+// conversation or request (so nobody appears twice).
+function dmSendTargets() {
+  const seen = new Set();
+  const convs = [];
+  for (const c of dmState.conversations) {
+    const id = c.profile && c.profile.id;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    convs.push({ userId: id, convId: c.id, profile: c.profile });
+  }
+  for (const r of dmState.requestsIn.concat(dmState.requestsOut)) {
+    if (r.profile && r.profile.id) seen.add(r.profile.id);
+  }
+  const people = [];
+  for (const p of followingProfiles) {
+    if (!p || !p.id || seen.has(p.id) || blockedUsers.has(p.id)) continue;
+    seen.add(p.id);
+    people.push({ userId: p.id, convId: '', profile: p });
+  }
+  return { convs, people };
+}
+
+async function openDmSendTo(logId) {
+  if (!dmEnabled() || !logId) return;
+  _dmSendLogId = logId;
+  const modal = document.getElementById('dm-send-modal');
+  const list = document.getElementById('dm-send-list');
+  if (!modal || !list) return;
+  list.innerHTML = '<div class="empty">Loading…</div>';
+  modal.classList.remove('hidden');
+  await dmEnsureInbox();
+  if (_dmSendLogId !== logId) return;
+  const { convs, people } = dmSendTargets();
+  const row = t => `<div class="notif-item u-cur-pointer" role="button" tabindex="0" data-user="${escAttr(t.userId)}" data-conv="${escAttr(t.convId)}" onclick="dmSendToPick(this)">
+      <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(t.profile)}</div>
+      <div class="grow-clip u-fw-bold">${escHtml(dmWho(t.profile))}</div>
+    </div>`;
+  let html = '';
+  if (convs.length) html += `<div class="eyebrow u-mb-2">Conversations</div>${convs.map(row).join('')}`;
+  if (people.length) html += `<div class="eyebrow u-mb-2">People you follow</div>${people.map(row).join('')}`;
+  list.innerHTML = html || '<div class="empty">Follow someone to send them posts.</div>';
+}
+
+function closeDmSendTo() {
+  _dmSendLogId = null;
+  const modal = document.getElementById('dm-send-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function dmSendToPick(el) {
+  const logId = _dmSendLogId;
+  const userId = el && el.dataset.user;
+  const convId = el && el.dataset.conv;
+  if (!logId || !userId || _dmSendBusy) return;
+  _dmSendBusy = true;
+  try {
+    if (convId) {
+      const r = await sendDmMessage(convId, '', logId);   // toasts its own error
+      if (!r) return;
+    } else {
+      try { await startDmWith(userId, '', logId); }
+      catch (e) { toast(dmErrorText(e && e.message), 'error'); return; }
+    }
+    closeDmSendTo();
+    toast('Sent');
+    loadDmInbox();
+  } finally { _dmSendBusy = false; }
 }
 
 async function deleteDmMessage(messageId) {
