@@ -71,6 +71,25 @@ test('Posts title links to the feed filtered to that member, and Show all posts 
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 });
 
+test('feed card ⋯ menu filters to that member', async ({ page }) => {
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: LOGS });
+  await routeLogsWithUserFilter(page);
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+
+  // The other member's post is in the normal feed; open its ⋯ menu.
+  await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
+  await page.locator('#feedcard-log-other-1 .feed-edit-btn').click();
+  await page.locator('#feed-menu-log-other-1 .feed-menu-item', { hasText: 'Posts by this member' }).click();
+
+  // Feed reloads filtered to that member only (query carried their user_id).
+  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by');
+  await expect(page.locator('#feed-list [id^="feedcard-"]')).toHaveCount(1);
+  await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
+  await expect(page.locator('#feedcard-log-own-1')).toHaveCount(0);
+});
+
 test('leaving the feed for another tab drops the filter', async ({ page }) => {
   await boot(page);
   await page.locator('.profile-posts-link').click();

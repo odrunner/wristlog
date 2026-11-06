@@ -2766,7 +2766,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">Read a Member&#8217;s Posts as a Feed</div>
-        <div class="body-muted">On any profile, tap the <strong>Posts</strong> title above the photo grid to open the feed showing just that member&#8217;s posts &#8212; scroll, like and comment as usual instead of opening grid photos one by one. Tap <strong>Show all posts</strong> at the top to return to your normal feed.</div>
+        <div class="body-muted">On any profile, tap the <strong>Posts</strong> title above the photo grid to open the feed showing just that member&#8217;s posts &#8212; scroll, like and comment as usual instead of opening grid photos one by one. From the feed, the same view is one tap away: open a post&#8217;s &#8943; menu and choose <strong>Posts by this member</strong>. Tap <strong>Show all posts</strong> at the top to return to your normal feed.</div>
       </div>
       <div class="stack-3 hidden" id="wn-dms">
         <div class="item-title">Private Messages</div>
@@ -8126,7 +8126,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.20.31';
+const APP_VERSION = '05.20.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15565,6 +15565,7 @@ function renderFeedCard(item) {
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options" aria-label="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
+                <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-uname="${escAttr(rawName)}" onclick="viewUserFeed(this.dataset.uid,this.dataset.uname);closeFeedMenu(this.dataset.pid)">Posts by this member</div>
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 ${dmEnabled() ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="openDmSendTo('${item.id}');closeFeedMenu('${item.id}')">Send to…</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
