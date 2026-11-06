@@ -743,6 +743,7 @@
 .u-mb-calc-1-px.u-mb-calc-1-px.u-mb-calc-1-px.u-mb-calc-1-px.u-mb-calc-1-px { margin-bottom: calc(-1 * var(--space-px)); }
 .u-mb-px.u-mb-px.u-mb-px.u-mb-px.u-mb-px { margin-bottom: var(--space-px); }
 .u-minh-100vh.u-minh-100vh.u-minh-100vh.u-minh-100vh.u-minh-100vh { min-height: 100vh; }
+.u-minh-50vh.u-minh-50vh.u-minh-50vh.u-minh-50vh.u-minh-50vh { min-height: 50vh; }
 .u-minh-105.u-minh-105.u-minh-105.u-minh-105.u-minh-105 { min-height: var(--size-105); }
 .u-minh-40.u-minh-40.u-minh-40.u-minh-40.u-minh-40 { min-height: var(--size-40); }
 .u-minh-70.u-minh-70.u-minh-70.u-minh-70.u-minh-70 { min-height: var(--size-70); }

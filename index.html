@@ -164,7 +164,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=468e93d2">
+  <link rel="stylesheet" href="/design-system.css?v=c531ae93">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -5432,7 +5432,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="form-group stack-4">
       <input type="text" id="dm-new-search" aria-label="Search people" placeholder="Search by name or username…" oninput="renderDmNewList()" autocomplete="off">
     </div>
-    <div id="dm-new-list"></div>
+    <div id="dm-new-list" class="u-maxh-50vh u-minh-50vh" style="overflow-y:auto;"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeDmNewMessage()">Cancel</button>
     </div>
@@ -8126,7 +8126,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.20.36';
+const APP_VERSION = '05.20.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
