@@ -1629,6 +1629,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .nav-label { display: none; }
       .nav-icon svg { width: var(--size-6); height: var(--size-6); }
       nav button { padding: var(--space-3) var(--space-1) var(--space-2-5); }
+      /* The signed-in right cluster (theme/help/streak/DM/bell/profile) is
+         flex-shrink:0 and six buttons wide — at 320px it pushed the page into
+         horizontal scroll. Recover width from the frame, not the tap targets. */
+      .header-inner { padding: 0 var(--space-2); gap: var(--space-1); }
     }
 
     /* ── PROFILE BUTTON (header) ───────────────── */
@@ -8125,7 +8129,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.01';
+const APP_VERSION = '06.07.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
