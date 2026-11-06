@@ -2761,6 +2761,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Private Messages</div>
+        <div class="body-muted">Send a message request from any member&#8217;s profile. Once they accept &#8212; replying accepts &#8212; you can chat and share posts privately. Choose who can reach you under <strong>Privacy</strong>.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Your Month&#8217;s Pattern</div>
         <div class="body-muted">The month-in-review card can now spot a habit in your wear log and give it a slide of its own: the watch that owned your Saturdays, a comeback after months in the box, a run of days back to back on one watch, or the watch you most often reach for next. One pattern per month, and only when the numbers genuinely back it up &#8212; no slide beats a stretched claim.</div>
       </div>
@@ -4295,6 +4299,41 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Mention someone in a comment or post</div>
               <div class="help-step-desc">Type <strong>@</strong> followed by a username in any comment or post. A dropdown will appear with matching users — tap one to insert the mention. The mentioned user will receive a notification.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MESSAGES ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Messages</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Send a message request</div>
+              <div class="help-step-desc">Tap <strong>Message</strong> on any member&#8217;s profile. If you don&#8217;t follow each other yet, your first message goes out as a request and the other person sees it before deciding whether to accept.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Replying accepts</div>
+              <div class="help-step-desc">When you get a request, read it first. Replying accepts it and opens the conversation; you can also decline it. Share a post into a chat from any post&#8217;s menu with <strong>Send to&#8230;</strong>.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Choose who can message you</div>
+              <div class="help-step-desc">In <strong>Privacy</strong> settings, set <strong>Who can message me</strong> to Everyone, People I follow, or Nobody.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Block or report</div>
+              <div class="help-step-desc">Blocking someone also freezes your conversation with them. To report a message, open the menu in the conversation and choose <strong>Report</strong>.</div>
             </div>
           </div>
         </div>
@@ -8066,7 +8105,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.31';
+const APP_VERSION = '05.18.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
