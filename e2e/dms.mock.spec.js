@@ -22,7 +22,7 @@ async function boot(page, opts = {}) {
   await R('dm_unread_count', r => json(r, opts.unread ?? 0));
   await R('dm_inbox', r => {
     state.inboxCalls++;
-    const v = typeof opts.inbox === 'function' ? opts.inbox(state.inboxCalls) : (opts.inbox || {});
+    const v = typeof opts.inbox === 'function' ? opts.inbox(state.inboxCalls, state) : (opts.inbox || {});
     return json(r, v);
   });
   await R('dm_respond', r => { state.respond.push(JSON.parse(r.request().postData() || '{}')); return json(r, null); });
@@ -61,7 +61,7 @@ test('header badge shows the mocked unread count', async ({ page }) => {
 test('inbox lists a request with its first message; Accept calls dm_respond and moves it to conversations', async ({ page }) => {
   const reqs = [{ id: REQ, created_at: iso(5), first: { body: 'Love your Speedy, is it for sale?', shared_log_id: null, created_at: iso(5) }, profile: PROFILE }];
   const state = await boot(page, {
-    inbox: n => n === 1
+    inbox: (n, st) => st.respond.length === 0
       ? { unread: 0, requests_in: reqs, requests_out: [], conversations: [] }
       : { unread: 0, requests_in: [], requests_out: [], conversations: [{
           id: REQ, last_message_at: iso(5), unread: 0,
@@ -90,6 +90,8 @@ test('thread renders message bodies as text: markup never executes', async ({ pa
   });
   const titleBefore = await page.title();
   await page.locator('#dm-btn').click();
+  await expect(page.locator('#dm-list .notif-item')).toHaveCount(1);
+  await expect(page.locator('#dm-list img')).toHaveCount(0);   // inbox preview is escaped too
   await page.locator('#dm-list .notif-item').click();
   const msgs = page.locator('#dm-thread-msgs');
   await expect(msgs).toContainText('hello there');
@@ -132,7 +134,7 @@ test('composer send shows an optimistic bubble and posts p_conversation / p_body
   await expect(pending).toContainText('Sure, DM me a price');
   await expect(pending).toContainText('Sending');
   await expect(page.locator('#dm-input')).toHaveValue('');
-  expect(state.send).toEqual([{ p_conversation: CONV, p_body: 'Sure, DM me a price', p_log_id: null }]);
+  await expect.poll(() => state.send).toEqual([{ p_conversation: CONV, p_body: 'Sure, DM me a price', p_log_id: null }]);
 
   // Server answers with the real row; the pending bubble is replaced, not duplicated.
   state.messages.push(msg('m-new', 'Sure, DM me a price', 0, { sender_id: ME }));
