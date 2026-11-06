@@ -69,7 +69,10 @@ CREATE POLICY dm_messages_delete_sender ON public.dm_messages
   FOR DELETE TO authenticated
   USING (sender_id = (SELECT auth.uid()));
 
--- ── 5. Grants (Supabase no longer auto-grants new tables) ────────────────────────
+-- ── 5. Grants ────────────────────────────────────────────────────────────────────
+-- This project's default privileges still hand ALL (incl. INSERT/UPDATE/TRUNCATE) to anon and
+-- authenticated on new tables, so revoke first and then grant only what the client uses.
+REVOKE ALL ON public.dm_conversations, public.dm_messages FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.dm_conversations TO authenticated;
 GRANT SELECT ON public.dm_messages TO authenticated;
 GRANT DELETE ON public.dm_messages TO authenticated;
@@ -123,7 +126,8 @@ CREATE TABLE IF NOT EXISTS public.dm_send_ledger (
 COMMENT ON TABLE public.dm_send_ledger IS 'DM send counts for rate limiting; definer RPCs only, rows older than a day pruned on send';
 CREATE INDEX IF NOT EXISTS idx_dm_send_ledger_sender_created ON public.dm_send_ledger (sender_id, created_at DESC);
 ALTER TABLE public.dm_send_ledger ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.dm_send_ledger FROM PUBLIC, anon, authenticated;
+-- No edge function reads it, so service_role gets nothing either: only the owner (postgres).
+REVOKE ALL ON public.dm_send_ledger FROM PUBLIC, anon, authenticated, service_role;
 -- Superseded by the ledger (was created by the first deploy of this file).
 DROP INDEX IF EXISTS public.idx_dm_messages_sender_created;
 

@@ -42,6 +42,11 @@ describe('dms policies and grants', () => {
     expect(sql).toMatch(/CREATE POLICY [^;]*ON public\.dm_messages[^;]*FOR DELETE[^;]*sender_id/);
     expect(sql).not.toMatch(/CREATE POLICY [^;]*ON public\.dm_(conversations|messages)[^;]*FOR (INSERT|UPDATE|ALL)/);
   });
+  it('revokes the default ALL grants before granting narrowly', () => {
+    const revoke = sql.indexOf('REVOKE ALL ON public.dm_conversations, public.dm_messages FROM PUBLIC, anon, authenticated;');
+    expect(revoke).toBeGreaterThan(-1);
+    expect(revoke).toBeLessThan(sql.indexOf('GRANT SELECT ON public.dm_conversations TO authenticated'));
+  });
   it('grants SELECT on both and DELETE on messages to authenticated only', () => {
     expect(sql).toMatch(/GRANT SELECT ON public\.dm_conversations TO authenticated/);
     expect(sql).toMatch(/GRANT SELECT ON public\.dm_messages TO authenticated/);
@@ -140,7 +145,7 @@ describe('dms RPCs: safety rules', () => {
     expect(body).not.toMatch(/dm_messages|notifications/);
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.dm_send_ledger/);
     expect(sql).toMatch(/ALTER TABLE public\.dm_send_ledger ENABLE ROW LEVEL SECURITY/);
-    expect(sql).toMatch(/REVOKE ALL ON public\.dm_send_ledger FROM PUBLIC, anon, authenticated/);
+    expect(sql).toMatch(/REVOKE ALL ON public\.dm_send_ledger FROM PUBLIC, anon, authenticated, service_role;/);
     expect(sql).not.toMatch(/CREATE POLICY [^;]*ON public\.dm_send_ledger/);
     expect(sql).not.toMatch(/GRANT [^;]*ON public\.dm_send_ledger/);
     const append = fn('dm_append');
