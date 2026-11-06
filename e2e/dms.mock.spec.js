@@ -222,3 +222,27 @@ test('profile Message button opens the existing thread instead of an inline comp
   await expect(page.locator('#dm-thread-msgs')).toContainText('hello there');
   await expect(page.locator('#dm-thread-head')).toContainText('Omega Fan');
 });
+
+test('opening Messages gets the same page-switch hygiene as nav(): top of page, aria-current, focused heading', async ({ page }) => {
+  await boot(page, { inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [] } });
+  // Deep in the feed, then tap the envelope.
+  await page.evaluate(() => { document.body.style.minHeight = '3000px'; window.scrollTo(0, 800); });
+  await page.evaluate(() => openMessagesPage());
+  await expect(page.locator('#page-messages')).toHaveClass(/active/);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  // The old tab must not keep aria-current="page" — Messages has no tab of its own.
+  expect(await page.evaluate(() => document.querySelectorAll('nav button[aria-current]').length)).toBe(0);
+  // A6: screen readers announce the page change via the focused heading.
+  expect(await page.evaluate(() => document.activeElement && document.activeElement.textContent)).toBe('Messages');
+});
+
+test('a message request names a tappable sender — profile opens before judging it', async ({ page }) => {
+  await boot(page, { inbox: { unread: 0, requests_out: [], conversations: [],
+    requests_in: [{ id: REQ, created_at: iso(5), profile: PROFILE, first: { body: 'hi', shared_log_id: null } }] } });
+  await page.evaluate(() => { window._vupCalls = []; window.viewUserProfile = id => window._vupCalls.push(id); });
+  await page.evaluate(() => openMessagesPage());
+  const who = page.locator('#dm-requests [role="button"][data-user]', { hasText: 'Omega Fan' });
+  await expect(who).toBeVisible();
+  await who.click();
+  expect(await page.evaluate(() => window._vupCalls)).toEqual(['u-other-001']);
+});
