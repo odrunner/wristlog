@@ -3240,6 +3240,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="theme-btn" class="theme-btn" aria-label="Toggle theme" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
+      <button class="bell-btn hidden" id="dm-btn" onclick="openMessagesPage()" title="Messages" aria-label="Messages">
+        <span aria-hidden="true">&#9993;&#xFE0E;</span><span class="bell-badge hidden" id="dm-badge">0</span>
+      </button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
@@ -3410,6 +3413,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
     <div id="explore-empty" class="empty" style="display:none;">No models found. The database grows as members add watches to their collections.</div>
+  </div>
+
+  <div id="page-messages" class="page">
+    <div class="stack-4">
+      <button class="btn btn-md btn-ghost" onclick="goHome()">← Back</button>
+    </div>
+    <div class="row-between u-mb-3-5">
+      <h1 class="u-fs-xl u-fw-bold">Messages</h1>
+    </div>
+    <div id="dm-requests"></div>
+    <div id="dm-list"></div>
+    <div id="dm-empty" class="empty hidden">No messages yet. Open a member's profile and tap Message to start a conversation.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -6284,6 +6299,7 @@ const FEATURE_FLAGS = {
   tg_dev_knobs: { label: 'Timegrapher: raw engine knob panel (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  dms: { label: 'Private messages (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = safeLS.get('ff_' + name);
@@ -8030,7 +8046,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.17.54';
+const APP_VERSION = '05.17.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10871,9 +10887,11 @@ function openCloseFriendsModal() {
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
   if (!currentUser) return;
+  loadDmUnread();  // rides the same 30s poll (and every bootstrap/resume call site)
   const { data, error } = await withTimeout(db.from('notifications')
     .select('id, type, actor_id, ref_id, is_read, created_at')
     .eq('user_id', currentUser.id)
+    .not('type', 'in', '("message","message_request")')  // DMs live under the envelope, not the bell
     .order('created_at', { ascending: false }).limit(30));
   if (error) {
     // Auth expired or revoked — stop polling to avoid endless 401s
@@ -20480,6 +20498,138 @@ function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
   if (p === 'nobody') return false;
   if (p === 'following') return !!theyFollowMe;
   return true;
+}
+
+// ── Private messages: inbox, requests, badge (flag 'dms') ───────────────
+let dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
+
+function dmEnabled() { return !!currentUser && featureFlag('dms'); }
+
+function syncDmBtn() {
+  const b = document.getElementById('dm-btn');
+  if (b) b.classList.toggle('hidden', !dmEnabled());
+}
+
+function updateDmBadge(n) {
+  const el = document.getElementById('dm-badge');
+  if (!el) return;
+  const c = Number(n) || 0;
+  el.textContent = c > 99 ? '99+' : String(c);
+  el.classList.toggle('hidden', c <= 0 || !dmEnabled());
+}
+
+async function loadDmUnread() {
+  syncDmBtn();
+  if (!dmEnabled()) return;
+  try {
+    const { data, error } = await db.rpc('dm_unread_count');
+    if (error) return;
+    dmState.unread = Number(data) || 0;
+    updateDmBadge(dmState.unread);
+  } catch (_) { /* badge is best-effort */ }
+}
+
+function dmClearState() {
+  dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
+  updateDmBadge(0);
+  const b = document.getElementById('dm-btn');
+  if (b) b.classList.add('hidden');
+}
+
+function openMessagesPage() {
+  if (demoGuard()) return;
+  if (!dmEnabled()) return;
+  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
+  if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-messages').classList.add('active');
+  loadDmInbox();
+}
+
+async function loadDmInbox() {
+  if (!dmEnabled()) return;
+  const { data, error } = await db.rpc('dm_inbox');
+  if (error) { toast(dmErrorText(error.message), 'error'); return; }
+  dmState = dmInboxToState(data);
+  updateDmBadge(dmState.unread);
+  renderDmInbox(dmState);
+}
+
+function dmWho(p) {
+  return (p && (p.display_name || p.username)) || 'Member';
+}
+
+function dmPreview(last, myId) {
+  if (!last) return '';
+  const text = last.body ? last.body : (last.shared_log_id ? 'Shared a post' : '');
+  return (last.sender_id === myId ? 'You: ' : '') + text;
+}
+
+function renderDmInbox(state) {
+  const reqEl = document.getElementById('dm-requests');
+  const listEl = document.getElementById('dm-list');
+  const emptyEl = document.getElementById('dm-empty');
+  if (!reqEl || !listEl || !emptyEl) return;
+  const st = state || dmState;
+  const myId = currentUser && currentUser.id;
+
+  const incoming = st.requestsIn.map(r => {
+    const who = dmWho(r.profile);
+    const body = r.first
+      ? (r.first.body ? escHtml(r.first.body) : (r.first.shared_log_id ? 'Shared a post' : '(message deleted)'))
+      : '(message deleted)';
+    return `<div class="panel stack-2 u-mb-2">
+      <div class="row-between">
+        <span class="u-fw-bold">${escHtml(who)}</span>
+        <span class="text-meta">${escHtml(_shortAgo(Date.parse(r.created_at)))}</span>
+      </div>
+      <div class="text-meta">${body}</div>
+      <div class="row-between">
+        <button class="btn btn-sm btn-primary" data-id="${escAttr(r.id)}" onclick="respondDmRequest(this.dataset.id, true)">Accept</button>
+        <button class="btn btn-sm btn-ghost" data-id="${escAttr(r.id)}" onclick="respondDmRequest(this.dataset.id, false)">Decline</button>
+        <button class="btn btn-sm btn-ghost" data-user="${escAttr((r.profile && r.profile.id) || '')}" data-name="${escAttr(who)}" onclick="blockDmRequester(this.dataset.user, this.dataset.name)">Block</button>
+      </div>
+    </div>`;
+  });
+  const outgoing = st.requestsOut.map(r => `<div class="panel row-between u-mb-2">
+      <span class="u-fw-bold">${escHtml(dmWho(r.profile))}</span>
+      <span class="text-meta">Request sent</span>
+    </div>`);
+  reqEl.innerHTML = (incoming.length || outgoing.length)
+    ? `<div class="eyebrow u-mb-2">Requests</div>${incoming.join('')}${outgoing.join('')}`
+    : '';
+
+  listEl.innerHTML = st.conversations.map(c => {
+    const unread = Number(c.unread) > 0;
+    return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" data-id="${escAttr(c.id)}" onclick="if (typeof openDmThread === 'function') openDmThread(this.dataset.id)">
+      <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${escHtml(profileInitials(c.profile))}</div>
+      <div class="grow-clip">
+        <div class="row-between">
+          <span class="u-fw-bold">${escHtml(dmWho(c.profile))}</span>
+          <span class="text-meta">${unread ? '<span class="text-gold">&#9679;</span> ' : ''}${escHtml(_shortAgo(Date.parse(c.last_message_at)))}</span>
+        </div>
+        <div class="text-meta">${escHtml(dmPreview(c.last, myId))}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  emptyEl.classList.toggle('hidden', !!(incoming.length || outgoing.length || st.conversations.length));
+}
+
+async function respondDmRequest(convId, accept) {
+  if (demoGuard()) return;
+  if (!convId) return;
+  const { error } = await db.rpc('dm_respond', { p_conversation: convId, p_accept: !!accept });
+  if (error) { toast(dmErrorText(error.message), 'error'); return; }
+  await loadDmInbox();
+  if (accept && typeof openDmThread === 'function') openDmThread(convId);  // Task 6 removes this guard
+}
+
+async function blockDmRequester(userId, name) {
+  if (!userId) return;
+  await blockUser(userId, name);
+  loadDmInbox();
 }
 
 // App Store ratings — snapshotted daily at 9:15 by cost-report.py into
@@ -31571,6 +31721,11 @@ function openPushRoute(route, id) {
     if (id && sel && [...sel.options].some(o => o.value === id)) { sel.value = id; onMsrWatchChange(); }
     return;
   }
+  if (route === 'messages') {
+    openMessagesPage();
+    if (id && typeof openDmThread === 'function') openDmThread(id);  // Task 6 removes this guard
+    return;
+  }
   if (typeof openNotifPanel === 'function') openNotifPanel();
 }
 
@@ -32252,6 +32407,7 @@ function clearUserState() {
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+  dmClearState();
   clearTimeout(_syncRetryTimer); _syncRetryTimer = undefined;
   document.getElementById('reminder-banner')?.classList.add('hidden');
 }
@@ -35640,6 +35796,7 @@ async function bootApp(user) {
   if (helpBtn) helpBtn.style.display = '';
   const bellBtn = document.getElementById('bell-btn');
   if (bellBtn) bellBtn.style.display = '';
+  syncDmBtn();
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
@@ -35806,6 +35963,7 @@ function _onSignedOut() {
     if (helpBtn2) helpBtn2.style.display = 'none';
     const bellBtn2 = document.getElementById('bell-btn');
     if (bellBtn2) bellBtn2.style.display = 'none';
+    dmClearState();
     const adminNavBtn2 = document.getElementById('admin-nav-btn');
     if (adminNavBtn2) adminNavBtn2.style.display = 'none';
     const notifPanel = document.getElementById('notif-panel');
