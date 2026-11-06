@@ -19,7 +19,7 @@ export const TYPE_TO_CATEGORY: Record<string, string> = {
   follow_request: "friends",
   // "message" is deliberately absent: DMs are push-only. Only a first-contact
   // request is worth an email.
-  message_request: "social",
+  message_request: "friends",
 };
 
 // Default preferences (matches DB default)
@@ -28,7 +28,6 @@ export const DEFAULT_PREFS: Record<string, boolean> = {
   mentions: true,
   clubs: false,
   friends: true,
-  social: true,
 };
 
 // Merge a user's stored prefs over the defaults. `email_prefs || DEFAULT_PREFS`

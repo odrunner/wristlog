@@ -43,7 +43,7 @@ Deno.test("TYPE_TO_CATEGORY — maps known types and omits hearts", () => {
 });
 
 Deno.test("DEFAULT_PREFS — matches DB defaults (clubs off)", () => {
-  assertEquals(DEFAULT_PREFS, { comments: true, mentions: true, clubs: false, friends: true, social: true });
+  assertEquals(DEFAULT_PREFS, { comments: true, mentions: true, clubs: false, friends: true });
 });
 
 Deno.test("isValidRecord — requires user_id and type", () => {
@@ -228,10 +228,9 @@ Deno.test("buildHtmlEmail — without unsubUrl uses the fallback footer text", (
   assertEquals(html.includes(">Unsubscribe<"), false);
 });
 
-Deno.test("TYPE_TO_CATEGORY — message_request is social; message is push-only", () => {
-  assertEquals(TYPE_TO_CATEGORY["message_request"], "social");
+Deno.test("TYPE_TO_CATEGORY — message_request is friends; message is push-only", () => {
+  assertEquals(TYPE_TO_CATEGORY["message_request"], "friends");
   assertEquals(TYPE_TO_CATEGORY["message"], undefined);
-  assertEquals(effectivePrefs(null)["social"], true);
 });
 
 Deno.test("buildEmailContent — message_request frames a request, message has no email", () => {
