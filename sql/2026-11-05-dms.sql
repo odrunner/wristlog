@@ -342,10 +342,6 @@ BEGIN
     RAISE EXCEPTION 'dm_not_participant';
   END IF;
   v_other := CASE WHEN c.user_lo = v_me THEN c.user_hi ELSE c.user_lo END;
-  v_body := public.dm_clean_body(p_body, v_log);
-  IF v_log IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.logs WHERE id = v_log) THEN
-    RAISE EXCEPTION 'dm_bad_log';
-  END IF;
   -- 'accepted' only, except the target replying to a pending request (replying = accepting).
   IF c.status = 'pending' AND c.requester_id = v_me THEN
     RAISE EXCEPTION 'dm_pending';
@@ -357,6 +353,12 @@ BEGIN
   END IF;
   IF public.dm_is_blocked(v_me, v_other) THEN
     RAISE EXCEPTION 'dm_blocked';
+  END IF;
+  -- Input validation after every state check (as in dm_start): run first, dm_bad_log vs
+  -- dm_pending/dm_blocked would be a log-id existence oracle.
+  v_body := public.dm_clean_body(p_body, v_log);
+  IF v_log IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.logs WHERE id = v_log) THEN
+    RAISE EXCEPTION 'dm_bad_log';
   END IF;
   IF NOT public.dm_rate_ok(v_me) THEN
     RAISE EXCEPTION 'dm_rate_limited';

@@ -173,6 +173,12 @@ describe('dms RPCs: safety rules', () => {
     expect(v).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
     expect(body.indexOf('FROM public.logs')).toBeGreaterThan(body.indexOf("v_privacy = 'nobody'"));
   });
+  it('dm_send validates body/log only after the state checks (no log-id oracle)', () => {
+    const body = fn('dm_send');
+    const v = body.indexOf('dm_clean_body(');
+    for (const m of ["'dm_pending'", "'dm_declined'", "'dm_suspended'", "'dm_blocked'"]) expect(v).toBeGreaterThan(body.indexOf(m));
+    expect(body.indexOf('FROM public.logs')).toBeGreaterThan(body.indexOf("'dm_blocked'"));
+  });
   it('requester cannot act while pending; replying flips pending to accepted', () => {
     const body = fn('dm_send');
     expect(body).toMatch(/c\.status = 'pending' AND c\.requester_id = v_me THEN\s+RAISE EXCEPTION 'dm_pending'/);

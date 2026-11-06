@@ -8105,7 +8105,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.18.39';
+const APP_VERSION = '05.19.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8727,14 +8727,21 @@ function goBackFromProfile() {
   }
 }
 
+let _profileLoadingId = null; // the profile most recently asked for (stale-guard for the async DM refresh)
 const _profileCache = {}; // { [userId]: { args, ts } }
 async function loadAndRenderProfile(userId) {
   const el = document.getElementById('profile-page-content');
   if (!el) return;
 
   _profilePostsOffset = 9; // reset lazy-load offset on profile switch
+  _profileLoadingId = userId;
   // The Message button needs to know about existing conversations/requests.
-  if (userId !== currentUser?.id) await dmEnsureInbox();
+  if (userId !== currentUser?.id && dmEnabled() && !_dmInboxAt) {
+    // Non-blocking: render now, refresh the Message button once the inbox lands.
+    dmEnsureInbox().then(() => {
+      if (_dmInboxAt && _profileLoadingId === userId && el.isConnected) loadAndRenderProfile(userId);
+    });
+  }
   // Use cached result if fresh (30s TTL)
   const cached = _profileCache[userId];
   if (cached && Date.now() - cached.ts < 30000) {
@@ -11035,7 +11042,7 @@ function updateBellBadge() {
   }
   // Sync badge count to iOS native app
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.auth) {
-    try { window.webkit.messageHandlers.auth.postMessage({ event: 'BADGE_UPDATE', count: unreadNotifCount }); } catch(e) {}
+    try { window.webkit.messageHandlers.auth.postMessage({ event: 'BADGE_UPDATE', count: unreadNotifCount + ((typeof dmState !== 'undefined' && dmState && dmState.unread) || 0) }); } catch(e) {}
   }
 }
 const _followInFlight = new Set();
@@ -20625,6 +20632,7 @@ async function loadDmUnread() {
     if (error) return;
     dmState.unread = Number(data) || 0;
     updateDmBadge(dmState.unread);
+    updateBellBadge();
   } catch (_) { /* badge is best-effort */ }
 }
 
@@ -20680,7 +20688,7 @@ function openMessagesPage() {
 async function loadDmInbox() {
   if (!dmEnabled()) return;
   const { data, error } = await db.rpc('dm_inbox');
-  if (error) { toast(dmErrorText(error.message), 'error'); return; }
+  if (error) { toast("Couldn't load messages. Try again.", 'error'); return; }
   dmState = dmInboxToState(data);
   _dmInboxAt = Date.now();
   updateDmBadge(dmState.unread);
