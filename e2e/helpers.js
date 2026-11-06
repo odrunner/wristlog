@@ -365,10 +365,16 @@ export async function waitForAppBoot(page) {
 }
 
 /**
- * Navigate to an in-app page by clicking its nav button.
+ * Navigate to an in-app page by clicking its nav button. The wishlist left the
+ * main nav 2026-11-06: it's reached through the Collection tab's segmented toggle.
  */
 export async function navigateTo(page, pageName) {
-  await page.click(`nav button[data-page="${pageName}"]`);
+  if (pageName === 'wishlist') {
+    await page.click('nav button[data-page="collection"]');
+    await page.click('#page-collection .coll-seg button[data-seg="wishlist"]');
+  } else {
+    await page.click(`nav button[data-page="${pageName}"]`);
+  }
   await page.waitForSelector(`#page-${pageName}`, { state: 'visible', timeout: 5_000 });
 }
 

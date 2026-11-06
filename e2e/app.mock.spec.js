@@ -935,12 +935,11 @@ test.describe('Clubs page (mocked)', () => {
     await expect(page.locator('#page-feed button', { hasText: /clubs/i })).toBeHidden();
   });
 
-  // Launched the same day: Watches (the model database) replaces Clubs as the
-  // visible feed-header destination, marked Beta.
-  test('the feed Watches button is visible, no Beta tag, and opens Explore', async ({ page }) => {
-    const btn = page.locator('#feed-watches-btn');
+  // Watches (the model database) moved from the feed header into the main nav
+  // 2026-11-06, taking the slot Wishlist vacated.
+  test('the Watches nav tab opens Explore', async ({ page }) => {
+    const btn = page.locator('nav button[data-page="explore"]');
     await expect(btn).toBeVisible();
-    await expect(btn.locator('.tag-beta')).toHaveCount(0);
     await btn.click();
     await expect(page.locator('#page-explore')).toBeVisible();
   });

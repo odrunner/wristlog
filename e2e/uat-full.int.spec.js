@@ -288,14 +288,16 @@ test.describe('7. Stats', () => {
 test.describe('8. Wishlist', () => {
   test('wishlist page loads', async ({ page }) => {
     await devLogin(page);
-    await page.click('nav button[data-page="wishlist"]');
+    await page.click('nav button[data-page="collection"]');
+    await page.click('#page-collection .coll-seg button[data-seg="wishlist"]');
     await page.waitForSelector('#page-wishlist', { state: 'visible' });
     await expect(page.locator('#page-wishlist')).toBeVisible();
   });
 
   test('add wishlist modal opens', async ({ page }) => {
     await devLogin(page);
-    await page.click('nav button[data-page="wishlist"]');
+    await page.click('nav button[data-page="collection"]');
+    await page.click('#page-collection .coll-seg button[data-seg="wishlist"]');
     await page.waitForSelector('#page-wishlist', { state: 'visible' });
 
     const addBtn = page.locator('[onclick*="openWishlistModal"], button:has-text("+ Add")').first();

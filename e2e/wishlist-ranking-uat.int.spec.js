@@ -18,7 +18,8 @@ async function devLogin(page) {
 test('wishlist ranking game: play, save, reorder persists', async ({ page }) => {
   test.setTimeout(120_000);
   await devLogin(page);
-  await page.click('nav button[data-page="wishlist"]');
+  await page.click('nav button[data-page="collection"]');
+  await page.click('#page-collection .coll-seg button[data-seg="wishlist"]');
   await page.waitForFunction(() => typeof wishlist !== "undefined" && wishlist.length >= 2, null, { timeout: 15_000 });
   const before = await page.evaluate(() => wishlist.map(w => ({ id: w.id, name: w.name, elo: w.elo })));
   console.log('before', JSON.stringify(before));

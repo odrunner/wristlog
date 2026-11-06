@@ -2769,6 +2769,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Watches in the Main Menu</div>
+        <div class="body-muted">The watch database now has its own <strong>Watches</strong> tab in the main menu. Your <strong>Wishlist</strong> moved in with your collection: open the <strong>Collection</strong> tab and switch between Collection and Wishlist at the top. Everything on it &#8212; views, ranking, AI picks, share links &#8212; works exactly as before.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Filter the Feed to One Member&#8217;s Posts</div>
         <div class="body-muted">See everything one member has posted: tap the <strong>Posts</strong> title on their profile, or open any post&#8217;s &#8943; menu in the feed and choose <strong>Posts by this member</strong>. The feed shows only their posts &#8212; scroll, like and comment as usual. Tap <strong>Show all posts</strong> at the top to go back to the full feed.</div>
       </div>
@@ -3246,7 +3250,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button               data-page="track" aria-label="Track"       onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
       <button               data-page="collection" aria-label="Collection"  onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
       <button id="nav-measure-btn" data-page="measure" aria-label="Measure" onclick="nav(this)" style="display:none;"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
-      <button               data-page="wishlist" aria-label="Wishlist"    onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
+      <button               data-page="explore" aria-label="Watches"    onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg></span><span class="nav-label">Watches</span></button>
       <button               data-page="stats" aria-label="Stats"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
     </nav>
     <div class="header-data">
@@ -3346,6 +3350,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3" role="tablist" aria-label="Collection or Wishlist">
+      <button class="chip selected" role="tab" aria-selected="true" data-seg="collection" onclick="collSeg('collection')">Collection</button>
+      <button class="chip" role="tab" aria-selected="false" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+    </div>
     <div class="page-header">
       <div class="row">
         <h1 class="page-title">My Collection</h1>
@@ -3383,7 +3391,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="u-gap-2 u-ml-auto u-d-flex">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
         <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
              feature is intact (open_clubs deep links still work) — drop the `hidden`
              class to bring it back. -->
@@ -3414,11 +3421,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-explore" class="page">
-    <div class="stack-4">
-      <button class="btn btn-md btn-ghost" onclick="goHome()">← Back</button>
-    </div>
-    <div class="row-between u-mb-3-5">
-      <h1 class="u-fs-xl u-fw-bold">Watches</h1>
+    <div class="page-header">
+      <h1 class="page-title">Watches</h1>
     </div>
     <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
@@ -4119,6 +4123,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="help-section">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Wishlist</div>
         <div class="help-card">
+          <div class="help-tip">Your wishlist lives on the <strong>Collection</strong> tab &#8212; tap <strong>Wishlist</strong> at the top to switch to it.</div>
           <div class="help-step">
             <div class="help-step-num">1</div>
             <div class="help-step-body">
@@ -4158,14 +4163,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Get AI picks from your wishlist</div>
-              <div class="help-step-desc">Tap <strong>AI Picks</strong> at the top of the Wishlist tab: up to three watches ranked against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list; tap the button again to hide them. Needs at least two wishlist watches; the picks also appear in the Collection&#8217;s What-if simulator, where <strong>+ Add</strong> drops one straight into your scenario.</div>
+              <div class="help-step-desc">Tap <strong>AI Picks</strong> at the top of your Wishlist: up to three watches ranked against what you own and actually wear &#8212; style and size gaps, wear habits, and price all count, each with a one-line reason. Tap a pick to spot it in your list; tap the button again to hide them. Needs at least two wishlist watches; the picks also appear in the Collection&#8217;s What-if simulator, where <strong>+ Add</strong> drops one straight into your scenario.</div>
             </div>
           </div>
           <div class="help-step">
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">Send part of your wishlist to a dealer</div>
-              <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. Add a note first if you want &#8212; who it&#8217;s for, sizes, budget, anything &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never your price, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how many times it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
+              <div class="help-step-desc">On your Wishlist, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. Add a note first if you want &#8212; who it&#8217;s for, sizes, budget, anything &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never your price, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how many times it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
             </div>
           </div>
         </div>
@@ -4252,7 +4257,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Browse the watch database</div>
-              <div class="help-step-desc">Tap <strong>Watches</strong> at the top of the Feed to explore watch models. Search by name or reference &#8212; Submariner, Speedmaster, SKX &#8212; or filter by brand.</div>
+              <div class="help-step-desc">Open the <strong>Watches</strong> tab in the main menu to explore watch models. Search by name or reference &#8212; Submariner, Speedmaster, SKX &#8212; or filter by brand.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4937,6 +4942,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ WISHLIST PAGE ════ -->
   <div id="page-wishlist" class="page">
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3" role="tablist" aria-label="Collection or Wishlist">
+      <button class="chip" role="tab" aria-selected="false" data-seg="collection" onclick="collSeg('collection')">Collection</button>
+      <button class="chip selected" role="tab" aria-selected="true" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+    </div>
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
       <span id="wl-count" class="text-meta"></span>
@@ -8129,7 +8138,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.49';
+const APP_VERSION = '06.15.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9338,7 +9347,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       wishlistHtml = `
         <div class="profile-page-card">
           <div class="profile-page-section-title">Wishlist</div>
-          <div class="note">Your wishlist is empty — add watches in the Wishlist tab.</div>
+          <div class="note">Your wishlist is empty — add watches under Collection → Wishlist.</div>
         </div>`;
     } else {
       const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
@@ -13743,7 +13752,7 @@ function promoSlotPositions({ slots, postCount, config, placedCount, rememberedP
 // CTA actions. A key here, never raw JS from the database — an admin-entered
 // string can only ever select one of these, or a validated https URL.
 const PROMO_ACTIONS = {
-  open_wishlist:      () => nav(document.querySelector('nav button[data-page="wishlist"]')),
+  open_wishlist:      () => collSeg('wishlist'),
   open_collection:    () => nav(document.querySelector('nav button[data-page="collection"]')),
   open_track:         () => nav(document.querySelector('nav button[data-page="track"]')),
   open_stats:         () => nav(document.querySelector('nav button[data-page="stats"]')),
@@ -22198,10 +22207,19 @@ function nav(btn) {
     if (!_navHeading.hasAttribute('tabindex')) _navHeading.setAttribute('tabindex', '-1');
     _navHeading.focus({ preventScroll: true });
   }
-  if (page === 'collection') renderCollection();
+  if (page === 'collection') { _collSegSync('collection'); renderCollection(); }
   if (page === 'track')    { _trackHistoryLimit = 50; renderTrack(); }
   if (page === 'wishlist') renderWishlist();
   if (page === 'stats')  renderStats();
+  if (page === 'explore' && !_exploreLoaded) {
+    _exploreLoaded = true;
+    loadExploreBrands();
+    loadExploreModels(true);
+    if (window.posthog) posthog.capture('explore_viewed');
+    // First-party copy for Admin → Traffic (PostHog is unreadable from the
+    // dashboard): internal accounts are excluded by admin_feature_event_stats.
+    if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'explore_viewed' }).then(() => {});
+  }
   if (page === 'feed')     {
     // If feed is still showing skeleton (stuck load), force a fresh attempt
     const fl = document.getElementById('feed-list');
@@ -22247,20 +22265,38 @@ const EXPLORE_PAGE_SIZE = 30;
 
 function showExplorePage() {
   if (demoGuard()) return;
+  nav(document.querySelector('nav button[data-page="explore"]'));
+}
+
+// ── Collection ⇄ Wishlist segmented toggle (Wishlist left the main nav 2026-11-06;
+// its slot went to Watches). Wishlist keeps its own .page — the toggle swaps pages
+// while the Collection nav button stays lit, so nav() can't be reused for it. ──
+function collSeg(page) {
+  if (page === 'collection') { nav(document.querySelector('nav button[data-page="collection"]')); return; }
+  _openBootGate();
+  if (feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-explore').classList.add('active');
-  if (!_exploreLoaded) {
-    _exploreLoaded = true;
-    loadExploreBrands();
-    loadExploreModels(true);
-    if (window.posthog) posthog.capture('explore_viewed');
-    // First-party copy for Admin → Traffic (PostHog is unreadable from the
-    // dashboard): internal accounts are excluded by admin_feature_event_stats.
-    if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'explore_viewed' }).then(() => {});
-  }
+  document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+  document.getElementById('page-wishlist').classList.add('active');
+  const navBtn = document.querySelector('nav button[data-page="collection"]');
+  if (navBtn) { navBtn.classList.add('active'); navBtn.setAttribute('aria-current', 'page'); }
+  window.scrollTo(0, 0);
+  const h = document.querySelector('#page-wishlist .page-title');
+  if (h) { if (!h.hasAttribute('tabindex')) h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  _collSegSync('wishlist');
+  renderWishlist();
+  updateStreakChip();
+  updateHeaderPostBtn();
+}
+
+function _collSegSync(page) {
+  document.querySelectorAll('.coll-seg button').forEach(b => {
+    const on = b.dataset.seg === page;
+    b.classList.toggle('selected', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
 }
 
 async function loadExploreBrands() {
@@ -26720,6 +26756,8 @@ function goBackFromModel() {
     viewUserProfile(profilePageUserId);
   } else if (prev === 'page-explore') {
     showExplorePage();
+  } else if (prev === 'page-wishlist') {
+    collSeg('wishlist');
   } else {
     const btn = document.querySelector(`nav button[data-page="${prev.replace('page-', '')}"]`);
     if (btn) nav(btn); else goHome();
@@ -29925,7 +29963,7 @@ function sharedImgChoose(action) {
     nav(document.querySelector('nav button[data-page="collection"]'));
     setTimeout(() => af2StartWithBase64(b64), 300);
   } else if (action === 'wishlist') {
-    nav(document.querySelector('nav button[data-page="wishlist"]'));
+    collSeg('wishlist');
     setTimeout(() => wlPhotoIdentify(_sharedB64ToFile(b64)), 300);
   }
 }
@@ -32273,8 +32311,8 @@ function addPreviewedWatchToWishlist() {
   if (!previewingWatch) return;
   const w = previewingWatch;
   closeWatchPreview();
-  // Switch to wishlist tab so context is right
-  document.querySelector('[data-page="wishlist"]')?.click();
+  // Switch to the wishlist view so context is right
+  collSeg('wishlist');
   // Pre-fill wishlist modal
   editingWlId    = null;
   wlPendingImage = null;
