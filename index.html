@@ -443,6 +443,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-stats-row { display:flex; gap:var(--space-5); justify-content:center; flex-wrap:wrap; margin:var(--space-4) 0 var(--space-5); }
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4) var(--space-5); margin-bottom:var(--space-4); }
     .profile-page-section-title { font-size:var(--fs-sm); font-weight:var(--fw-bold); letter-spacing:var(--ls-eyebrow); text-transform:uppercase; color:var(--gold-text); margin-bottom:var(--space-3-5); }
+    /* Profile → Posts title as a link to the user-filtered feed (experiment profile_posts_feed) */
+    .profile-posts-link { display:flex; align-items:center; gap:var(--space-1-5); width:100%; text-align:left; padding:0; margin-bottom:var(--space-3-5); }
+    .profile-posts-link .profile-page-section-title { margin-bottom:0; }
+    .profile-posts-chev { color:var(--gold-text); font-size:var(--fs-md); font-weight:var(--fw-bold); line-height:var(--lh-none); }
     .streak-flame { line-height: var(--lh-none); display: inline-flex; align-items: center; }
     .streak-flame-dim { opacity: var(--opacity-dim); }
     .streak-flame-svg { width: 1em; height: 1em; fill: color-mix(in srgb, var(--gold) 30%, transparent); stroke: var(--gold); transition: fill var(--dur-fast), stroke var(--dur-fast); }
@@ -8118,7 +8122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.20.06';
+const APP_VERSION = '05.20.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9386,9 +9390,14 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   if (recentLogs.length > 0) {
     const cells = recentLogs.map(l => profilePostCellHTML(l, isOwn)).join('');
     const hasMore = recentLogs.length >= 9;
+    // Experiment profile_posts_feed: the title links to the feed filtered to this
+    // member, so their posts can be read as full cards instead of tapped one by one.
+    const postsTitle = experiment('profile_posts_feed')
+      ? `<button type="button" class="btn-plain profile-posts-link" data-pid="${escAttr(profile.id)}" data-uname="${escAttr(profile.username || profile.display_name || '')}" onclick="viewUserFeed(this.dataset.pid, this.dataset.uname)" aria-label="View these posts as a feed"><span class="profile-page-section-title">Posts</span><span class="profile-posts-chev" aria-hidden="true">›</span></button>`
+      : `<div class="profile-page-section-title">Posts</div>`;
     logsHtml = `
       <div class="profile-page-card">
-        <div class="profile-page-section-title">Posts</div>
+        ${postsTitle}
         <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
         ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-md btn-ghost btn-block u-mt-2" data-pid="${escAttr(profile.id)}" onclick="loadMoreProfilePosts(this.dataset.pid, ${isOwn})">Load more</button>` : ''}
       </div>`;
@@ -12360,6 +12369,27 @@ async function loadFeed() {
   }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
   if (!feedError && feedItems.length > 0 && Date.now() - feedLoadedAt < 60000) return;
+  // User-filtered view (profile → Posts): a dedicated lightweight load — one
+  // member's posts, no feed_page RPC, no caught-up divider, no pin.
+  if (feedUserFilter) {
+    feedLoading = true;
+    _feedLoadStartedAt = Date.now();
+    feedError = false; feedPartial = false;
+    feedLoadingMore = false; _feedSkipCursor = null; _feedCaughtUpIdx = null;
+    const fl = document.getElementById('feed-list');
+    if (fl && feedItems.length === 0) fl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-40pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-90pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-70pct u-h-3"></div></div>';
+    try {
+      await _loadUserFilterFeed();
+      feedLoadedAt = Date.now();
+    } catch (e) {
+      console.warn('[WRotate] user feed load failed:', e?.message);
+      feedError = true;
+    } finally {
+      feedLoading = false;
+      renderFeed();
+    }
+    return;
+  }
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
@@ -12677,9 +12707,170 @@ async function loadFeed() {
 // against what's shown, enriches, and APPENDS new cards without a full re-render
 // (preserving scroll, playing videos, and open comment drafts).
 // ═══════════════════════════════════════════════════════════════════════════
+// Fetch watches/profiles/likes/comments/facts for a batch of logs and merge them
+// into the global feed maps (feedLikes/feedComments/feedCommentCounts/commentLikes).
+// Returns the batch with profile/watch/fact attached, ready for renderFeedCard.
+// Shared by loadMoreFeed() and the user-filtered feed (profile → Posts).
+async function _enrichFeedBatch(batch) {
+  const logIds = batch.map(l => l.id);
+  const watchIds = [...new Set(batch.filter(l => l.watch_id).map(l => l.watch_id))];
+  const userIds = [...new Set(batch.map(l => l.user_id))];
+  const factIds = [...new Set(batch.filter(l => l.fact_id).map(l => l.fact_id))];
+  const [watchResult, profileResult, likesResult, commentResult, factResult] = await withTimeout(Promise.all([
+    watchIds.length
+      ? db.rpc('feed_watch_display', { ids: watchIds })
+      : { data: [] },
+    db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
+    db.from('likes').select('log_id, user_id').in('log_id', logIds).range(0, 4999), // audit F9: unbounded selects silently cap at 1000 — count chips under-reported on busy pages
+    db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
+      .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
+    factIds.length
+      ? db.from('watch_facts').select('id, fact').in('id', factIds)
+      : Promise.resolve({ data: [] }),
+  ]), 8000);
+
+  const watchMap = {};
+  (watchResult.data || []).forEach(w => watchMap[w.id] = w);
+  const profileMap = {};
+  (profileResult.data || []).forEach(p => profileMap[p.id] = p);
+  const factMap = {};
+  (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
+
+  logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
+  (likesResult.data || []).forEach(l => {
+    if (!feedLikes[l.log_id]) feedLikes[l.log_id] = { count: 0, liked: false };
+    feedLikes[l.log_id].count++;
+    if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
+  });
+
+  const commentData = commentResult.data;
+  if (commentData && commentData.length) {
+    const commenterIds = [...new Set(commentData.map(c => c.user_id))];
+    const allCommentIds = commentData.map(c => c.id);
+    const [commenterResult, clResult] = await withTimeout(Promise.all([
+      db.from('profiles').select('id, username, display_name, is_official').in('id', commenterIds),
+      allCommentIds.length
+        ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
+        : { data: [] },
+    ]), 8000);
+    const cpm = {};
+    (commenterResult.data || []).forEach(p => cpm[p.id] = p);
+    commentData.forEach(c => {
+      if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
+      feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
+    });
+    applyCommentLikes(commentLikes, allCommentIds, clResult.data, currentUser.id);
+  }
+  logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
+
+  return batch.map(l => ({
+    ...l,
+    profile: profileMap[l.user_id] || null,
+    watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+    fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
+  }));
+}
+
+// ── User-filtered feed (experiment profile_posts_feed) ──────────────────────
+// Set by viewUserFeed() — the Posts title on a profile page. While set, the Feed
+// tab shows only this member's posts, with a bar at the top to clear it. Cleared
+// by that bar, by navigating to any other tab, or by a grid-cell post jump.
+let feedUserFilter = null;      // { id, name } or null
+let _userFeedOffset = 0;        // offset pagination for the filtered view
+const USER_FEED_PAGE = 20;
+
+// Same authoritative client-side filters as loadFeed()/loadMoreFeed() apply on
+// top of RLS (blocked → club strip → visibility), for the filtered view's rows.
+function _userFeedStrip(logs) {
+  const myClubIds = myClubs.map(c => c.id);
+  return (logs || [])
+    .filter(l => !blockedUsers.has(l.user_id))
+    .filter(l => !l.club_id || myClubIds.includes(l.club_id))
+    .filter(log => {
+      if (log.user_id === currentUser.id) return true;
+      if (log.club_id && myClubIds.includes(log.club_id)) return log.visibility !== 'private';
+      if (log.visibility === 'private')   return false;
+      if (log.visibility === 'public')    return true;
+      if (log.visibility === 'followers') return following.has(log.user_id);
+      if (log.visibility === 'friends')   return friendships.has(log.user_id);
+      return following.has(log.user_id);
+    });
+}
+
+function _userFeedQuery(from, to) {
+  return db.from('logs').select(FEED_LOG_COLS)
+    .eq('user_id', feedUserFilter.id)
+    .neq('use_case', 'no_watch')
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+}
+
+// First page of the filtered view. Called from loadFeed() while feedUserFilter
+// is set; loadFeed owns feedLoading and the final renderFeed().
+async function _loadUserFilterFeed() {
+  const { data, error } = await withTimeout(_userFeedQuery(0, USER_FEED_PAGE - 1), 8000);
+  if (error) throw error;
+  _userFeedOffset = (data || []).length;
+  feedHasMore = (data || []).length === USER_FEED_PAGE;
+  feedLikes = {}; feedComments = {}; feedCommentCounts = {};
+  const batch = _userFeedStrip(data).sort((a, b) => compareFeedLogs(a, b, todayStr()));
+  feedItems = await _enrichFeedBatch(batch);
+}
+
+function userFeedFilterHtml() {
+  const name = feedUserFilter?.name ? '@' + escHtml(feedUserFilter.name) : 'this member';
+  return `<div class="feed-stale" role="status"><span>Posts by ${name}</span><button type="button" onclick="clearUserFeedFilter()">&#10005; Show all posts</button></div>`;
+}
+
+function viewUserFeed(userId, username) {
+  if (!userId || !currentUser) return;
+  feedUserFilter = { id: userId, name: username || '' };
+  feedItems = []; feedLoadedAt = 0; feedError = false; _feedCaughtUpIdx = null;
+  if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'profile_posts_feed', meta: { profile: userId } }).then(() => {});
+  const btn = document.querySelector("nav button[data-page='feed']");
+  if (btn) nav(btn);
+}
+
+function clearUserFeedFilter() {
+  feedUserFilter = null;
+  feedItems = []; feedLoadedAt = 0; feedError = false; feedHasMore = true;
+  loadFeed();
+}
+
 async function loadMoreFeed() {
   // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
+  // User-filtered view: simple offset pagination over one member's posts.
+  if (feedUserFilter) {
+    feedLoadingMore = true;
+    try {
+      const { data, error } = await withTimeout(_userFeedQuery(_userFeedOffset, _userFeedOffset + USER_FEED_PAGE - 1), 8000);
+      if (error) throw error;
+      _userFeedOffset += (data || []).length;
+      feedHasMore = (data || []).length === USER_FEED_PAGE;
+      const shownIds = new Set(feedItems.map(i => i.id));
+      const batch = _userFeedStrip((data || []).filter(l => !shownIds.has(l.id)));
+      if (batch.length) {
+        const enriched = await _enrichFeedBatch(batch);
+        feedItems = feedItems.concat(enriched);
+        const listEl = document.getElementById('feed-list');
+        const sentinel = document.getElementById('feed-load-sentinel');
+        const html = enriched.map(item => renderFeedCard(item)).join('');
+        if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+        else if (listEl) listEl.insertAdjacentHTML('beforeend', html);
+        initFactRows();
+        document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
+      }
+      mountFeedLoadMoreSentinel();
+    } catch (e) {
+      console.warn('[WRotate] user feed load-more error:', e?.message);
+      showFeedLoadMoreButton();
+    } finally {
+      feedLoadingMore = false;
+    }
+    return;
+  }
   // Normally we page from the oldest rendered item. _feedSkipCursor is set when a
   // previous call burned its attempts skipping fully-filtered pages (a long run of
   // blocked-user posts); resuming from it means that work isn't repeated.
@@ -12778,63 +12969,7 @@ async function loadMoreFeed() {
     batch.sort((a, b) => compareFeedLogs(a, b, feedToday));
 
     // ── Enrich the new batch and merge into the global feed maps ──────────────
-    const logIds = batch.map(l => l.id);
-    const watchIds = [...new Set(batch.filter(l => l.watch_id).map(l => l.watch_id))];
-    const userIds = [...new Set(batch.map(l => l.user_id))];
-    const factIds = [...new Set(batch.filter(l => l.fact_id).map(l => l.fact_id))];
-    const [watchResult, profileResult, likesResult, commentResult, factResult] = await withTimeout(Promise.all([
-      watchIds.length
-        ? db.rpc('feed_watch_display', { ids: watchIds })
-        : { data: [] },
-      db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
-      db.from('likes').select('log_id, user_id').in('log_id', logIds).range(0, 4999), // audit F9: unbounded selects silently cap at 1000 — count chips under-reported on busy pages
-      db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
-        .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
-      factIds.length
-        ? db.from('watch_facts').select('id, fact').in('id', factIds)
-        : Promise.resolve({ data: [] }),
-    ]), 8000);
-
-    const watchMap = {};
-    (watchResult.data || []).forEach(w => watchMap[w.id] = w);
-    const profileMap = {};
-    (profileResult.data || []).forEach(p => profileMap[p.id] = p);
-    const factMap = {};
-    (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
-
-    logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
-    (likesResult.data || []).forEach(l => {
-      if (!feedLikes[l.log_id]) feedLikes[l.log_id] = { count: 0, liked: false };
-      feedLikes[l.log_id].count++;
-      if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
-    });
-
-    const commentData = commentResult.data;
-    if (commentData && commentData.length) {
-      const commenterIds = [...new Set(commentData.map(c => c.user_id))];
-      const allCommentIds = commentData.map(c => c.id);
-      const [commenterResult, clResult] = await withTimeout(Promise.all([
-        db.from('profiles').select('id, username, display_name, is_official').in('id', commenterIds),
-        allCommentIds.length
-          ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
-          : { data: [] },
-      ]), 8000);
-      const cpm = {};
-      (commenterResult.data || []).forEach(p => cpm[p.id] = p);
-      commentData.forEach(c => {
-        if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
-        feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
-      });
-      applyCommentLikes(commentLikes, allCommentIds, clResult.data, currentUser.id);
-    }
-    logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
-
-    const enriched = batch.map(l => ({
-      ...l,
-      profile: profileMap[l.user_id] || null,
-      watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
-      fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
-    }));
+    const enriched = await _enrichFeedBatch(batch);
 
     // ── Append to feedItems and insert cards before the sentinel ──────────────
     feedItems = feedItems.concat(enriched);
@@ -12866,6 +13001,9 @@ async function loadMoreFeed() {
 
 async function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
+  // A grid-cell tap targets the MAIN feed — drop any profile-posts filter so the
+  // jump never lands inside (or injects into) another member's filtered view.
+  if (feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
   expandedComments.add(postId);
   // Switch to feed page without forcing a full reload — preserve existing cards
   nav(document.querySelector('nav button[data-page=\'feed\']'));
@@ -14501,6 +14639,7 @@ function logPromoEvent(slotId, event) {
 function injectPromoCards() {
   const el = document.getElementById('feed-list');
   if (!el || !currentUser) return;
+  if (feedUserFilter) return; // user-filtered view (profile → Posts) stays promo-free
 
   // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
   // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
@@ -15010,6 +15149,16 @@ function renderFeed() {
     return;
   }
   if (feedItems.length === 0) {
+    // Filtered view with nothing visible: keep the filter bar so the state is
+    // clear and the way back obvious — the follow CTA below would mislead here.
+    if (feedUserFilter) {
+      el.innerHTML = userFeedFilterHtml() + `
+        <div class="empty feed-empty-state">
+          <div class="empty-icon"></div>
+          <div class="empty-text">No posts to show</div>
+        </div>`;
+      return;
+    }
     el.innerHTML = `
       <div class="empty feed-empty-state">
         <div class="empty-icon"></div>
@@ -15035,6 +15184,7 @@ function renderFeed() {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
   if (feedError || feedPartial) cards.unshift(feedStaleHtml(!feedError && feedPartial));
+  if (feedUserFilter) cards.unshift(userFeedFilterHtml());
   carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render
@@ -21940,6 +22090,10 @@ function nav(btn) {
   const page = btn.dataset.page;
   // Leaving the Feed tab: the feed no longer deserves priority — let the rest of boot go.
   if (page !== 'feed') _openBootGate();
+  // Any other tab drops the user-filtered feed (profile → Posts), so the next
+  // Feed visit is the normal feed again. (Entering 'feed' keeps it: viewUserFeed
+  // navigates here with the filter set, and Back-from-profile must restore it.)
+  if (page !== 'feed' && feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
   // Stop active microphone/audio when navigating away from measure or watch detail
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
@@ -33228,6 +33382,7 @@ function clearUserState() {
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
+  feedUserFilter = null; _userFeedOffset = 0;   // A's profile-posts filter must not shape B's feed
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
   dmClearState();
