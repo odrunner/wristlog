@@ -246,3 +246,57 @@ test('a message request names a tappable sender — profile opens before judging
   await who.click();
   expect(await page.evaluate(() => window._vupCalls)).toEqual(['u-other-001']);
 });
+
+test('blocking a member closes their open thread and drops them from inbox + Send-to picker', async ({ page }) => {
+  await boot(page, {
+    messages: [msg('m1', 'hello there', 30)],
+    inbox: { unread: 1, requests_in: [], requests_out: [], conversations: [{
+      id: CONV, last_message_at: iso(30), unread: 1,
+      last: { body: 'hello there', shared_log_id: null, sender_id: OTHER, created_at: iso(30) }, profile: PROFILE }] },
+  });
+  await page.evaluate(() => openMessagesPage());
+  await page.evaluate(id => openDmThread(id), CONV);
+  await expect(page.locator('#dm-thread-view')).toBeVisible();
+
+  await page.evaluate(id => { blockUser(id, 'Omega Fan'); }, OTHER);
+  await page.waitForSelector('#confirm-modal:not(.hidden)');
+  await page.locator('#confirm-ok-btn').click();
+
+  // Back on the inbox, with the blocked member gone everywhere locally —
+  // server-side dm_is_blocked already guards the data; this is the UI's half.
+  await expect(page.locator('#dm-thread-view')).toBeHidden();
+  await expect(page.locator('#dm-inbox-view')).toBeVisible();
+  await expect(page.locator('#dm-list')).not.toContainText('Omega Fan');
+  expect(await page.evaluate(() => dmSendTargets().convs.length)).toBe(0);
+  expect(await page.evaluate(() => _dmThread)).toBeNull();
+});
+
+test('a failed inbox load shows an inline error with Retry — not a blank page', async ({ page }) => {
+  await boot(page, { inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [] } });
+  // Fail the next dm_inbox call only; the retry falls through to boot's route.
+  let failed = 0;
+  await page.route('**/rest/v1/rpc/dm_inbox*', r => {
+    if (failed++ === 0) return r.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' });
+    return r.fallback();
+  });
+  await page.evaluate(() => openMessagesPage());
+  const retry = page.locator('#dm-list button', { hasText: 'Retry' });
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(page.locator('#dm-list button', { hasText: 'Retry' })).toHaveCount(0);
+  await expect(page.locator('#dm-empty')).toBeVisible(); // healthy empty state after recovery
+});
+
+test('an unread-count change while the inbox is on screen refreshes the rows', async ({ page }) => {
+  const conv = { id: CONV, last_message_at: iso(1), unread: 1,
+    last: { body: 'fresh arrival', shared_log_id: null, sender_id: OTHER, created_at: iso(1) }, profile: PROFILE };
+  await boot(page, { inbox: (n) => n === 1
+    ? { unread: 0, requests_in: [], requests_out: [], conversations: [] }
+    : { unread: 1, requests_in: [], requests_out: [], conversations: [conv] } });
+  await page.evaluate(() => openMessagesPage());
+  await expect(page.locator('#dm-empty')).toBeVisible();
+  // A new message lands server-side; the 30s poll picks up the new count.
+  await page.route('**/rest/v1/rpc/dm_unread_count*', r => json(r, 1));
+  await page.evaluate(() => loadDmUnread());
+  await expect(page.locator('#dm-list')).toContainText('fresh arrival');
+});

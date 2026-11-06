@@ -8129,7 +8129,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.14';
+const APP_VERSION = '06.07.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9784,6 +9784,9 @@ async function blockUser(userId, displayName) {
   // The cached feed paints before any network on the next open (and is trusted for
   // 7 days) — without this the blocked user's posts came back until the refresh landed.
   saveFeedCache();
+
+  // DMs: their open thread and inbox rows must not outlive the block.
+  dmHandleBlock(userId);
 
   toast(`${displayName || 'User'} blocked`);
   if (profilePageUserId === userId) goBackFromProfile();
@@ -20831,9 +20834,18 @@ async function loadDmUnread() {
   try {
     const { data, error } = await db.rpc('dm_unread_count');
     if (error) return;
+    const prev = dmState.unread;
     dmState.unread = Number(data) || 0;
     updateDmBadge(dmState.unread);
     updateBellBadge();
+    // The badge and the inbox rows must not disagree on screen: a count change
+    // while the inbox is visible means new rows — refetch them.
+    const pm = document.getElementById('page-messages');
+    const inboxView = document.getElementById('dm-inbox-view');
+    if (dmState.unread !== prev && pm && pm.classList.contains('active')
+        && inboxView && !inboxView.classList.contains('hidden')) {
+      loadDmInbox();
+    }
   } catch (_) { /* badge is best-effort */ }
 }
 
@@ -20857,6 +20869,27 @@ function dmClearState() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   });
+}
+
+// blockUser() calls this — the server's dm_is_blocked already guards the data;
+// this is the UI's half. Close their open thread, drop them from local inbox
+// state, and re-render/recount what's on screen.
+function dmHandleBlock(userId) {
+  if (!dmEnabled() || !userId) return;
+  const theirs = c => c.profile && c.profile.id === userId;
+  const hadUnread = dmState.conversations.some(c => theirs(c) && Number(c.unread) > 0);
+  dmState.conversations = dmState.conversations.filter(c => !theirs(c));
+  dmState.requestsIn = dmState.requestsIn.filter(c => !theirs(c));
+  dmState.requestsOut = dmState.requestsOut.filter(c => !theirs(c));
+  if (_dmThread && _dmThread.otherId === userId) {
+    dmStopThreadPoll();
+    _dmThread = null;
+    _dmThreadSeq++;
+    dmShowView('inbox');
+  }
+  const pm = document.getElementById('page-messages');
+  if (pm && pm.classList.contains('active')) renderDmInbox();
+  if (hadUnread) loadDmUnread();
 }
 
 function dmActivatePage() {
@@ -20899,7 +20932,18 @@ function openMessagesPage() {
 async function loadDmInbox() {
   if (!dmEnabled()) return;
   const { data, error } = await db.rpc('dm_inbox');
-  if (error) { toast("Couldn't load messages. Try again.", 'error'); return; }
+  if (error) {
+    toast("Couldn't load messages. Try again.", 'error');
+    // With nothing rendered yet the page would just be blank — give the
+    // inbox an inline error + Retry (same idea as the feed's error chip).
+    const listEl = document.getElementById('dm-list');
+    const emptyEl = document.getElementById('dm-empty');
+    if (listEl && !dmState.conversations.length) {
+      if (emptyEl) emptyEl.classList.add('hidden');
+      listEl.innerHTML = '<div class="empty">Couldn&#8217;t load messages.<br><button class="btn btn-ghost btn-sm u-mt-2" onclick="loadDmInbox()">Retry</button></div>';
+    }
+    return;
+  }
   dmState = dmInboxToState(data);
   _dmInboxAt = Date.now();
   updateDmBadge(dmState.unread);
@@ -21526,7 +21570,7 @@ function dmSendTargets() {
   const convs = [];
   for (const c of dmState.conversations) {
     const id = c.profile && c.profile.id;
-    if (!id || seen.has(id)) continue;
+    if (!id || seen.has(id) || blockedUsers.has(id)) continue;
     seen.add(id);
     convs.push({ userId: id, convId: c.id, profile: c.profile });
   }
