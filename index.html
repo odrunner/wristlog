@@ -8046,7 +8046,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.17.58';
+const APP_VERSION = '05.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20603,7 +20603,7 @@ function renderDmInbox(state) {
   listEl.innerHTML = st.conversations.map(c => {
     const unread = Number(c.unread) > 0;
     return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" data-id="${escAttr(c.id)}" onclick="if (typeof openDmThread === 'function') openDmThread(this.dataset.id)">
-      <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${escHtml(profileInitials(c.profile))}</div>
+      <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(c.profile)}</div>
       <div class="grow-clip">
         <div class="row-between">
           <span class="u-fw-bold">${escHtml(dmWho(c.profile))}</span>
