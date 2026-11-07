@@ -29,6 +29,7 @@ import {
 import { serviceKey } from "../_shared/keys.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 import { sendFcm } from "../_shared/fcm.ts";
+import { claimSend } from "../_shared/send-claim.ts";
 
 // APNs configuration
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
@@ -190,6 +191,14 @@ serve(async (req) => {
     const message = buildMessage(type, actorName, ref_id);
     if (!message) {
       return new Response(JSON.stringify({ skipped: "unknown type" }), {
+        status: 200,
+      });
+    }
+
+    // Replay guard (audit 11-06 F3): claim the row before sending, so a
+    // replayed webhook for the same notification never double-pushes.
+    if (!(await claimSend(supabase, dbRecord.id, "pushed_at"))) {
+      return new Response(JSON.stringify({ skipped: "already pushed" }), {
         status: 200,
       });
     }

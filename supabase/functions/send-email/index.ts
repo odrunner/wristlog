@@ -26,6 +26,7 @@ import {
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
+import { claimSend } from "../_shared/send-claim.ts";
 const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
@@ -159,6 +160,12 @@ serve(async (req) => {
     const content = buildEmailContent(type, actorName, commentBody, mentionSource);
     if (!content) {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });
+    }
+
+    // Replay guard (audit 11-06 F3): claim the row before sending, so a
+    // replayed webhook for the same notification never double-emails.
+    if (!(await claimSend(supabase, dbRecord.id, "emailed_at"))) {
+      return new Response(JSON.stringify({ skipped: "already emailed" }), { status: 200 });
     }
 
     // Generate signed unsubscribe URL
