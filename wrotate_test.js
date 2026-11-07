@@ -4354,6 +4354,19 @@ export function modelFeedLabel(brand, name) {
   return s || 'this watch';
 }
 
+// The feed scope chip's label. Filters (profile → Posts, model → photos) win
+// over the selected scope; user filter wins by invariant (each view clears the
+// other). Returns raw text; the caller escapes.
+// Mirror-drift guards this VERBATIM against index.html.
+export function scopeChipLabel(scope, userFilter, modelFilter) {
+  if (userFilter) return feedFilterLabel(userFilter.uname, userFilter.dname) + '’s posts';
+  if (modelFilter) return modelFeedLabel(modelFilter.brand, modelFilter.name) + ' posts';
+  if (scope === 'following') return 'People I follow';
+  if (scope === 'friends') return 'Close friends';
+  if (scope === 'mine') return 'My posts';
+  return 'All posts';
+}
+
 export function userFeedStrip(logs, ctx) {
   const myClubIds = ctx.myClubIds || [];
   return (logs || [])

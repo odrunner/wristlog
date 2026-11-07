@@ -62,7 +62,7 @@ const VERBATIM = [
   'parseTgTrialKey', 'tgTrialKnobs', 'resolveTgKnob', 'ratingsDelta',
   'shouldNudgeEnhance', 'orderCommentsForDisplay',
   'dmValidateBody', 'dmInboxToState', 'dmGroupMessages', 'dmErrorText', 'dmCanMessage',
-  'userFeedStrip', 'feedFilterLabel', 'modelFeedLabel', 'fullAuditEarned',
+  'userFeedStrip', 'feedFilterLabel', 'modelFeedLabel', 'scopeChipLabel', 'fullAuditEarned',
   'experimentInfoSections', 'EXP_OWNER_AUDIENCE', 'EXP_STATUS_AUDIENCE',
 ];
 

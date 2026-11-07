@@ -8156,7 +8156,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.24';
+const APP_VERSION = '07.08.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12397,10 +12397,10 @@ async function loadFeed() {
   }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
   if (!feedError && feedItems.length > 0 && Date.now() - feedLoadedAt < 60000) return;
-  // Filtered views (profile → Posts, model page → photos): a dedicated
-  // lightweight load — one slice of posts, no feed_page RPC, no caught-up
-  // divider, no pin.
-  if (feedUserFilter || feedModelFilter) {
+  // Filtered views (profile → Posts, model page → photos, scope dropdown): a
+  // dedicated lightweight load — one slice of posts, no feed_page RPC, no
+  // caught-up divider, no pin.
+  if (feedUserFilter || feedModelFilter || feedScope !== 'all') {
     feedLoading = true;
     _feedLoadStartedAt = Date.now();
     feedError = false; feedPartial = false;
@@ -12408,7 +12408,7 @@ async function loadFeed() {
     const fl = document.getElementById('feed-list');
     if (fl && feedItems.length === 0) fl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-40pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-90pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-70pct u-h-3"></div></div>';
     try {
-      await (feedUserFilter ? _loadUserFilterFeed() : _loadModelFilterFeed());
+      await (feedUserFilter ? _loadUserFilterFeed() : feedModelFilter ? _loadModelFilterFeed() : _loadScopeFeed());
       feedLoadedAt = Date.now();
     } catch (e) {
       console.warn('[WRotate] filtered feed load failed:', e?.message);
@@ -12945,29 +12945,116 @@ function clearModelFeedFilter() {
   loadFeed();
 }
 
+// ── Scope-filtered feed ──────────────────────────────────────────────────────
+// The feed's scope dropdown: All posts / People I follow / Close friends / My
+// posts. Non-'all' scopes ride the same lightweight filtered path as the
+// user/model filters above — ONE PostgREST query each (offsets don't compose
+// across the classic load's merged parallel queries), offset pagination,
+// userFeedStrip on top. The 'all' feed (feed_page RPC + classic fallback) is
+// untouched. Scope survives tab-away (it's a mode, not a drill-in) and resets
+// on reload/sign-out.
+let feedScope = 'all';          // 'all' | 'following' | 'friends' | 'mine'
+let _scopeFeedOffset = 0;       // offset pagination for the scoped view
+
+// The feed scope chip's label. Filters (profile → Posts, model → photos) win
+// over the selected scope; user filter wins by invariant (each view clears the
+// other). Returns raw text; the caller escapes.
+// Mirror-drift guards this VERBATIM against wrotate_test.js.
+function scopeChipLabel(scope, userFilter, modelFilter) {
+  if (userFilter) return feedFilterLabel(userFilter.uname, userFilter.dname) + '’s posts';
+  if (modelFilter) return modelFeedLabel(modelFilter.brand, modelFilter.name) + ' posts';
+  if (scope === 'following') return 'People I follow';
+  if (scope === 'friends') return 'Close friends';
+  if (scope === 'mine') return 'My posts';
+  return 'All posts';
+}
+
+// Mutual close friends who are also followed — the classic load's Q3b subset.
+function _scopeFriendsArr() { return [...following].filter(id => friendships.has(id)); }
+
+// True when the scope's author set is empty: the query must not fire
+// (PostgREST rejects `user_id=in.()`) — the empty state renders instead.
+function _scopeFeedEmpty() {
+  if (feedScope === 'following') return following.size === 0;
+  if (feedScope === 'friends') return _scopeFriendsArr().length === 0;
+  return false;
+}
+
+function _scopeFeedQuery(from, to) {
+  let q = db.from('logs').select(FEED_LOG_COLS).neq('use_case', 'no_watch');
+  if (feedScope === 'mine') {
+    q = q.eq('user_id', currentUser.id);
+  } else if (feedScope === 'friends') {
+    q = q.in('user_id', _scopeFriendsArr())
+         .or('visibility.in.(public,followers,friends),visibility.is.null');
+  } else {
+    // 'following': everything the viewer may see from people they follow —
+    // friends-visibility rows only from mutual close friends.
+    const friendsArr = _scopeFriendsArr();
+    const orParts = ['visibility.in.(public,followers)', 'visibility.is.null'];
+    if (friendsArr.length) orParts.push(`and(visibility.eq.friends,user_id.in.(${friendsArr.join(',')}))`);
+    q = q.in('user_id', [...following]).or(orParts.join(','));
+  }
+  return q.order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(from, to);
+}
+
+// First page of the scoped view. Called from loadFeed() while feedScope is not
+// 'all' and no user/model filter is set; loadFeed owns feedLoading and the
+// final renderFeed().
+async function _loadScopeFeed() {
+  feedLikes = {}; feedComments = {}; feedCommentCounts = {};
+  if (_scopeFeedEmpty()) { feedItems = []; feedHasMore = false; _scopeFeedOffset = 0; return; }
+  const { data, error } = await withTimeout(_scopeFeedQuery(0, USER_FEED_PAGE - 1), 8000);
+  if (error) throw error;
+  _scopeFeedOffset = (data || []).length;
+  feedHasMore = (data || []).length === USER_FEED_PAGE;
+  const batch = userFeedStrip(data, _userFeedCtx()).sort((a, b) => compareFeedLogs(a, b, todayStr()));
+  feedItems = await _enrichFeedBatch(batch);
+}
+
+function setFeedScope(scope) {
+  if (!currentUser) return;
+  if (scope === feedScope && !feedUserFilter && !feedModelFilter) return;
+  feedUserFilter = null; _userFeedOffset = 0;
+  feedModelFilter = null; _modelFeedOffset = 0;
+  feedScope = scope;
+  feedItems = []; feedLoadedAt = 0; feedError = false; feedHasMore = true;
+  _scopeFeedOffset = 0; _feedCaughtUpIdx = null;
+  if (!_isDemoMode && scope !== 'all') db.from('feature_events').insert({ user_id: currentUser.id, event: 'feed_scope', meta: { scope } }).then(() => {});
+  loadFeed();
+}
+
 async function loadMoreFeed() {
   // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
-  // Filtered views: simple offset pagination over one member's / one model's posts.
-  if (feedUserFilter || feedModelFilter) {
-    // "Show all posts" / tab-away can clear the filter while a page is in
-    // flight — a stale continuation must never splice these posts into the
-    // restored full feed. Re-check after every await.
+  // Filtered views: simple offset pagination over one member's / one model's /
+  // one scope's posts.
+  if (feedUserFilter || feedModelFilter || feedScope !== 'all') {
+    // "Show all posts" / tab-away can clear the filter (or switch the scope)
+    // while a page is in flight — a stale continuation must never splice these
+    // posts into the restored feed. Re-check after every await.
     const isModel = !!feedModelFilter;
-    const filterId = isModel ? feedModelFilter.id : feedUserFilter.id;
+    const isUser = !!feedUserFilter;
+    const filterId = isModel ? feedModelFilter.id : isUser ? feedUserFilter.id : feedScope;
     const filterGone = () => isModel
       ? (!feedModelFilter || feedModelFilter.id !== filterId)
-      : (!feedUserFilter || feedUserFilter.id !== filterId);
+      : isUser
+      ? (!feedUserFilter || feedUserFilter.id !== filterId)
+      : (feedScope !== filterId || !!feedUserFilter || !!feedModelFilter);
     feedLoadingMore = true;
     try {
-      const from = isModel ? _modelFeedOffset : _userFeedOffset;
+      const from = isModel ? _modelFeedOffset : isUser ? _userFeedOffset : _scopeFeedOffset;
       const q = isModel ? _modelFeedQuery(from, from + USER_FEED_PAGE - 1)
-                        : _userFeedQuery(from, from + USER_FEED_PAGE - 1);
+              : isUser  ? _userFeedQuery(from, from + USER_FEED_PAGE - 1)
+                        : _scopeFeedQuery(from, from + USER_FEED_PAGE - 1);
       const { data, error } = await withTimeout(q, 8000);
       if (filterGone()) return;
       if (error) throw error;
       if (isModel) _modelFeedOffset += (data || []).length;
-      else _userFeedOffset += (data || []).length;
+      else if (isUser) _userFeedOffset += (data || []).length;
+      else _scopeFeedOffset += (data || []).length;
       feedHasMore = (data || []).length === USER_FEED_PAGE;
       const shownIds = new Set(feedItems.map(i => i.id));
       const batch = userFeedStrip((data || []).filter(l => !shownIds.has(l.id)), _userFeedCtx());
@@ -14760,7 +14847,7 @@ function logPromoEvent(slotId, event) {
 function injectPromoCards() {
   const el = document.getElementById('feed-list');
   if (!el || !currentUser) return;
-  if (feedUserFilter || feedModelFilter) return; // filtered views (profile → Posts, model → photos) stay promo-free
+  if (feedUserFilter || feedModelFilter || feedScope !== 'all') return; // filtered views (profile → Posts, model → photos, scope dropdown) stay promo-free
 
   // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
   // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
@@ -33730,6 +33817,7 @@ function clearUserState() {
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   feedUserFilter = null; _userFeedOffset = 0;   // A's profile-posts filter must not shape B's feed
   feedModelFilter = null; _modelFeedOffset = 0; // ...nor A's model filter
+  feedScope = 'all'; _scopeFeedOffset = 0;      // ...nor A's feed scope
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
   dmClearState();
