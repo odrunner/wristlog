@@ -332,3 +332,55 @@ test('a rate-limited send keeps the typed text, drops the ghost bubble and says 
   await expect(page.locator('#dm-input')).toHaveValue('One message too many');
   await expect(page.locator('#dm-thread-msgs .dm-msg-pending')).toHaveCount(0);
 });
+
+// ── Audit 2026-11-06 U4/U6/U7 — inbox keyboard access, live request rows, multi-line composer ──
+
+test('inbox conversation rows are keyboard-reachable and Enter opens the thread (U4)', async ({ page }) => {
+  const conv = { id: CONV, last_message_at: iso(5), unread: 0,
+    last: { body: 'hey', shared_log_id: null, sender_id: OTHER, created_at: iso(5) }, profile: PROFILE };
+  await boot(page, { inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [conv] } });
+  await page.evaluate(() => openMessagesPage());
+  const row = page.locator('#dm-list .notif-item').first();
+  await expect(row).toHaveAttribute('role', 'button');
+  await expect(row).toHaveAttribute('tabindex', '0');
+  await row.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#dm-thread-view')).not.toHaveClass(/hidden/);
+});
+
+test('an outgoing request row carries its age and taps through to the waiting thread (U6)', async ({ page }) => {
+  await boot(page, {
+    inbox: { unread: 0, requests_in: [], conversations: [],
+      requests_out: [{ id: REQ, created_at: iso(60 * 24), profile: PROFILE }] },
+    conv: { id: REQ, user_lo: ME, user_hi: OTHER, requester_id: ME, status: 'pending' },
+  });
+  await page.evaluate(() => openMessagesPage());
+  const row = page.locator('#dm-requests [data-id]').first();
+  await expect(row).toContainText('Request sent');
+  await expect(row).toContainText('1d');
+  await expect(row).toHaveAttribute('role', 'button');
+  await row.click();
+  await expect(page.locator('#dm-thread-view')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#dm-composer')).toContainText('Waiting for');
+  await expect(page.locator('#dm-composer')).toContainText('to accept');
+});
+
+test('composer takes line breaks: Shift+Enter inserts, Enter still sends (U7)', async ({ page }) => {
+  await boot(page, {
+    messages: [msg('m1', 'hello there', 30)],
+    inbox: { unread: 0, requests_in: [], requests_out: [], conversations: [{
+      id: CONV, last_message_at: iso(30), unread: 0,
+      last: { body: 'hello there', shared_log_id: null, sender_id: OTHER, created_at: iso(30) }, profile: PROFILE }] },
+  });
+  await page.evaluate(id => openDmThread(id), CONV);
+  const input = page.locator('textarea#dm-input');   // input[type=text] could never hold a newline
+  await expect(input).toBeVisible();
+  await input.focus();
+  await page.keyboard.type('line one');
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.type('line two');
+  await expect(input).toHaveValue('line one\nline two');
+  await page.keyboard.press('Enter');
+  await expect(input).toHaveValue('');               // sent — composer cleared
+  await expect(page.locator('#dm-thread-msgs')).toContainText('line one');
+});

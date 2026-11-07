@@ -8150,7 +8150,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.21.41';
+const APP_VERSION = '06.21.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9423,7 +9423,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     const hasMore = recentLogs.length >= 9;
     // The title links to the feed filtered to this member, so their posts can be
     // read as full cards instead of tapped one by one.
-    const postsTitle = `<button type="button" class="btn-plain profile-posts-link" data-pid="${escAttr(profile.id)}" data-uname="${escAttr(profile.username || profile.display_name || '')}" onclick="viewUserFeed(this.dataset.pid, this.dataset.uname)" aria-label="View these posts as a feed"><span class="profile-page-section-title">Posts</span><span class="profile-posts-chev" aria-hidden="true">›</span></button>`;
+    const postsTitle = `<button type="button" class="btn-plain profile-posts-link" data-pid="${escAttr(profile.id)}" data-uname="${escAttr(profile.username || '')}" data-dname="${escAttr(profile.display_name || '')}" onclick="viewUserFeed(this.dataset.pid, this.dataset.uname, this.dataset.dname)" aria-label="View these posts as a feed"><span class="profile-page-section-title">Posts</span><span class="profile-posts-chev" aria-hidden="true">›</span></button>`;
     logsHtml = `
       <div class="profile-page-card">
         ${postsTitle}
@@ -12797,7 +12797,7 @@ async function _enrichFeedBatch(batch) {
 // Set by viewUserFeed() — the Posts title on a profile page. While set, the Feed
 // tab shows only this member's posts, with a bar at the top to clear it. Cleared
 // by that bar, by navigating to any other tab, or by a grid-cell post jump.
-let feedUserFilter = null;      // { id, name } or null
+let feedUserFilter = null;      // { id, uname, dname } or null
 let _userFeedOffset = 0;        // offset pagination for the filtered view
 const USER_FEED_PAGE = 20;
 
@@ -12848,13 +12848,24 @@ async function _loadUserFilterFeed() {
 }
 
 function userFeedFilterHtml() {
-  const name = feedUserFilter?.name ? '@' + escHtml(feedUserFilter.name) : 'this member';
+  const name = escHtml(feedFilterLabel(feedUserFilter?.uname, feedUserFilter?.dname));
   return `<div class="feed-stale" role="status"><span>Posts by ${name}</span><button type="button" onclick="clearUserFeedFilter()">&#10005; Show all posts</button></div>`;
 }
 
-function viewUserFeed(userId, username) {
+/**
+ * The "Posts by ..." banner label. '@' belongs only to an actual username —
+ * a member without one used to render as "@Display Name" with spaces (U8).
+ * Returns raw text; the caller escapes.
+ */
+function feedFilterLabel(username, displayName) {
+  if (username) return '@' + username;
+  if (displayName) return displayName;
+  return 'this member';
+}
+
+function viewUserFeed(userId, username, displayName) {
   if (!userId || !currentUser) return;
-  feedUserFilter = { id: userId, name: username || '' };
+  feedUserFilter = { id: userId, uname: username || '', dname: displayName || '' };
   feedItems = []; feedLoadedAt = 0; feedError = false; _feedCaughtUpIdx = null;
   if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'profile_posts_feed', meta: { profile: userId } }).then(() => {});
   const btn = document.querySelector("nav button[data-page='feed']");
@@ -15599,7 +15610,7 @@ function renderFeedCard(item) {
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options" aria-label="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
-                <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-uname="${escAttr(rawName)}" onclick="viewUserFeed(this.dataset.uid,this.dataset.uname);closeFeedMenu(this.dataset.pid)">Posts by this member</div>
+                <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-uname="${escAttr(p?.username || '')}" data-dname="${escAttr(p?.display_name || '')}" onclick="viewUserFeed(this.dataset.uid,this.dataset.uname,this.dataset.dname);closeFeedMenu(this.dataset.pid)">Posts by this member</div>
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 ${dmEnabled() ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="openDmSendTo('${item.id}');closeFeedMenu('${item.id}')">Send to…</div>` : ''}
                 <div class="feed-menu-item" role="button" tabindex="0" data-pid="${escAttr(item.id)}" data-uid="${escAttr(item.user_id)}" data-name="${escAttr(rawName)}" onclick="openReport('log',this.dataset.pid,this.dataset.uid,this.dataset.name);closeFeedMenu(this.dataset.pid)">Report</div>
@@ -18875,7 +18886,7 @@ function showAdminPage() {
   seedWishlistShareDraft();
   seedCollectionShareReleaseDraft();
   seedWhatIfAiPicksDraft();
-  seedWatchesBetaDraft();
+  seedWatchesDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -19267,8 +19278,10 @@ function seedCollectionExtrasDraft() {
 // the social one: every model has a page, and your watch's page knows who else
 // on WRotate owns it. Seeded as a DRAFT only: nothing sends until it is queued
 // and the drain runs.
-function seedWatchesBetaDraft() {
-  const FLAG = 'wr_seed_watches_beta_draft_v1';
+function seedWatchesDraft() {
+  // v2 re-seeds over v1: Watches was de-badged on 2026-11-01, so the draft no
+  // longer calls it a beta (audit U8 — the email contradicted the app).
+  const FLAG = 'wr_seed_watches_draft_v2';
   if (safeLS.get(FLAG)) return;
   safeLS.set(FLAG, '1');
   const SUBJECT = 'Your watch has a page now';
@@ -19276,14 +19289,14 @@ function seedWatchesBetaDraft() {
   drafts.unshift({
     id: Date.now() + 8,
     subject: SUBJECT,
-    heading: 'Watches: browse the model database (beta)',
+    heading: 'Watches: browse the model database',
     body: `There&#8217;s a new button at the top of your feed: <b>Watches</b>. Tap it and you&#8217;re browsing the WRotate model database &#8212; search by name or reference, Submariner to SKX, or wander by brand.
 
 Every model gets its own page: photos, a short history, the fun facts, and the part we like most &#8212; <b>who else on WRotate owns one</b>. Your Speedmaster isn&#8217;t just yours; there&#8217;s a small club of people who reach for the same watch, and now you can see them, follow them, and compare notes.
 
 It works from your collection too. Open any watch you own and tap <b>See this model</b> to jump straight to its page.
 
-It&#8217;s a beta, and that&#8217;s deliberate: the database grows as members add watches, so if a model page looks thin today, it fills in as more of its owners arrive. Your collection is already helping build it.
+The database grows as members add watches, so if a model page looks thin today, it fills in as more of its owners arrive. Your collection is already helping build it.
 
 <a href="https://wrotate.com/open">Browse the Watches database &#8594;</a>
 
@@ -20816,7 +20829,7 @@ function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
   return true;
 }
 
-// ── Private messages: inbox, requests, badge (flag 'dms') ───────────────
+// ── Private messages: inbox, requests, badge ────────────────────────────
 let dmState = { unread: 0, requestsIn: [], requestsOut: [], conversations: [] };
 // Open thread: { id, status, requesterId, otherId, profile, messages (server rows,
 // ascending), pending (optimistic sends), lastAt (newest server created_at) } or null.
@@ -21011,9 +21024,11 @@ function renderDmInbox(state) {
       </div>
     </div>`;
   });
-  const outgoing = st.requestsOut.map(r => `<div class="panel row-between u-mb-2">
+  // U6: the waiting thread exists — the row opens it (composer shows
+  // "Waiting for X to accept"), and carries its age like incoming rows do.
+  const outgoing = st.requestsOut.map(r => `<div class="panel row-between u-mb-2 u-cur-pointer" role="button" tabindex="0" title="View request" data-id="${escAttr(r.id)}" onclick="openDmThread(this.dataset.id)">
       <span class="u-fw-bold">${escHtml(dmWho(r.profile))}</span>
-      <span class="text-meta">Request sent</span>
+      <span class="text-meta">Request sent &#183; ${escHtml(_shortAgo(Date.parse(r.created_at)))}</span>
     </div>`);
   reqEl.innerHTML = (incoming.length || outgoing.length)
     ? `<div class="eyebrow u-mb-2">Requests</div>${incoming.join('')}${outgoing.join('')}`
@@ -21021,7 +21036,7 @@ function renderDmInbox(state) {
 
   listEl.innerHTML = st.conversations.map(c => {
     const unread = Number(c.unread) > 0;
-    return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" data-id="${escAttr(c.id)}" onclick="openDmThread(this.dataset.id)">
+    return `<div class="notif-item ${unread ? 'notif-unread' : ''} u-cur-pointer" role="button" tabindex="0" data-id="${escAttr(c.id)}" onclick="openDmThread(this.dataset.id)">
       <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(c.profile)}</div>
       <div class="grow-clip">
         <div class="row-between">
@@ -21051,7 +21066,7 @@ async function blockDmRequester(userId, name) {
   loadDmInbox();
 }
 
-// ── Private messages: thread view (flag 'dms') ──────────────────────────
+// ── Private messages: thread view ───────────────────────────────────────
 const DM_PAGE = 50;
 const DM_POLL_MS = 10000;
 
@@ -21284,17 +21299,30 @@ function renderDmComposer() {
     // dm_start auto-accepts when the target follows me; otherwise it is a request.
     : (!t.id && !myFollowers.has(t.otherId)) ? '<div class="caption stack-1-5">They don&#8217;t follow you, so your first message arrives as a request.</div>' : '';
   el.innerHTML = `${note}<div class="row">
-      <input type="text" id="dm-input" class="grow-clip" aria-label="Message" placeholder="Message…" maxlength="2000" autocomplete="off" onkeydown="dmComposerKey(event)">
+      <textarea rows="1" id="dm-input" class="grow-clip u-rs-none u-maxh-30" aria-label="Message" placeholder="Message…" maxlength="2000" autocomplete="off" onkeydown="dmComposerKey(event)" oninput="dmComposerGrow(this)"></textarea>
       <button class="comment-send-btn" aria-label="Send message" onclick="dmSubmitComposer()">↑</button>
     </div>`;
-  if (draft) document.getElementById('dm-input').value = draft;
+  if (draft) {
+    const inp = document.getElementById('dm-input');
+    inp.value = draft;
+    dmComposerGrow(inp);
+  }
 }
 
 function dmComposerKey(e) {
+  // Enter sends; Shift+Enter falls through to the textarea's own newline (U7 —
+  // the bubbles always rendered multi-line, the old input just couldn't type one).
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
     dmSubmitComposer();
   }
+}
+
+// Grow with the text up to the u-maxh cap, then scroll inside.
+function dmComposerGrow(el) {
+  if (!el) return;
+  el.style.height = '';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 async function dmSubmitComposer() {
@@ -21308,6 +21336,7 @@ async function dmSubmitComposer() {
   }
   if (t.sending) return;               // first message (new conversation) still on its way
   input.value = '';
+  dmComposerGrow(input);               // collapse back to one row
   let ok;
   if (!t.id) {
     ok = await dmStartFromNewThread(t, v.body);
@@ -21322,7 +21351,7 @@ async function dmSubmitComposer() {
   }
   // A failed send must not lose what was typed.
   const now = document.getElementById('dm-input');
-  if (!ok && now && !now.value && _dmThread === t) now.value = v.body;
+  if (!ok && now && !now.value && _dmThread === t) { now.value = v.body; dmComposerGrow(now); }
 }
 
 function dmDayLabel(key) {

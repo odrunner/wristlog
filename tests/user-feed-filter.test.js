@@ -63,3 +63,24 @@ describe('userFeedStrip', () => {
     expect(userFeedStrip([], ctx())).toEqual([]);
   });
 });
+
+// ── feedFilterLabel (audit U8) ───────────────────────────────────────────────
+// The "Posts by …" banner used to '@'-prefix whatever name it was handed, so a
+// member with no username rendered as "@Display Name" with spaces. The label
+// now only wears '@' when it is an actual username.
+import { feedFilterLabel } from '../wrotate_test.js';
+
+describe('feedFilterLabel', () => {
+  it('prefixes @ only for a real username', () => {
+    expect(feedFilterLabel('watchfan', 'Watch Fan')).toBe('@watchfan');
+    expect(feedFilterLabel('watchfan', '')).toBe('@watchfan');
+  });
+  it('falls back to the bare display name, no @', () => {
+    expect(feedFilterLabel('', 'Watch Fan')).toBe('Watch Fan');
+    expect(feedFilterLabel(null, 'Watch Fan')).toBe('Watch Fan');
+  });
+  it('falls back to "this member" when there is no name at all', () => {
+    expect(feedFilterLabel('', '')).toBe('this member');
+    expect(feedFilterLabel(undefined, undefined)).toBe('this member');
+  });
+});

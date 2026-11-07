@@ -4338,6 +4338,17 @@ export function dmCanMessage(targetProfile, iFollowThem, theyFollowMe) {
 // the feed's visibility ladder client-side. Pure: ctx carries what index.html
 // reads from globals ({ myId, myClubIds, blockedUsers, following, friendships }).
 // Mirror-drift guards this VERBATIM against index.html.
+/**
+ * The "Posts by ..." banner label. '@' belongs only to an actual username —
+ * a member without one used to render as "@Display Name" with spaces (U8).
+ * Returns raw text; the caller escapes.
+ */
+export function feedFilterLabel(username, displayName) {
+  if (username) return '@' + username;
+  if (displayName) return displayName;
+  return 'this member';
+}
+
 export function userFeedStrip(logs, ctx) {
   const myClubIds = ctx.myClubIds || [];
   return (logs || [])
