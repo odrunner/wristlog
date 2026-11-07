@@ -60,10 +60,15 @@ test('search finds watches and opens the model page', async ({ page }) => {
 });
 
 test('header search pill opens the sheet and Post still posts', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
   await mockSupabase(page, {});
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
+  // Chip + pill + post share one line even at the narrowest phone width.
+  const tops = await page.evaluate(() => ['#feed-scope-chip', '.feed-search-pill', '#feed-post-btn']
+    .map(s => document.querySelector(s).getBoundingClientRect().top));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(10);
   await page.locator('.feed-search-pill').click();
   await expect(page.locator('#discover-modal')).toBeVisible();
   await page.locator('#discover-modal .modal-actions button', { hasText: 'Close' }).click();

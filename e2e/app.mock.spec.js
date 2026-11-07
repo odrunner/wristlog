@@ -782,8 +782,9 @@ test.describe('Search / Discover (mocked)', () => {
   });
 
   test('opens discover modal from feed page', async ({ page }) => {
-    const findBtn = page.locator('#page-feed button', { hasText: /people/i });
+    const findBtn = page.locator('.feed-search-pill');
     await expect(findBtn).toBeVisible();
+    await expect(findBtn).toHaveText(/^\s*Search\s*$/); // compact label — header stays one line
     await findBtn.click();
 
     await expect(page.locator('#discover-modal')).toBeVisible();
@@ -791,7 +792,7 @@ test.describe('Search / Discover (mocked)', () => {
   });
 
   test('discover search input accepts text', async ({ page }) => {
-    await page.locator('#page-feed button', { hasText: /people/i }).click();
+    await page.locator('.feed-search-pill').click();
     await expect(page.locator('#discover-modal')).toBeVisible();
 
     await page.locator('#discover-search').fill('watchfan');
