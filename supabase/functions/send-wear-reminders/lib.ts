@@ -13,7 +13,24 @@ const watchLabel = (w: LastWatch) => w ? [w.brand, w.name].filter(Boolean).join(
 export function buildReminderPush(w?: LastWatch): { title: string; body: string } {
   const label = watchLabel(w);
   if (label) return { title: "WRotate", body: `Wearing the ${label} again today? Tap to log it — or pick another watch.` };
-  return { title: "WRotate", body: "What did you wear today? 🕰️ Log it before the day's out." };
+  return { title: "WRotate", body: "What did you wear today? Log it before the day's out." };
+}
+
+// Audit N6: the bounce lookup must never be able to kill the run — pushes
+// don't need it at all. `bounced` is the suppression set, or null when the
+// lookup itself failed. Email fails CLOSED on null (a re-send to a suppressed
+// address charges the SES reputation that gates the whole account); a
+// provisional-token row falls back to the quiet push exactly as a suppressed
+// address does, so it still writes a ledger entry instead of being dropped
+// forever. Push rows pass through untouched either way.
+export function applyBounceFilter<
+  T extends { channel: string; email?: string | null; push_quiet?: boolean | null },
+>(rows: T[], bounced: Set<string> | null): T[] {
+  return rows.flatMap((t) => {
+    if (t.channel === "push") return [t];
+    if (bounced !== null && !bounced.has((t.email ?? "").trim().toLowerCase())) return [t];
+    return t.push_quiet ? [{ ...t, channel: "push" }] : [];
+  });
 }
 
 export function buildReminderEmail(w?: LastWatch): { subject: string; body: string } {

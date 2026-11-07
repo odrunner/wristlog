@@ -11,7 +11,7 @@ import { sendEmail } from "../_shared/mailer.ts";
 import { sendFcm } from "../_shared/fcm.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
-  apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
+  apnsHost, applyBounceFilter, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
@@ -54,15 +54,22 @@ serve(async (req) => {
     // Checked only when there are targets — most hourly runs match nobody
     // (the RPC selects users whose LOCAL hour is 5pm), and paying for a
     // suppression lookup on every empty run is 20+ wasted queries a day.
-    const bounced = await fetchBouncedEmails(supabase);
+    // Audit N6: this lookup must never kill the run — pushes don't need it at
+    // all. On failure the email channel fails CLOSED for this hour (no bounce
+    // data means no emails; the targets stay unledgered and are re-selected
+    // next window), while push targets — and the quiet-push fallback for
+    // provisional tokens — go out as normal. See applyBounceFilter in lib.ts.
+    let bounced: Set<string> | null = null;
+    try {
+      bounced = await fetchBouncedEmails(supabase);
+    } catch (e) {
+      console.error("[send-wear-reminders] bounce lookup failed — email channel skipped this run:", e);
+    }
     // A suppressed address with a provisional token falls back to the quiet push (the RPC
     // says so via push_quiet) instead of being dropped — dropped rows write no ledger
     // entry, so that user stayed "email due" and was never reminded again.
-    const rows = allRows.flatMap((t) => {
-      if (t.channel === "push" || !bounced.has((t.email ?? "").trim().toLowerCase())) return [t];
-      return t.push_quiet ? [{ ...t, channel: "push" }] : [];
-    });
-    if (!rows.length) return new Response(JSON.stringify({ sent: 0, skipped_bounced: allRows.length }), { status: 200 });
+    const rows = applyBounceFilter(allRows, bounced);
+    if (!rows.length) return new Response(JSON.stringify({ sent: 0, skipped_bounced: allRows.length, ...(bounced === null ? { bounce_lookup_failed: true } : {}) }), { status: 200 });
 
     let pushed = 0, emailed = 0, failed = 0;
     let jwt: string | null = null;
@@ -121,7 +128,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ pushed, emailed, failed, candidates: rows.length, skipped_bounced: allRows.length - rows.length }), { status: 200 });
+    return new Response(JSON.stringify({ pushed, emailed, failed, candidates: rows.length, skipped_bounced: allRows.length - rows.length, ...(bounced === null ? { bounce_lookup_failed: true } : {}) }), { status: 200 });
   } catch (err) {
     console.error("[send-wear-reminders] Error:", err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });

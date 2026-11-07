@@ -53,3 +53,44 @@ Deno.test("buildAlertPayload — extra merges into the root, aps untouched", () 
   assertEquals((p.w as Record<string, unknown>).route, "measure");
   assertEquals("w" in (buildAlertPayload({ title: "T", body: "B" }) as Record<string, unknown>), false);
 });
+
+// ── applyBounceFilter (audit N6) ─────────────────────────────────────────────
+// The bounce lookup used to be the run's single point of failure: one thrown
+// error 500'd the hour, pushes included. The filter now takes `null` to mean
+// "lookup failed" and fails CLOSED for the email channel only — no email goes
+// out without bounce data (a re-send to a suppressed address charges the SES
+// reputation that gates the whole account), pushes are untouched, and
+// provisional-token users keep their quiet-push fallback so a skipped row
+// still writes a ledger entry and the user isn't silently dropped forever.
+import { applyBounceFilter } from "./lib.ts";
+
+const T = (channel: string, email: string | null, push_quiet = false) =>
+  ({ user_id: "u", channel, email, push_quiet, local_today: "2026-11-06" });
+
+Deno.test("applyBounceFilter — clean lookup: bounced email dropped, quiet-push fallback kept", () => {
+  const rows = applyBounceFilter(
+    [T("email", "dead@x.com"), T("email", "Dead2@X.com ", true), T("email", "ok@x.com"), T("push", null)],
+    new Set(["dead@x.com", "dead2@x.com"]),
+  );
+  assertEquals(rows.map((r) => [r.channel, r.email]), [
+    ["push", "Dead2@X.com "],   // suppressed + provisional token -> quiet push
+    ["email", "ok@x.com"],
+    ["push", null],
+  ]);
+});
+
+Deno.test("applyBounceFilter — lookup failed (null): emails fail closed, pushes untouched", () => {
+  const rows = applyBounceFilter(
+    [T("email", "ok@x.com"), T("email", "prov@x.com", true), T("push", null)],
+    null,
+  );
+  assertEquals(rows.map((r) => [r.channel, r.email]), [
+    ["push", "prov@x.com"],     // no bounce data -> same fallback as suppressed
+    ["push", null],
+  ]);
+});
+
+Deno.test("applyBounceFilter — empty set keeps everyone", () => {
+  const input = [T("email", "a@x.com"), T("push", null)];
+  assertEquals(applyBounceFilter(input, new Set()), input);
+});
