@@ -2289,6 +2289,7 @@
     .feed-scope-label { overflow:hidden; text-overflow:ellipsis; }
     .feed-scope-caret { color:var(--muted); font-size:var(--fs-xs); flex-shrink:0; }
     .feed-scope-wrap .feed-menu { left:0; right:auto; }
+    .feed-scope-chip--active { border-color:var(--gold); color:var(--gold-deep); }
     .feed-menu-item.selected { background:var(--gold-dim); color:var(--gold-deep); }
 
     /* Post visibility badge */
@@ -8173,7 +8174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.35';
+const APP_VERSION = '07.08.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12871,11 +12872,6 @@ async function _loadUserFilterFeed() {
   feedItems = await _enrichFeedBatch(batch);
 }
 
-function userFeedFilterHtml() {
-  const name = escHtml(feedFilterLabel(feedUserFilter?.uname, feedUserFilter?.dname));
-  return `<div class="feed-stale" role="status"><span>Posts by ${name}</span><button type="button" onclick="clearUserFeedFilter()">&#10005; Show all posts</button></div>`;
-}
-
 /**
  * The "Posts by ..." banner label. '@' belongs only to an actual username —
  * a member without one used to render as "@Display Name" with spaces (U8).
@@ -12897,11 +12893,6 @@ function viewUserFeed(userId, username, displayName) {
   if (btn) nav(btn);
 }
 
-function clearUserFeedFilter() {
-  feedUserFilter = null;
-  feedItems = []; feedLoadedAt = 0; feedError = false; feedHasMore = true;
-  loadFeed();
-}
 
 // ── Model-filtered feed ──────────────────────────────────────────────────────
 // Set by viewModelFeed() — the "N photos" count on a model page's "On members'
@@ -12915,17 +12906,6 @@ let _modelFeedOffset = 0;       // offset pagination for the filtered view
 function modelFeedLabel(brand, name) {
   const s = [brand, name].filter(Boolean).join(' ').trim();
   return s || 'this watch';
-}
-
-function modelFeedFilterHtml() {
-  const label = escHtml(modelFeedLabel(feedModelFilter?.brand, feedModelFilter?.name));
-  return `<div class="feed-stale" role="status"><span>Posts with ${label}</span><button type="button" onclick="clearModelFeedFilter()">&#10005; Show all posts</button></div>`;
-}
-
-// Either filter's bar — renderFeed() shows at most one (viewUserFeed/viewModelFeed
-// each clear the other filter on entry).
-function feedFilterBarHtml() {
-  return feedUserFilter ? userFeedFilterHtml() : modelFeedFilterHtml();
 }
 
 function _modelFeedQuery(from, to) {
@@ -12956,11 +12936,6 @@ function viewModelFeed(modelId, brand, name) {
   if (btn) nav(btn);
 }
 
-function clearModelFeedFilter() {
-  feedModelFilter = null;
-  feedItems = []; feedLoadedAt = 0; feedError = false; feedHasMore = true;
-  loadFeed();
-}
 
 // ── Scope-filtered feed ──────────────────────────────────────────────────────
 // The feed's scope dropdown: All posts / People I follow / Close friends / My
@@ -13084,11 +13059,11 @@ function closeScopeMenu() {
 function updateScopeChip() {
   const chip = document.getElementById('feed-scope-chip');
   if (!chip) return;
-  // Phase-2 interim: while a person/model filter is active the legacy banner
-  // carries the state and the chip hides so the two never contradict.
-  chip.classList.toggle('hidden', !!(feedUserFilter || feedModelFilter));
+  // A person/model filter shows IN the chip (gold active state); picking
+  // anything from the menu clears it via setFeedScope.
+  chip.classList.toggle('feed-scope-chip--active', !!(feedUserFilter || feedModelFilter));
   const lbl = chip.querySelector('.feed-scope-label');
-  if (lbl) lbl.textContent = scopeChipLabel(feedScope, null, null);
+  if (lbl) lbl.textContent = scopeChipLabel(feedScope, feedUserFilter, feedModelFilter);
 }
 
 async function loadMoreFeed() {
@@ -15425,8 +15400,10 @@ function renderFeed() {
   if (feedItems.length === 0) {
     // Filtered view with nothing visible: keep the filter bar so the state is
     // clear and the way back obvious — the follow CTA below would mislead here.
+    // Filtered view with nothing visible: the chip names the filter and is the
+    // way back — the follow CTA below would mislead here.
     if (feedUserFilter || feedModelFilter) {
-      el.innerHTML = feedFilterBarHtml() + `
+      el.innerHTML = `
         <div class="empty feed-empty-state">
           <div class="empty-icon"></div>
           <div class="empty-text">No posts to show</div>
@@ -15474,7 +15451,6 @@ function renderFeed() {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
   if (feedError || feedPartial) cards.unshift(feedStaleHtml(!feedError && feedPartial));
-  if (feedUserFilter || feedModelFilter) cards.unshift(feedFilterBarHtml());
   carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render

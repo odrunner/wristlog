@@ -96,6 +96,25 @@ test('scope survives tab-away and back', async ({ page }) => {
   await expect(page.locator('#feed-scope-chip')).toContainText('My posts');
 });
 
+test('person filter folds into the chip (escaped), menu clears it', async ({ page }) => {
+  await boot(page, {
+    logs: [log('own-1', FAKE_USER.id, '2025-03-15'), log('oth-1', OTHER, '2025-03-14')],
+    follows: [OTHER],
+  });
+  await page.evaluate(uid => viewUserFeed(uid, '', 'Steve <b>X</b>'), OTHER);
+  const chip = page.locator('#feed-scope-chip');
+  await expect(chip).toBeVisible();
+  // textContent assertion: an unescaped name would become a real <b> element
+  // and the literal "<b>" would vanish from the text.
+  await expect(chip).toContainText('Steve <b>X</b>’s posts');
+  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  await expect(page.locator('#feedcard-oth-1')).toBeVisible();
+  await expect(page.locator('#feedcard-own-1')).toHaveCount(0);
+  await pickScope(page, 'All posts');
+  await expect(chip).toContainText('All posts');
+  await expect(page.locator('#feedcard-own-1')).toBeVisible();
+});
+
 test('scope load-more dedups overlapping pages', async ({ page }) => {
   // 20 rows fill page 1 (USER_FEED_PAGE); page 2 overlaps the last id + 5 new.
   const page1 = [], page2 = [];

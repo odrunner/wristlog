@@ -4,7 +4,8 @@ import { mockSupabase, injectSession, waitForAppBoot, SAMPLE_WATCHES, FAKE_USER 
 // The Posts title on a profile page links to the Feed tab filtered to that
 // member, so their posts read as full cards instead of one grid tap at a time.
 // Clicking it must query logs WITH a user_id filter (asserted on the request),
-// show the filter bar, and the bar's "Show all posts" must restore the normal feed.
+// show the filter in the scope chip, and picking "All posts" from the chip's
+// menu must restore the normal feed.
 
 const OTHER_USER = 'other-user-111';
 
@@ -46,17 +47,16 @@ async function boot(page) {
   await page.waitForSelector('#page-profile.active', { timeout: 5_000 });
 }
 
-test('Posts title links to the feed filtered to that member, and Show all posts clears it', async ({ page }) => {
+test('Posts title links to the feed filtered to that member, and All posts clears it', async ({ page }) => {
   await boot(page);
 
   const link = page.locator('.profile-posts-link');
   await expect(link).toHaveCount(1);
   await link.click();
 
-  // Lands on the Feed tab with the filter bar naming the member.
+  // Lands on the Feed tab with the scope chip naming the member.
   await expect(page.locator('#page-feed')).toHaveClass(/active/);
-  const bar = page.locator('#feed-list .feed-stale');
-  await expect(bar).toContainText('Posts by @testuser');
+  await expect(page.locator('#feed-scope-chip')).toContainText('@testuser’s posts');
 
   // Only this member's posts render — the query carried user_id=eq.<id>, so the
   // other member's public post never arrived. Own private post is visible to self.
@@ -65,9 +65,10 @@ test('Posts title links to the feed filtered to that member, and Show all posts 
   await expect(page.locator('#feedcard-log-own-2')).toBeVisible();
   await expect(page.locator('#feedcard-log-other-1')).toHaveCount(0);
 
-  // Clearing the filter restores the normal feed (other members' posts return).
-  await bar.getByRole('button', { name: 'Show all posts' }).click();
-  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  // Clearing the filter from the chip menu restores the normal feed.
+  await page.locator('#feed-scope-chip').click();
+  await page.locator('#feed-scope-menu .feed-menu-item', { hasText: 'All posts' }).click();
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 });
 
@@ -84,7 +85,8 @@ test('feed card ⋯ menu filters to that member', async ({ page }) => {
   await page.locator('#feed-menu-log-other-1 .feed-menu-item', { hasText: 'Posts by this member' }).click();
 
   // Feed reloads filtered to that member only (query carried their user_id).
-  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by');
+  await expect(page.locator('#feed-scope-chip')).toContainText('posts');
+  await expect(page.locator('#feed-scope-chip')).toHaveClass(/feed-scope-chip--active/);
   await expect(page.locator('#feed-list [id^="feedcard-"]')).toHaveCount(1);
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
   await expect(page.locator('#feedcard-log-own-1')).toHaveCount(0);
@@ -93,18 +95,18 @@ test('feed card ⋯ menu filters to that member', async ({ page }) => {
 test('leaving the feed for another tab drops the filter', async ({ page }) => {
   await boot(page);
   await page.locator('.profile-posts-link').click();
-  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by @testuser');
+  await expect(page.locator('#feed-scope-chip')).toContainText('@testuser’s posts');
 
   await page.click('nav button[data-page="collection"]');
   await page.click('nav button[data-page="feed"]');
-  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 });
 
-test('a filtered load-more that lands after "Show all posts" never splices into the full feed', async ({ page }) => {
+test('a filtered load-more that lands after clearing the filter never splices into the full feed', async ({ page }) => {
   await boot(page);
   await page.locator('.profile-posts-link').click();
-  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts by @testuser');
+  await expect(page.locator('#feed-scope-chip')).toContainText('@testuser’s posts');
 
   // Gate the NEXT filtered logs query; it will answer with a fresh post only
   // after the filter has been cleared — the stale continuation's payload.
@@ -124,8 +126,9 @@ test('a filtered load-more that lands after "Show all posts" never splices into 
   await page.evaluate(() => { feedHasMore = true; loadMoreFeed(); });
 
   // User escapes the filtered view while that page is still in flight.
-  await page.locator('#feed-list .feed-stale').getByRole('button', { name: 'Show all posts' }).click();
-  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  await page.locator('#feed-scope-chip').click();
+  await page.locator('#feed-scope-menu .feed-menu-item', { hasText: 'All posts' }).click();
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-other-1')).toBeVisible();
 
   release();

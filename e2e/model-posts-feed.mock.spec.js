@@ -68,7 +68,7 @@ async function boot(page) {
   return rpcCalls;
 }
 
-test('photos count links to the feed filtered to this model, and Show all posts clears it', async ({ page }) => {
+test('photos count links to the feed filtered to this model, and All posts clears it', async ({ page }) => {
   const rpcCalls = await boot(page);
 
   const link = page.locator('#mp-shots [data-mp="shots-all"]');
@@ -76,10 +76,10 @@ test('photos count links to the feed filtered to this model, and Show all posts 
   await expect(link).toContainText('21 photos');
   await link.click();
 
-  // Lands on the Feed tab with the filter bar naming the model.
+  // Lands on the Feed tab with the scope chip naming the model.
   await expect(page.locator('#page-feed')).toHaveClass(/active/);
-  const bar = page.locator('#feed-list .feed-stale');
-  await expect(bar).toContainText('Posts with Rolex Submariner');
+  await expect(page.locator('#feed-scope-chip')).toContainText('Rolex Submariner posts');
+  await expect(page.locator('#feed-scope-chip')).toHaveClass(/feed-scope-chip--active/);
 
   // Only the model's posts render, served by model_feed_page with the model id.
   await expect(page.locator('#feed-list [id^="feedcard-"]')).toHaveCount(2);
@@ -89,9 +89,10 @@ test('photos count links to the feed filtered to this model, and Show all posts 
   expect(rpcCalls.length).toBeGreaterThan(0);
   expect(rpcCalls[0].p_model_id).toBe(MODEL_ID);
 
-  // Clearing the filter restores the normal feed.
-  await bar.getByRole('button', { name: 'Show all posts' }).click();
-  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  // Clearing the filter from the chip menu restores the normal feed.
+  await page.locator('#feed-scope-chip').click();
+  await page.locator('#feed-scope-menu .feed-menu-item', { hasText: 'All posts' }).click();
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-unrelated')).toBeVisible();
 });
 
@@ -117,10 +118,10 @@ test('on the public w/ page the photos count falls back to the homepage (sign-in
 test('leaving the feed for another tab drops the model filter', async ({ page }) => {
   await boot(page);
   await page.locator('#mp-shots [data-mp="shots-all"]').click();
-  await expect(page.locator('#feed-list .feed-stale')).toContainText('Posts with Rolex Submariner');
+  await expect(page.locator('#feed-scope-chip')).toContainText('Rolex Submariner posts');
 
   await page.click('nav button[data-page="collection"]');
   await page.click('nav button[data-page="feed"]');
-  await expect(page.locator('#feed-list .feed-stale')).toHaveCount(0);
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-unrelated')).toBeVisible();
 });
