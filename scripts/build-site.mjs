@@ -26,6 +26,7 @@ export const SITE_FILES = [
   'w/',
   'design-system.css',
   'model-page.js',
+  'supabase-js-2.98.0.min.js', // vendored UMD: own file so it drops out of the per-deploy shell re-download (P4)
   'sw.js',
   'manifest.json',
   'icon.svg',
