@@ -43,7 +43,7 @@ async function openStats(page) {
 }
 
 async function setPeriod(page, value) {
-  await page.selectOption('#report-period', value);
+  await page.click(`#report-period [data-period="${value}"]`);
   await page.waitForTimeout(150);
 }
 
@@ -116,11 +116,12 @@ test.describe('Wear leaderboard (mocked)', () => {
     expect(speedy.wears).toBe('2 wears');
   });
 
-  test('the period filter offers all five ranges', async ({ page }) => {
+  test('the period pills offer all five ranges, All Time selected by default', async ({ page }) => {
     await openStats(page);
     const opts = await page.evaluate(() =>
-      [...document.querySelectorAll('#report-period option')].map(o => o.value));
+      [...document.querySelectorAll('#report-period [data-period]')].map(o => o.dataset.period));
     expect(opts).toEqual(['all', '30', '90', 'ytd', '365']);
+    await expect(page.locator('#report-period .chip.selected')).toHaveText('All Time');
   });
 
   test('a measurement share today does NOT show the "worn today" badge', async ({ page }) => {

@@ -1118,7 +1118,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Filter */
     .stats-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); flex-wrap: wrap; gap: var(--space-4); }
-    select.filter-select { width: auto; min-width: var(--size-40); }
     .stats-filters { display: flex; align-items: center; gap: var(--space-2-5); flex-wrap: wrap; }
 
     /* Empty state */
@@ -4955,7 +4954,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button id="wl-view-btn" class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;"></button>
         <button class="btn btn-ghost u-pt-2 u-pr-2 u-pb-2 u-pl-2" onclick="openAddWishlist()" title="Add Manually" aria-label="Add Manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
         <button id="wl-rec-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="toggleWishlistRecs()" title="AI picks from your wishlist" aria-label="AI picks from your wishlist" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg><span class="wl-actions-text" id="wl-rec-btn-label">AI Picks</span></button>
       </div>
     </div>
@@ -4968,6 +4966,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="wl-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitWishlistSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
     </div>
+    <div id="wl-sort-bar"></div>
     <div id="wl-rec-panel"></div>
     <div id="wishlist-grid"></div>
   </div>
@@ -4976,13 +4975,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-stats" class="page">
     <div class="stats-top">
       <div class="stats-filters">
-        <select class="filter-select" id="report-period" aria-label="Stats period" onchange="renderStats(true)">
-          <option value="all">All Time</option>
-          <option value="30">1M</option>
-          <option value="90">3M</option>
-          <option value="ytd">YTD</option>
-          <option value="365">1Y</option>
-        </select>
+        <div class="u-d-flex u-gap-2 u-fw--wrap" id="report-period" role="tablist" aria-label="Stats period">
+          <button class="chip selected" role="tab" aria-selected="true" data-period="all" onclick="setStatsPeriod('all')">All Time</button>
+          <button class="chip" role="tab" aria-selected="false" data-period="30" onclick="setStatsPeriod('30')">1M</button>
+          <button class="chip" role="tab" aria-selected="false" data-period="90" onclick="setStatsPeriod('90')">3M</button>
+          <button class="chip" role="tab" aria-selected="false" data-period="ytd" onclick="setStatsPeriod('ytd')">YTD</button>
+          <button class="chip" role="tab" aria-selected="false" data-period="365" onclick="setStatsPeriod('365')">1Y</button>
+        </div>
       </div>
     </div>
 
@@ -8136,7 +8135,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.19.44';
+const APP_VERSION = '06.20.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18461,7 +18460,7 @@ let collView     = collViewFromStore(safeLS.get('wr_coll_view')); // 'grid' | 'g
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears' | 'lastworn'
 let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
-let collTagsHidden = safeLS.get('collTagsHidden') === '1'; // watch-type pills tucked away
+let collTagsHidden = safeLS.get('collTagsHidden') !== '0'; // watch-type pills tucked away (hidden by default)
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
 let simMode  = false;                     // Collection "What-if" simulation (shipped to everyone 2026-09-28)
@@ -27477,9 +27476,20 @@ function confirmDelete() {
 // Streaks and badges read the raw `logs` array separately and deliberately keep
 // counting measurement shares as activity.
 function filteredLogs() {
-  const p = document.getElementById('report-period').value;
-  const cutoff = periodCutoff(p, todayStr());
+  const cutoff = periodCutoff(_statsPeriod, todayStr());
   return logs.filter(l => isWearEntry(l) && (!cutoff || l.date >= cutoff));
+}
+
+// Stats period pills (replaced the dropdown 2026-11-06)
+let _statsPeriod = 'all';
+function setStatsPeriod(p) {
+  _statsPeriod = p;
+  document.querySelectorAll('#report-period [data-period]').forEach(b => {
+    const sel = b.dataset.period === p;
+    b.classList.toggle('selected', sel);
+    b.setAttribute('aria-selected', sel);
+  });
+  renderStats(true);
 }
 
 // ══════════════════════════════════════════
@@ -28075,7 +28085,7 @@ function renderWearLeaderboard(fl) {
 
   const rows = wearLeaderboard(watches, fl, null); // fl is already period-filtered
   const anyWears = rows.some(r => r.wears > 0);
-  const label = periodLabel(document.getElementById('report-period').value);
+  const label = periodLabel(_statsPeriod);
 
   // Unworn watches are the tail of the list and were rendering in full: a
   // 30-watch collection produced ~1500px of identical "#11 · 0 wears —" rows
@@ -31805,21 +31815,53 @@ function renderWishlist(force) {
   _renderWishlistBody(force);
   decorateWishlistPicks();   // rank badges + rings on AI-picked tiles, any view
 }
+
+// Wishlist sort pills (2026-11-06, mirrors the Collection sort bar): Rank
+// chip + Newest + My Ranking. No pill active = the user's own drag order;
+// tapping the active pill returns to it. Sorting works on a COPY, so
+// sort_order is never rewritten — but drag is suspended while a pill is
+// active, since a drop into a sorted list would be meaningless.
+let _wlSort = null; // null | 'newest' | 'ranking'
+function setWlSort(key) {
+  _wlSort = (_wlSort === key) ? null : key;
+  renderWishlist(true);
+}
+
+function renderWlSortBar() {
+  const bar = document.getElementById('wl-sort-bar');
+  if (!bar) return;
+  if (wishlist.length < 2 || _wlSelect) { bar.innerHTML = ''; return; }
+  const rankChip = `<button id="wl-rank-btn" class="coll-sort-chip coll-rank-chip" onclick="startGame('wishlist')" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="coll-rank-text">Rank</span></button>`;
+  // "My Ranking" appears once the Ranking Game has been played, like Collection
+  const hasRanking = wishlist.some(w => w.elo != null);
+  const opts = [
+    { key: 'newest', label: 'Newest' },
+    ...(hasRanking ? [{ key: 'ranking', label: 'My Ranking' }] : []),
+  ];
+  bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
+    `<button class="coll-sort-chip${_wlSort === o.key ? ' active' : ''}" onclick="setWlSort('${o.key}')">${o.label}</button>`
+  ).join('')}</div>`;
+}
 function _renderWishlistBody(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
   _lastRenderedGen.wishlist = _dataGen;
   const el = document.getElementById('wishlist-grid');
   const viewBtn = document.getElementById('wl-view-btn');
-  const visible = wishlist;
+  // Sort pills rearrange a copy; the drag order (sort_order) stays untouched
+  let visible = wishlist;
+  if (_wlSort === 'newest') {
+    visible = [...wishlist].sort((a, b) => (b.addedDate || '').localeCompare(a.addedDate || ''));
+  } else if (_wlSort === 'ranking') {
+    visible = [...wishlist].sort((a, b) => (b.elo ?? -1) - (a.elo ?? -1));
+  }
   if (viewBtn) {
     viewBtn.style.display = visible.length ? '' : 'none';
     updateWishlistViewBtn(viewBtn);
   }
+  renderWlSortBar();
   const shareBtn = document.getElementById('wl-share-btn');
-  const rankBtn = document.getElementById('wl-rank-btn');
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
-  if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
   // AI picks show only after the user asks (toggleWishlistRecs); the What-if
   // simulator keeps its automatic rail.
   const canRec = visible.length >= 2 && !_wlSelect && currentUser;
@@ -31900,12 +31942,12 @@ function _renderWishlistBody(force) {
         : '';
       // Same drag-to-reorder as the list view (mouse via draggable, touch via
       // the ⠿ handle); suspended while share-selecting, like the list.
-      const dragAttrs = selecting ? '' : ` draggable="true"
+      const dragAttrs = (selecting || _wlSort) ? '' : ` draggable="true"
         ondragstart="wlDragStart(event,'${w.id}')"
         ondragover="wlDragOver(event)"
         ondrop="wlDrop(event,'${w.id}')"
         ondragend="wlDragEnd(event)"`;
-      const handle = selecting ? '' : `<span class="drag-handle wl-tile-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>`;
+      const handle = (selecting || _wlSort) ? '' : `<span class="drag-handle wl-tile-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>`;
       return `<div class="wl-tile" data-id="${w.id}" data-priv="${escHtml(w.wishPrivacy||'')}"${dragAttrs}>
         ${box}
         ${handle}
@@ -31955,7 +31997,7 @@ function _renderWishlistBody(force) {
     return;
   }
   el.className = 'wishlist-list';
-  el.innerHTML = visible.map(w => wlCardHtml(w, true)).join('');
+  el.innerHTML = visible.map(w => wlCardHtml(w, !_wlSort)).join('');
 }
 
 // ── Wishlist drag-and-drop reordering ────────────────────────────────────────
@@ -35134,8 +35176,6 @@ function updateMsrModeIndicator() {
       chip.style.display = 'none';
     }
   }
-  const gear = document.getElementById('msr-settings-gear');
-  if (gear) gear.style.color = isAdvanced ? 'var(--gold)' : 'var(--muted)';
 }
 
 function showTroubleshootTips() {

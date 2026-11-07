@@ -187,12 +187,13 @@ describe('"worn today" excludes measurement (index.html)', () => {
 });
 
 describe('wear leaderboard wiring (index.html)', () => {
-  it('the period filter offers YTD', () => {
-    const sel = html.slice(html.indexOf('id="report-period"'), html.indexOf('</select>', html.indexOf('id="report-period"')));
-    expect(sel).toContain('value="ytd"');
-    expect(sel).toMatch(/value="30"/);
-    expect(sel).toMatch(/value="90"/);
-    expect(sel).toMatch(/value="365"/);
+  it('the period pills offer YTD', () => {
+    const start = html.indexOf('id="report-period"');
+    const sel = html.slice(start, html.indexOf('1Y</button>', start));
+    expect(sel).toContain('data-period="ytd"');
+    expect(sel).toMatch(/data-period="30"/);
+    expect(sel).toMatch(/data-period="90"/);
+    expect(sel).toMatch(/data-period="365"/);
   });
 
   it('filteredLogs excludes measurement shares via the shared predicate', () => {

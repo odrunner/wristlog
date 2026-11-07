@@ -74,12 +74,15 @@ test('the sortable Stats table has a Last Worn column', async ({ page }) => {
   await expect(lastRowName).toContainText('Black Bay 58');
 });
 
-test('chevron between Last Worn and Post Pics hides the type pills and clears an active filter', async ({ page }) => {
+test('type pills start hidden; the chevron shows them and collapsing clears an active filter', async ({ page }) => {
   await openCollection(page);
+  // Hidden by default (2026-11-06)
+  await expect(page.locator('#coll-tag-filter-bar .coll-tag-chip')).toHaveCount(0);
+  const toggle = page.locator('#coll-sort-bar .coll-tags-toggle');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
   const pills = page.locator('#coll-tag-filter-bar .coll-tag-chip');
   await expect(pills.first()).toBeVisible();
-  // The chevron sits right after the Last Worn chip
-  const toggle = page.locator('#coll-sort-bar .coll-tags-toggle');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   // Filter to Chronograph (1 watch), then tuck the pills away: filter clears too
   const cards = page.locator('#watches-grid .watch-card:not(.watch-card-add)');
@@ -88,8 +91,4 @@ test('chevron between Last Worn and Post Pics hides the type pills and clears an
   await toggle.click();
   await expect(page.locator('#coll-tag-filter-bar .coll-tag-chip')).toHaveCount(0);
   await expect(cards).toHaveCount(3);
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  // And back
-  await toggle.click();
-  await expect(pills.first()).toBeVisible();
 });
