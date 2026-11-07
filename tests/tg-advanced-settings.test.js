@@ -229,12 +229,12 @@ describe('Advanced Settings — Phase 1 trim', () => {
     expect(html).toContain("safeLS.get('tg_advanced_settings')");
   });
 
-  it('places the gear icon next to Help (title takes flex:1 to push both right)', () => {
+  it('places the gear icon next to Help in the measure header (page titles removed 2026-11-06)', () => {
     const headerStart = html.indexOf('id="page-measure"');
-    const titleIdx = html.indexOf('Measure Accuracy', headerStart);
-    const titleTag = html.slice(html.lastIndexOf('<h1', titleIdx), titleIdx);
-    // `.grow` is flex:1 (design-system.css); the title carried it inline until 2026-09-21.
-    expect(titleTag).toMatch(/flex:1|class="[^"]*\bgrow\b/);
+    const gearIdx = html.indexOf('id="msr-settings-gear"', headerStart);
+    const helpIdx = html.indexOf('showMsrHelp()', headerStart);
+    expect(gearIdx).toBeGreaterThan(headerStart);
+    expect(helpIdx).toBeGreaterThan(gearIdx);
   });
 });
 

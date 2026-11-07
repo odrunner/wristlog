@@ -3350,16 +3350,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
-    <div class="coll-seg u-d-flex u-gap-2 u-mb-3" role="tablist" aria-label="Collection or Wishlist">
-      <button class="chip selected" role="tab" aria-selected="true" data-seg="collection" onclick="collSeg('collection')">Collection</button>
-      <button class="chip" role="tab" aria-selected="false" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-center">
+      <div class="u-d-flex u-gap-2" role="tablist" aria-label="Collection or Wishlist">
+        <button class="chip selected" role="tab" aria-selected="true" data-seg="collection" onclick="collSeg('collection')">Collection</button>
+        <button class="chip" role="tab" aria-selected="false" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+      </div>
+      <span class="grow"></span>
+      <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
+      <button id="coll-report-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" onclick="openCollectionReport()" title="Collection report — sortable by purchase date, price, market value, cost per wear" aria-label="Collection report" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="9" x2="12" y2="21"/></svg></button>
     </div>
     <div class="page-header">
-      <div class="row">
-        <h1 class="page-title">My Collection</h1>
-        <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
-        <button id="coll-report-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" onclick="openCollectionReport()" title="Collection report — sortable by purchase date, price, market value, cost per wear" aria-label="Collection report" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="9" x2="12" y2="21"/></svg></button>
-      </div>
       <div class="wl-actions" id="coll-header-actions">
         <button id="coll-view-btn" class="btn btn-md btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-md btn-ghost" onclick="openAddWatch()" title="Add Manually" aria-label="Add watch manually"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -3387,8 +3387,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-feed" class="page active page-feed">
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
-      <h1 class="page-title">Feed</h1>
-      <div class="u-gap-2 u-ml-auto u-d-flex">
+      <div class="u-gap-2 u-d-flex">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
         <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
@@ -3421,9 +3420,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <div id="page-explore" class="page">
-    <div class="page-header">
-      <h1 class="page-title">Watches</h1>
-    </div>
     <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
@@ -4578,17 +4574,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ MEASURE PAGE ════ -->
   <div id="page-measure" class="page">
     <div class="page-header">
-      <h1 class="page-title grow">Measure Accuracy</h1>
-      <button id="msr-mode-chip" onclick="openMsrSettings()" class="u-items-center u-gap-1-5 u-bg-gold-dim u-bd-1px-solid-gold u-c-gold-text u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-fs-xs u-fw-semibold u-lh-none u-cur-pointer u-ws-nowrap" style="display:none;" aria-label="Active measurement mode — tap to change"></button>
-      <button id="msr-history-btn" onclick="openMsrHistory('header')" class="btn-plain" style="display:none;" aria-label="Accuracy history" title="Accuracy history">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
-      </button>
-      <button id="msr-settings-gear" onclick="openMsrSettings()" class="u-bg-none u-bd-none u-cur-pointer u-pt-1 u-pr-1 u-pb-1 u-pl-1 u-c-muted" style="display:none;" aria-label="Advanced settings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button onclick="showMsrHelp()" class="btn-plain" aria-label="How to measure">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      </button>
+      <div class="u-d-flex u-gap-2 u-items-center">
+        <button id="msr-history-btn" onclick="openMsrHistory('header')" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;" aria-label="Accuracy history" title="Accuracy history">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+        </button>
+        <button id="msr-settings-gear" onclick="openMsrSettings()" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;" aria-label="Advanced settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button onclick="showMsrHelp()" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" aria-label="How to measure">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+        <button id="msr-mode-chip" onclick="openMsrSettings()" class="u-items-center u-gap-1-5 u-bg-gold-dim u-bd-1px-solid-gold u-c-gold-text u-r-pill u-pt-1 u-pr-2-5 u-pb-1 u-pl-2-5 u-fs-xs u-fw-semibold u-lh-none u-cur-pointer u-ws-nowrap" style="display:none;" aria-label="Active measurement mode — tap to change"></button>
+      </div>
     </div>
     <!-- No-watches callout (shown when collection is empty) -->
     <div id="measure-no-watches" class="u-ta-center u-pt-8 u-pr-4 u-pb-8 u-pl-4" style="display:none;">
@@ -4942,13 +4939,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ WISHLIST PAGE ════ -->
   <div id="page-wishlist" class="page">
-    <div class="coll-seg u-d-flex u-gap-2 u-mb-3" role="tablist" aria-label="Collection or Wishlist">
-      <button class="chip" role="tab" aria-selected="false" data-seg="collection" onclick="collSeg('collection')">Collection</button>
-      <button class="chip selected" role="tab" aria-selected="true" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-center">
+      <div class="u-d-flex u-gap-2" role="tablist" aria-label="Collection or Wishlist">
+        <button class="chip" role="tab" aria-selected="false" data-seg="collection" onclick="collSeg('collection')">Collection</button>
+        <button class="chip selected" role="tab" aria-selected="true" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
+      </div>
+      <span class="grow"></span>
+      <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
     </div>
     <div class="page-header">
-      <h1 class="page-title">Wishlist</h1>
-      <span id="wl-count" class="text-meta"></span>
       <div class="wl-actions">
         <!-- One icon cycles list → folders → gallery → compact → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
@@ -4957,7 +4956,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-primary u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="wl-rank-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
         <button id="wl-rec-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="toggleWishlistRecs()" title="AI picks from your wishlist" aria-label="AI picks from your wishlist" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.9 1.9L12 18.4l-2.1-5.8L4 10.7l6.1-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg><span class="wl-actions-text" id="wl-rec-btn-label">AI Picks</span></button>
-        <button id="wl-share-btn" class="btn btn-ghost u-gap-1-5 u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
     <div id="wl-select-bar" class="panel u-items-center u-fw--wrap u-mb-3 wl-select-bar u-gap-2 u-pt-2 u-pr-3 u-pb-2 u-pl-3" style="display:none;">
@@ -4976,7 +4974,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ STATS PAGE ════ -->
   <div id="page-stats" class="page">
     <div class="stats-top">
-      <h1 class="page-title">Stats</h1>
       <div class="stats-filters">
         <select class="filter-select" id="report-period" aria-label="Stats period" onchange="renderStats(true)">
           <option value="all">All Time</option>
@@ -8138,7 +8135,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.15.31';
+const APP_VERSION = '06.16.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22292,7 +22289,7 @@ function collSeg(page) {
 }
 
 function _collSegSync(page) {
-  document.querySelectorAll('.coll-seg button').forEach(b => {
+  document.querySelectorAll('.coll-seg button[data-seg]').forEach(b => {
     const on = b.dataset.seg === page;
     b.classList.toggle('selected', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -31833,11 +31830,6 @@ function _renderWishlistBody(force) {
   }
   const recPanel = document.getElementById('wl-rec-panel');
   if (recPanel) recPanel.innerHTML = (_recWlVisible && canRec) ? recRailHTML('wishlist') : '';
-  const countEl = document.getElementById('wl-count');
-  if (countEl) {
-    const wlTotal = visible.reduce((s, w) => s + (Number(w.marketPrice ?? w.price) || 0), 0);
-    countEl.textContent = visible.length ? `${visible.length} watch${visible.length === 1 ? '' : 'es'}${wlTotal > 0 ? ' · ' + fmtMoney(wlTotal) : ''}` : '';
-  }
   if (bar) {
     bar.style.display = (_wlSelect && visible.length) ? 'flex' : 'none';
     if (_wlSelect) {

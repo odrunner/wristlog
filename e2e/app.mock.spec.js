@@ -1274,7 +1274,7 @@ test.describe('Measure page (mocked)', () => {
   test('navigates to Measure tab and shows content', async ({ page }) => {
     await navigateTo(page, 'measure');
     await expect(page.locator('#page-measure')).toBeVisible();
-    await expect(page.locator('h1:has-text("Measure Accuracy")')).toBeVisible();
+    await expect(page.locator('#page-measure .page-header button[aria-label="How to measure"]')).toBeVisible();
   });
 
   test('shows first-time help modal on initial visit', async ({ page }) => {
