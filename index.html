@@ -3386,7 +3386,7 @@
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
     <div class="enhance-nudge-slot"></div>
-    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-center">
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-flex-start">
       <div class="u-d-flex u-gap-2" role="tablist" aria-label="Collection or Wishlist">
         <button class="chip selected" role="tab" aria-selected="true" data-seg="collection" onclick="collSeg('collection')">Collection</button>
         <button class="chip" role="tab" aria-selected="false" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
@@ -3457,10 +3457,10 @@
   </div>
 
   <div id="page-explore" class="page">
+    <div id="explore-brands" class="u-gap-2 u-pb-2 u-mb-2 u-ovs-touch u-d-flex" style="overflow-x:auto;"></div>
     <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
-    <div id="explore-brands" class="u-gap-1-5 u-pb-2 u-mb-2 u-ovs-touch u-d-flex" style="overflow-x:auto;"></div>
     <div id="explore-grid" class="watches-grid"></div>
     <div id="explore-more-wrap" class="u-ta-center u-mt-4" style="display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
@@ -4983,7 +4983,7 @@
 
   <!-- ════ WISHLIST PAGE ════ -->
   <div id="page-wishlist" class="page">
-    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-center">
+    <div class="coll-seg u-d-flex u-gap-2 u-mb-3 u-items-flex-start">
       <div class="u-d-flex u-gap-2" role="tablist" aria-label="Collection or Wishlist">
         <button class="chip" role="tab" aria-selected="false" data-seg="collection" onclick="collSeg('collection')">Collection</button>
         <button class="chip selected" role="tab" aria-selected="true" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
@@ -8192,7 +8192,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.27';
+const APP_VERSION = '07.09.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
