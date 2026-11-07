@@ -65,7 +65,9 @@ test('header search pill opens the sheet and Post still posts', async ({ page })
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  // Chip + pill + post share one line even at the narrowest phone width.
+  // Post keeps its word next to the icon, and chip + pill + post still share
+  // one line even at the narrowest phone width (the pill truncates instead).
+  await expect(page.locator('#feed-post-btn')).toContainText('Post');
   const tops = await page.evaluate(() => ['#feed-scope-chip', '.feed-search-pill', '#feed-post-btn']
     .map(s => document.querySelector(s).getBoundingClientRect().top));
   expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(10);

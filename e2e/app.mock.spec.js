@@ -784,7 +784,7 @@ test.describe('Search / Discover (mocked)', () => {
   test('opens discover modal from feed page', async ({ page }) => {
     const findBtn = page.locator('.feed-search-pill');
     await expect(findBtn).toBeVisible();
-    await expect(findBtn).toHaveText(/^\s*Search\s*$/); // compact label — header stays one line
+    await expect(findBtn).toHaveText(/Search watches and people/);
     await findBtn.click();
 
     await expect(page.locator('#discover-modal')).toBeVisible();
