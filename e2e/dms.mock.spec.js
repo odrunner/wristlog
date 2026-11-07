@@ -19,6 +19,8 @@ async function boot(page, opts = {}) {
   const R = (name, fn) => page.route(`**/rest/v1/rpc/${name}*`, fn);
   await R('get_experiments', r => json(r, []));
   await R('dm_unread_count', r => json(r, opts.unread ?? 0));
+  // The 30s bell poll carries the DM count too — keep both sources agreeing.
+  await R('notif_poll', r => json(r, { notifications: [], badge_topup: [], dm_unread: opts.unread ?? 0 }));
   await R('dm_inbox', r => {
     state.inboxCalls++;
     const v = typeof opts.inbox === 'function' ? opts.inbox(state.inboxCalls, state) : (opts.inbox || {});

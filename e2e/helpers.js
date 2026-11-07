@@ -206,6 +206,11 @@ export async function mockSupabase(page, opts = {}) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 
+  // ── Bell poll: one RPC carries window + badge top-up + enrichment + DM count ──
+  await page.route('**/rest/v1/rpc/notif_poll*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ notifications: [], badge_topup: [], dm_unread: 0 }) })
+  );
+
   // ── Social: friends, follows, likes, comments, notifications, badges ──
   for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events']) {
     await page.route(`**/rest/v1/${table}*`, route =>

@@ -1807,6 +1807,28 @@ export function mergeBadgeNotifs(recent, badgeRows) {
 }
 
 /**
+ * Shape the notif_poll() RPC payload (one-request bell poll, audit CLIENT-4)
+ * into what the client used to assemble from six requests: window + badge
+ * top-up merged via mergeBadgeNotifs, enrichment under the client's names
+ * (share_comment -> shareComment, absent -> null), unread count, DM count.
+ * Returns null on a malformed payload so the bell keeps its last state.
+ */
+export function shapeNotifPoll(payload) {
+  if (!payload || !Array.isArray(payload.notifications)) return null;
+  const topup = Array.isArray(payload.badge_topup) ? payload.badge_topup : [];
+  const notifs = mergeBadgeNotifs(payload.notifications, topup).map(n => ({
+    id: n.id, type: n.type, actor_id: n.actor_id, ref_id: n.ref_id,
+    is_read: n.is_read, created_at: n.created_at,
+    actor: n.actor || null, club: n.club || null, shareComment: n.share_comment || null,
+  }));
+  return {
+    notifs,
+    unread: notifs.filter(n => !n.is_read).length,
+    dmUnread: Number(payload.dm_unread) || 0,
+  };
+}
+
+/**
  * Build the bell-inbox rows for a set of newly-earned badges.
  * Self-addressed (recipient = earner) and actor-less, like 'system'.
  * badges: [{ ref, name }]. ref_id is the badge ref as a string.

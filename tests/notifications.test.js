@@ -12,6 +12,7 @@ import {
   notificationOpensBadgeWall,
   notifStaysUnreadOnPanelOpen,
   mergeBadgeNotifs,
+  shapeNotifPoll,
 } from '../wrotate_test.js';
 
 // ── notificationBody ──────────────────────────────────────────────────────────
@@ -658,5 +659,78 @@ describe('share_comment body', () => {
     expect(notificationBody('share_comment', 'Sarah', { shareKind: 'wishlist' })).toBe('Sarah commented on your shared wishlist link');
     expect(notificationBody('share_comment', 'Sarah', { shareKind: 'collection' })).toBe('Sarah commented on your shared collection link');
     expect(notificationBody('share_comment', '', {})).toBe('Someone commented on your shared wishlist link');
+  });
+});
+
+// ── shapeNotifPoll ────────────────────────────────────────────────────────────
+// The notif_poll() RPC answers the whole 30s bell poll in one request
+// (audit CLIENT-4): window + badge top-up + embedded actor/club/share-comment
+// enrichment + DM unread count. shapeNotifPoll turns that payload into what
+// the client used to assemble from six requests: merged rows (via
+// mergeBadgeNotifs), camelCase shareComment, unread count, dm count.
+describe('shapeNotifPoll', () => {
+  const row = (id, over = {}) => ({
+    id, type: 'like', actor_id: 'a1', ref_id: 'log-1', is_read: false,
+    created_at: '2026-11-06T10:00:00+00:00', actor: null, club: null, share_comment: null,
+    ...over,
+  });
+
+  it('rejects a malformed payload instead of blanking the bell', () => {
+    expect(shapeNotifPoll(null)).toBe(null);
+    expect(shapeNotifPoll(undefined)).toBe(null);
+    expect(shapeNotifPoll({})).toBe(null);
+    expect(shapeNotifPoll({ notifications: 'nope' })).toBe(null);
+  });
+
+  it('merges the badge top-up into the window, deduped and newest-first', () => {
+    const payload = {
+      notifications: [row('r1'), row('r2', { created_at: '2026-11-04T10:00:00+00:00' })],
+      badge_topup: [
+        row('b1', { type: 'badge_earned', created_at: '2026-11-05T10:00:00+00:00' }),
+        row('r2', { created_at: '2026-11-04T10:00:00+00:00' }),   // already in the window
+      ],
+      dm_unread: 0,
+    };
+    expect(shapeNotifPoll(payload).notifs.map(n => n.id)).toEqual(['r1', 'b1', 'r2']);
+  });
+
+  it('keeps enrichment under the client names (share_comment -> shareComment)', () => {
+    const actor = { id: 'a1', username: 'jane', display_name: 'Jane', avatar_url: null, is_official: false, profile_privacy: 'public' };
+    const club = { id: 'c9', name: 'GMT Club' };
+    const sc = { id: 's7', kind: 'collection', token: 'tok', name: 'Sarah', body: 'Nice' };
+    const out = shapeNotifPoll({
+      notifications: [
+        row('n1', { actor }),
+        row('n2', { type: 'club_invite', club }),
+        row('n3', { type: 'share_comment', share_comment: sc }),
+      ],
+      badge_topup: [], dm_unread: 0,
+    });
+    expect(out.notifs[0].actor).toEqual(actor);
+    expect(out.notifs[1].club).toEqual(club);
+    expect(out.notifs[2].shareComment).toEqual(sc);
+    expect(out.notifs[2].share_comment).toBeUndefined();
+    // Absent enrichment stays null, never undefined — the renderer tests truthiness.
+    expect(out.notifs[0].club).toBe(null);
+    expect(out.notifs[0].shareComment).toBe(null);
+  });
+
+  it('counts only unread rows, badge top-up included', () => {
+    const out = shapeNotifPoll({
+      notifications: [row('n1'), row('n2', { is_read: true })],
+      badge_topup: [row('b1', { type: 'badge_earned' })],
+      dm_unread: 0,
+    });
+    expect(out.unread).toBe(2);
+  });
+
+  it('passes the DM count through, defaulting junk to 0', () => {
+    expect(shapeNotifPoll({ notifications: [], badge_topup: [], dm_unread: 3 }).dmUnread).toBe(3);
+    expect(shapeNotifPoll({ notifications: [], badge_topup: [], dm_unread: null }).dmUnread).toBe(0);
+    expect(shapeNotifPoll({ notifications: [] }).dmUnread).toBe(0);
+  });
+
+  it('tolerates a missing badge_topup array', () => {
+    expect(shapeNotifPoll({ notifications: [row('n1')] }).notifs.map(n => n.id)).toEqual(['n1']);
   });
 });

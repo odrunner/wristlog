@@ -41,7 +41,7 @@ const VERBATIM = [
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'tgSecondHalfDrift', 'tgDriftGateBlocks', 'uniqueWears',
   'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'collViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows', 'notifStaysUnreadOnPanelOpen',
-  'mergeBadgeNotifs',
+  'mergeBadgeNotifs', 'shapeNotifPoll',
   'addDaysStr', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',

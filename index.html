@@ -8138,7 +8138,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.20.17';
+const APP_VERSION = '06.20.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11012,12 +11012,12 @@ function openCloseFriendsModal() {
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
   if (!currentUser) return;
-  loadDmUnread();  // rides the same 30s poll (and every bootstrap/resume call site)
-  const { data, error } = await withTimeout(db.from('notifications')
-    .select('id, type, actor_id, ref_id, is_read, created_at')
-    .eq('user_id', currentUser.id)
-    .not('type', 'in', '("message","message_request")')  // DMs live under the envelope, not the bell
-    .order('created_at', { ascending: false }).limit(30));
+  syncDmBtn();
+  // One RPC answers the whole 30s poll — recency window + unread-badge top-up
+  // (the persistent nudge that outlives the 30-row window) + actor/club/
+  // share-comment enrichment + the DM unread count. This used to be up to six
+  // round-trips per tick (audit 2026-11-06, CLIENT-4).
+  const { data, error } = await withTimeout(db.rpc('notif_poll'));
   if (error) {
     // Auth expired or revoked — stop polling to avoid endless 401s
     if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.status === 401) {
@@ -11025,43 +11025,11 @@ async function loadNotifications() {
     }
     return;
   }
-  if (!data) return;
-  // The fetch above is a 30-row recency window, but badge rows are the persistent
-  // unseen-badge nudge (they survive the panel's auto mark-all-read). An active
-  // user buries one under 30 newer notifications within days, which dropped it
-  // from the window and silently extinguished the indicator while it was still
-  // unread in the DB. Top up with the unread badge rows, whatever their age.
-  let rows = data;
-  try {
-    const { data: badgeRows } = await withTimeout(db.from('notifications')
-      .select('id, type, actor_id, ref_id, is_read, created_at')
-      .eq('user_id', currentUser.id).eq('type', 'badge_earned').eq('is_read', false)
-      .order('created_at', { ascending: false }).limit(20));
-    rows = mergeBadgeNotifs(data, badgeRows);
-  } catch (_) { /* top-up failed — fall back to the recency window alone */ }
-  let pMap = {}, clubMap = {}, scMap = {};
-  try {
-    const actorIds = [...new Set(rows.map(n => n.actor_id).filter(Boolean))];
-    if (actorIds.length) {
-      const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official, profile_privacy').in('id', actorIds);
-      (ps || []).forEach(p => pMap[p.id] = p);
-    }
-    const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
-    const clubIds = [...new Set(rows.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
-    if (clubIds.length) {
-      const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
-      (clubs || []).forEach(c => clubMap[c.id] = c);
-    }
-    // Share-link comments: the commenter has no profile row — name/kind/token
-    // live on the comment (owner-only RLS lets us read our own).
-    const scIds = [...new Set(rows.filter(n => n.type === 'share_comment' && n.ref_id).map(n => n.ref_id))];
-    if (scIds.length) {
-      const { data: scs } = await db.from('share_comments').select('id, kind, token, name, body').in('id', scIds);
-      (scs || []).forEach(c => scMap[c.id] = c);
-    }
-  } catch (_) { /* enrichment failed — render with fallback names */ }
-  userNotifs = rows.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null, shareComment: scMap[n.ref_id] || null }));
-  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  const shaped = shapeNotifPoll(data);
+  if (!shaped) return;
+  userNotifs = shaped.notifs;
+  unreadNotifCount = shaped.unread;
+  if (dmEnabled()) applyDmUnread(shaped.dmUnread);
   updateBellBadge();
 }
 
@@ -11074,6 +11042,28 @@ function mergeBadgeNotifs(recent, badgeRows) {
   if (!extra.length) return recent || [];
   return [...(recent || []), ...extra]
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+}
+
+/**
+ * Shape the notif_poll() RPC payload (one-request bell poll, audit CLIENT-4)
+ * into what the client used to assemble from six requests: window + badge
+ * top-up merged via mergeBadgeNotifs, enrichment under the client's names
+ * (share_comment -> shareComment, absent -> null), unread count, DM count.
+ * Returns null on a malformed payload so the bell keeps its last state.
+ */
+function shapeNotifPoll(payload) {
+  if (!payload || !Array.isArray(payload.notifications)) return null;
+  const topup = Array.isArray(payload.badge_topup) ? payload.badge_topup : [];
+  const notifs = mergeBadgeNotifs(payload.notifications, topup).map(n => ({
+    id: n.id, type: n.type, actor_id: n.actor_id, ref_id: n.ref_id,
+    is_read: n.is_read, created_at: n.created_at,
+    actor: n.actor || null, club: n.club || null, shareComment: n.share_comment || null,
+  }));
+  return {
+    notifs,
+    unread: notifs.filter(n => !n.is_read).length,
+    dmUnread: Number(payload.dm_unread) || 0,
+  };
 }
 
 function updateBellBadge() {
@@ -20842,6 +20832,23 @@ function updateDmBadge(n) {
 }
 
 let _dmUnreadAt = 0;
+// Both count sources land here: the 30s notif_poll (count rides the one RPC)
+// and loadDmUnread's own fetch for forced user-action refreshes.
+function applyDmUnread(count) {
+  _dmUnreadAt = Date.now();
+  const prev = dmState.unread;
+  dmState.unread = Number(count) || 0;
+  updateDmBadge(dmState.unread);
+  updateBellBadge();
+  // The badge and the inbox rows must not disagree on screen: a count change
+  // while the inbox is visible means new rows — refetch them.
+  const pm = document.getElementById('page-messages');
+  const inboxView = document.getElementById('dm-inbox-view');
+  if (dmState.unread !== prev && pm && pm.classList.contains('active')
+      && inboxView && !inboxView.classList.contains('hidden')) {
+    loadDmInbox();
+  }
+}
 async function loadDmUnread(force = false) {
   syncDmBtn();
   if (!dmEnabled()) return;
@@ -20851,19 +20858,7 @@ async function loadDmUnread(force = false) {
   try {
     const { data, error } = await db.rpc('dm_unread_count');
     if (error) return;
-    _dmUnreadAt = Date.now();
-    const prev = dmState.unread;
-    dmState.unread = Number(data) || 0;
-    updateDmBadge(dmState.unread);
-    updateBellBadge();
-    // The badge and the inbox rows must not disagree on screen: a count change
-    // while the inbox is visible means new rows — refetch them.
-    const pm = document.getElementById('page-messages');
-    const inboxView = document.getElementById('dm-inbox-view');
-    if (dmState.unread !== prev && pm && pm.classList.contains('active')
-        && inboxView && !inboxView.classList.contains('hidden')) {
-      loadDmInbox();
-    }
+    applyDmUnread(data);
   } catch (_) { /* badge is best-effort */ }
 }
 

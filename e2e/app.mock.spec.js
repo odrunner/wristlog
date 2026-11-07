@@ -1145,33 +1145,23 @@ test.describe('Notification bell (mocked)', () => {
 // and the actor profile is resolved into the message.
 test.describe('Notifications populated (mocked)', () => {
   const ACTOR = 'actor-user-001';
+  // notif_poll() embeds the actor profile per row — no separate profiles fetch.
+  const JANE = { id: ACTOR, username: 'collector_jane', display_name: 'Jane Collector', avatar_url: null, is_official: false, profile_privacy: 'public' };
   const NOTIFS = [
-    { id: 'n1', user_id: FAKE_USER.id, type: 'like', actor_id: ACTOR, ref_id: 'log-001', is_read: false, created_at: '2026-06-01T10:00:00Z' },
-    { id: 'n2', user_id: FAKE_USER.id, type: 'follow', actor_id: ACTOR, ref_id: null, is_read: false, created_at: '2026-06-01T09:00:00Z' },
-    { id: 'n3', user_id: FAKE_USER.id, type: 'comment', actor_id: ACTOR, ref_id: 'log-001', is_read: true, created_at: '2026-05-31T09:00:00Z' },
+    { id: 'n1', type: 'like', actor_id: ACTOR, ref_id: 'log-001', is_read: false, created_at: '2026-06-01T10:00:00Z', actor: JANE, club: null, share_comment: null },
+    { id: 'n2', type: 'follow', actor_id: ACTOR, ref_id: null, is_read: false, created_at: '2026-06-01T09:00:00Z', actor: JANE, club: null, share_comment: null },
+    { id: 'n3', type: 'comment', actor_id: ACTOR, ref_id: 'log-001', is_read: true, created_at: '2026-05-31T09:00:00Z', actor: JANE, club: null, share_comment: null },
   ];
 
   test.beforeEach(async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
-    // Override the harness's empty-array default for notifications + actor profile.
-    // Registered after mockSupabase, so Playwright matches these first.
-    await page.route('**/rest/v1/notifications*', (route) => {
-      if (route.request().method() === 'GET') {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NOTIFS) });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-    });
-    await page.route('**/rest/v1/profiles*', (route) => {
-      // actor lookup (in=...) returns the actor; everything else returns the user profile
-      const url = route.request().url();
-      if (url.includes(ACTOR)) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-          { id: ACTOR, username: 'collector_jane', display_name: 'Jane Collector', avatar_url: null, is_official: false },
-        ]) });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FAKE_PROFILE) });
-    });
+    // Override the harness's empty notif_poll default. Registered after
+    // mockSupabase, so Playwright matches this first.
+    await page.route('**/rest/v1/rpc/notif_poll*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ notifications: NOTIFS, badge_topup: [], dm_unread: 0 }),
+    }));
     await page.goto('/');
     await waitForAppBoot(page);
   });
@@ -2257,15 +2247,10 @@ test.describe('Badge earned notification (mocked)', () => {
     await injectSession(page);
     // Seed the badge_earned notification (registered after mockSupabase so
     // Playwright matches this more-specific handler first, per existing pattern).
-    await page.route('**/rest/v1/notifications*', (route) => {
-      if (route.request().method() === 'GET') {
-        return route.fulfill({
-          status: 200, contentType: 'application/json',
-          body: JSON.stringify([BADGE_NOTIF]),
-        });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-    });
+    await page.route('**/rest/v1/rpc/notif_poll*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ notifications: [BADGE_NOTIF], badge_topup: [], dm_unread: 0 }),
+    }));
     await page.goto('/');
     await waitForAppBoot(page);
   });
@@ -2307,7 +2292,7 @@ test.describe('Badge earned notification (mocked)', () => {
 // loadNotifications() fetches only the 30 newest rows. A badge row buried under
 // newer traffic dropped out of that window and silently killed the nudge while
 // it was still unread in the DB — the indicator was supposed to be persistent.
-// It's now topped up by a separate unread-badge query (mergeBadgeNotifs).
+// It's now topped up by notif_poll()'s badge_topup array (mergeBadgeNotifs).
 test.describe('Buried badge notification (mocked)', () => {
   const BURIED_BADGE = {
     id: 'bn-old', user_id: FAKE_USER.id, type: 'badge_earned', actor_id: null,
@@ -2323,16 +2308,11 @@ test.describe('Buried badge notification (mocked)', () => {
   test.beforeEach(async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
-    await page.route('**/rest/v1/notifications*', (route) => {
-      if (route.request().method() !== 'GET') {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-      }
-      // The top-up query filters to unread badge rows; the main window doesn't.
-      const body = route.request().url().includes('type=eq.badge_earned') ? [BURIED_BADGE] : FILLER;
-      return route.fulfill({
-        status: 200, contentType: 'application/json', body: JSON.stringify(body),
-      });
-    });
+    // notif_poll() serves the top-up as its own array; the window stays full.
+    await page.route('**/rest/v1/rpc/notif_poll*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ notifications: FILLER, badge_topup: [BURIED_BADGE], dm_unread: 0 }),
+    }));
     await page.goto('/');
     await waitForAppBoot(page);
   });

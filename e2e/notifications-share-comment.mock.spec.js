@@ -5,12 +5,14 @@ import { mockSupabase, injectSession, waitForAppBoot, SAMPLE_WATCHES, SAMPLE_LOG
 // the commenter from the comment itself and open the matching Shared-links modal.
 test('a share_comment notification names the commenter and opens Shared links', async ({ page }) => {
   await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
-  await page.route('**/rest/v1/notifications*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-    { id: 'n1', type: 'share_comment', actor_id: null, ref_id: 'c1', is_read: false, created_at: '2026-08-22T10:00:00Z' },
-  ]) }));
-  await page.route('**/rest/v1/share_comments*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-    { id: 'c1', kind: 'collection', token: 'tok1', name: 'Sarah', body: 'Is the GMT available?', created_at: '2026-08-22T10:00:00Z', deleted_at: null },
-  ]) }));
+  // notif_poll() embeds the comment on the row — no separate share_comments fetch.
+  await page.route('**/rest/v1/rpc/notif_poll*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    notifications: [
+      { id: 'n1', type: 'share_comment', actor_id: null, ref_id: 'c1', is_read: false, created_at: '2026-08-22T10:00:00Z', actor: null, club: null,
+        share_comment: { id: 'c1', kind: 'collection', token: 'tok1', name: 'Sarah', body: 'Is the GMT available?' } },
+    ],
+    badge_topup: [], dm_unread: 0,
+  }) }));
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
