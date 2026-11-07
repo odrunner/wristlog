@@ -262,7 +262,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: inherit; letter-spacing: var(--ls-snug);
       display: flex; align-items: center; gap: var(--space-1);
     }
-    nav button:hover { color: var(--text); }
+    /* :not(.active): on touch screens :hover sticks to the button after the
+       tap, and this rule outranking .active painted the tab you just pressed
+       white instead of gold until the next re-render (fixed 2026-11-06) */
+    nav button:not(.active):hover { color: var(--text); }
     nav button.active { color: var(--gold-text); border-bottom-color: var(--gold); }
 
     /* Mid-width (641–1060px): show icons only, no text labels */
@@ -1526,7 +1529,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         border-bottom: none; border-top: 2.5px solid transparent;
       }
       nav button.active { color: var(--gold-text); border-top-color: var(--gold); border-bottom-color: transparent; }
-      nav button:hover { color: var(--text); }
+      nav button:not(.active):hover { color: var(--text); }
       .nav-icon svg { width: var(--size-6); height: var(--size-6); }
 
       /* Main: pad bottom for tab bar */
@@ -8135,7 +8138,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.20.01';
+const APP_VERSION = '06.20.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
