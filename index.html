@@ -1559,11 +1559,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          (e2e/wishlist-layout.mock.spec.js). */
       .wl-actions .btn { padding: var(--space-2) var(--space-2) !important; }
       .wl-actions .wl-actions-text { display: none; }
-      /* Collection header: Share and Enhance drop to icon-only too, so the row
-         still fits at 390px (e2e/collection-gallery.mock.spec.js) — with both
-         labels the six buttons needed 406px. */
-      .coll-share-btn, .coll-enhance-all-btn { padding: var(--space-2) var(--space-2) !important; }
-      .coll-share-btn .wl-actions-text, .coll-enhance-all-btn .wl-actions-text { display: none; }
+      /* Collection header: Enhance drops to icon-only too, so the row still
+         fits at 390px (e2e/collection-gallery.mock.spec.js). Share keeps its
+         label — it sits in the seg row, which has room (2026-11-06, matches
+         the Wishlist Share). */
+      .coll-enhance-all-btn { padding: var(--space-2) var(--space-2) !important; }
+      .coll-enhance-all-btn .wl-actions-text { display: none; }
       /* Share-selection bars (Collection + Wishlist): Select all / Clear /
          Shared links / Cancel drop to icons so the six controls stay on ONE
          row at 390px (e2e/collection-share.mock.spec.js). With labels the row
@@ -1571,11 +1572,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .coll-select-bar, .wl-select-bar { gap: var(--space-1-5); padding: var(--space-2) var(--space-2); }
       .sel-bar-btn { padding: var(--space-1-5) var(--space-2); }
       .sel-bar-btn .sel-bar-text { display: none; }
-      /* Collection sort bar: Rank + three sorts + Post Pics needed 421px in
-         363px. Smaller chips, icon-only Rank, and wrap as the safety net for
-         narrower phones. */
+      /* Collection sort bar: Rank + three sorts + the pills chevron + Post
+         Pics is the fullest it gets — square chip padding keeps that one row
+         at 390px (e2e/collection-share.mock.spec.js); wrap stays as the
+         safety net for narrower phones. */
       .coll-sort-bar { flex-wrap: wrap; gap: var(--space-1); }
-      .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1) var(--space-1-5); }
+      .coll-sort-chip { font-size: var(--fs-xs); padding: var(--space-1); }
       .coll-rank-chip .coll-rank-text { display: none; }
       .coll-rank-chip + .coll-sort-chip { margin-left: var(--space-0-5); }
       .wishlist-modal .modal-actions { gap: var(--space-1); }
@@ -2804,7 +2806,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="stack-3">
         <div class="item-title">Sort by Last Worn</div>
-        <div class="body-muted">The Collection sort chips now include <strong>Last Worn</strong> &#8212; most recent on your wrist first, never-worn at the end, with a colour-coded &#8220;how long ago&#8221; note on every card. The sort chips also no longer wait for the Ranking Game: Newest, Most Worn and Last Worn are always there. And the new <strong>report button</strong> next to Share at the top of the page jumps straight to the sortable Stats table, where every column &#8212; purchase date, price, market value, last worn, cost per wear &#8212; sorts with a tap.</div>
+        <div class="body-muted">The Collection sort chips now include <strong>Last Worn</strong> &#8212; most recent on your wrist first, never-worn at the end, with a colour-coded &#8220;how long ago&#8221; note on every card. The sort chips also no longer wait for the Ranking Game: Newest, Most Worn and Last Worn are always there. And the sortable table on the Stats tab gained a <strong>Last Worn</strong> column &#8212; every column there &#8212; purchase date, price, market value, last worn, cost per wear &#8212; sorts with a tap.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">What-If Simulator</div>
@@ -3356,8 +3358,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="chip" role="tab" aria-selected="false" data-seg="wishlist" onclick="collSeg('wishlist')">Wishlist</button>
       </div>
       <span class="grow"></span>
-      <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap coll-share-btn u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
-      <button id="coll-report-btn" class="btn btn-ghost u-pt-2 u-pr-3 u-pb-2 u-pl-3" onclick="openCollectionReport()" title="Collection report — sortable by purchase date, price, market value, cost per wear" aria-label="Collection report" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="9" x2="12" y2="21"/></svg></button>
+      <button id="coll-share-btn" class="btn btn-ghost u-gap-1-5 u-ws-nowrap u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-fs-base" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
     </div>
     <div class="page-header">
       <div class="wl-actions" id="coll-header-actions">
@@ -8135,7 +8136,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.16.13';
+const APP_VERSION = '06.19.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18460,6 +18461,7 @@ let collView     = collViewFromStore(safeLS.get('wr_coll_view')); // 'grid' | 'g
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears' | 'lastworn'
 let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
+let collTagsHidden = safeLS.get('collTagsHidden') === '1'; // watch-type pills tucked away
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
 let simMode  = false;                     // Collection "What-if" simulation (shipped to everyone 2026-09-28)
@@ -25225,18 +25227,23 @@ function renderCollSortBar() {
     { key: 'wears',    label: 'Most Worn' },
     { key: 'lastworn', label: 'Last Worn' },
   ];
+  // Watch-type pills (Daily Beater, Dive, …) tuck away behind this chevron;
+  // it only shows when there are pills to hide.
+  const anyTags = watches.some(w => (w.tags || []).length);
+  const tagsLbl = collTagsHidden ? 'Show watch type filters' : 'Hide watch type filters';
+  const tagsToggle = anyTags
+    ? `<button class="coll-sort-chip coll-tags-toggle" onclick="toggleCollTagsBar()" title="${tagsLbl}" aria-label="${tagsLbl}" aria-expanded="${!collTagsHidden}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${collTagsHidden ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="18 15 12 9 6 15"/>'}</svg></button>` : '';
   bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}${photoToggle}</div>`;
+  ).join('')}${tagsToggle}${photoToggle}</div>`;
 }
 
-// Report button beside Share in the header: jump to Stats → Collection Report
-// (sortable purchase date / price / market value / cost per wear — feedback
-// said the table goes undiscovered from Stats alone)
-function openCollectionReport() {
-  nav(document.querySelector('nav button[data-page="stats"]'));
-  requestAnimationFrame(() =>
-    document.getElementById('coll-report-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+function toggleCollTagsBar() {
+  collTagsHidden = !collTagsHidden;
+  safeLS.set('collTagsHidden', collTagsHidden ? '1' : '0');
+  // A filter the user can no longer see would keep silently shrinking the grid
+  if (collTagsHidden && collTagFilter) collTagFilter = null;
+  renderCollection(true);
 }
 
 function toggleCollPhotoMode(checked) {
@@ -25526,6 +25533,7 @@ function setTagFilter(tag) {
 function renderTagFilterBar() {
   const bar = document.getElementById('coll-tag-filter-bar');
   if (!bar) return;
+  if (collTagsHidden) { bar.innerHTML = ''; return; }
   const tagSet = new Set();
   watches.forEach(w => (w.tags || []).forEach(t => tagSet.add(t)));
   if (tagSet.size === 0) { bar.innerHTML = ''; return; }
@@ -25574,9 +25582,6 @@ function renderCollection(force) {
   const collShareBtn = document.getElementById('coll-share-btn');
   const collBar = document.getElementById('coll-select-bar');
   if (collShareBtn) collShareBtn.style.display = (currentUser && visible.length && !_collSelect && collView !== 'list') ? 'inline-flex' : 'none';
-  // Report jump lives beside Share; unlike Share it also works in list view
-  const collReportBtn = document.getElementById('coll-report-btn');
-  if (collReportBtn) collReportBtn.style.display = (currentUser && visible.length && !_collSelect) ? 'inline-flex' : 'none';
   if (collBar) {
     collBar.style.display = (selecting && visible.length) ? 'flex' : 'none';
     if (_collSelect) {
@@ -25980,8 +25985,6 @@ function renderCollectionSim() {
   if (tagBar) tagBar.innerHTML = '';
   const shareBtn = document.getElementById('coll-share-btn');
   if (shareBtn) shareBtn.style.display = 'none';
-  const reportBtn = document.getElementById('coll-report-btn');
-  if (reportBtn) reportBtn.style.display = 'none';
   const selBar = document.getElementById('coll-select-bar');
   if (selBar) selBar.style.display = 'none';
   const { added, list } = simulatedCollection(watches, wishlist, simState);
