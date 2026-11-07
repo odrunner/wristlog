@@ -6539,7 +6539,7 @@ const BADGE_REGISTRY = [
     isHidden: false },
   { ref: 62, slug: 'full_audit', name: 'Full Audit', category: 'timegrapher',
     flavor: 'Every watch measured. Full audit complete.',
-    unlock: 'Have at least one measurement for every watch in your collection (min 3 watches).',
+    unlock: 'Have at least one measurement for every mechanical watch in your collection (min 3 mechanical; quartz, digital, solar and Spring Drive don\'t count).',
     glyph: '<path d="M34 50l10 10 22-22" stroke="var(--badge-ink)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="20" stroke="var(--badge-ink)" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 63, slug: 'caught_a_drifter', name: 'Caught a Drifter', category: 'timegrapher',
@@ -7153,6 +7153,19 @@ function maybeFreezeToast() {
   toast(`A freeze saved your ${sk.current}-day streak — log today to keep it going`);
 }
 
+// Full Audit badge (ref 62). Quartz-family movements (quartz, digital, solar,
+// Spring Drive) have no escapement tick train, so the timegrapher can never
+// measure them — they don't count toward "every watch measured". A blank or
+// unrecognized movement type stays eligible: excluding it would award the
+// badge to collections that were never typed in. The min-3 gate applies to
+// the eligible set. Mirror-drift guards this VERBATIM against wrotate_test.js.
+function fullAuditEarned(watches, measuredIds) {
+  const unmeasurable = ['quartz', 'digital', 'solar', 'spring-drive'];
+  const eligible = watches.filter(w => !unmeasurable.includes(w.movementType || ''));
+  if (eligible.length < 3) return false;
+  return eligible.every(w => measuredIds.has(w.id));
+}
+
 async function checkAndAwardBadges(context, postId) {
   if (!currentUser) return;
   const newlyEarned = [];
@@ -7246,10 +7259,9 @@ async function checkAndAwardBadges(context, postId) {
     if (!alreadyEarned(61) && tgResults.length >= 10) {
       if (await awardBadge(61)) newlyEarned.push(BADGE_BY_REF[61]);
     }
-    if (!alreadyEarned(62) && watches.length >= 3) {
+    if (!alreadyEarned(62)) {
       const measuredWatches = new Set(tgResults.map(r => r.watch_id));
-      const allMeasured = watches.every(w => measuredWatches.has(w.id));
-      if (allMeasured) { if (await awardBadge(62)) newlyEarned.push(BADGE_BY_REF[62]); }
+      if (fullAuditEarned(watches, measuredWatches)) { if (await awardBadge(62)) newlyEarned.push(BADGE_BY_REF[62]); }
     }
     if (!alreadyEarned(63)) {
       const byWatch = {};
@@ -8138,7 +8150,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.20.38';
+const APP_VERSION = '06.21.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

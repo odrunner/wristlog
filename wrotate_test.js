@@ -4353,3 +4353,16 @@ export function userFeedStrip(logs, ctx) {
       return ctx.following.has(log.user_id);
     });
 }
+
+// Full Audit badge (ref 62). Quartz-family movements (quartz, digital, solar,
+// Spring Drive) have no escapement tick train, so the timegrapher can never
+// measure them — they don't count toward "every watch measured". A blank or
+// unrecognized movement type stays eligible: excluding it would award the
+// badge to collections that were never typed in. The min-3 gate applies to
+// the eligible set. Mirror-drift guards this VERBATIM against index.html.
+export function fullAuditEarned(watches, measuredIds) {
+  const unmeasurable = ['quartz', 'digital', 'solar', 'spring-drive'];
+  const eligible = watches.filter(w => !unmeasurable.includes(w.movementType || ''));
+  if (eligible.length < 3) return false;
+  return eligible.every(w => measuredIds.has(w.id));
+}
