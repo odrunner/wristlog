@@ -2269,6 +2269,15 @@
     .feed-menu-item { padding:var(--space-2) var(--space-3); font-size:var(--fs-base); cursor:pointer; white-space:nowrap; }
     .feed-menu-item:hover { background:var(--surface2); }
 
+    /* Feed header search pill — a button that opens the search sheet (no real
+       input here: typing happens in the sheet, so iOS never stacks keyboards) */
+    .feed-search-pill { flex:1; min-width:0; display:inline-flex; align-items:center; gap:var(--space-2);
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-pill);
+      padding:var(--space-2) var(--space-3); font-size:var(--fs-body); color:var(--muted);
+      font-family:inherit; cursor:pointer; text-align:left; transition:border-color var(--dur-fast); }
+    .feed-search-pill:hover { border-color:var(--gold-lt); }
+    .feed-search-pill-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:var(--space-1); font-size:var(--fs-xs);
       padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-pill); font-weight:var(--fw-semibold); margin: 0 var(--space-4) var(--space-2-5); }
@@ -3388,14 +3397,12 @@
   <div id="page-feed" class="page active page-feed">
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
-      <div class="u-gap-2 u-ml-auto u-d-flex">
-        <button id="feed-post-btn" class="btn btn-primary btn-md u-gap-1-5 u-ws-nowrap u-d-inline-flex" onclick="openNewPost()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Post</button>
-        <button class="btn btn-ghost btn-md u-gap-1-5 u-ws-nowrap u-d-inline-flex" onclick="openDiscover()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>People</button>
-        <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
-             feature is intact (open_clubs deep links still work) — drop the `hidden`
-             class to bring it back. -->
-        <button class="btn btn-ghost btn-sm hidden" onclick="showClubsPage()" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
-      </div>
+      <button class="feed-search-pill" onclick="openDiscover()" aria-label="Search people and watches"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="u-shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="feed-search-pill-text">Search people and watches</span></button>
+      <button id="feed-post-btn" class="btn btn-primary btn-md u-gap-1-5 u-d-inline-flex" onclick="openNewPost()" aria-label="New post" title="New post"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
+           feature is intact (open_clubs deep links still work) — drop the `hidden`
+           class to bring it back. -->
+      <button class="btn btn-ghost btn-sm hidden" onclick="showClubsPage()" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
     </div>
     <div id="onboarding-checklist" class="ob-wrap"></div>
     <div id="follow-suggest-slot"></div>
@@ -8149,7 +8156,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.19';
+const APP_VERSION = '07.08.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

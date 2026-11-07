@@ -50,6 +50,18 @@ test('search finds watches and opens the model page', async ({ page }) => {
   await expect(page.locator('#page-model')).toHaveClass(/active/);
 });
 
+test('header search pill opens the sheet and Post still posts', async ({ page }) => {
+  await mockSupabase(page, {});
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await page.locator('.feed-search-pill').click();
+  await expect(page.locator('#discover-modal')).toBeVisible();
+  await page.locator('#discover-modal .modal-actions button', { hasText: 'Close' }).click();
+  await page.locator('#feed-post-btn').click();
+  await expect(page.locator('#new-post-modal')).toBeVisible();
+});
+
 test('one group failing keeps the other', async ({ page }) => {
   await openSearchSheet(page, { modelsStatus: 500 });
   await page.locator('#discover-search').fill('speed');

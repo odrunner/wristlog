@@ -608,14 +608,14 @@ test.describe('Feed page (mocked)', () => {
     await expect(feedList).toBeVisible();
   });
 
-  test('feed has Post and People buttons', async ({ page }) => {
+  test('feed has Post button and search pill', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
 
-    await expect(page.locator('#page-feed button', { hasText: /post/i })).toBeVisible();
-    await expect(page.locator('#page-feed button', { hasText: /people/i })).toBeVisible();
+    await expect(page.locator('#feed-post-btn')).toBeVisible();
+    await expect(page.locator('.feed-search-pill')).toBeVisible();
   });
 
   test('renders feed cards when logs exist', async ({ page }) => {

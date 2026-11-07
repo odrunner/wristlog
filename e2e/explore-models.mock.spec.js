@@ -26,7 +26,7 @@ async function openExplore(page, onBrowse) {
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
-  await page.getByRole('button', { name: 'Watches' }).click();
+  await page.getByRole('button', { name: 'Watches', exact: true }).click();
   await expect(page.locator('#page-explore')).toHaveClass(/active/);
 }
 
