@@ -308,6 +308,121 @@ def cron_health():
         return fail_html
 
 
+# ── Mac Mini scheduled jobs — dead-man's switch (audit 2026-11-06 R6) ───────
+# Every LaunchAgent on this machine leaves a fresh artifact when it runs. This
+# email arrives every day, so a red line here is seen within a day — and if
+# THIS script's agent dies, the missing daily email is itself the alarm, which
+# is why the check lives here instead of in a watchdog with its own agent.
+#
+# Age limits trade detection speed against reboot-race false alarms: the
+# rollout check writes at 9:00 and this runs at 9:15, but after a morning
+# reboot both fire on load in arbitrary order, so the daily limit is 30h
+# (a dead daily job alerts the NEXT morning, never a false positive). The
+# weeklies run Sundays; 192h means a missed Sunday alerts Monday 9:15.
+JOB_WATCH = [
+    ("2.0 rollout check (daily 9:00)",
+     os.path.expanduser("~/.local/share/wrotate-rollout-history.log"), 30),
+    ("Sunday measurement review (Sun 8:00)",
+     os.path.expanduser("~/.local/share/wrotate-logs/weekly-review.log"), 192),
+    ("weekly agent team (Sun 7:12)",
+     os.path.expanduser("~/.local/share/wrotate-logs/weekly-agents.log"), 192),
+]
+# Loaded-in-launchd is checked separately: it catches a silently-unloaded
+# plist the same morning, before its artifact even has time to go stale.
+JOB_LABELS = [
+    "com.wrotate.rollout-check", "com.wrotate.cost-report",
+    "com.wrotate.weekly-review", "com.wrotate.weekly-agents",
+    "com.wrotate.devserver",
+]
+
+
+def jobs_freshness(entries, now_ts):
+    """(label, mtime_ts|None, max_age_h) rows -> fresh/stale verdicts.
+
+    A missing artifact (mtime None) is STALE with unknown age — a dead job
+    must never read as healthy. A future mtime (clock skew) clamps to 0h.
+    """
+    rows = []
+    for label, mtime, max_h in entries:
+        if mtime is None:
+            rows.append({"label": label, "age_h": None, "stale": True})
+            continue
+        age = max(0.0, (now_ts - mtime) / 3600.0)
+        rows.append({"label": label, "age_h": age, "stale": age > max_h})
+    return rows
+
+
+def jobs_health():
+    """Mac Mini LaunchAgent health: artifact freshness + loadedness + dev server.
+
+    Like email_health/cron_health this must never raise, and a failed check
+    renders as unknown, never as healthy.
+    """
+    fail_html = (
+        '<h3 style="margin-top:24px">Mac Mini jobs'
+        '<span style="color:#d29922"> &mdash; check failed</span></h3>'
+        '<p style="color:#d29922">Could not read the job artifacts this run '
+        "&mdash; job health is unknown, not necessarily healthy.</p>"
+    )
+    try:
+        now = datetime.now(timezone.utc).timestamp()
+        entries = []
+        for label, path, max_h in JOB_WATCH:
+            mtime = os.path.getmtime(path) if os.path.exists(path) else None
+            entries.append((label, mtime, max_h))
+        rows = jobs_freshness(entries, now)
+
+        try:
+            r = subprocess.run(["launchctl", "list"], capture_output=True,
+                               text=True, timeout=15)
+            loaded = r.stdout if r.returncode == 0 else None
+        except Exception:
+            loaded = None
+        missing = ([] if loaded is None
+                   else [l for l in JOB_LABELS if l not in loaded])
+
+        try:
+            d = subprocess.run(
+                ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+                 "--max-time", "5", "http://localhost:3000/"],
+                capture_output=True, text=True, timeout=10)
+            dev_up = d.stdout.strip() == "200"
+        except Exception:
+            dev_up = False
+
+        bad = any(r["stale"] for r in rows) or missing or not dev_up
+        colour = "#f85149" if bad else "#2ea043"
+        flag = " &mdash; STALE" if bad else ""
+        ago = lambda a: "artifact missing" if a is None else (
+            f"{a:.1f}h ago" if a < 48 else f"{a / 24:.1f}d ago")
+        parts = []
+        for r in rows:
+            c = "#f85149" if r["stale"] else "#2ea043"
+            parts.append(f'<span style="color:{c}">{r["label"]}: {ago(r["age_h"])}</span>')
+        parts.append('<span style="color:#2ea043">dev server: up</span>' if dev_up
+                     else '<span style="color:#f85149">dev server: DOWN (port 3000)</span>')
+        out = (
+            f'<h3 style="margin-top:24px">Mac Mini jobs<span style="color:{colour}">{flag}</span></h3>'
+            f'<p style="font-size:13px;">{" &middot; ".join(parts)}</p>'
+        )
+        if loaded is None:
+            out += ('<p style="color:#d29922;font-size:12px;">launchctl list '
+                    "failed &mdash; loadedness unknown.</p>")
+        elif missing:
+            out += ('<p style="color:#f85149;font-size:12px;">NOT loaded in '
+                    "launchd: " + ", ".join(missing) +
+                    " &mdash; reload from ~/Library/LaunchAgents.</p>")
+        for r in rows:
+            if r["stale"]:
+                print(f"[jobs_health] STALE: {r['label']} ({ago(r['age_h'])})")
+        if missing:
+            print(f"[jobs_health] not loaded: {', '.join(missing)}")
+        return out
+    except Exception as e:
+        print(f"[jobs_health] skipped section — {type(e).__name__}: {e}")
+        return fail_html
+
+
 def supabase_access_token():
     """Management-API token from ~/.config/supabase/env (`export KEY=value`)."""
     try:
@@ -1023,6 +1138,7 @@ def main():
     html += autofix_html(prs)
     html += email_health()
     html += cron_health()
+    html += jobs_health()
     send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
 

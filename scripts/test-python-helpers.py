@@ -440,5 +440,43 @@ class AppStoreRatingsHelpers(unittest.TestCase):
         self.assertIn("worldwide 41 (+0)", line)
 
 
+class JobsFreshness(unittest.TestCase):
+    """jobs_freshness — the Mac Mini dead-man's switch (audit R6).
+
+    Every scheduled job leaves a fresh artifact when it runs; this pure half
+    turns (label, mtime, limit) rows into fresh/stale verdicts for the daily
+    cost email. The contract that matters: a MISSING artifact is stale, never
+    silently fresh — the whole point is that a dead job must not look healthy.
+    """
+
+    def _fn(self):
+        ns = {}
+        exec(_extract("cost-report.py", "def jobs_freshness", "def jobs_health("), ns)
+        return ns["jobs_freshness"]
+
+    def test_fresh_and_stale_split_on_the_age_limit(self):
+        now = 1_000_000.0
+        rows = self._fn()([("daily", now - 2 * 3600, 30),
+                           ("weekly", now - 9 * 24 * 3600, 192)], now)
+        self.assertEqual([r["stale"] for r in rows], [False, True])
+        self.assertAlmostEqual(rows[0]["age_h"], 2.0, places=2)
+
+    def test_exactly_at_the_limit_is_still_fresh(self):
+        now = 1_000_000.0
+        rows = self._fn()([("j", now - 30 * 3600, 30)], now)
+        self.assertFalse(rows[0]["stale"])
+
+    def test_missing_artifact_is_stale_with_unknown_age(self):
+        rows = self._fn()([("j", None, 30)], 1000.0)
+        self.assertTrue(rows[0]["stale"])
+        self.assertIsNone(rows[0]["age_h"])
+
+    def test_future_mtime_from_clock_skew_reads_as_fresh_zero_age(self):
+        now = 1_000_000.0
+        rows = self._fn()([("j", now + 3600, 30)], now)
+        self.assertFalse(rows[0]["stale"])
+        self.assertEqual(rows[0]["age_h"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
