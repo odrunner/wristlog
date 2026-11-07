@@ -4349,6 +4349,11 @@ export function feedFilterLabel(username, displayName) {
   return 'this member';
 }
 
+export function modelFeedLabel(brand, name) {
+  const s = [brand, name].filter(Boolean).join(' ').trim();
+  return s || 'this watch';
+}
+
 export function userFeedStrip(logs, ctx) {
   const myClubIds = ctx.myClubIds || [];
   return (logs || [])

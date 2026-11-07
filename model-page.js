@@ -5,8 +5,8 @@
 //   ctx: { m, o, st, facts, loggedIn, publicMode, canMeasure }
 //   h:   { back, share, openModel(id, slug), brandExplore(brand), requestEdit(kind),
 //          openWatch(id), measure(id), addToCollection(b, n), addToWishlist(b, n),
-//          openPost(id), openProfile(uid, username), follow(uid, btn), isFollowing(uid),
-//          openApp, track(event, props) }
+//          openPost(id), openModelFeed(id, brand, name), openProfile(uid, username),
+//          follow(uid, btn), isFollowing(uid), openApp, track(event, props) }
 // One scroll, no tabs (2026-09-26 cut-down): your watch vs members → story →
 // wrist shots → owners → references / calibres / spec → more from the brand.
 (function () {
@@ -212,7 +212,7 @@ function renderModelPage(el, ctx, h) {
   // ── Wrist shots (public posts) ──
   const shots = (st.shots || []).slice(0, 6);
   const shotsHtml = shots.length ? `<section class="mp-sec" id="mp-shots">
-      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><span class="mp-sub">${plural(st.shots_total || shots.length, 'photo')}</span></div>
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><button type="button" class="mp-link" data-mp="shots-all">${plural(st.shots_total || shots.length, 'photo')}</button></div>
       <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-mp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
     </section>` : '';
 
@@ -326,6 +326,13 @@ function renderModelPage(el, ctx, h) {
         case 'watch': H.openWatch && H.openWatch(d.id); break;
         case 'measure': H.measure && H.measure(d.id); break;
         case 'post': H.openPost && H.openPost(d.id); if (H.track) H.track('model_shot_open', { model: mm.slug }); break;
+        // See-all next to the single-shot taps: the app filters the Feed to this
+        // model; the public page (no feed) falls back to the homepage / sign-in.
+        case 'shots-all':
+          if (H.openModelFeed) H.openModelFeed(mm.id, mm.brand, mm.name);
+          else if (H.openApp) H.openApp();
+          if (H.track) H.track('model_shots_feed', { model: mm.slug });
+          break;
         case 'owner': H.openProfile && H.openProfile(d.uid, d.username); break;
         case 'follow': e.stopPropagation(); H.follow && H.follow(d.uid, t); if (H.track) H.track('model_owner_follow', { model: mm.slug }); break;
         case 'collect': H.addToCollection && H.addToCollection(mm.brand, mm.name); break;

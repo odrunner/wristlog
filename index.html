@@ -79,7 +79,7 @@
        is in the filename, so upgrading it means renaming here, in SITE_FILES,
        in sw.js PRECACHE and in tests/page-weight.test.js -->
   <script src="/supabase-js-2.98.0.min.js"></script>
-  <script src="/model-page.js?v=f7a7733f"></script>
+  <script src="/model-page.js?v=5bf38b63"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Safe storage accessor. Reading localStorage THROWS rather than returning null
        in several real configurations: Safari with "Block all cookies", some corporate
@@ -2767,6 +2767,10 @@
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">See Every Post Featuring a Watch</div>
+        <div class="body-muted">On any model page in <strong>Watches</strong>, the photo count next to <strong>On members&#8217; wrists</strong> is now a link: tap it to filter the feed to every public post featuring that model &#8212; scroll, like and comment as usual. Tap <strong>Show all posts</strong> at the top to go back to the full feed.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Watches in the Main Menu</div>
         <div class="body-muted">The watch database now has its own <strong>Watches</strong> tab in the main menu. Your <strong>Wishlist</strong> moved in with your collection: open the <strong>Collection</strong> tab and switch between Collection and Wishlist at the top. Everything on it &#8212; views, ranking, AI picks, share links &#8212; works exactly as before.</div>
       </div>
@@ -4257,7 +4261,7 @@
             <div class="help-step-num">2</div>
             <div class="help-step-body">
               <div class="help-step-title">Model pages</div>
-              <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there.</div>
+              <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members&#8217; wrists</strong>, tap a photo to open that post &#8212; or tap the photo count to filter the feed to every public post featuring that model.</div>
             </div>
           </div>
           <div class="help-tip">The database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
@@ -8144,7 +8148,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.05.52';
+const APP_VERSION = '07.07.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12385,9 +12389,10 @@ async function loadFeed() {
   }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
   if (!feedError && feedItems.length > 0 && Date.now() - feedLoadedAt < 60000) return;
-  // User-filtered view (profile → Posts): a dedicated lightweight load — one
-  // member's posts, no feed_page RPC, no caught-up divider, no pin.
-  if (feedUserFilter) {
+  // Filtered views (profile → Posts, model page → photos): a dedicated
+  // lightweight load — one slice of posts, no feed_page RPC, no caught-up
+  // divider, no pin.
+  if (feedUserFilter || feedModelFilter) {
     feedLoading = true;
     _feedLoadStartedAt = Date.now();
     feedError = false; feedPartial = false;
@@ -12395,10 +12400,10 @@ async function loadFeed() {
     const fl = document.getElementById('feed-list');
     if (fl && feedItems.length === 0) fl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar u-w-40pct u-h-3-5 u-mb-3"></div><div class="feed-skeleton-bar u-w-90pct u-h-3 u-mb-2"></div><div class="feed-skeleton-bar u-w-70pct u-h-3"></div></div>';
     try {
-      await _loadUserFilterFeed();
+      await (feedUserFilter ? _loadUserFilterFeed() : _loadModelFilterFeed());
       feedLoadedAt = Date.now();
     } catch (e) {
-      console.warn('[WRotate] user feed load failed:', e?.message);
+      console.warn('[WRotate] filtered feed load failed:', e?.message);
       feedError = true;
     } finally {
       feedLoading = false;
@@ -12859,6 +12864,7 @@ function feedFilterLabel(username, displayName) {
 
 function viewUserFeed(userId, username, displayName) {
   if (!userId || !currentUser) return;
+  feedModelFilter = null; _modelFeedOffset = 0;
   feedUserFilter = { id: userId, uname: username || '', dname: displayName || '' };
   feedItems = []; feedLoadedAt = 0; feedError = false; _feedCaughtUpIdx = null;
   if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'profile_posts_feed', meta: { profile: userId } }).then(() => {});
@@ -12872,22 +12878,88 @@ function clearUserFeedFilter() {
   loadFeed();
 }
 
+// ── Model-filtered feed ──────────────────────────────────────────────────────
+// Set by viewModelFeed() — the "N photos" count on a model page's "On members'
+// wrists" header. While set, the Feed tab shows public posts featuring that
+// model (model_feed_page RPC, server-gated to public + unmoderated), with the
+// same clear-filter bar and lifecycle as the user filter above.
+let feedModelFilter = null;     // { id, brand, name } or null
+let _modelFeedOffset = 0;       // offset pagination for the filtered view
+
+// Mirror-drift guards this VERBATIM against wrotate_test.js.
+function modelFeedLabel(brand, name) {
+  const s = [brand, name].filter(Boolean).join(' ').trim();
+  return s || 'this watch';
+}
+
+function modelFeedFilterHtml() {
+  const label = escHtml(modelFeedLabel(feedModelFilter?.brand, feedModelFilter?.name));
+  return `<div class="feed-stale" role="status"><span>Posts with ${label}</span><button type="button" onclick="clearModelFeedFilter()">&#10005; Show all posts</button></div>`;
+}
+
+// Either filter's bar — renderFeed() shows at most one (viewUserFeed/viewModelFeed
+// each clear the other filter on entry).
+function feedFilterBarHtml() {
+  return feedUserFilter ? userFeedFilterHtml() : modelFeedFilterHtml();
+}
+
+function _modelFeedQuery(from, to) {
+  return db.rpc('model_feed_page', { p_model_id: feedModelFilter.id, p_offset: from, p_limit: to - from + 1 });
+}
+
+// First page of the model-filtered view. Called from loadFeed() while
+// feedModelFilter is set; loadFeed owns feedLoading and the final renderFeed().
+// The RPC returns public posts only; userFeedStrip still runs on top for the
+// viewer's own blocks and club membership.
+async function _loadModelFilterFeed() {
+  const { data, error } = await withTimeout(_modelFeedQuery(0, USER_FEED_PAGE - 1), 8000);
+  if (error) throw error;
+  _modelFeedOffset = (data || []).length;
+  feedHasMore = (data || []).length === USER_FEED_PAGE;
+  feedLikes = {}; feedComments = {}; feedCommentCounts = {};
+  const batch = userFeedStrip(data, _userFeedCtx()).sort((a, b) => compareFeedLogs(a, b, todayStr()));
+  feedItems = await _enrichFeedBatch(batch);
+}
+
+function viewModelFeed(modelId, brand, name) {
+  if (!modelId || !currentUser) return;
+  feedUserFilter = null; _userFeedOffset = 0;
+  feedModelFilter = { id: modelId, brand: brand || '', name: name || '' };
+  feedItems = []; feedLoadedAt = 0; feedError = false; _feedCaughtUpIdx = null;
+  if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'model_posts_feed', meta: { model: modelId } }).then(() => {});
+  const btn = document.querySelector("nav button[data-page='feed']");
+  if (btn) nav(btn);
+}
+
+function clearModelFeedFilter() {
+  feedModelFilter = null;
+  feedItems = []; feedLoadedAt = 0; feedError = false; feedHasMore = true;
+  loadFeed();
+}
+
 async function loadMoreFeed() {
   // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
-  // User-filtered view: simple offset pagination over one member's posts.
-  if (feedUserFilter) {
+  // Filtered views: simple offset pagination over one member's / one model's posts.
+  if (feedUserFilter || feedModelFilter) {
     // "Show all posts" / tab-away can clear the filter while a page is in
-    // flight — a stale continuation must never splice this member's posts
-    // into the restored full feed. Re-check after every await.
-    const filterId = feedUserFilter.id;
-    const filterGone = () => !feedUserFilter || feedUserFilter.id !== filterId;
+    // flight — a stale continuation must never splice these posts into the
+    // restored full feed. Re-check after every await.
+    const isModel = !!feedModelFilter;
+    const filterId = isModel ? feedModelFilter.id : feedUserFilter.id;
+    const filterGone = () => isModel
+      ? (!feedModelFilter || feedModelFilter.id !== filterId)
+      : (!feedUserFilter || feedUserFilter.id !== filterId);
     feedLoadingMore = true;
     try {
-      const { data, error } = await withTimeout(_userFeedQuery(_userFeedOffset, _userFeedOffset + USER_FEED_PAGE - 1), 8000);
+      const from = isModel ? _modelFeedOffset : _userFeedOffset;
+      const q = isModel ? _modelFeedQuery(from, from + USER_FEED_PAGE - 1)
+                        : _userFeedQuery(from, from + USER_FEED_PAGE - 1);
+      const { data, error } = await withTimeout(q, 8000);
       if (filterGone()) return;
       if (error) throw error;
-      _userFeedOffset += (data || []).length;
+      if (isModel) _modelFeedOffset += (data || []).length;
+      else _userFeedOffset += (data || []).length;
       feedHasMore = (data || []).length === USER_FEED_PAGE;
       const shownIds = new Set(feedItems.map(i => i.id));
       const batch = userFeedStrip((data || []).filter(l => !shownIds.has(l.id)), _userFeedCtx());
@@ -12905,7 +12977,7 @@ async function loadMoreFeed() {
       }
       mountFeedLoadMoreSentinel();
     } catch (e) {
-      console.warn('[WRotate] user feed load-more error:', e?.message);
+      console.warn('[WRotate] filtered feed load-more error:', e?.message);
       showFeedLoadMoreButton();
     } finally {
       feedLoadingMore = false;
@@ -13042,9 +13114,9 @@ async function loadMoreFeed() {
 
 async function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
-  // A grid-cell tap targets the MAIN feed — drop any profile-posts filter so the
-  // jump never lands inside (or injects into) another member's filtered view.
-  if (feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
+  // A grid-cell tap targets the MAIN feed — drop any profile-posts or model
+  // filter so the jump never lands inside (or injects into) a filtered view.
+  if (feedUserFilter || feedModelFilter) { feedUserFilter = null; feedModelFilter = null; feedItems = []; feedLoadedAt = 0; }
   expandedComments.add(postId);
   // Switch to feed page without forcing a full reload — preserve existing cards
   nav(document.querySelector('nav button[data-page=\'feed\']'));
@@ -14680,7 +14752,7 @@ function logPromoEvent(slotId, event) {
 function injectPromoCards() {
   const el = document.getElementById('feed-list');
   if (!el || !currentUser) return;
-  if (feedUserFilter) return; // user-filtered view (profile → Posts) stays promo-free
+  if (feedUserFilter || feedModelFilter) return; // filtered views (profile → Posts, model → photos) stay promo-free
 
   // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
   // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
@@ -15192,8 +15264,8 @@ function renderFeed() {
   if (feedItems.length === 0) {
     // Filtered view with nothing visible: keep the filter bar so the state is
     // clear and the way back obvious — the follow CTA below would mislead here.
-    if (feedUserFilter) {
-      el.innerHTML = userFeedFilterHtml() + `
+    if (feedUserFilter || feedModelFilter) {
+      el.innerHTML = feedFilterBarHtml() + `
         <div class="empty feed-empty-state">
           <div class="empty-icon"></div>
           <div class="empty-text">No posts to show</div>
@@ -15225,7 +15297,7 @@ function renderFeed() {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
   if (feedError || feedPartial) cards.unshift(feedStaleHtml(!feedError && feedPartial));
-  if (feedUserFilter) cards.unshift(userFeedFilterHtml());
+  if (feedUserFilter || feedModelFilter) cards.unshift(feedFilterBarHtml());
   carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render
@@ -22219,10 +22291,11 @@ function nav(btn) {
   const page = btn.dataset.page;
   // Leaving the Feed tab: the feed no longer deserves priority — let the rest of boot go.
   if (page !== 'feed') _openBootGate();
-  // Any other tab drops the user-filtered feed (profile → Posts), so the next
-  // Feed visit is the normal feed again. (Entering 'feed' keeps it: viewUserFeed
-  // navigates here with the filter set, and Back-from-profile must restore it.)
-  if (page !== 'feed' && feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
+  // Any other tab drops the filtered feed (profile → Posts, model → photos), so
+  // the next Feed visit is the normal feed again. (Entering 'feed' keeps it:
+  // viewUserFeed/viewModelFeed navigate here with the filter set, and
+  // Back-from-profile must restore it.)
+  if (page !== 'feed' && (feedUserFilter || feedModelFilter)) { feedUserFilter = null; feedModelFilter = null; feedItems = []; feedLoadedAt = 0; }
   // Stop active microphone/audio when navigating away from measure or watch detail
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
@@ -22305,7 +22378,7 @@ function showExplorePage() {
 function collSeg(page) {
   if (page === 'collection') { nav(document.querySelector('nav button[data-page="collection"]')); return; }
   _openBootGate();
-  if (feedUserFilter) { feedUserFilter = null; feedItems = []; feedLoadedAt = 0; }
+  if (feedUserFilter || feedModelFilter) { feedUserFilter = null; feedModelFilter = null; feedItems = []; feedLoadedAt = 0; }
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -26829,6 +26902,7 @@ function renderModelPage() {
     openWatch: openEditWatch, addToCollection: addModelToCollection, addToWishlist: addModelToWishlist,
     measure: id => openPushRoute('measure', id),
     openPost: id => scrollToFeedPost(id),
+    openModelFeed: (id, brand, name) => viewModelFeed(id, brand, name),
     openProfile: uid => viewUserProfile(uid),
     follow: (uid, btn) => followByPrivacy(uid, btn),
     isFollowing: uid => following.has(uid),
@@ -33616,6 +33690,7 @@ function clearUserState() {
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   feedUserFilter = null; _userFeedOffset = 0;   // A's profile-posts filter must not shape B's feed
+  feedModelFilter = null; _modelFeedOffset = 0; // ...nor A's model filter
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
   dmClearState();
