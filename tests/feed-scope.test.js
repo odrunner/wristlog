@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { scopeChipLabel } from '../wrotate_test.js';
+
+// The banner's "Show all posts" control is gone — no copy may still point at it.
+describe('no stale banner copy', () => {
+  it('index.html never mentions Show all posts', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    expect(html.includes('Show all posts')).toBe(false);
+  });
+});
 
 // The feed scope chip's label. Filters (profile → Posts, model → photos)
 // win over the selected scope; raw text, the caller escapes.

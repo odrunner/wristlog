@@ -29,9 +29,11 @@ async function boot(page, { logs = [], follows = [], friends = [], logsRoute = n
     if (route.request().method() !== 'GET') return route.fallback();
     const url = decodeURIComponent(route.request().url());
     let rows = logs;
+    const mId = url.match(/[?&]id=eq\.([\w-]+)/);
     const mEq = url.match(/user_id=eq\.([\w-]+)/);
     const mIn = url.match(/user_id=in\.\(([^)]*)\)/);
-    if (mEq) rows = rows.filter(l => l.user_id === mEq[1]);
+    if (mId) rows = rows.filter(l => l.id === mId[1]);
+    else if (mEq) rows = rows.filter(l => l.user_id === mEq[1]);
     else if (mIn) { const ids = mIn[1].split(','); rows = rows.filter(l => ids.includes(l.user_id)); }
     return route.fulfill(fulfill(rows));
   }));
@@ -94,6 +96,83 @@ test('scope survives tab-away and back', async ({ page }) => {
   await navigateTo(page, 'collection');
   await navigateTo(page, 'feed');
   await expect(page.locator('#feed-scope-chip')).toContainText('My posts');
+});
+
+test('switching scope mid-flight never shows the old scope’s rows', async ({ page }) => {
+  const logs = [log('own-1', FAKE_USER.id, '2025-03-15'), log('oth-1', OTHER, '2025-03-14')];
+  let release; const gate = new Promise(r => { release = r; });
+  let held = 0;
+  await boot(page, {
+    logs, follows: [OTHER],
+    logsRoute: async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const url = decodeURIComponent(route.request().url());
+      // or=(visibility… is unique to the scope loaders' single query — the
+      // boot load's parallel queries use eq/is visibility filters instead.
+      if (url.includes('user_id=in.(') && url.includes('or=(visibility') && held++ === 0) {
+        await gate; // the following-scope page, answered after the user moved on
+        return route.fulfill(fulfill([logs[1]]));
+      }
+      const mEq = url.match(/user_id=eq\.([\w-]+)/);
+      return route.fulfill(fulfill(mEq ? logs.filter(l => l.user_id === mEq[1]) : logs));
+    },
+  });
+  await pickScope(page, 'People I follow');   // query now held in flight
+  await pickScope(page, 'My posts');          // user moves on before it answers
+  release();
+  await expect(page.locator('#feed-scope-chip')).toContainText('My posts');
+  await expect(page.locator('#feedcard-own-1')).toBeVisible();
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(0);
+});
+
+test('scope picked during the initial feed load wins over it', async ({ page }) => {
+  const logs = [log('own-1', FAKE_USER.id, '2025-03-15'), log('oth-1', OTHER, '2025-03-14')];
+  let release; const gate = new Promise(r => { release = r; });
+  let held = 0;
+  await boot(page, {
+    logs, follows: [OTHER],
+    logsRoute: async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const url = decodeURIComponent(route.request().url());
+      // Hold the boot load's followers-visibility query so the whole classic
+      // load is still in flight when the user picks a scope.
+      if (url.includes('visibility=eq.followers') && held++ === 0) {
+        await gate;
+        return route.fulfill(fulfill([]));
+      }
+      const mEq = url.match(/user_id=eq\.([\w-]+)/);
+      return route.fulfill(fulfill(mEq ? logs.filter(l => l.user_id === mEq[1]) : logs));
+    },
+  });
+  await pickScope(page, 'My posts'); // the boot 'all' load is still in flight
+  release();
+  await expect(page.locator('#feed-scope-chip')).toContainText('My posts');
+  await expect(page.locator('#feedcard-own-1')).toBeVisible();
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(0);
+});
+
+test('jump-to-post resets a scoped view instead of injecting into it', async ({ page }) => {
+  await boot(page, {
+    logs: [log('own-1', FAKE_USER.id, '2025-03-15'), log('oth-1', OTHER, '2025-03-14')],
+    follows: [OTHER, FRIEND],
+    friends: [FRIEND],
+  });
+  await pickScope(page, 'Close friends');
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(0);
+  // A notification tap / deep link lands on a non-friend's post.
+  await page.evaluate(() => scrollToFeedPost('oth-1'));
+  await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
+  await expect(page.locator('#feedcard-oth-1')).toBeVisible();
+});
+
+test('quiet following scope says no posts, not "not following anyone"', async ({ page }) => {
+  await boot(page, {
+    logs: [log('own-1', FAKE_USER.id, '2025-03-15')], // the followed user never posted
+    follows: [OTHER],
+  });
+  await pickScope(page, 'People I follow');
+  await expect(page.locator('#feed-list')).toContainText('No posts to show');
+  await expect(page.locator('#feed-list')).not.toContainText('not following anyone');
 });
 
 test('person filter folds into the chip (escaped), menu clears it', async ({ page }) => {
