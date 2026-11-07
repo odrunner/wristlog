@@ -153,11 +153,12 @@ describe('fun-fact engagement tracking + admin metrics', () => {
     expect(html).toMatch(/from\('fact_clicks'\)\.upsert\([^)]*\{ onConflict: 'user_id,log_id', ignoreDuplicates: true \}/);
     expect(html).not.toMatch(/from\('fact_clicks'\)\.insert\(/);
   });
-  it('admin dashboard calls admin_fact_counts and shows the four rows', () => {
+  it('admin dashboard calls admin_fact_counts and shows the rows in the Fun Facts card', () => {
     expect(html).toContain('admin_fact_counts');
-    expect(html).toContain('Fun fact clicks');
-    expect(html).toContain('Fun fact viewers');
-    expect(html).toContain('Fun facts generated');
+    expect(html).toContain('>Fun Facts</div>');
+    expect(html).toMatch(/statRow\('Clicks', Number\(fc\.clicks_total\)/);
+    expect(html).toMatch(/statRow\('Viewers', Number\(fc\.viewers_total\)/);
+    expect(html).toMatch(/statRow\('Generated', Number\(fc\.generated_total\)/);
     expect(html).toContain('Watches with facts');
   });
 });
@@ -527,8 +528,8 @@ describe('fix: _factImpSeen is reset on sign-out so it cannot survive an account
 
 describe('admin fun-fact stats', () => {
   it('shows impressions and an expand rate beside the click counts', () => {
-    expect(html).toContain("statRow('Fun fact impressions'");
-    expect(html).toContain("statRow('Fun fact expand rate'");
+    expect(html).toMatch(/statRow\('Impressions', Number\(fc\.impressions_total\)/);
+    expect(html).toMatch(/statRow\('Expand rate', \(Number\(fc\.impressions_total\)/);
   });
 });
 

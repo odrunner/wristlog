@@ -71,10 +71,10 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/statRow\('Advanced mode \(24h\)',\s*advSessions24h,\s*advDelta/);
   });
 
-  it('Totals splits measurements by engine — Pro V2 and Original, each with users + sessions', () => {
+  it('Measurement card splits sessions by engine — Pro V2 and Original, each with users + sessions', () => {
     expect(html).toContain("db.rpc('admin_engine_stats')");
-    expect(html).toMatch(/engineRow\('Measurements — Pro V2',\s*eng\.prov2_sessions,\s*eng\.prov2_users,\s*eng\.prov2_sessions_24h,\s*eng\.prov2_sessions_prev24h\)/);
-    expect(html).toMatch(/engineRow\('Measurements — Original',\s*eng\.orig_sessions,\s*eng\.orig_users,\s*eng\.orig_sessions_24h,\s*eng\.orig_sessions_prev24h\)/);
+    expect(html).toMatch(/engineRow\('Pro V2 sessions',\s*eng\.prov2_sessions,\s*eng\.prov2_users,\s*eng\.prov2_sessions_24h,\s*eng\.prov2_sessions_prev24h\)/);
+    expect(html).toMatch(/engineRow\('Original sessions',\s*eng\.orig_sessions,\s*eng\.orig_users,\s*eng\.orig_sessions_24h,\s*eng\.orig_sessions_prev24h\)/);
   });
 
   it('engineRow: sessions is the headline, users + 24h change live in the sub', () => {
@@ -83,9 +83,13 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/const engineRow = \(label, sessions, users, s24, sPrev24\) => \{[\s\S]*?statRow\(label, n, null,[\s\S]*?inlineDelta\(h24 - p24, false\)\)/);
   });
 
-  it('Email Unsubs row: total stands alone, 24h change inverted (a rise is not green)', () => {
-    // total passes null delta; the 24h change is inverted (higher-is-bad) via inlineDelta(..., true)
-    expect(html).toMatch(/statRow\('Email Unsubs \(total\)',[^\n]*null,[^\n]*inlineDelta\([^\n]*unsub_prev24h[^\n]*,\s*true\)/);
+  it('Email unsubscribes live on the Traffic tab Email Health card, not Usage (moved 2026-11-07)', () => {
+    // The Usage tab no longer fetches or renders unsubs; renderAdminTraffic
+    // fetches admin_unsub_stats and renderEmailHealth shows the all-time total
+    // with the 24h count beside it.
+    expect(html).not.toContain("Email Unsubs (total)");
+    expect(html).toMatch(/function renderEmailHealth\(data, unsub\)/);
+    expect(html).toMatch(/row\('Unsubscribes \(all time\)',\s*\+u\.unsub_total \|\| 0,\s*\(\+u\.unsub_24h \|\| 0\) \+ ' \(24h\)'/);
   });
 
   it('Push approvals row: distinct users from admin_push_stats, newly-approved 24h delta', () => {
