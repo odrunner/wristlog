@@ -2278,6 +2278,19 @@
     .feed-search-pill:hover { border-color:var(--gold-lt); }
     .feed-search-pill-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+    /* Feed scope chip + dropdown — names what the feed is showing */
+    .feed-scope-wrap { position:relative; flex-shrink:0; }
+    .feed-scope-chip { display:inline-flex; align-items:center; gap:var(--space-1-5);
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-pill);
+      padding:var(--space-2) var(--space-3); font-size:var(--fs-md); font-weight:var(--fw-semibold);
+      color:var(--text); font-family:inherit; cursor:pointer; white-space:nowrap;
+      max-width:var(--size-45); transition:border-color var(--dur-fast); }
+    .feed-scope-chip:hover { border-color:var(--gold-lt); }
+    .feed-scope-label { overflow:hidden; text-overflow:ellipsis; }
+    .feed-scope-caret { color:var(--muted); font-size:var(--fs-xs); flex-shrink:0; }
+    .feed-scope-wrap .feed-menu { left:0; right:auto; }
+    .feed-menu-item.selected { background:var(--gold-dim); color:var(--gold-deep); }
+
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:var(--space-1); font-size:var(--fs-xs);
       padding:var(--space-0-5) var(--space-2); border-radius:var(--radius-pill); font-weight:var(--fw-semibold); margin: 0 var(--space-4) var(--space-2-5); }
@@ -3397,6 +3410,10 @@
   <div id="page-feed" class="page active page-feed">
     <div class="enhance-nudge-slot"></div>
     <div class="page-header">
+      <div class="feed-scope-wrap">
+        <button id="feed-scope-chip" class="feed-scope-chip" aria-haspopup="menu" aria-expanded="false" onclick="toggleScopeMenu()"><span class="feed-scope-label">All posts</span><span class="feed-scope-caret">&#9662;</span></button>
+        <div id="feed-scope-menu" class="feed-menu hidden" role="menu"></div>
+      </div>
       <button class="feed-search-pill" onclick="openDiscover()" aria-label="Search people and watches"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="u-shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="feed-search-pill-text">Search people and watches</span></button>
       <button id="feed-post-btn" class="btn btn-primary btn-md u-gap-1-5 u-d-inline-flex" onclick="openNewPost()" aria-label="New post" title="New post"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <!-- Clubs is parked (2026-10-03): nobody used it. The button is hidden, the
@@ -8156,7 +8173,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.27';
+const APP_VERSION = '07.08.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13026,6 +13043,54 @@ function setFeedScope(scope) {
   loadFeed();
 }
 
+// ── Scope chip + dropdown UI ─────────────────────────────────────────────────
+const FEED_SCOPES = [['all', 'All posts'], ['following', 'People I follow'], ['friends', 'Close friends'], ['mine', 'My posts']];
+let _scopeMenuCleanup = null;
+
+function toggleScopeMenu() {
+  const menu = document.getElementById('feed-scope-menu');
+  const chip = document.getElementById('feed-scope-chip');
+  if (!menu || !chip) return;
+  if (!menu.classList.contains('hidden')) { closeScopeMenu(); return; }
+  menu.innerHTML = FEED_SCOPES.map(([k, label]) => {
+    const sel = k === feedScope && !feedUserFilter && !feedModelFilter;
+    return `<div class="feed-menu-item${sel ? ' selected' : ''}" role="menuitem" tabindex="0" data-scope="${k}"
+      onclick="closeScopeMenu();setFeedScope(this.dataset.scope)"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();closeScopeMenu();setFeedScope(this.dataset.scope)}">${escHtml(label)}</div>`;
+  }).join('');
+  menu.classList.remove('hidden');
+  chip.setAttribute('aria-expanded', 'true');
+  // Outside click / Escape close. Listeners attach on the next tick so the
+  // opening click doesn't immediately close the menu (same idiom as
+  // toggleFeedMenu); the open-check prevents a leak if it closed in between.
+  setTimeout(() => {
+    if (menu.classList.contains('hidden')) return;
+    const close = e => { if (!menu.contains(e.target) && !chip.contains(e.target)) closeScopeMenu(); };
+    const esc = e => { if (e.key === 'Escape') closeScopeMenu(); };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', esc);
+    _scopeMenuCleanup = () => { document.removeEventListener('click', close); document.removeEventListener('keydown', esc); _scopeMenuCleanup = null; };
+  }, 0);
+}
+
+function closeScopeMenu() {
+  const menu = document.getElementById('feed-scope-menu');
+  const chip = document.getElementById('feed-scope-chip');
+  if (menu) menu.classList.add('hidden');
+  if (chip) chip.setAttribute('aria-expanded', 'false');
+  if (_scopeMenuCleanup) _scopeMenuCleanup();
+}
+
+function updateScopeChip() {
+  const chip = document.getElementById('feed-scope-chip');
+  if (!chip) return;
+  // Phase-2 interim: while a person/model filter is active the legacy banner
+  // carries the state and the chip hides so the two never contradict.
+  chip.classList.toggle('hidden', !!(feedUserFilter || feedModelFilter));
+  const lbl = chip.querySelector('.feed-scope-label');
+  if (lbl) lbl.textContent = scopeChipLabel(feedScope, null, null);
+}
+
 async function loadMoreFeed() {
   // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
@@ -15334,6 +15399,7 @@ function carryFeedVideos(el, render) {
 
 function renderFeed() {
   maybeRenderFollowSuggest();   // A/B follow_suggest — cached, no-op unless the list changed
+  updateScopeChip();
   const el = document.getElementById('feed-list');
   if (!el) return;
   renderOnboardingChecklist();
@@ -15364,6 +15430,22 @@ function renderFeed() {
         <div class="empty feed-empty-state">
           <div class="empty-icon"></div>
           <div class="empty-text">No posts to show</div>
+        </div>`;
+      return;
+    }
+    // Scoped view with nothing visible: name the reason; the chip stays as the
+    // way back. Promo-free like every filtered view.
+    if (feedScope !== 'all') {
+      const t = feedScope === 'following' ? 'You’re not following anyone yet.'
+              : feedScope === 'friends' ? 'No close friends yet.'
+              : 'No posts to show';
+      const cta = feedScope === 'mine' ? ''
+        : `<button class="btn btn-primary" onclick="openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find people</button>`;
+      el.innerHTML = `
+        <div class="empty feed-empty-state">
+          <div class="empty-icon"></div>
+          <div class="empty-text">${t}</div>
+          ${cta}
         </div>`;
       return;
     }
