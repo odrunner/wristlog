@@ -5713,12 +5713,13 @@
 <!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
 <div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="discover-modal-title">
   <div class="modal u-maxw-105">
-    <div class="modal-title row" id="discover-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
+    <div class="modal-title row" id="discover-modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search</div>
     <div class="form-group stack-4">
-      <input type="text" id="discover-search" aria-label="Search people" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
+      <input type="text" id="discover-search" aria-label="Search people and watches" placeholder="Search people and watches…" oninput="debounceSearch(this.value)" autocomplete="off">
     </div>
     <div id="discover-suggested"></div>
     <div id="discover-results"></div>
+    <div id="discover-watch-results"></div>
     <div class="u-mt-5">
       <div class="eyebrow eyebrow-muted stack-2-5">People You Follow</div>
       <div id="following-list"></div>
@@ -8148,7 +8149,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.07.33';
+const APP_VERSION = '07.08.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17967,7 +17968,8 @@ function openDiscover() {
   discoverUsers = [];
   document.getElementById('discover-search').value = '';
   document.getElementById('discover-results').innerHTML =
-    '<div class="text-secondary u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0">Type a name or @username to search.</div>';
+    '<div class="text-secondary u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0">Type a name, @username or watch model to search.</div>';
+  document.getElementById('discover-watch-results').innerHTML = '';
   renderFollowingList();
   renderDiscoverSuggested();   // A/B follow_suggest
   document.getElementById('discover-modal').classList.remove('hidden');
@@ -17982,11 +17984,41 @@ function debounceSearch(val) {
   if (!val.trim()) {
     discoverUsers = [];
     document.getElementById('discover-results').innerHTML =
-      '<div class="text-secondary u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0">Type a name or @username to search.</div>';
+      '<div class="text-secondary u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0">Type a name, @username or watch model to search.</div>';
+    document.getElementById('discover-watch-results').innerHTML = '';
     return;
   }
   document.getElementById('discover-results').innerHTML = '';
-  searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
+  searchDebounce = setTimeout(() => { const q = val.trim(); doSearchUsers(q); doSearchModels(q); }, 350);
+}
+// Watches group of the unified search sheet — same browse_watch_models RPC the
+// Explore page uses. A failure renders nothing: the people group must survive
+// a watches error (and vice versa — each group renders independently).
+async function doSearchModels(query) {
+  if (!currentUser) return;
+  const el = document.getElementById('discover-watch-results');
+  if (!el) return;
+  const { data, error } = await db.rpc('browse_watch_models', { p_q: query, p_brand: null, p_limit: 6, p_offset: 0 });
+  // Stale response: the box has been cleared or retyped since this query fired.
+  if (document.getElementById('discover-search')?.value.trim() !== query) return;
+  if (error) { console.warn('[WRotate] model search failed:', error.message); el.innerHTML = ''; return; }
+  const rows = data || [];
+  if (!rows.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="eyebrow eyebrow-muted stack-2-5">Watches</div>`
+    + rows.map(m => watchResultHtml(m)).join('');
+}
+function watchResultHtml(m) {
+  const label = [m.brand, m.name].filter(Boolean).join(' ');
+  return `
+    <div class="user-card u-cur-pointer" data-mid="${escAttr(m.id)}" onclick="closeDiscover();openModelPage(this.dataset.mid)">
+      ${m.image
+        ? `<img src="${escAttr(m.image)}" alt="" class="feed-user-avatar img-cover" onerror="this.style.visibility='hidden'">`
+        : `<div class="feed-user-avatar u-bg-watch-default u-c-black">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+      <div class="u-flex-1 u-minw-0">
+        <div class="user-card-name">${escHtml(label)}</div>
+        <div class="user-card-username">${Number(m.owners) || 0} member${Number(m.owners) === 1 ? '' : 's'}</div>
+      </div>
+    </div>`;
 }
 async function doSearchUsers(query) {
   if (!currentUser) return;
@@ -18016,7 +18048,7 @@ function renderDiscoverUsers() {
     return;
   }
   el.innerHTML = `
-    <div class="eyebrow eyebrow-muted stack-2-5">Search Results</div>
+    <div class="eyebrow eyebrow-muted stack-2-5">People</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
