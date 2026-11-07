@@ -8189,7 +8189,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.00';
+const APP_VERSION = '07.09.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18227,7 +18227,7 @@ function watchResultHtml(m) {
   return `
     <div class="user-card u-cur-pointer" data-mid="${escAttr(m.id)}" onclick="closeDiscover();openModelPage(this.dataset.mid)">
       ${m.image
-        ? `<img src="${escAttr(m.image)}" alt="" class="feed-user-avatar img-cover" onerror="this.style.visibility='hidden'">`
+        ? `<img loading="lazy" ${thumbSrcAttrs(m.image)} alt="" class="u-w-9 u-h-9 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
         : `<div class="feed-user-avatar u-bg-watch-default u-c-black">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
       <div class="u-flex-1 u-minw-0">
         <div class="user-card-name">${escHtml(label)}</div>

@@ -4,7 +4,10 @@ import { mockSupabase, injectSession, waitForAppBoot } from './helpers.js';
 // Unified search sheet — the people search modal also finds watch models
 // (browse_watch_models RPC) and a watch row jumps to its model page.
 
-const MODEL = { id: 'aaaaaaaa-0000-0000-0000-000000000009', brand: 'Omega', name: 'Speedmaster', slug: 'omega-speedmaster', owners: 3, image: null };
+// 1x1 transparent PNG — a real loadable image so the thumbnail-size assertion
+// measures what a user with a model photo sees.
+const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+const MODEL = { id: 'aaaaaaaa-0000-0000-0000-000000000009', brand: 'Omega', name: 'Speedmaster', slug: 'omega-speedmaster', owners: 3, image: TINY_PNG };
 const PERSON = { id: 'bbbbbbbb-0000-0000-0000-000000000001', username: 'speedyfan', display_name: 'Speedy Fan', avatar_url: null, profile_privacy: 'public' };
 
 async function openSearchSheet(page, { modelsStatus = 200 } = {}) {
@@ -43,6 +46,12 @@ test('search finds watches and opens the model page', async ({ page }) => {
   const watchResults = page.locator('#discover-watch-results');
   await expect(watchResults).toContainText('Watches');
   await expect(watchResults).toContainText('Omega Speedmaster');
+  // The model photo is a small avatar-sized thumbnail, never a hero image.
+  const thumb = watchResults.locator('[data-mid] img').first();
+  await expect(thumb).toBeVisible();
+  const box = await thumb.boundingBox();
+  expect(box.width).toBeLessThanOrEqual(48);
+  expect(box.height).toBeLessThanOrEqual(48);
   // People group renders too, above the watches group.
   await expect(page.locator('#discover-results')).toContainText('Speedy Fan');
   await watchResults.locator('[data-mid]').first().click();
