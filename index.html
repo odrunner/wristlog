@@ -4841,6 +4841,7 @@
         <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">Log you're wearing it</button>
         <div class="u-gap-1-5 u-d-flex">
           <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Share result</button>
+          <button id="msr-share-ext-btn" class="btn btn-ghost btn-sm btn-grow btn-ghost-gold" style="display:none;">Share image</button>
           <button class="btn btn-ghost btn-sm btn-grow u-c-muted" onclick="dismissMsrShareCta()">Done</button>
         </div>
         <div id="msr-cta-discard" class="u-ta-center u-mt-2" style="display:none;">
@@ -8201,7 +8202,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.15.22';
+const APP_VERSION = '08.15.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -37225,6 +37226,16 @@ function showMsrShareCta(watchId, rate, opts = {}) {
   const savedWord = opts.kept ? 'Kept' : 'Saved';
   const btn = document.getElementById('msr-share-btn');
   if (btn) btn.onclick = () => shareMsrToFeed(watchId, Number(rate));
+  // Experiment result_share: an EXTERNAL share next to the feed post — the
+  // feed button recruits members to engage, this one recruits outsiders.
+  // In treatment the feed button is renamed so two "share"s can't be confused.
+  const extBtn = document.getElementById('msr-share-ext-btn');
+  if (extBtn) {
+    const ext = experiment('result_share');
+    extBtn.style.display = ext ? '' : 'none';
+    extBtn.onclick = () => shareMsrExternal(watchId, Number(rate));
+    if (btn) btn.textContent = ext ? 'Post to feed' : 'Share result';
+  }
   // Primary CTA: log a wear (the core action) — the watch is literally in hand.
   // Skip it if this watch already has a wear logged today, so repeat-measurers
   // aren't nagged twice; fall back to the share-only framing.
@@ -37375,6 +37386,71 @@ function shareMsrToFeed(watchId, rate, opts) {
   } else {
     open([]);
   }
+}
+
+// External share of the result card (experiment result_share): the same
+// renderMsrShareCard image, out through the system share sheet with a
+// wrotate.com link — the acquisition loop the feed post can't provide.
+// Keeps the CTA open (the user may still post to feed after). Fallbacks:
+// no file-share support → download the image; no card data → text share;
+// nothing available → copy the text.
+function shareMsrExternal(watchId, rate) {
+  const w = watches.find(x => x.id === watchId);
+  const name = w ? `${w.brand} ${w.name}` : 'my watch';
+  const r = Number(rate);
+  const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
+  const text = `Measured my ${name}: ${rateStr} s/day with WRotate — https://wrotate.com/?utm_source=result_share`;
+  const logShare = (how) => {
+    if (currentUser && !_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'result_share', meta: { how } }).then(() => {});
+  };
+  let cardCanvas = null;
+  if (msrCardHasEnoughData(_msrScatterData)) {
+    try {
+      const beVal = document.getElementById('msr-be-input')?.value.trim();
+      const beatError = beVal ? parseFloat(beVal) : null;
+      const bph = parseInt(document.getElementById('msr-bph-select')?.value) || null;
+      cardCanvas = renderMsrShareCard({
+        data: _msrScatterData.slice(),
+        watchName: w ? name : null,
+        rate: r, beatError, bph,
+        wave: (_tgAlgo() === 'tg' && Array.isArray(_msrLastWave)) ? _msrLastWave.slice() : null,
+        amplitude: _msrLastAmp,
+        algo: _tgAlgo(),
+      });
+    } catch (e) { cardCanvas = null; }
+  }
+  const shareText = () => {
+    if (navigator.share) {
+      navigator.share({ text }).then(() => logShare('text')).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => { toast('Copied — paste it anywhere'); logShare('copy'); }).catch(() => {});
+    } else {
+      _fallbackCopyText(text);
+      logShare('copy');
+    }
+  };
+  const download = (blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'wrotate-accuracy.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    toast('Card saved as an image');
+    logShare('download');
+  };
+  if (!cardCanvas || !cardCanvas.toBlob) { shareText(); return; }
+  cardCanvas.toBlob((blob) => {
+    const file = blob ? new File([blob], 'wrotate-accuracy.jpg', { type: 'image/jpeg' }) : null;
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], text })
+        .then(() => logShare('sheet'))
+        .catch((e) => { if (e.name !== 'AbortError') download(blob); });
+    } else if (blob) {
+      download(blob);
+    } else {
+      shareText();
+    }
+  }, 'image/jpeg', 0.9);
 }
 
 // Throttled presence ping — records "last opened the app", which is distinct
