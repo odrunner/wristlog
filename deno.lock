@@ -44,6 +44,7 @@
         "npm:@playwright/test@^1.58.2",
         "npm:@vitest/coverage-v8@^3.2.4",
         "npm:canvas@^3.2.1",
+        "npm:supabase@3.0.0",
         "npm:vitest@3"
       ]
     }

@@ -9,9 +9,12 @@
 # environment). Layered containment:
 #   1. exactly ONE statement (no semicolons), starting with SELECT or WITH
 #   2. a keyword blocklist for data-modifying CTEs and side-effect functions
-#   3. `SET TRANSACTION READ ONLY` prefixed to the batch — the management
-#      API runs the batch as one transaction, so Postgres itself refuses any
-#      write that slips past 1–2 (verified 2026-10-22: error 25006)
+#   3. the CLI's own `--read-only` flag (supabase >= 3.0) wraps the statement
+#      in a read-only transaction server-side, so Postgres itself refuses any
+#      write that slips past 1–2. Replaced the hand-rolled `SET TRANSACTION
+#      READ ONLY;` prefix 2026-11-08: the 3.x CLI parses that two-statement
+#      batch as a possible mutation and aborts in agent mode
+#      (HostedMutationConsentRequiredError — blinded all four agents 11-08)
 #   4. SUPABASE_ACCESS_TOKEN is sourced here, in this child process only;
 #      the agent runner no longer exports it into agent environments
 set -u
@@ -35,4 +38,4 @@ printf '%s' "$SQL" | grep -qiwE 'insert|update|delete|merge|truncate|drop|alter|
   npx supabase link --project-ref xnzweevzrojmouzhpwzv >/dev/null 2>&1 ||
   fail "could not link the checkout"
 
-exec npx supabase db query --linked "SET TRANSACTION READ ONLY; $SQL"
+exec npx supabase db query --linked --read-only "$SQL"
