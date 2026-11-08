@@ -50,7 +50,7 @@
     <footer id="site-footer"><a href="/w/all/">Browse all watch models</a></footer>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js" integrity="sha384-NRo2jhGGHu91p1IOcVC3UWI5Vnd+xGXfD/8N7Hr9+aGTK0d/Pl0i+kUZsB/zIlrK" crossorigin="anonymous"></script>
-  <script src="/model-page.js?v=5bf38b63"></script>
+  <script src="/model-page.js?v=1f877466"></script>
   <script>
     const SUPABASE_URL = 'https://api.wrotate.com';
     const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
@@ -113,7 +113,12 @@
       document.title = `${m.brand} ${m.name} — WRotate`;
       const canon = document.createElement('link');
       canon.rel = 'canonical';
-      canon.href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
+      // Content-bearing models have a static, crawlable twin at /w/<slug>/
+      // (scripts/gen-sitemap.mjs) — point search engines there. Thin stubs
+      // have no snapshot, so they stay their own canonical.
+      canon.href = (m.description && m.hero_image)
+        ? `https://wrotate.com/w/${encodeURIComponent(m.slug)}/`
+        : `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
       document.head.appendChild(canon);
       document.getElementById('og-title').content = `${m.brand} ${m.name} — WRotate`;
       if (m.hero_image) document.getElementById('og-image').content = m.hero_image;

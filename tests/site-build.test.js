@@ -24,7 +24,11 @@ const published = (p, from = '/') => {
   return statSync(target).isDirectory() ? existsSync(join(target, 'index.html')) : true;
 };
 
-const PAGES = ['index.html', 'open.html', 'privacy.html', 'terms.html', 'p/index.html', 'profile/index.html', 'w/index.html'];
+const PAGES = ['index.html', 'open.html', 'privacy.html', 'terms.html', 'p/index.html', 'profile/index.html', 'w/index.html',
+  // generated model snapshots (scripts/gen-sitemap.mjs) ship under w/ too
+  ...readdirSync(join(root, 'w'), { withFileTypes: true })
+    .filter(d => d.isDirectory() && existsSync(join(root, 'w', d.name, 'index.html')))
+    .map(d => `w/${d.name}/index.html`)];
 
 describe('site build', () => {
   it('publishes every local src/href the pages reference', () => {

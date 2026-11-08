@@ -458,5 +458,6 @@ function renderModelPage(el, ctx, h) {
   window.WRModelPage = {
     render(el, ctx, h) { injectStyles(); return renderModelPage(el, ctx, h); },
     fmtRate, featuredFactIndex, rateStrip, agoText,
+    css: CSS,   // scripts/gen-sitemap.mjs inlines it into the static /w/<slug>/ snapshots
   };
 })();
