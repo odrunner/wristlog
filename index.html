@@ -1643,6 +1643,7 @@
     }
     .profile-btn:hover { box-shadow: var(--ring); }
     .help-btn {
+      position: relative;
       width: var(--size-8); height: var(--size-8); border-radius: var(--radius-round);
       background: none; border: none;
       color: var(--muted); font-size: var(--fs-body); font-weight: var(--fw-bold);
@@ -1651,6 +1652,8 @@
       font-family: inherit;
     }
     .help-btn:hover { box-shadow: var(--ring); color: var(--text); }
+    /* What's New unread dot (experiment wn_badge) */
+    .wn-dot { position: absolute; top: var(--space-0-5); right: var(--space-0-5); width: var(--size-2); height: var(--size-2); border-radius: var(--radius-round); background: var(--gold); }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
@@ -3294,7 +3297,7 @@
 
       <span id="msr-badge" class="msr-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg><span id="msr-badge-time"></span></span>
       <button id="theme-btn" class="theme-btn" aria-label="Toggle theme" onclick="cycleTheme()" title="Toggle theme"></button>
-      <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
+      <button class="help-btn" id="help-btn" aria-label="Help" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?<span id="wn-dot" class="wn-dot hidden" aria-hidden="true"></span></button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn hidden" id="dm-btn" onclick="openMessagesPage()" title="Messages" aria-label="Messages">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span class="bell-badge hidden" id="dm-badge">0</span>
@@ -8198,7 +8201,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.08.19';
+const APP_VERSION = '08.15.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19058,10 +19061,33 @@ function showHelpPage() {
 
 function openWhatsNew() {
   document.getElementById('whats-new-modal').classList.remove('hidden');
+  const unseen = safeLS.get('wristlog_wn_seen') !== wnVersion();
+  safeLS.set('wristlog_wn_seen', wnVersion());
+  updateWnBadge();
+  if (currentUser && !_isDemoMode) {
+    db.from('feature_events').insert({ user_id: currentUser.id, event: 'whats_new_opened', meta: { unseen, badge: experiment('wn_badge') } }).then(() => {});
+  }
 }
 function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
+// ── What's New unread dot (experiment wn_badge, usability P5 2026-11-08) ──
+// The "version" is a hash of the modal's own text: adding or editing an entry
+// lights the dot with no release constant to remember to bump.
+function wnVersion() {
+  const el = document.getElementById('whats-new-modal');
+  const s = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function updateWnBadge() {
+  const dot = document.getElementById('wn-dot');
+  if (!dot) return;
+  const show = !!currentUser && experiment('wn_badge') && safeLS.get('wristlog_wn_seen') !== wnVersion();
+  dot.classList.toggle('hidden', !show);
+}
+document.addEventListener('experiments:loaded', updateWnBadge);
 
 // ── Anniversary check ──────────────────────────────────────────────────────
 let _annivQueue = []; // watches with anniversaries today, shown one at a time
