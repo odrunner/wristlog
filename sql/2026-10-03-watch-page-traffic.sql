@@ -19,6 +19,13 @@
 -- scripts (screenshot/crawl runs on the Mac Mini) rendered w/ pages and
 -- inflated "public views" (5 of the first 6 rows). The rows stay in
 -- page_visits; only this aggregation skips them.
+--
+-- 2026-11-07: crawler renders are split out — Googlebot executes the page JS,
+-- so its crawl of w/ (15 of the first 16 "public views") fired the same visit
+-- beacon as a person and showed as source 'direct' (bots send no referrer).
+-- Known crawlers now appear in by_source under their own name ('googlebot',
+-- 'bingbot', ...; unrecognized bot UAs as 'crawler') so indexing progress
+-- stays visible, while total/1d/7d/by_model/daily count humans only.
 
 CREATE OR REPLACE FUNCTION public.admin_watch_page_traffic(p_days integer DEFAULT 14)
 RETURNS json
@@ -34,30 +41,41 @@ BEGIN
 
   WITH wv AS (
     SELECT
-      created_at,
-      NULLIF(substring(path from '\?m=([a-z0-9-]+)'), '') AS model,
-      -- Same precedence as the Traffic tab's other source lists:
-      -- explicit utm_source, else the external referrer's host, else direct.
+      v.created_at,
+      NULLIF(substring(v.path from '\?m=([a-z0-9-]+)'), '') AS model,
+      b.crawler,
+      -- Same precedence as the Traffic tab's other source lists — but a
+      -- crawler's bot name wins (bots send no referrer, so they'd all land in
+      -- 'direct' otherwise): crawler name, else explicit utm_source, else the
+      -- external referrer's host, else direct.
       CASE
-        WHEN COALESCE(utm_source, '') NOT IN ('', 'direct') THEN utm_source
-        WHEN COALESCE(referrer, '') <> '' THEN COALESCE(substring(referrer from '://([^/]+)'), referrer)
+        WHEN b.crawler IS NOT NULL THEN b.crawler
+        WHEN COALESCE(v.utm_source, '') NOT IN ('', 'direct') THEN v.utm_source
+        WHEN COALESCE(v.referrer, '') <> '' THEN COALESCE(substring(v.referrer from '://([^/]+)'), v.referrer)
         ELSE 'direct'
       END AS source
-    FROM page_visits
-    WHERE path LIKE '/w/%'
-      AND COALESCE(user_agent, '') NOT ILIKE '%HeadlessChrome%'
-  )
+    FROM page_visits v
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(
+        lower((regexp_match(v.user_agent, '(googlebot|bingbot|duckduckbot|applebot|yandexbot|baiduspider|ahrefsbot|semrushbot|petalbot|gptbot|claudebot|bytespider|ccbot|facebookexternalhit)', 'i'))[1]),
+        CASE WHEN v.user_agent ~* '(bot|spider|crawler)[ /;)]' THEN 'crawler' END
+      ) AS crawler
+    ) b
+    WHERE v.path LIKE '/w/%'
+      AND COALESCE(v.user_agent, '') NOT ILIKE '%HeadlessChrome%'
+  ),
+  humans AS (SELECT * FROM wv WHERE crawler IS NULL)
   SELECT json_build_object(
-    'total',   (SELECT count(*) FROM wv),
-    'last_1d', (SELECT count(*) FROM wv WHERE created_at >= NOW() - INTERVAL '1 day'),
-    'last_7d', (SELECT count(*) FROM wv WHERE created_at >= NOW() - INTERVAL '7 days'),
+    'total',   (SELECT count(*) FROM humans),
+    'last_1d', (SELECT count(*) FROM humans WHERE created_at >= NOW() - INTERVAL '1 day'),
+    'last_7d', (SELECT count(*) FROM humans WHERE created_at >= NOW() - INTERVAL '7 days'),
     'by_model', (
       SELECT coalesce(json_agg(row_to_json(m) ORDER BY m.total DESC), '[]'::json)
       FROM (
         SELECT COALESCE(model, '(no model)') AS model, count(*) AS total,
           count(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS day,
           count(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS week
-        FROM wv GROUP BY 1 ORDER BY count(*) DESC LIMIT 30
+        FROM humans GROUP BY 1 ORDER BY count(*) DESC LIMIT 30
       ) m
     ),
     'by_source', (
@@ -73,7 +91,7 @@ BEGIN
       SELECT coalesce(json_agg(row_to_json(dd) ORDER BY dd.day DESC), '[]'::json)
       FROM (
         SELECT created_at::date AS day, count(*) AS count
-        FROM wv
+        FROM humans
         WHERE created_at >= date_trunc('day', NOW())
           - make_interval(days => GREATEST(1, LEAST(COALESCE(p_days, 14), 90)) - 1)
         GROUP BY 1 ORDER BY day DESC

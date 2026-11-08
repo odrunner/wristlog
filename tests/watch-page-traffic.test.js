@@ -43,6 +43,33 @@ describe('admin_watch_page_traffic excludes headless-browser visits', () => {
   });
 });
 
+// ── 2026-11-07: Googlebot renders the page JS, so its crawl of w/ fired the
+// visit beacon and showed as 15 of the first 16 "public views", all source
+// 'direct' (bots send no referrer). Crawlers now get their own by_source rows
+// (named, so indexing progress stays visible); the human counts exclude them.
+describe('admin_watch_page_traffic splits crawler renders out of human counts', () => {
+  const sql = readFileSync(join(root, 'sql/2026-10-03-watch-page-traffic.sql'), 'utf8');
+
+  it('names known crawlers so by_source shows who is indexing', () => {
+    expect(sql).toMatch(/googlebot\|bingbot/);
+  });
+
+  it('catches unrecognized bot user agents as a generic crawler row', () => {
+    expect(sql).toMatch(/\(bot\|spider\|crawler\)\[ \/;\)\]'\s*THEN 'crawler'/);
+  });
+
+  it('total/1d/7d, by_model and daily count humans only', () => {
+    expect(sql).toMatch(/humans AS \(SELECT \* FROM wv WHERE crawler IS NULL\)/);
+    expect(sql).toMatch(/'total',\s+\(SELECT count\(\*\) FROM humans\)/);
+    expect(sql).toMatch(/FROM humans GROUP BY 1 ORDER BY count\(\*\) DESC LIMIT 30/);
+    expect(sql).toMatch(/FROM humans\s+WHERE created_at >= date_trunc/);
+  });
+
+  it('by_source keeps crawler rows (reads wv, not humans)', () => {
+    expect(sql).toMatch(/'by_source',[\s\S]{0,400}FROM wv GROUP BY 1/);
+  });
+});
+
 describe('Admin → Traffic shows the Watch Pages card', () => {
   const src = readFileSync(join(root, 'index.html'), 'utf8');
 
