@@ -297,6 +297,80 @@ def running_trial(experiments):
     return None
 
 
+# ── queued trials (picker fallback) ──────────────────────────────────────
+# Trials the gate-table picker can never propose: native-engine fixes behind NEW knobs
+# (dark default = today's behaviour) and toggles of an existing default with no gate-table
+# row. When the gate table yields no candidate, the loop starts the first of these whose
+# key was never tried and whose knob has enough recent echo adoption to fill both arms —
+# a free slot never dead-ends while queued work exists (added 2026-11-08: that morning's
+# run said "nothing started" while tgknob_stabfresh_1 was fillable at 93% REV-2 adoption).
+# Order = priority. Remove an entry only once its trial has run (it then lives in the ledger).
+QUEUED_TRIALS = [
+    dict(key="tgknob_stabfresh_1",
+         why="stability-honesty (TG_ENGINE_REV 2, shipped 2026-10-25): 1 = count only fresh tg "
+             "computes toward stability + drop the flag across rate gaps. First in the queue — "
+             "most user harm."),
+    dict(key="tgknob_bphdecisive_2",
+         why="auto-BPH noise gate (TG_ENGINE_REV 2, shipped 2026-10-25): best BPH candidate must "
+             "beat the runner-up by this ratio (watch false-negatives on real 36000 watches)."),
+    dict(key="tgknob_phaselock_1",
+         why="phase-locked tick selection ON. Fleet control is OFF — the web payload has always "
+             "sent phaseLock=false (field-verified 2026-10-25); every shipped build echoes and "
+             "obeys phaseLock. After starting, recheck rollout-check.py's psBE= count (treatment "
+             "sessions must still carry psBE= or [TGALGO)."),
+]
+# Adoption bar: the trailing 7 days alone must supply 1/MAX_WEEKS of the per-arm data bar.
+# Starting on a thinner build ramp risks "thin after MAX_WEEKS → killed", which burns the
+# key forever (a key that was ever a trial is never retried).
+QUEUE_MIN_WEEK_CONV = math.ceil(2 * MIN_CONV_PER_ARM / MAX_WEEKS)
+QUEUE_MIN_WEEK_USERS = 2 * MIN_USERS_PER_ARM
+
+
+def knob_adoption(sessions, knob, since):
+    """(converged sessions, distinct users) at/after `since` on builds whose [TGTUNE] echo
+    carries the knob at all (any value) — the population that can fill a trial's arms."""
+    conv, users = 0, set()
+    for s in sessions:
+        if since and (s.get("t") or "") < since:
+            continue
+        if tune_value(s.get("tune"), knob) is None:
+            continue
+        if s.get("conv"):
+            conv += 1
+        if s.get("uid"):
+            users.add(s["uid"])
+    return conv, len(users)
+
+
+def queued_status(experiments, sessions, now):
+    """Live state of every queued trial: dicts(key, knob, value, why, state, startable).
+    state ∈ 'done' (key already ran — see the ledger) | 'ready' | 'waiting — …' (adoption)."""
+    tried = {e.get("key") for e in experiments or []}
+    since = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
+    out = []
+    for q in QUEUED_TRIALS:
+        knob, val = parse_trial_key(q["key"])
+        conv, users = knob_adoption(sessions, knob, since)
+        if q["key"] in tried:
+            state, startable = "done", False
+        elif conv >= QUEUE_MIN_WEEK_CONV and users >= QUEUE_MIN_WEEK_USERS:
+            state, startable = "ready", True
+        else:
+            state, startable = (f"waiting — last 7 days: {conv} converged sessions "
+                                f"(need ≥{QUEUE_MIN_WEEK_CONV}) / {users} users (need ≥{QUEUE_MIN_WEEK_USERS}) "
+                                f"on builds echoing {knob}"), False
+        out.append(dict(key=q["key"], knob=knob, value=val, why=q["why"], state=state, startable=startable))
+    return out
+
+
+def pick_queued(experiments, sessions, now):
+    """The first startable queued trial (queue order = priority), or None."""
+    for q in queued_status(experiments, sessions, now):
+        if q["startable"]:
+            return q
+    return None
+
+
 def trial_name(knob, val, r=None):
     return f"{knob} = {val:g}" + (f" ({r['desc']})" if r else "")
 

@@ -95,33 +95,12 @@ LEDGER = os.path.expanduser("~/Documents/Claude project/watch tracker/docs/measu
 # Manual runs refresh it from the repo copy.
 LEDGER_CACHE = os.path.expanduser("~/.local/share/wrotate-measurement-changelog.md")
 
-# Experiments the Android-port review (2026-10-23) identified but which the auto-picker
-# CANNOT start, so they'd otherwise be invisible to this weekly cadence. Each is a native
-# engine fix for a real iOS behaviour, gated behind a NEW tuning knob (dark default = today's
-# behaviour), shipped in BOTH engines in lockstep (TG_ENGINE_REV bump) — so none can run until
-# the knob exists in a shipped build (iOS 2.10 + the Android build). Remove a line once its
-# knob ships and the auto-picker/loop can trial it. Blockers below are why none has started yet.
-QUEUED_NATIVE_EXPERIMENTS = [
-    ("phaselock-toggle", "READY to trial — start `tgknob_phaselock_1` (--start) when the slot "
-     "frees. Fleet control is OFF (the web payload has always sent phaseLock=false; verified "
-     "in field logs 2026-10-25 — the engine-source 'default ON' never reached users). Treatment "
-     "turns phase-locked tick selection ON; no new build needed. Check rollout-check.py's "
-     "psBE= dependency before starting."),
-    ("stability-honesty", "knob `tg_stabfresh` SHIPPED in code 2026-10-25 (TG_ENGINE_REV 2): "
-     "1 = count only fresh tg computes toward stability + drop the flag across rate gaps. "
-     "Trial `tgknob_stabfresh_1` once 2.10/Android builds have adoption. Ship FIRST (most user harm)."),
-    ("autobph-noise-gate", "knob `tg_bphdecisive` SHIPPED in code 2026-10-25 (TG_ENGINE_REV 2): "
-     "best candidate must beat the runner-up by this ratio (ship 1.5). Trial e.g. "
-     "`tgknob_bphdecisive_2` once builds have adoption (watch false-negatives on real 36000 watches)."),
-]
+# The trial queue (experiments the gate-table picker can never propose) lives in
+# accuracy_loop.QUEUED_TRIALS since 2026-11-08: the loop now STARTS the first eligible one
+# itself when the gate table yields nothing, so a free slot never dead-ends. Eligibility =
+# the knob is echoed by enough recent sessions to fill both arms (al.queued_status).
 # The post-restart blank-rate bug (tg rate dead for ~the prior session length after a capture
 # rebuild) was fixed PLAIN, no knob, 2026-10-25: the compute/log markers reset when elapsed rewinds.
-QUEUED_BLOCKERS = [
-    "The loop judges/runs ONE trial at a time; the slot is taken until the running trial decides.",
-    "tg_stabfresh / tg_bphdecisive exist only at TG_ENGINE_REV 2 — they need iOS 2.10 + an Android "
-    "build with adoption before a trial can fill arms (phaselock-toggle is exempt: every shipped "
-    "build echoes and obeys phaseLock).",
-]
 TMP = "/tmp/wrotate-weekly"
 # "sane" = a believable number. No Weishi ground truth in the field; the per-watch
 # reference (below) is the truth proxy for lock quality.
@@ -625,6 +604,7 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
     if al.running_trial(trials):
         return L, trials, defaults, snap
     pick = None
+    started_by = "manual" if start_key else "picker"
     if start_key:
         kv = al.parse_trial_key(start_key)
         if not kv:
@@ -648,10 +628,24 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
             name = f"{knob} = {val:g} vs live {defaults.get(knob):g}"
             L.append(f"\n**Started today: `{k}`** — {hyp}")
         else:
-            L.append("\n**Nothing started.** No untried knob VALUE clears the bar on the whole era (≥15% of bad locks blocked at ≤10% good cost, n≥10) across the "
-                     "value ladders. That is a data verdict, not the end of non-native work: a new JS gate over the rate series can add a knob without a binary "
-                     "(how tg_driftband was built, 2026-10-04) — propose one from the no-knob rows above. Native work (the estimator itself; raw-audio field "
-                     "captures) stays the bigger lever.")
+            q = al.pick_queued(trials, sessions, now)
+            if q:
+                k, knob, val = q["key"], q["knob"], q["value"]
+                started_by = "queue"
+                hyp = (f"Queue fallback ({now.strftime('%Y-%m-%d')}): no untried gate-table value clears the bar, so the loop "
+                       f"starts the next queued native experiment. {q['why']} Treatment runs {knob}={val:g} "
+                       f"(live default {defaults.get(knob):g}). Judged Sundays on wrong-of-converged; guardrails converged% and no-reading%.")
+                name = f"{knob} = {val:g} vs live {defaults.get(knob):g} (queued experiment)"
+                pick = (k, knob, val, None)
+                L.append(f"\n**Started today (from the queue): `{k}`** — {hyp}")
+            else:
+                L.append("\n**Nothing started.** No untried knob VALUE clears the gate-table bar (≥15% of bad locks blocked at ≤10% good cost, n≥10) "
+                         "and no queued trial is startable:")
+                for s in al.queued_status(trials, sessions, now):
+                    L.append(f"  - `{s['key']}`: {s['state']}")
+                L.append("That is a data verdict, not the end of non-native work: a new JS gate over the rate series can add a knob without a binary "
+                         "(how tg_driftband was built, 2026-10-04) — propose one from the no-knob rows above. Native work (the estimator itself; raw-audio field "
+                         "captures) stays the bigger lever.")
     if pick:
         k, knob, val, r = pick
         snap.update(started=k)
@@ -662,7 +656,7 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
             resp = svc_call(url, key, "/rest/v1/experiments", "POST", json.dumps(body))
             if isinstance(resp, dict):
                 raise RuntimeError(f"experiment INSERT failed: {resp}")
-            record_decision(url, key, k, "started", dict(rollout_pct=al.START_ROLLOUT, hypothesis=hyp, by="manual" if start_key else "picker"))
+            record_decision(url, key, k, "started", dict(rollout_pct=al.START_ROLLOUT, hypothesis=hyp, by=started_by))
             trials.append(dict(body, last_eval=None, decided_at=None, created_at=now_iso))
             L.append(f"→ Action: running at {al.START_ROLLOUT}% (new logins assigned from now; sticky per user). First judgement next Sunday.")
         else:
@@ -843,14 +837,14 @@ def main():
     L.append("\n## Trial ledger (every knob trial ever run)")
     L += al.fmt_ledger(trials)
 
-    # 6b. Queued native experiments the auto-picker can't start (would otherwise be invisible here)
-    if QUEUED_NATIVE_EXPERIMENTS:
-        L.append("\n## Queued experiments (blocked — not startable by the loop yet)")
-        for key, why in QUEUED_NATIVE_EXPERIMENTS:
-            L.append(f"  - `{key}`: {why}")
-        L.append("  Blockers:")
-        for b in QUEUED_BLOCKERS:
-            L.append(f"    - {b}")
+    # 6b. Trial queue: started by the loop itself when the gate table yields nothing
+    queued = [s for s in al.queued_status(trials, loop_sessions(cum), now) if s["state"] != "done"]
+    if queued:
+        L.append("\n## Trial queue (the loop starts the first READY one whenever the gate table yields nothing)")
+        for s in queued:
+            L.append(f"  - `{s['key']}` [{s['state']}]: {s['why']}")
+        L.append("  (One trial at a time — the slot is taken until the running trial decides. "
+                 "'waiting' = not enough recent sessions echo the knob to fill both arms yet.)")
     if not dry and (loop_snap.get("trial_action") in ("won", "killed") or loop_snap.get("started")):
         bits = []
         if loop_snap.get("trial_action") in ("won", "killed"):

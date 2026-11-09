@@ -225,6 +225,45 @@ class Pick(unittest.TestCase):
         self.assertIsNone(al.running_trial([{"key": "tgknob_guardmode_0", "status": "won"}]))
 
 
+class Queue(unittest.TestCase):
+    """Queue fallback (2026-11-08): the loop starts a queued trial itself when the gate
+    table yields nothing — a free slot never dead-ends while queued work exists."""
+    NOW = datetime(2026, 11, 8, 8, 0, 0)
+    REV2 = TUNE_25 + " phaseLock=false/0.4 stabFresh=0 bphDecisive=1.5"
+    PL_ONLY = TUNE_25 + " phaseLock=false/0.4"
+
+    def _fleet(self, tune, n=40, users=30, t="2026-11-05T10:00:00"):
+        return [sess(tune, "sane", True, uid=f"u{i % users}", t=t) for i in range(n)]
+
+    def test_rev2_ready_and_priority(self):
+        # Enough REV-2 adoption → stabfresh (most user harm) outranks the always-ready phaselock.
+        q = al.pick_queued([], self._fleet(self.REV2), self.NOW)
+        self.assertEqual(q["key"], "tgknob_stabfresh_1")
+        self.assertEqual((q["knob"], q["value"]), ("tg_stabfresh", 1.0))
+
+    def test_falls_through_to_phaselock_without_rev2_adoption(self):
+        q = al.pick_queued([], self._fleet(self.PL_ONLY), self.NOW)
+        self.assertEqual(q["key"], "tgknob_phaselock_1")
+
+    def test_tried_key_is_done_and_skipped(self):
+        S = self._fleet(self.REV2)
+        trials = [{"key": "tgknob_stabfresh_1", "status": "killed"}]
+        st = {s["key"]: s for s in al.queued_status(trials, S, self.NOW)}
+        self.assertEqual(st["tgknob_stabfresh_1"]["state"], "done")
+        self.assertEqual(al.pick_queued(trials, S, self.NOW)["key"], "tgknob_bphdecisive_2")
+
+    def test_adoption_bar(self):
+        # 40 converged but only 10 users → waiting; 30 users but under 40 converged → waiting.
+        for S in (self._fleet(self.REV2, n=40, users=10), self._fleet(self.REV2, n=30, users=30)):
+            st = {s["key"]: s for s in al.queued_status([], S, self.NOW)}
+            self.assertFalse(st["tgknob_stabfresh_1"]["startable"])
+            self.assertIn("waiting", st["tgknob_stabfresh_1"]["state"])
+
+    def test_only_the_trailing_week_counts(self):
+        # A month-old burst of REV-2 sessions proves nothing about filling arms now.
+        self.assertIsNone(al.pick_queued([], self._fleet(self.REV2, t="2026-10-01T10:00:00"), self.NOW))
+
+
 class Text(unittest.TestCase):
     def test_arm_table_and_ledger_render(self):
         L = al.fmt_arm_table(arms(10, 3, 12, 2, c_conv=8, t_conv=10))
