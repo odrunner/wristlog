@@ -131,10 +131,7 @@ function renderModelPage(el, ctx, h) {
     ${heroImg ? `<img ${imgSrcAttrs(heroImg, 960, 360)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
     <div class="u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct" style="position:absolute;inset:0;pointer-events:none;"></div>
     <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
-      <span class="u-d-flex u-gap-2">
-        <span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>
-        <span class="tag-beta">Beta</span>
-      </span>
+      <span class="u-d-flex u-gap-2">${publicMode ? '' : '<span role="button" tabindex="0" class="u-cur-pointer" data-mp="back">‹ Back</span>'}</span>
       <span role="button" tabindex="0" class="u-cur-pointer" data-mp="share">Share</span>
     </div>
     <div style="position:absolute;left:var(--size-4);bottom:var(--size-3-5);right:var(--size-4);pointer-events:none;">
