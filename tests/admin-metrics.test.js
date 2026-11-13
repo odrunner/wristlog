@@ -298,9 +298,19 @@ describe('Admin stats cache (sql/2026-08-15-admin-stats-cache.sql)', () => {
   const CACHED = ['admin_dod_counts', 'admin_active_dau', 'admin_engine_stats', 'admin_per_user_trend',
     'admin_measurement_counts', 'admin_user_stats', 'admin_last_active',
     'admin_traffic_stats', 'admin_email_engagement', 'admin_email_clickthrough'];
-  it('every cached RPC reads the cache (no p_force from the client)', () => {
+  // The two email keys are the exception since 2026-11-13: the Traffic tab is
+  // opened to review a send that just happened, and the 10-min pre-warm hid a
+  // broadcast queued seconds after the last refresh. Both measure ~0.2 s forced.
+  const FORCED = ['admin_email_engagement', 'admin_email_clickthrough'];
+  it('every cached RPC reads the cache except the two email keys, which force', () => {
     for (const fn of CACHED) {
-      expect(html, fn).toContain(`db.rpc('${fn}')`);
+      if (FORCED.includes(fn)) {
+        expect(html, fn).toContain(`db.rpc('${fn}', { p_force: true })`);
+        expect(html, fn).not.toContain(`db.rpc('${fn}')`);
+      } else {
+        expect(html, fn).toContain(`db.rpc('${fn}')`);
+        expect(html, fn).not.toContain(`db.rpc('${fn}', { p_force`);
+      }
       expect(html, fn).not.toContain(`db.rpc('${fn}', cacheArgs)`);
     }
     expect(html).not.toContain('p_force: force');
