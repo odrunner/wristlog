@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=4e707f4b', it: 'i18n/it.js?v=889c69cf', fr: 'i18n/fr.js?v=42f1dae8', tr: 'i18n/tr.js?v=66649ecd' };
+      var FILES = { es: 'i18n/es.js?v=db704468', it: 'i18n/it.js?v=b2e86743', fr: 'i18n/fr.js?v=4306c2fd', tr: 'i18n/tr.js?v=4c1b06b5', de: 'i18n/de.js?v=21a5767d', pt: 'i18n/pt.js?v=846255b6' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2822,7 +2822,7 @@
       </div>
       <div class="stack-3">
         <div class="item-title">WRotate in Your Language</div>
-        <div class="body-muted">The app now speaks <strong>Spanish, Italian, French and Turkish</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
+        <div class="body-muted">The app now speaks <strong>Spanish, Italian, French, Turkish, German and Portuguese</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">WRotate Is Now on Android</div>
@@ -4489,7 +4489,7 @@
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">Language</div>
-              <div class="help-step-desc">WRotate is available in English, Spanish, Italian, French and Turkish. Pick yours in the <strong>Language</strong> card on your profile; the app reloads in that language and remembers it on this device. Posts, comments and watch names stay as their authors wrote them.</div>
+              <div class="help-step-desc">WRotate is available in several languages. Pick yours in the <strong>Language</strong> card on your profile; the app reloads in that language and remembers it on this device. Posts, comments and watch names stay as their authors wrote them.</div>
             </div>
           </div>
           <div class="help-step">
@@ -6418,13 +6418,15 @@ function i18nLookup(k) {
 // i18n-runtime:end
 // The languages offered in Profile -> Language, each named in its own language. A new one
 // also needs its file in the loader's FILES (head) and i18n/<code>.json.
-const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano'], ['fr', 'Français'], ['tr', 'Türkçe']];
+const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano'], ['fr', 'Français'], ['tr', 'Türkçe'], ['de', 'Deutsch'], ['pt', 'Português']];
 // The one-time offer, written in the language it offers: [sentence, button].
 const I18N_OFFER = {
   es: ['WRotate está disponible en español', 'Cambiar'],
   it: ['WRotate è disponibile in italiano', 'Cambia'],
   fr: ['WRotate est disponible en français', 'Changer'],
   tr: ['WRotate artık Türkçe', 'Değiştir'],
+  de: ['WRotate gibt es auf Deutsch', 'Wechseln'],
+  pt: ['O WRotate está disponível em português', 'Mudar'],
 };
 // Pure: which language to offer, or null. Offered only while no choice is stored (picking
 // English in the profile, or dismissing, stores one) and the device's first language is
@@ -8411,7 +8413,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.07.39';
+const APP_VERSION = '13.07.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

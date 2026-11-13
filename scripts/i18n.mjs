@@ -60,7 +60,9 @@ function holes(src) { // replace each ${ … } (nested braces allowed) with \u00
   return out;
 }
 const number = (s) => { let n = 0; return s.replace(/\u0001|\d+(?:[.,]\d+)*/g, () => `{${n++}}`); };
-const clean = (s) => number(decode(s).replace(/\s+/g, ' ').trim());
+// \u2026 written as an escape in the source is the character on screen (and its digits are not a number).
+const unescape = (s) => s.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+const clean = (s) => number(decode(unescape(s)).replace(/\s+/g, ' ').trim());
 const wordy = (s) => /[A-Za-z]{2}/.test(s.replace(/\{\d+\}/g, '')) && !/&\w+;/.test(s);
 export function templateStrings(src) {
   const out = new Set(), flat = holes(src);

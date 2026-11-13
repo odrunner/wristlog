@@ -55,7 +55,7 @@ test('Profile -> Language switches the app and back, English stays the default',
   await boot(page, '/');
   await page.evaluate(() => openProfileModal());
   const chips = page.locator('#pp-lang-chips .chip');
-  await expect(chips).toHaveText(['English', 'Español', 'Italiano', 'Français', 'Türkçe']);
+  await expect(chips).toHaveText(['English', 'Español', 'Italiano', 'Français', 'Türkçe', 'Deutsch', 'Português']);
   await expect(page.locator('#pp-lang-chips .chip.selected')).toHaveText('English');
   await Promise.all([page.waitForEvent('load'), chips.nth(2).click()]);
   await waitForAppBoot(page);
@@ -94,7 +94,7 @@ test.describe('language offer banner', () => {
   test('an English device never sees it', async ({ page }) => {
     await boot(page, '/');
     await expect(page.locator('#lang-banner')).toBeHidden();
-    expect(await page.evaluate(() => [langOffer(null, 'en-US'), langOffer(null, 'de-DE'), langOffer(null, ''), langOffer('en', 'it-IT'), langOffer(null, 'IT'), langOffer(null, 'tr-TR')]))
+    expect(await page.evaluate(() => [langOffer(null, 'en-US'), langOffer(null, 'ja-JP'), langOffer(null, ''), langOffer('en', 'it-IT'), langOffer(null, 'IT'), langOffer(null, 'tr-TR')]))
       .toEqual([null, null, null, null, 'it', 'tr']);
   });
 
