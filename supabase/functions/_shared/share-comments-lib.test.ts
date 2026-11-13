@@ -108,3 +108,26 @@ Deno.test("buildCommentEmail: we-voice, escaped content, CTA to /open, unsubscri
   assertStringIncludes(buildCommentEmail("wishlist", { name: "A", body: "b" }, null, "u").html, "a wishlist link you shared");
   assertEquals(/Ozgur|founder/i.test(html), false);
 });
+
+// ---- languages ----
+import { LANGS } from "./lang.ts";
+
+Deno.test("buildCommentEmail: every language has both kinds, escapes content, leaves no hole", () => {
+  for (const lang of LANGS) {
+    for (const kind of ["collection", "wishlist"] as const) {
+      for (const label of ["For <the> insurer", null]) {
+        const { subject, html } = buildCommentEmail(kind, { name: "Sa<ra>h", body: "Is it available?" }, label, "https://u/unsub", lang);
+        assertEquals(/[{}]/.test(subject), false);
+        assertEquals(html.includes("{n}") || html.includes("{l}"), false, `${lang}/${kind}: leftover hole`);
+        assertEquals(html.includes("Sa&lt;ra&gt;h"), true);
+        assertEquals(html.includes("<ra>"), false);
+        if (label) assertEquals(html.includes("For &lt;the&gt; insurer"), true);
+        assertEquals(html.includes('href="https://wrotate.com/open?'), true);
+        if (lang !== "en") assertEquals(subject === buildCommentEmail(kind, { name: "a", body: "b" }, label, "https://u").subject, false);
+      }
+    }
+  }
+  assertEquals(buildCommentEmail("wishlist", { name: "a", body: "b" }, null, "https://u", "de").subject, "Neuer Kommentar zu deiner geteilten Wunschliste");
+  assertEquals(buildCommentEmail("collection", { name: "a", body: "b" }, null, "https://u"),
+    buildCommentEmail("collection", { name: "a", body: "b" }, null, "https://u", "en"));
+});

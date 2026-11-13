@@ -1,3 +1,6 @@
+import { fill, SHELL_STRINGS } from "./lang.ts";
+import type { Lang } from "./lang.ts";
+import { SHARE_COMMENT_STRINGS } from "./share-comment-strings.ts";
 // share-comments — pure logic shared by share-wishlist and share-watches.
 // Comments are left by recipients of a share link (usually no account), so the
 // name is typed. The thread is PUBLIC to anyone holding the link. Everything that
@@ -190,19 +193,22 @@ export function buildCommentEmail(
   comment: { name: string; body: string },
   label: string | null,
   unsubUrl: string,
+  lang: Lang = "en",
 ): { subject: string; html: string } {
-  const what = kind === "collection" ? "watches" : "wishlist";
-  const subject = `New comment on your shared ${what}`;
+  const S = SHARE_COMMENT_STRINGS[lang];
+  const SH = SHELL_STRINGS[lang];
+  const k = kind === "collection" ? "collection" : "wishlist";
+  const subject = S.subject[k];
   const trimmedLabel = (label || "").trim();
   const linkLine = trimmedLabel
-    ? `<p style="margin:0 0 12px;">On your link <strong>“${esc(trimmedLabel)}”</strong>:</p>`
-    : `<p style="margin:0 0 12px;">On a ${what} link you shared:</p>`;
+    ? `<p style="margin:0 0 12px;">${fill(S.onLabel, { l: esc(trimmedLabel) })}</p>`
+    : `<p style="margin:0 0 12px;">${S.onLink[k]}</p>`;
   const body = `
-    <p style="margin:0 0 12px;"><strong>${esc(comment.name)}</strong> left a comment.</p>
+    <p style="margin:0 0 12px;">${fill(S.left, { n: esc(comment.name) })}</p>
     ${linkLine}
     <blockquote style="margin:0 0 16px;padding:10px 14px;border-left:3px solid #b8941f;background:#faf7ee;border-radius:6px;white-space:pre-wrap;">${esc(comment.body)}</blockquote>
-    <p style="margin:0;">Open WRotate and go to Shared links to read the thread or remove the comment. We email you about a link at most once every 30 minutes — the app always has everything.</p>`;
-  const unsubLine = `<a href="${esc(unsubUrl)}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
+    <p style="margin:0;">${S.outro}</p>`;
+  const unsubLine = `<a href="${esc(unsubUrl)}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -218,7 +224,7 @@ export function buildCommentEmail(
           <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=transactional&utm_campaign=share-comment" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=transactional&utm_campaign=share-comment" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">${SH.open}</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

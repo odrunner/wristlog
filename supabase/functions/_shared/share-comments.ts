@@ -1,6 +1,7 @@
 // share-comments — the IO half (DB, email). Pure logic is in share-comments-lib.ts.
 // Both share pages call handleCommentPost for POST and loadComments for GET.
 import { sendEmail } from "./mailer.ts";
+import { pickLang } from "./lang.ts";
 import { trackedConfigSet } from "./tracked.ts";
 import { hmacSign, unsubUrl } from "../send-wear-reminders/lib.ts";
 import {
@@ -99,7 +100,7 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
 
   // Email — owner pref + per-link throttle. A failure here never reaches the poster.
   try {
-    const { data: prof } = await db.from("profiles").select("email_prefs").eq("id", share.user_id).maybeSingle();
+    const { data: prof } = await db.from("profiles").select("email_prefs, language").eq("id", share.user_id).maybeSingle();
     const prefs = (prof?.email_prefs || {}) as Record<string, unknown>;
     if (prefs.share_comments !== false && !(await checkAndBump(db, share.user_id, keys.email, 1, EMAIL_WINDOW_MS, now))) {
       const { data: au } = await db.auth.admin.getUserById(share.user_id);
@@ -110,9 +111,11 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
         const { subject, html } = buildCommentEmail(
           kind, { name: v.name, body: v.body }, share.label,
           unsubUrl(opts.supabaseUrl, share.user_id, sig, "share_comments"),
+          // In the language the link's owner chose in the app.
+          pickLang(prof?.language),
         );
         const r = await sendEmail({
-          from: FROM_EMAIL, to: [to], subject, html,
+          from: FROM_EMAIL, to: [to], subject, html, msgKey: "share_comment",
           // Click tracking only for an iOS 2.6+ install; see ./tracked.ts.
           ...(await trackedConfigSet(db, share.user_id)),
         });
