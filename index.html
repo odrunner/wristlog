@@ -8218,7 +8218,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.03';
+const APP_VERSION = '12.20.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19264,6 +19264,7 @@ function showAdminPage() {
   seedCollectionShareReleaseDraft();
   seedWhatIfAiPicksDraft();
   seedWatchesDraft();
+  seedAndroidWhatsNewDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -19676,6 +19677,44 @@ It works from your collection too. Open any watch you own and tap <b>See this mo
 The database grows as members add watches, so if a model page looks thin today, it fills in as more of its owners arrive. Your collection is already helping build it.
 
 <a href="https://wrotate.com/open">Browse the Watches database &#8594;</a>
+
+The WRotate team`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// Android launched on Google Play (open testing → released, 2026-11). The hero
+// is the platform itself — same account, everything syncs — followed by the
+// What's-New tail nobody has been emailed about yet: private messages, the
+// unified feed search + views, and the month-pattern slide. The Play link sits
+// in the hero paragraph; the template's footer already carries both store
+// badges. Seeded as a DRAFT only: nothing sends until it is queued and the
+// drain runs.
+function seedAndroidWhatsNewDraft() {
+  const FLAG = 'wr_seed_android_whats_new_draft_v1';
+  if (safeLS.get(FLAG)) return;
+  safeLS.set(FLAG, '1');
+  const SUBJECT = 'WRotate is now on Android';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 9,
+    subject: SUBJECT,
+    heading: 'Now on Android &#8212; plus what else is new',
+    body: `The full WRotate app &#8212; timegrapher, collection, wear tracking and the social feed &#8212; is now on <b>Google Play</b>. Sign in with the same account on any phone and everything syncs. If you carry an Android phone, or know a collector who does, the wait is over.
+
+<a href="https://play.google.com/store/apps/details?id=com.wrotate.app">Get WRotate on Google Play &#8594;</a>
+
+And while we were building that, the app kept moving. A few more things you may have missed:
+
+<b>Private messages.</b> Send a message request from any member&#8217;s profile; once they accept, you can chat and share posts privately. You choose who can reach you under <b>Privacy</b>.
+
+<b>Search watches, not just people.</b> The search bar at the top of the feed now finds watch models too &#8212; type Speedmaster, SKX or Datejust and jump straight to that model&#8217;s page. And the view name at the top left of the feed is now a menu: all posts, people you follow, close friends, or just yours.
+
+<b>Your month&#8217;s pattern.</b> The month-in-review card can now spot a habit in your wear log and give it a slide of its own &#8212; the watch that owned your Saturdays, or a comeback after months in the box. One pattern per month, and only when the numbers genuinely back it up.
+
+<a href="https://wrotate.com/open">See what&#8217;s new &#8594;</a>
 
 The WRotate team`,
     imageUrls: [],
