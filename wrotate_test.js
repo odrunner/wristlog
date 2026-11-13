@@ -28,15 +28,18 @@ export function todayStr(now = new Date()) {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+// index.html picks this from the chosen language; the tests run the English app.
+const I18N_LOCALE = 'en-US';
+
 export function fmtDate(d) {
   const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return dt.toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function fmtMonYear(d) {
   if (!d) return null;
   const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return dt.toLocaleDateString(I18N_LOCALE, { month: 'short', year: 'numeric' });
 }
 
 export function addDaysStr(dateStr, delta) {

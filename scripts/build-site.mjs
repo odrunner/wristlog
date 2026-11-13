@@ -26,6 +26,7 @@ export const SITE_FILES = [
   'w/',
   'design-system.css',
   'model-page.js',
+  'i18n/',          // language files, fetched only by a non-English choice (docs/i18n.md)
   'supabase-js-2.98.0.min.js', // vendored UMD: own file so it drops out of the per-deploy shell re-download (P4)
   'sw.js',
   'manifest.json',

@@ -159,6 +159,22 @@
     })();
   </script>
   <link rel="stylesheet" href="/design-system.css?v=e096b945">
+  <!-- Languages. English (everyone today) runs none of this: no request, no work.
+       A supported non-English choice loads its dictionary here, parser-blocking on
+       purpose, so it is in memory before the boot script draws anything. The file
+       is /i18n/<lang>.js, generated from i18n/<lang>.json by scripts/i18n.mjs,
+       which also stamps the ?v= hash below (docs/i18n.md). -->
+  <script>
+    (function () {
+      var FILES = { es: 'i18n/es.js?v=cff64cd9', it: 'i18n/it.js?v=d6c7b896' };
+      var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
+      if (m) safeLS.set('wr_lang', m[1]);
+      var lang = safeLS.get('wr_lang');
+      if (!lang || !FILES[lang]) return;
+      document.documentElement.lang = lang;
+      document.write('<script src=/' + FILES[lang] + '><\/script>');
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -3294,7 +3310,7 @@
         <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
         <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
         <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
-      </svg>W<span class="logo-r">Rotate</span>
+      </svg>W<span class="logo-r" data-i18n-skip>Rotate</span>
     </button>
     <button id="admin-nav-btn" class="admin-nav-btn" onclick="showAdminPage()" title="Admin" style="display:none;" aria-label="Admin portal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <nav aria-label="Main navigation">
@@ -6294,6 +6310,133 @@
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+// ── Languages ────────────────────────────────────────────────────────────────
+// The page is written in English and English is the dictionary key: tx('Add watch').
+// With no dictionary loaded (every English user) tx() returns its argument and the
+// walker never runs. A missing entry also falls back to English, so a language can
+// be filled in screen by screen. Named tx, not t: t is a local variable in ~60 places.
+// scripts/i18n.mjs evaluates the block between the
+// two markers to collect the page's strings, so it must stay self-contained.
+// i18n-runtime:start
+function tx(s, vars) {
+  var d = window.WR_I18N && window.WR_I18N.dict;
+  var out = (d && Object.prototype.hasOwnProperty.call(d, s)) ? d[s] : s;
+  if (vars) out = out.replace(/\{(\w+)\}/g, function (m, k) { return k in vars ? vars[k] : m; });
+  return out;
+}
+// Translates the static markup in place. lookup(english) returns the translation or
+// nothing. Skipped: the sign-in screen (not to be modified), the admin portal, and
+// the release-notes archive. A run of text with bare inline tags ("Tap <b>Add</b>")
+// is one entry keyed by its innerHTML, so the sentence is translated whole.
+function i18nWalk(root, lookup) {
+  var SKIP = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,#whats-new-modal,[data-i18n-skip]';
+  var SKIP_TAG = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|TEXTAREA|svg|CANVAS)$/;
+  var INLINE = /^(B|STRONG|EM|I|U|BR|CODE|KBD)$/;
+  var ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+  function norm(v) { return v.replace(/\s+/g, ' ').trim(); }
+  // What we wrote, per node: a translation that happens to spell another English label
+  // (Italian "Post" for "Posts") must not be translated a second time when it comes back.
+  var done = i18nWalk.done || (i18nWalk.done = new WeakMap());
+  function isPhrase(el) {
+    var text = false, tag = false;
+    for (var c = el.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 3) { if (c.nodeValue.trim()) text = true; }
+      else if (c.nodeType === 1) {
+        if (!INLINE.test(c.tagName) || c.attributes.length || c.firstElementChild) return false;
+        tag = true;
+      } else return false;
+    }
+    return text && tag;
+  }
+  (function walk(el) {
+    if (SKIP_TAG.test(el.tagName) || el.matches(SKIP)) return;
+    for (var i = 0; i < ATTRS.length; i++) {
+      var a = el.getAttribute(ATTRS[i]);
+      if (a && (done.get(el) || {})[ATTRS[i]] !== a) {
+        var ra = lookup(norm(a));
+        if (ra) { var rec = done.get(el) || {}; rec[ATTRS[i]] = ra; done.set(el, rec); el.setAttribute(ATTRS[i], ra); }
+      }
+    }
+    if (isPhrase(el)) { var rp = lookup(norm(el.innerHTML)); if (rp) el.innerHTML = rp; return; }
+    for (var c = el.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 1) walk(c);
+      else if (c.nodeType === 3) {
+        var k = norm(c.nodeValue); if (!k || done.get(c) === c.nodeValue) continue;
+        var r = lookup(k); if (!r) continue;
+        // An <option> without value="" submits its text: pin the English before changing it.
+        if (el.tagName === 'OPTION' && !el.hasAttribute('value')) el.setAttribute('value', k);
+        var out = c.nodeValue.replace(c.nodeValue.trim(), r);
+        done.set(c, out); c.nodeValue = out;
+      }
+    }
+  })(root);
+}
+// A string with numbers in it ("3 wears", "2h ago") is looked up as written first, then
+// as a pattern with the numbers lifted out: "{0} wears" -> "{0} usos". English already
+// picked singular or plural, and the pattern keeps that choice.
+function i18nLookup(k) {
+  var d = window.WR_I18N && window.WR_I18N.dict;
+  if (!d) return;
+  if (Object.prototype.hasOwnProperty.call(d, k)) return d[k];
+  var nums = [], pat = k.replace(/\d+(?:[.,]\d+)*/g, function (m) { nums.push(m); return '{' + (nums.length - 1) + '}'; });
+  if (nums.length && Object.prototype.hasOwnProperty.call(d, pat)) return d[pat].replace(/\{(\d+)\}/g, function (m, i) { return i in nums ? nums[i] : m; });
+  // Sort headers carry an arrow: "Paid ↕".
+  var arrow = /^(.*\S)\s*([↕↓↑▾▴→])$/.exec(k);
+  if (arrow) { var ra = i18nLookup(arrow[1]); if (ra) return ra + ' ' + arrow[2]; }
+  // "2h ago · work": the pieces around a middle dot are labels in their own right.
+  if (k.indexOf('·') > 0) {
+    var hit = false, joined = k.replace(/[^·]+/g, function (seg) {
+      var p = seg.trim(), r = p && i18nLookup(p);
+      if (!r) return seg;
+      hit = true; return seg.replace(p, r);
+    });
+    if (hit) return joined;
+  }
+  if (window.__i18nMiss && /[A-Za-z]{2}/.test(k)) window.__i18nMiss.add(k);
+}
+// i18n-runtime:end
+// The languages offered in Profile -> Language, each named in its own language. A new one
+// also needs its file in the loader's FILES (head) and i18n/<code>.json.
+const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano']];
+function i18nLang() { return window.WR_I18N ? window.WR_I18N.lang : 'en'; }
+// The dictionary is read once, before boot, so a change of language is a reload. The
+// address is rebuilt without ?lang=, which would otherwise win over the new choice.
+function setLanguage(code) {
+  if (code === i18nLang()) return;
+  safeLS.set('wr_lang', code);
+  location.replace(location.pathname + location.hash);
+}
+// Dates follow the chosen language; English keeps the US format it always had.
+const I18N_LOCALE = window.WR_I18N ? window.WR_I18N.lang : 'en-US';
+if (window.WR_I18N) {
+  i18nWalk(document.body, i18nLookup);
+  // Everything the script draws later (cards, lists, modals) is translated as it lands.
+  // Whole-string matches only, so a caption or a watch name is left alone unless it is
+  // letter-for-letter a label of ours. Our own writes come back through here and are
+  // recognised by the walker's memory, which ends the loop.
+  var _i18nSkip = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,#whats-new-modal,[data-i18n-skip]';
+  var _i18nSeen = function (k) { return i18nLookup(k); };
+  new MutationObserver(function (muts) {
+    for (var i = 0; i < muts.length; i++) {
+      var m = muts[i], host = m.target.nodeType === 1 ? m.target : m.target.parentElement;
+      if (!host || host.closest(_i18nSkip)) continue;
+      if (m.type === 'attributes') {
+        var v = host.getAttribute(m.attributeName), rec = i18nWalk.done.get(host) || {};
+        if (!v || rec[m.attributeName] === v) continue;
+        var r = i18nLookup(v.replace(/\s+/g, ' ').trim());
+        if (r) { rec[m.attributeName] = r; i18nWalk.done.set(host, rec); host.setAttribute(m.attributeName, r); }
+      } else if (m.type === 'characterData') {
+        i18nWalk(host, _i18nSeen);
+      } else {
+        for (var j = 0; j < m.addedNodes.length; j++) {
+          var n = m.addedNodes[j];
+          if (n.nodeType === 1) i18nWalk(n, _i18nSeen);
+          else if (n.nodeType === 3 && n.nodeValue.trim()) i18nWalk(host, _i18nSeen);
+        }
+      }
+    }
+  }).observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'aria-label', 'title', 'alt'] });
+}
 // ── Design-system values for code that cannot write var(--…) ───────────────────
 // Canvas, Chart.js, and colours that are SAVED (a watch's colour) need the value itself. It lives only
 // in design-system.css; this reads it. The stylesheet is linked in <head>, before this script, so it has
@@ -7715,7 +7858,7 @@ async function deleteAccount() {
   if (!currentUser) return;
   const uid = currentUser.id;
   const btn = document.getElementById('da-final-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+  if (btn) { btn.disabled = true; btn.textContent = tx('Deleting…'); }
   // Capture session token NOW before any deletes invalidate it
   let accessToken = null;
   try {
@@ -7732,7 +7875,7 @@ async function deleteAccount() {
   const batch = (...fns) => Promise.all(fns.map(fn => fn()));
   try {
     // Phase 1: independent leaf tables (no FK dependencies between them)
-    if (btn) btn.textContent = 'Deleting data…';
+    if (btn) btn.textContent = tx('Deleting data…');
     await batch(
       () => del('likes',            { eq: ['user_id', uid] }),
       () => del('comments',         { eq: ['user_id', uid] }),
@@ -7755,19 +7898,19 @@ async function deleteAccount() {
       () => del('feedback',         { eq: ['user_id', uid] })
     );
     // Phase 2: logs depend on watches being present for FK, delete logs first
-    if (btn) btn.textContent = 'Removing collection…';
+    if (btn) btn.textContent = tx('Removing collection…');
     await del('logs',     { eq: ['user_id', uid] });
     await batch(
       () => del('wishlist', { eq: ['user_id', uid] }),
       () => del('watches',  { eq: ['user_id', uid] })
     );
     // Phase 3: profile last
-    if (btn) btn.textContent = 'Finalizing…';
+    if (btn) btn.textContent = tx('Finalizing…');
     await del('profiles', { eq: ['id', uid] });
   } catch (e) {
     console.error(`[WristLog] deleteAccount failed at ${e.message}:`, e);
     toast(`Delete failed at ${escHtml(e.message)}. Please try again — already-deleted data will be skipped.`, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
+    if (btn) { btn.disabled = false; btn.textContent = tx('Permanently Delete Everything'); }
     return;
   }
   // Delete from auth.users via edge function (requires service role)
@@ -8220,7 +8363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.21.54';
+const APP_VERSION = '13.07.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8559,7 +8702,7 @@ function formatFeedDate(dateStr, createdAt) {
   if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   if (diff < 7)  return `${diff} day${diff === 1 ? '' : 's'} ago`;
-  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  return d.toLocaleDateString(I18N_LOCALE, { month:'short', day:'numeric' });
 }
 
 function formatCommentTime(createdAt) {
@@ -8574,7 +8717,7 @@ function formatCommentTime(createdAt) {
   if (diffH < 24) return `${diffH}h ago`;
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7)  return `${diffD}d ago`;
-  return ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return ts.toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
 }
 
 // ── My Profile ────────────────────────────────────────────────────────────
@@ -8711,7 +8854,7 @@ function onUsernameInput(inputEl, statusElId) {
   // If it matches the user's current username, skip check
   const original = inputEl.dataset?.original || '';
   if (clean === original && valid) {
-    statusEl.textContent = 'Your current username';
+    statusEl.textContent = tx('Your current username');
     statusEl.className = 'username-status available';
     _usernameAvailable = true;
     _enableUsernameBtn(statusElId);
@@ -8727,7 +8870,7 @@ function onUsernameInput(inputEl, statusElId) {
   }
 
   // Debounce availability check
-  statusEl.textContent = 'Checking…';
+  statusEl.textContent = tx('Checking…');
   statusEl.className = 'username-status checking';
   _usernameAvailable = false;
   _enableUsernameBtn(statusElId);
@@ -8748,19 +8891,19 @@ async function checkUsernameAvailability(username, statusElId) {
   // Guard: user may have typed more while we were waiting
   if (_lastCheckedUsername !== username) return;
   if (error) {
-    statusEl.textContent = 'Could not check — try again';
+    statusEl.textContent = tx('Could not check — try again');
     statusEl.className = 'username-status invalid';
     _usernameAvailable = false;
   } else if (reservedRes && !reservedRes.error && reservedRes.data === true) {
-    statusEl.textContent = 'This username isn’t available';
+    statusEl.textContent = tx('This username isn’t available');
     statusEl.className = 'username-status taken';
     _usernameAvailable = false;
   } else if (data && data.length > 0) {
-    statusEl.textContent = 'Already taken';
+    statusEl.textContent = tx('Already taken');
     statusEl.className = 'username-status taken';
     _usernameAvailable = false;
   } else {
-    statusEl.textContent = 'Available!';
+    statusEl.textContent = tx('Available!');
     statusEl.className = 'username-status available';
     _usernameAvailable = true;
   }
@@ -8795,11 +8938,11 @@ async function saveUsernamePrompt() {
   const displayName = (document.getElementById('up-display-name').value || '').trim();
   if (!checkContent(displayName).clean) { toast('Your display name contains inappropriate content. Please revise.', 'error'); return; }
   const btn = document.getElementById('up-save-btn');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = tx('Saving…');
   const updates = { username: raw, username_set: true };
   if (displayName) updates.display_name = displayName;
   const { error } = await db.from('profiles').update(updates).eq('id', currentUser.id);
-  btn.disabled = false; btn.textContent = 'Continue';
+  btn.disabled = false; btn.textContent = tx('Continue');
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
   myProfile.username = raw;
   myProfile.username_set = true;
@@ -9091,7 +9234,7 @@ const PROFILE_POSTS_BATCH = 12;
 
 async function loadMoreProfilePosts(userId, isOwn) {
   const btn = document.getElementById('profile-posts-load-more');
-  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  if (btn) { btn.disabled = true; btn.textContent = tx('Loading…'); }
   try {
     const { data } = await db.from('logs')
       .select('id, date, use_case, notes, photo_url, visibility, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
@@ -9106,10 +9249,10 @@ async function loadMoreProfilePosts(userId, isOwn) {
     if (data.length < PROFILE_POSTS_BATCH) {
       if (btn) btn.remove();
     } else {
-      if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
+      if (btn) { btn.disabled = false; btn.textContent = tx('Load more'); }
     }
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
+    if (btn) { btn.disabled = false; btn.textContent = tx('Load more'); }
   }
 }
 
@@ -9310,6 +9453,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </label>
       </div>`;
     return `
+    <div class="profile-page-card">
+      <div class="form-group u-mb-0">
+        <label class="u-fs-sm">Language</label>
+        <div class="chips" id="pp-lang-chips" data-i18n-skip>
+          ${I18N_LANGS.map(([code, name]) => `<div class="chip${code === i18nLang() ? ' selected' : ''}" lang="${code}" onclick="setLanguage('${code}')">${name}</div>`).join('')}
+        </div>
+        <div class="text-caption u-mt-1">Choose the language WRotate is shown in.</div>
+      </div>
+    </div>
     <div class="profile-page-card">
       <div class="prof-section">
         <button type="button" class="prof-section-hdr" onclick="toggleProfSection('notif-section','notif-collapse')">
@@ -10976,13 +11128,13 @@ function confirmRemoveFollower(userId, btn) {
     removeFollower(userId, btn);
   } else {
     btn.dataset.confirming = '1';
-    btn.textContent = 'Remove?';
+    btn.textContent = tx('Remove?');
     btn.style.borderColor = 'var(--danger)';
     btn.style.color = 'var(--danger)';
     setTimeout(() => {
       if (btn.dataset.confirming) {
         delete btn.dataset.confirming;
-        btn.textContent = 'Remove';
+        btn.textContent = tx('Remove');
         btn.style.borderColor = '';
         btn.style.color = '';
       }
@@ -10997,7 +11149,7 @@ async function removeFollower(userId, btn) {
     .eq('follower_id', userId).eq('following_id', currentUser.id);
   if (error) {
     toast('Could not remove — please try again', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Remove'; btn.style.borderColor = ''; btn.style.color = ''; }
+    if (btn) { btn.disabled = false; btn.textContent = tx('Remove'); btn.style.borderColor = ''; btn.style.color = ''; }
     return;
   }
   // Close friends need the mutual follow, so the friendship goes with the follow — silently.
@@ -11027,7 +11179,7 @@ async function openFollowingModalFor(userId) {
   if (!userId) return;
   const modal = document.getElementById('following-modal');
   const list  = document.getElementById('following-modal-list');
-  document.querySelector('#following-modal .modal-title').textContent = 'Following';
+  document.querySelector('#following-modal .modal-title').textContent = tx('Following');
   modal.classList.remove('hidden');
   list.innerHTML = '<div class="empty">Loading…</div>';
 
@@ -11061,7 +11213,7 @@ function openCloseFriendsModal() {
   if (!currentUser) return;
   const modal = document.getElementById('following-modal');
   const list  = document.getElementById('following-modal-list');
-  document.querySelector('#following-modal .modal-title').textContent = 'Close Friends';
+  document.querySelector('#following-modal .modal-title').textContent = tx('Close Friends');
   modal.classList.remove('hidden');
 
   const activeFriends = friendRequests
@@ -11178,14 +11330,14 @@ async function followUser(userId, btn) {
       actor_id: currentUser.id, is_read: false,
     }).then(({ error }) => { if (error) console.error('[WristLog] follow notif:', error.message); })
       .catch(e => console.error('[WristLog] follow notif network error:', e));
-    if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
     toast('Following! Their logs will appear in your feed.');
     renderDiscoverUsers();
     renderFollowingList();
     loadFeed();
   } else if (error.code === '23505') {
     following.add(userId);
-    if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
     renderDiscoverUsers();
   } else { toast('Could not follow — please try again', 'error'); }
   } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
@@ -11206,7 +11358,7 @@ async function sendFollowRequest(userId, btn) {
       following.add(userId);
       pendingRequests.delete(userId);
       await db.from('follow_requests').delete().eq('requester_id', currentUser.id).eq('target_id', userId);
-      if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
+      if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
       renderDiscoverUsers();
       return;
     }
@@ -11222,12 +11374,12 @@ async function sendFollowRequest(userId, btn) {
         });
         if (notifErr) console.error('follow_request notif failed:', notifErr);
       }
-      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = function() { confirmCancelRequest(userId, this); }; }
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = tx('Requested'); btn.onclick = function() { confirmCancelRequest(userId, this); }; }
       toast('Follow request sent');
       renderDiscoverUsers();
     } else if (error.code === '23505') {
       pendingRequests.add(userId);
-      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = function() { confirmCancelRequest(userId, this); }; }
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = tx('Requested'); btn.onclick = function() { confirmCancelRequest(userId, this); }; }
       renderDiscoverUsers();
     } else { toast('Could not send request — please try again', 'error'); }
   } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
@@ -11238,20 +11390,20 @@ function confirmCancelRequest(userId, btn) {
     // Optimistically show Follow immediately — request paths only exist for
     // restricted profiles, so re-follow is always another request.
     btn.className = 'follow-btn follow';
-    btn.textContent = 'Follow';
+    btn.textContent = tx('Follow');
     btn.style.borderColor = '';
     btn.style.color = '';
     btn.onclick = function() { sendFollowRequest(userId, this); };
     cancelFollowRequest(userId);
   } else {
     btn.dataset.confirming = '1';
-    btn.textContent = 'Cancel request?';
+    btn.textContent = tx('Cancel request?');
     btn.style.borderColor = 'var(--danger)';
     btn.style.color = 'var(--danger)';
     setTimeout(() => {
       if (btn.dataset.confirming) {
         delete btn.dataset.confirming;
-        btn.textContent = 'Requested';
+        btn.textContent = tx('Requested');
         btn.style.borderColor = '';
         btn.style.color = '';
       }
@@ -11368,20 +11520,20 @@ function confirmUnfollow(userId, btn) {
     // Re-follow is NOT always direct: a restricted profile (or one that removed
     // you as a follower) needs a fresh request, so look the privacy up on tap.
     btn.className = 'follow-btn follow';
-    btn.textContent = 'Follow';
+    btn.textContent = tx('Follow');
     btn.style.borderColor = '';
     btn.style.color = '';
     btn.onclick = function() { followByPrivacy(userId, this); };
     unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
-    btn.textContent = 'Unfollow?';
+    btn.textContent = tx('Unfollow?');
     btn.style.borderColor = 'var(--danger)';
     btn.style.color = 'var(--danger)';
     setTimeout(() => {
       if (btn.dataset.confirming) {
         delete btn.dataset.confirming;
-        btn.textContent = 'Following';
+        btn.textContent = tx('Following');
         btn.style.borderColor = '';
         btn.style.color = '';
       }
@@ -11391,19 +11543,19 @@ function confirmUnfollow(userId, btn) {
 function confirmUnfriend(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
-    btn.textContent = 'Close Friends';
+    btn.textContent = tx('Close Friends');
     btn.style.borderColor = '';
     btn.style.color = '';
     unfriendFromCard(userId, btn);
   } else {
     btn.dataset.confirming = '1';
-    btn.textContent = 'Unfriend?';
+    btn.textContent = tx('Unfriend?');
     btn.style.borderColor = 'var(--danger)';
     btn.style.color = 'var(--danger)';
     setTimeout(() => {
       if (btn.dataset.confirming) {
         delete btn.dataset.confirming;
-        btn.textContent = 'Close Friends';
+        btn.textContent = tx('Close Friends');
         btn.style.borderColor = '';
         btn.style.color = '';
       }
@@ -11422,7 +11574,7 @@ async function unfriendFromCard(userId, btn) {
   // Revert button to "Following" in-place (still following each other)
   if (btn && btn.isConnected) {
     btn.className = 'follow-btn following';
-    btn.textContent = 'Following';
+    btn.textContent = tx('Following');
     btn.style.borderColor = '';
     btn.style.color = '';
     btn.onclick = function() { confirmUnfollow(userId, this); };
@@ -11467,7 +11619,7 @@ async function unfollowUser(userId, btn) {
     // Reset button on failure
     if (btn && btn.isConnected) {
       btn.className = 'follow-btn following';
-      btn.textContent = 'Following';
+      btn.textContent = tx('Following');
       btn.style.borderColor = '';
       btn.style.color = '';
       btn.dataset.confirming = '';
@@ -11714,7 +11866,7 @@ document.addEventListener('click', e => {
       _ptrRefreshing = true;
       el.classList.add('refreshing');
       const txt = el.querySelector('.ptr-text');
-      if (txt) txt.textContent = 'Refreshing...';
+      if (txt) txt.textContent = tx('Refreshing...');
       feedLoadedAt = 0;
       feedError = false;
       loadFeed().finally(() => {
@@ -14436,7 +14588,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
 
   // ── longest streak ──
   if (recap.streak) {
-    const span = (s) => new Date(s + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const span = (s) => new Date(s + 'T12:00:00').toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
     slides.push(`<div class="promo-recap-slide">
       <div class="promo-recap-slide-lbl">Longest streak</div>
       <div class="promo-recap-streak">${recap.streak.days}</div>
@@ -15386,10 +15538,10 @@ function renderPushSettingRow() {
   const status = window._pushAuthStatus || 'notDetermined';
   const label = document.getElementById('push-setting-state');
   const btn = document.getElementById('push-setting-btn');
-  if (status === 'authorized') { if (label) label.textContent = 'On'; if (btn) btn.style.display = 'none'; }
-  else if (status === 'provisional') { if (label) label.textContent = 'On (quiet)'; if (btn) { btn.style.display = ''; btn.textContent = 'Deliver prominently'; btn.onclick = () => { try { safeLS.set(PUSH_HARD_ASKED, '1'); _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
-  else if (status === 'denied') { if (label) label.textContent = 'Off'; if (btn) { btn.style.display = ''; btn.textContent = 'Open Settings'; btn.onclick = () => { try { _pushBridge().postMessage({ action: 'openAppSettings' }); } catch (_) {} }; } }
-  else { if (label) label.textContent = 'Off'; if (btn) { btn.style.display = ''; btn.textContent = 'Turn on'; btn.onclick = () => { try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
+  if (status === 'authorized') { if (label) label.textContent = tx('On'); if (btn) btn.style.display = 'none'; }
+  else if (status === 'provisional') { if (label) label.textContent = tx('On (quiet)'); if (btn) { btn.style.display = ''; btn.textContent = tx('Deliver prominently'); btn.onclick = () => { try { safeLS.set(PUSH_HARD_ASKED, '1'); _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
+  else if (status === 'denied') { if (label) label.textContent = tx('Off'); if (btn) { btn.style.display = ''; btn.textContent = tx('Open Settings'); btn.onclick = () => { try { _pushBridge().postMessage({ action: 'openAppSettings' }); } catch (_) {} }; } }
+  else { if (label) label.textContent = tx('Off'); if (btn) { btn.style.display = ''; btn.textContent = tx('Turn on'); btn.onclick = () => { try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
 }
 
 function _firstWearState() {
@@ -16283,7 +16435,7 @@ async function openReport(contentType, contentId, userId, contextName, logIdForC
 
   // Context text
   if (isOwnPost) {
-    document.getElementById('report-context').textContent = 'Report a comment on your post';
+    document.getElementById('report-context').textContent = tx('Report a comment on your post');
   } else if (contentType === 'comment') {
     document.getElementById('report-context').textContent = 'Reporting: comment by ' + (contextName || 'User');
   } else {
@@ -16324,7 +16476,7 @@ async function openReport(contentType, contentId, userId, contextName, logIdForC
   }
 
   document.getElementById('report-submit-btn').disabled = false;
-  document.getElementById('report-submit-btn').textContent = 'Submit Report';
+  document.getElementById('report-submit-btn').textContent = tx('Submit Report');
   document.getElementById('report-modal').classList.remove('hidden');
 }
 
@@ -16336,7 +16488,7 @@ async function submitReport() {
   if (demoGuard()) return;
   if (_reportTargetType === 'message') return submitDmReport();   // DM report (openDmReport)
   const btn = document.getElementById('report-submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting...';
+  btn.disabled = true; btn.textContent = tx('Submitting...');
 
   const contentType = _reportTargetType;
   const contentId = _reportTargetId;
@@ -16363,7 +16515,7 @@ async function submitReport() {
 
   if (error) {
     toast('Could not submit report', 'error');
-    btn.disabled = false; btn.textContent = 'Submit Report';
+    btn.disabled = false; btn.textContent = tx('Submit Report');
     return;
   }
 
@@ -16766,7 +16918,7 @@ async function saveEditPost() {
   if (!(await checkEulaAcceptance())) return;
   if (!editPostLogId) return;
   const saveBtn = document.querySelector('#edit-post-modal .btn-primary');
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = tx('Saving…'); }
   try {
   const fi  = feedItems.find(i => i.id === editPostLogId);
   const log = logs.find(l => l.id === editPostLogId);
@@ -16777,7 +16929,7 @@ async function saveEditPost() {
     const { clean } = checkContent(newLocation);
     if (!clean) {
       toast('Your location contains inappropriate content. Please revise.', 'error');
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = tx('Save'); }
       return;
     }
   }
@@ -16922,7 +17074,7 @@ async function saveEditPost() {
   }
   closeEditPost();
   toast('Post updated!');
-  } finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; } }
+  } finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = tx('Save'); } }
 }
 
 function deletePostFromFeed() {
@@ -17475,7 +17627,7 @@ async function saveNewPost() {
   if (location) { const { clean } = checkContent(location); if (!clean) { toast('Your location contains inappropriate content. Please revise.', 'error'); return; } }
   const _npBtn = document.querySelector('#new-post-modal .btn-primary');
   if (_npBtn?.disabled) return;
-  if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
+  if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = tx('Posting...'); }
   // Hoisted so the catch below can roll back a post that never reached the
   // server (audit REL-N2: a throw used to skip the rollback entirely, leaving
   // a phantom local-only post).
@@ -17650,7 +17802,7 @@ async function saveNewPost() {
       if (entry.photoUrl) { deletePostPhotos(entry.photoUrl); }
     }
     toast('Post failed — ' + (e?.message || 'unexpected error'), 'error');
-  } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
+  } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = tx('Post'); } }
 }
 
 // ── Feed photo (add after logging) ────────────────────────────────────────
@@ -17743,7 +17895,7 @@ async function toggleLike(logId) {
 async function showLikers(logId) {
   const modal = document.getElementById('following-modal');
   const list  = document.getElementById('following-modal-list');
-  document.querySelector('#following-modal .modal-title').textContent = 'Liked by';
+  document.querySelector('#following-modal .modal-title').textContent = tx('Liked by');
   modal.classList.remove('hidden');
   list.innerHTML = '<div class="empty">Loading…</div>';
   const { data: rows, error: rowsErr } = await db.from('likes').select('user_id').eq('log_id', logId);
@@ -18157,8 +18309,8 @@ async function postComment(logId) {
 async function deleteComment(commentId, logId, el) {
   if (demoGuard()) return;
   if (el && !el.dataset.confirm) {
-    el.dataset.confirm = '1'; el.textContent = 'Sure?';
-    setTimeout(() => { if (el) { delete el.dataset.confirm; el.textContent = 'Delete'; } }, 3000);
+    el.dataset.confirm = '1'; el.textContent = tx('Sure?');
+    setTimeout(() => { if (el) { delete el.dataset.confirm; el.textContent = tx('Delete'); } }, 3000);
     return;
   }
   const list = feedComments[logId] || [];
@@ -18979,12 +19131,12 @@ const todayStr = () => {
 };
 const fmtDate  = d => {
   const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  return dt.toLocaleDateString(I18N_LOCALE, { month:'short', day:'numeric', year:'numeric' });
 };
 const fmtMonYear = d => {
   if (!d) return null;
   const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('en-US', { month:'short', year:'numeric' });
+  return dt.toLocaleDateString(I18N_LOCALE, { month:'short', year:'numeric' });
 };
 const fmtMoney = n => n ? '$' + Number(n).toLocaleString() : '—';
 const initials = (b, n) => ((b[0]||'') + (n[0]||'')).toUpperCase();
@@ -19027,7 +19179,7 @@ function _confirmCancel() { document.getElementById('confirm-modal').classList.a
 
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
+  el.textContent = tx(msg);
   el.className = `toast ${type} show`;
   clearTimeout(el._t);
   el._t = setTimeout(() => el.className = `toast ${type}`, type === 'error' ? 5000 : 2600);
@@ -19921,7 +20073,7 @@ let _adminModels = [];
 async function loadAdminModels() {
   const el = document.getElementById('admin-models-list');
   if (!el) return;
-  el.textContent = 'Loading…';
+  el.textContent = tx('Loading…');
   const { data, error } = await db.rpc('admin_watch_models');
   if (error) { el.textContent = 'Failed: ' + error.message; return; }
   _adminModels = data || [];
@@ -19990,14 +20142,14 @@ async function adminEnrichModel(id, quiet) {
     return true;
   } catch (e) {
     if (!quiet) toast('Enrich failed: ' + e.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Enrich'; }
+    if (btn) { btn.disabled = false; btn.textContent = tx('Enrich'); }
     return false;
   }
 }
 async function adminEnrichAllCurated() {
   const todo = _adminModels.filter(m => !m.is_auto && !m.enriched_at);
   const st = document.getElementById('adm-enrich-status');
-  if (!todo.length) { st.textContent = 'Nothing to enrich.'; return; }
+  if (!todo.length) { st.textContent = tx('Nothing to enrich.'); return; }
   let ok = 0, fail = 0;
   for (const [i, m] of todo.entries()) {
     st.textContent = `Enriching ${i + 1}/${todo.length}: ${m.brand} ${m.name}…`;
@@ -20064,7 +20216,7 @@ const EXP_STATUS_COLOR = { running: 'var(--gold)', won: 'var(--success-text)', k
 async function loadAdminExperiments() {
   const el = document.getElementById('admin-experiments-list');
   if (!el) return;
-  el.textContent = 'Loading…';
+  el.textContent = tx('Loading…');
   const [{ data, error }, metrics, speedR, progR] = await Promise.all([
     db.rpc('admin_experiments_list'),
     db.from('experiment_metrics').select('key,label,kind').order('sort'),
@@ -22195,20 +22347,20 @@ function openDmReport(messageId) {
   document.getElementById('report-context').textContent = 'Reporting: message from ' + dmWho(t.profile);
   document.getElementById('report-target-section').classList.add('hidden');
   const btn = document.getElementById('report-submit-btn');
-  btn.disabled = false; btn.textContent = 'Submit Report';
+  btn.disabled = false; btn.textContent = tx('Submit Report');
   document.getElementById('report-modal').classList.remove('hidden');
 }
 
 async function submitDmReport() {
   const btn = document.getElementById('report-submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting...';
+  btn.disabled = true; btn.textContent = tx('Submitting...');
   const messageId = _reportTargetId;
   const reportedUserId = document.getElementById('report-user-id').value;
   const details = (document.getElementById('report-details').value || '').trim() || null;
   const { error } = await db.rpc('dm_report_message', { p_message_id: messageId, p_reason: _reportReason, p_details: details });
   if (error) {
     toast('Could not submit report', 'error');
-    btn.disabled = false; btn.textContent = 'Submit Report';
+    btn.disabled = false; btn.textContent = tx('Submit Report');
     return;
   }
   closeReport();
@@ -23027,7 +23179,7 @@ function updateOfficialPreview() {
   const captionHtml = (imgSrc && caption)
     ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(caption)}</div>`
     : '';
-  const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const todayFmt = new Date().toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
 
   el.innerHTML = `
     <div class="feed-card" style="pointer-events:none;">
@@ -23126,7 +23278,7 @@ function previewOfficialDraft(draftId) {
   const captionHtml = (imgSrc && draft.caption)
     ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(draft.caption)}</div>`
     : '';
-  const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const todayFmt = new Date().toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
 
   card.innerHTML = `
     <div class="official-feed-preview u-mb-2">
@@ -23158,7 +23310,7 @@ async function extractOfficialUrl() {
   const btn = document.getElementById('official-extract-btn');
   const preview = document.getElementById('official-extract-preview');
   btn.disabled = true;
-  btn.textContent = 'Extracting…';
+  btn.textContent = tx('Extracting…');
   try {
     const session = await db.auth.getSession();
     const token = session?.data?.session?.access_token;
@@ -23208,7 +23360,7 @@ async function extractOfficialUrl() {
     preview.innerHTML = `<div class="text-secondary u-pt-2 u-pr-2 u-pb-2 u-pl-2">Could not extract metadata. Please fill in the fields manually.</div>`;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Extract';
+    btn.textContent = tx('Extract');
   }
 }
 
@@ -23958,7 +24110,7 @@ function syncTrackDateChips() {
   const label = document.getElementById('track-date-pick-label');
   if (label) {
     label.textContent = (which === 'pick' && val)
-      ? new Date(val + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      ? new Date(val + 'T12:00:00').toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' })
       : 'Pick date';
   }
 }
@@ -24263,7 +24415,7 @@ async function saveLog() {
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
   const _slBtn = document.querySelector('#track-log-modal .btn-primary');
   if (_slBtn?.disabled) return;
-  if (_slBtn) { _slBtn.disabled = true; _slBtn.textContent = 'Saving...'; }
+  if (_slBtn) { _slBtn.disabled = true; _slBtn.textContent = tx('Saving...'); }
   try {
   const notes = document.getElementById('track-notes').value.trim();
   const vis = selTrackVis || getDefaultVis();
@@ -24333,7 +24485,7 @@ async function saveLog() {
   const _pushAsked = !isUpdate && maybeDeferredPushAsk();
   if (!isUpdate && !_pushAsked && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
-  } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
+  } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = tx('Log This Wear'); } }
 }
 
 function handleTrackPhoto(input) {
@@ -24671,7 +24823,7 @@ async function savePromoSlot() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const st = document.getElementById('promo-status');
   const slot = promoFormSlot();
-  if (!slot.heading) { if (st) st.textContent = 'A heading is required.'; return; }
+  if (!slot.heading) { if (st) st.textContent = tx('A heading is required.'); return; }
   delete slot.id;
   // Every write bumps the epoch every device's local impression mirror is
   // keyed to (eligiblePromoSlots()) — an edit re-arms the slot for anyone who
@@ -24692,7 +24844,7 @@ async function savePromoSlot() {
     // unrelated next edit, with the "Update slot" button label as the only
     // (easy to miss) signal that was about to happen.
     clearPromoForm();
-    if (st) st.textContent = 'Slot updated.';
+    if (st) st.textContent = tx('Slot updated.');
     loadPromoAdmin();
     return;
   }
@@ -25116,7 +25268,7 @@ async function testCampaign(id) {
   const subject = fillCampaignSubject(document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject);
   const body = fillCampaignBody(document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html);
   const statusEl = document.getElementById('camp-status-' + id);
-  if (statusEl) statusEl.textContent = 'Sending test...';
+  if (statusEl) statusEl.textContent = tx('Sending test...');
   try {
     const { data, error } = await db.functions.invoke('send-broadcast', { body: { subject, html: buildCampaignPreviewHtml(subject, body), test_email: currentUser?.email } });
     if (error) throw error;
@@ -25321,7 +25473,7 @@ function closeSnapMatch() {
 function deleteLog(id, btn) {
   if (demoGuard()) return;
   if (btn && !btn.dataset.confirm) {
-    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger)';
+    btn.dataset.confirm = '1'; btn.textContent = tx('Sure?'); btn.style.color = 'var(--danger)';
     setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
     return;
   }
@@ -25344,7 +25496,7 @@ function openEditLog(id) {
   // A no-watch note is date-only: everything else on this modal is about a
   // watch that wasn't worn.
   if (log.useCase === 'no_watch') { _openDateOnlyLogModal('Edit Log Entry', log.date); return; }
-  document.getElementById('edit-log-modal-title-text').textContent = 'Edit Log Entry';
+  document.getElementById('edit-log-modal-title-text').textContent = tx('Edit Log Entry');
   const dateInput = document.getElementById('edit-log-date');
   dateInput.value = log.date;
   dateInput.removeAttribute('max');
@@ -25818,7 +25970,7 @@ function _fmtPriceDate(d) {
   const now = new Date();
   const opts = { month: 'short', day: 'numeric' };
   if (dt.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
-  return dt.toLocaleDateString('en-US', opts);
+  return dt.toLocaleDateString(I18N_LOCALE, opts);
 }
 
 function _updatePriceSubtotals() {
@@ -25853,7 +26005,7 @@ async function openUpdatePrices() {
   body.innerHTML = '';
 
   const eligible = watches.filter(w => w.brand && w.name);
-  if (eligible.length === 0) { status.textContent = 'No watches to update.'; return; }
+  if (eligible.length === 0) { status.textContent = tx('No watches to update.'); return; }
 
   // Check if user already did a lookup today
   const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0);
@@ -25863,7 +26015,7 @@ async function openUpdatePrices() {
     .eq('user_id', currentUser.id)
     .single();
   if (rl && rl.window_start >= todayStart.toISOString() && rl.request_count >= 40) {
-    status.textContent = 'You already updated prices today. Try again tomorrow.';
+    status.textContent = tx('You already updated prices today. Try again tomorrow.');
     return;
   }
 
@@ -26006,7 +26158,7 @@ function closeUpdatePrices() {
 async function saveUpdatedPrices() {
   const btn = document.getElementById('update-prices-save-btn');
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.textContent = tx('Saving...');
   const today = todayStr();
   const toggles = document.querySelectorAll('.upr-toggle:checked');
   let saved = 0;
@@ -26046,7 +26198,7 @@ async function saveUpdatedPrices() {
     toast(`Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`);
   }
   btn.disabled = false;
-  btn.textContent = 'Save Selected';
+  btn.textContent = tx('Save Selected');
   closeUpdatePrices();
   renderCollection(true);
 }
@@ -26805,7 +26957,7 @@ function updateAccuracySummary() {
   if (!sum) return;
   const list = document.getElementById('tg-history-list');
   const items = list ? list.querySelectorAll('[data-tg-entry]') : [];
-  if (!items.length) { sum.textContent = 'No readings yet'; return; }
+  if (!items.length) { sum.textContent = tx('No readings yet'); return; }
   const count = items.length;
   const firstDate = items[0]?.getAttribute('data-tg-date');
   const label = firstDate ? valueFreshnessLabel(firstDate) : '';
@@ -26846,7 +26998,7 @@ function updateEssentialsSummary() {
   if (price) parts.push(price.startsWith('$') ? price : '$' + price);
   if (dateVal) {
     const d = new Date(dateVal + 'T00:00:00');
-    if (!isNaN(d)) parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+    if (!isNaN(d)) parts.push(d.toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' }));
   }
   sum.textContent = parts.length ? parts.join(' · ') : '—';
 }
@@ -27195,7 +27347,7 @@ function openAddWatch() {
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
   document.getElementById('w-ins-value-group').style.display = 'none';
-  document.getElementById('watch-modal-title').textContent = 'Add Watch';
+  document.getElementById('watch-modal-title').textContent = tx('Add Watch');
   document.getElementById('modal-delete-btn').style.display = 'none';
   document.getElementById('footer-enhance-btn').style.display = 'none';
   document.getElementById('footer-value-btn').style.display = 'none';
@@ -27381,7 +27533,7 @@ function openEditWatch(id) {
   selColor      = w.color;
   wPendingImage = null;
   wPendingFile  = null;
-  document.getElementById('watch-modal-title').textContent    = 'Edit Watch';
+  document.getElementById('watch-modal-title').textContent    = tx('Edit Watch');
   document.getElementById('modal-delete-btn').style.display = '';
   document.getElementById('footer-enhance-btn').style.display = '';
   document.getElementById('footer-value-btn').style.display = '';
@@ -27476,11 +27628,11 @@ function renderWatchModalImg() {
   if (wPendingImage) {
     if (img) img.src = wPendingImage;
     if (thumb) thumb.innerHTML = `<img src="${escHtml(wPendingImage)}" alt="" class="img-thumb-tap" role="button" tabindex="0" aria-label="View photo full screen" onclick="openImageViewer([this.src],0)" onerror="this.parentElement.innerHTML=''">`;
-    if (changeBtn) changeBtn.textContent = 'Change photo';
+    if (changeBtn) changeBtn.textContent = tx('Change photo');
   } else {
     if (img) img.src = '';
     if (thumb) thumb.innerHTML = '';
-    if (changeBtn) changeBtn.textContent = 'Add photo';
+    if (changeBtn) changeBtn.textContent = tx('Add photo');
   }
 }
 
@@ -27754,7 +27906,7 @@ async function checkSingleWatchValue() {
   if (!w) return;
   const status = document.getElementById('check-value-status');
   const btn = document.getElementById('check-value-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
+  if (btn) { btn.disabled = true; btn.textContent = tx('Searching…'); }
 
   const valSpinner = '<span class="spinner u-w-3 u-h-3 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span>';
   if (status) status.innerHTML = `<span class="row-inline">${valSpinner} Looking up market value…</span>`;
@@ -27775,8 +27927,8 @@ async function checkSingleWatchValue() {
     }, 60000);
     clearInterval(valMsgTimer);
     if (r.status === 429) {
-      if (status) status.textContent = 'Daily limit reached. Try again tomorrow.';
-      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
+      if (status) status.textContent = tx('Daily limit reached. Try again tomorrow.');
+      if (btn) { btn.disabled = false; btn.textContent = tx('Check price'); }
       return;
     }
     const data = await r.json();
@@ -27786,13 +27938,13 @@ async function checkSingleWatchValue() {
       const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
       toast(`Price is still current — can refresh in ${remaining} day${remaining !== 1 ? 's' : ''}`, 'info');
       db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_cached', watches_total: watches.length, watches_priced: 1 }).then(() => {});
-      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
+      if (btn) { btn.disabled = false; btn.textContent = tx('Check price'); }
       return;
     }
     const mid = (data.estimated_value_usd || {}).mid;
     if (!mid) {
-      if (status) status.textContent = 'Could not find pricing for this watch.';
-      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
+      if (status) status.textContent = tx('Could not find pricing for this watch.');
+      if (btn) { btn.disabled = false; btn.textContent = tx('Check price'); }
       return;
     }
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
@@ -27801,8 +27953,8 @@ async function checkSingleWatchValue() {
     renderValueSection();
   } catch (e) {
     clearInterval(valMsgTimer);
-    if (status) status.textContent = 'Error looking up value. Try again later.';
-    if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
+    if (status) status.textContent = tx('Error looking up value. Try again later.');
+    if (btn) { btn.disabled = false; btn.textContent = tx('Check price'); }
   }
 }
 
@@ -27834,7 +27986,7 @@ async function saveWatch() {
   if (!name) { showFieldError('w-name', 'Model name is required'); return; }
   const _swBtn = document.getElementById('save-watch-btn');
   if (_swBtn?.disabled) return;
-  if (_swBtn) { _swBtn.disabled = true; _swBtn.textContent = 'Saving...'; }
+  if (_swBtn) { _swBtn.disabled = true; _swBtn.textContent = tx('Saving...'); }
   try {
 
   const insStatus = document.getElementById('w-insurance').value;
@@ -27958,7 +28110,7 @@ async function saveWatch() {
     saveWishlist();
     renderWishlist();
   }
-  } finally { if (_swBtn) { _swBtn.disabled = false; _swBtn.textContent = 'Save Watch'; } }
+  } finally { if (_swBtn) { _swBtn.disabled = false; _swBtn.textContent = tx('Save Watch'); } }
 }
 
 function openDelModal(id) {
@@ -28956,7 +29108,7 @@ function renderChCollectionValue() {
         legend: { display: hasMV, labels: { color: tickC, boxWidth: dsPx('--space-3'), padding: dsPx('--space-2-5'), font: { size: dsPx('--fs-xs') } } },
         tooltip: {
           callbacks: {
-            title: items => items.length ? new Date(items[0].parsed.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+            title: items => items.length ? new Date(items[0].parsed.x).toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' }) : '',
             label: ctx => ctx.parsed.y == null ? '' : ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.y),
           }
         }
@@ -29162,7 +29314,7 @@ async function fetchWatchImage(watchId) {
   if (!w || !w.url) return;
 
   const btn = document.getElementById(`fetchbtn-${watchId}`);
-  if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Fetching…'; }
+  if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = tx('Fetching…'); }
 
   try {
     // ── Steps 1-2: find the photo on the page, server-side ─────────────────
@@ -29179,7 +29331,7 @@ async function fetchWatchImage(watchId) {
 
     if (!imgUrl) {
       toast('No image found on that page', 'error');
-      if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; }
+      if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = tx('Get Photo'); }
       return;
     }
 
@@ -29196,7 +29348,7 @@ async function fetchWatchImage(watchId) {
 
   } catch (e) {
     toast('Could not fetch image — try pasting one instead', 'error');
-    if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; }
+    if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = tx('Get Photo'); }
   }
 }
 
@@ -30102,7 +30254,7 @@ function renderEditReceiptsList(w) {
 
 function removeReceiptFromEdit(watchId, receiptId, btn) {
   if (btn && !btn.dataset.confirm) {
-    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger)';
+    btn.dataset.confirm = '1'; btn.textContent = tx('Sure?'); btn.style.color = 'var(--danger)';
     setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
     return;
   }
@@ -31152,7 +31304,7 @@ async function enhanceSingleWatch() {
   const storyBtn = document.querySelector('#story-content button');
   const footerBtn = document.getElementById('footer-enhance-btn');
   if (storyBtn) { storyBtn.disabled = true; storyBtn.innerHTML = '<span class="spinner-sm"></span> Enhancing…'; }
-  if (footerBtn) { footerBtn.disabled = true; footerBtn.textContent = 'Enhancing…'; }
+  if (footerBtn) { footerBtn.disabled = true; footerBtn.textContent = tx('Enhancing…'); }
   const statusMsgs = [
     'Searching watch databases…',
     'Looking up specifications…',
@@ -31235,7 +31387,7 @@ async function enhanceSingleWatch() {
   } finally {
     renderStorySection();
     const fb = document.getElementById('footer-enhance-btn');
-    if (fb) { fb.disabled = false; fb.textContent = '★ Enhance'; }
+    if (fb) { fb.disabled = false; fb.textContent = tx('★ Enhance'); }
   }
 }
 
@@ -31334,7 +31486,7 @@ async function saveEnhanceResult(idx) {
     // device's stale snapshot of every OTHER column right back (REL-N9).
     save();
     const statusEl = card?.querySelector('.enh-status');
-    if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
+    if (statusEl) { statusEl.textContent = tx('✓ Saved'); statusEl.style.color = 'var(--gold)'; }
     const actions = card?.querySelector('.pi-card-actions');
     if (actions) actions.innerHTML = '<span class="u-fs-sm u-c-gold-text">Saved</span>';
     if (!_enhanceSaving) renderCollection(true);
@@ -31343,7 +31495,7 @@ async function saveEnhanceResult(idx) {
     Object.assign(w, backup);
     toast('Save failed: ' + (e?.message || e), 'error');
     const statusEl = card?.querySelector('.enh-status');
-    if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = tx('Save failed'); statusEl.style.color = 'var(--danger)'; }
     if (saveBtn) saveBtn.disabled = false;
   } finally {
     _enhanceSavesInFlight--;
@@ -31500,8 +31652,8 @@ async function enhanceAllWatches(scopedIds) {
   const list = document.getElementById('enhance-all-list');
   const closeBtn = document.getElementById('enhance-all-close-btn');
   closeBtn.disabled = false;
-  closeBtn.textContent = 'Cancel';
-  closeBtn.onclick = () => { _enhanceAllCancelled = true; closeBtn.disabled = true; closeBtn.textContent = 'Cancelling…'; };
+  closeBtn.textContent = tx('Cancel');
+  closeBtn.onclick = () => { _enhanceAllCancelled = true; closeBtn.disabled = true; closeBtn.textContent = tx('Cancelling…'); };
   _enhanceAllRunning = true;
   modal.classList.remove('hidden');
   modal.dataset.justOpened = '1';
@@ -31531,14 +31683,14 @@ async function enhanceAllWatches(scopedIds) {
       const statusEl = card?.querySelector('.enh-status');
       const actionsEl = card?.querySelector('.pi-card-actions');
       if (_enhanceAllCancelled) {
-        if (statusEl) { statusEl.textContent = 'Cancelled'; statusEl.style.color = 'var(--muted)'; }
+        if (statusEl) { statusEl.textContent = tx('Cancelled'); statusEl.style.color = 'var(--muted)'; }
         for (let j = i + 1; j < count; j++) {
           const sk = document.getElementById(`enh-card-${j}`)?.querySelector('.enh-status');
-          if (sk) { sk.textContent = 'Cancelled'; sk.style.color = 'var(--muted)'; }
+          if (sk) { sk.textContent = tx('Cancelled'); sk.style.color = 'var(--muted)'; }
         }
         break;
       }
-      if (statusEl) { statusEl.textContent = 'Searching specs…'; statusEl.style.color = 'var(--gold)'; }
+      if (statusEl) { statusEl.textContent = tx('Searching specs…'); statusEl.style.color = 'var(--gold)'; }
       const _enhStatusMsgs = ['Looking up specifications…', 'Finding dimensions & materials…', 'Researching model history…', 'Gathering caliber details…', 'Almost there…'];
       let _enhMsgIdx = 0;
       const _enhMsgTimer = setInterval(() => {
@@ -31577,11 +31729,11 @@ async function enhanceAllWatches(scopedIds) {
         clearInterval(_enhMsgTimer);
         if (!resp.ok) {
           if (resp.status === 429) {
-            if (statusEl) { statusEl.textContent = 'Daily limit reached'; statusEl.style.color = 'var(--danger)'; }
+            if (statusEl) { statusEl.textContent = tx('Daily limit reached'); statusEl.style.color = 'var(--danger)'; }
             toast('Daily enhance limit reached — try again tomorrow', 'error');
             for (let j = i + 1; j < count; j++) {
               const sk = document.getElementById(`enh-card-${j}`)?.querySelector('.enh-status');
-              if (sk) { sk.textContent = 'Skipped (limit)'; sk.style.color = 'var(--muted)'; }
+              if (sk) { sk.textContent = tx('Skipped (limit)'); sk.style.color = 'var(--muted)'; }
             }
             break;
           }
@@ -31589,7 +31741,7 @@ async function enhanceAllWatches(scopedIds) {
           continue;
         }
         const data = await resp.json();
-        if (data.error) { if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; } continue; }
+        if (data.error) { if (statusEl) { statusEl.textContent = tx('Failed'); statusEl.style.color = 'var(--danger)'; } continue; }
         const updates = {};
         for (const [apiKey, wKey] of Object.entries(fieldMap)) {
           const val = data[apiKey];
@@ -31605,11 +31757,11 @@ async function enhanceAllWatches(scopedIds) {
           if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
           if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
-          if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
+          if (statusEl) { statusEl.textContent = tx('Already complete'); statusEl.style.color = 'var(--muted)'; }
         }
       } catch(e) {
         clearInterval(_enhMsgTimer);
-        if (statusEl) { statusEl.textContent = 'Retrying…'; statusEl.style.color = 'var(--gold)'; }
+        if (statusEl) { statusEl.textContent = tx('Retrying…'); statusEl.style.color = 'var(--gold)'; }
         try {
           const retryPayload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
           const retryResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
@@ -31632,13 +31784,13 @@ async function enhanceAllWatches(scopedIds) {
                 if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span class="text-muted">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
                 if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-md btn-primary" onclick="saveEnhanceResult(${i})">Save</button>`;
               } else {
-                if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
+                if (statusEl) { statusEl.textContent = tx('Already complete'); statusEl.style.color = 'var(--muted)'; }
               }
               continue;
             }
           }
         } catch(_) {}
-        if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger)'; }
+        if (statusEl) { statusEl.textContent = tx('Failed'); statusEl.style.color = 'var(--danger)'; }
         console.error('[enhance-all]', w.brand, w.name, e);
       }
     }
@@ -31649,7 +31801,7 @@ async function enhanceAllWatches(scopedIds) {
     _enhanceAllRunning = false;
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     closeBtn.disabled = false;
-    closeBtn.textContent = 'Close';
+    closeBtn.textContent = tx('Close');
     closeBtn.onclick = closeEnhanceAll;
   }
 }
@@ -32932,7 +33084,7 @@ function addPreviewedWatchToWishlist() {
   editingWlId    = null;
   wlPendingImage = null;
   wlRemoveImage  = false;
-  document.getElementById('wishlist-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wishlist-modal-title').textContent = tx('Add to Wishlist');
   document.getElementById('wl-delete-btn').style.display = 'none';
   document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect(w.brand);
@@ -33033,7 +33185,7 @@ function openAddWishlist() {
   wlRemoveImage  = false;
   ['wl-name','wl-ref','wl-price','wl-url'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('wl-date').value = todayStr();
-  document.getElementById('wishlist-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wishlist-modal-title').textContent = tx('Add to Wishlist');
   document.getElementById('wl-delete-btn').style.display = 'none';
   document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect();
@@ -33049,7 +33201,7 @@ function openEditWishlist(id) {
   editingWlId    = id;
   wlPendingImage = null;
   wlRemoveImage  = false;
-  document.getElementById('wishlist-modal-title').textContent = 'Edit Wishlist Item';
+  document.getElementById('wishlist-modal-title').textContent = tx('Edit Wishlist Item');
   document.getElementById('wl-delete-btn').style.display = '';
   document.getElementById('wl-move-btn').style.display = '';
   buildWlBrandSelect(w.brand);
@@ -33087,7 +33239,7 @@ async function moveWishlistToCollection() {
   if (w.marketPrice) movingFromWishlistData.marketPrice = w.marketPrice;
 
   // Change modal title
-  document.getElementById('watch-modal-title').textContent = 'Move to Collection';
+  document.getElementById('watch-modal-title').textContent = tx('Move to Collection');
 
   // Pre-fill mapped fields
   if (w.brand) buildBrandSelect(w.brand);
@@ -33153,7 +33305,7 @@ async function saveWishlistItem() {
   if (!name) { showFieldError('wl-name', 'Model name is required'); return; }
   const _wlBtn = document.querySelector('#wishlist-modal .btn-primary');
   if (_wlBtn?.disabled) return;
-  if (_wlBtn) { _wlBtn.disabled = true; _wlBtn.textContent = 'Saving...'; }
+  if (_wlBtn) { _wlBtn.disabled = true; _wlBtn.textContent = tx('Saving...'); }
   try {
   const itemId = editingWlId || ('wl_' + uid());
   const data = {
@@ -33206,7 +33358,7 @@ async function saveWishlistItem() {
   saveWishlist();
   closeWishlistModal();
   renderWishlist();
-  } finally { if (_wlBtn) { _wlBtn.disabled = false; _wlBtn.textContent = 'Save'; } }
+  } finally { if (_wlBtn) { _wlBtn.disabled = false; _wlBtn.textContent = tx('Save'); } }
 }
 
 function openDelWlModal(id) {
@@ -33499,13 +33651,13 @@ function setFeedbackType(type) {
 // stored title and left the answer placeholder in the textarea.
 function resetFeedbackModalMode() {
   const t = document.getElementById('fb-modal-title-text');
-  if (t) t.textContent = 'Send Feedback';
+  if (t) t.textContent = tx('Send Feedback');
   const h = document.getElementById('fb-request-hint');
   if (h) h.style.display = 'none';
   const d = document.getElementById('fb-desc');
   if (d) { d.value = ''; d.placeholder = FB_DEFAULT_PLACEHOLDER; }
   const b = document.getElementById('fb-submit-btn');
-  if (b) { b.disabled = false; b.textContent = 'Submit Feedback'; }
+  if (b) { b.disabled = false; b.textContent = tx('Submit Feedback'); }
   const p = document.getElementById('fb-type-picker');
   if (p) p.style.display = 'flex';
   _feedbackPrompt = null;
@@ -33534,8 +33686,8 @@ function openPromoFeedback(slot, override) {
   // and neither sink re-enters the HTML parser, so there is nothing to escape.
   const t = document.getElementById('fb-modal-title-text');
   if (t) t.textContent = question;
-  document.getElementById('fb-desc').placeholder = 'Type your answer…';
-  document.getElementById('fb-submit-btn').textContent = 'Send';
+  document.getElementById('fb-desc').placeholder = tx('Type your answer…');
+  document.getElementById('fb-submit-btn').textContent = tx('Send');
   document.getElementById('fb-type-picker').style.display = 'none';
   setFeedbackType('feature');
   document.getElementById('feedback-modal').classList.remove('hidden');
@@ -33556,7 +33708,7 @@ function requestBrand(name) {
   hideWlBrandAC();
   resetFeedbackModalMode();
   const _t = document.getElementById('fb-modal-title-text');
-  if (_t) _t.textContent = 'Request a brand';
+  if (_t) _t.textContent = tx('Request a brand');
   const _h = document.getElementById('fb-request-hint');
   if (_h) _h.style.display = '';
   document.getElementById('fb-desc').value = brandRequestTitle(name);
@@ -33698,7 +33850,7 @@ async function submitFeedback() {
   // relabel it mid-flight after a failed insert.
   const prevLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Sending…';
+  btn.textContent = tx('Sending…');
 
   // A campaign answer is titled with the QUESTION, not with its own first line,
   // so every answer to one campaign sorts together in the admin Feedback tab.
@@ -34219,7 +34371,7 @@ let _pzBatchActive = false;
 const _PZ_BATCH_LABEL = 'Batch ×12 (6 manual @ selected BPH + 6 auto)';
 async function runPiezoBatch() {
   const btn = document.getElementById('pz-batch-btn');
-  if (_pzBatchActive) { _pzBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_pzBatchActive) { _pzBatchActive = false; if (btn) btn.textContent = tx('Cancelling…'); return; }
   if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
@@ -34302,7 +34454,7 @@ async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, 
 
 async function runMicBatch() {
   const btn = document.getElementById('mic-batch-btn');
-  if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = tx('Cancelling…'); return; }
   if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
@@ -34338,7 +34490,7 @@ function _deepRender(text, color) {
 }
 async function runDeepTest() {
   const btn = document.getElementById('deep-test-btn');
-  if (_deepTestActive) { _deepTestActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_deepTestActive) { _deepTestActive = false; if (btn) btn.textContent = tx('Cancelling…'); return; }
   if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Deep Test needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
@@ -34356,7 +34508,7 @@ async function runDeepTest() {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pooledRates = []; const runBeats = [];
   _deepTestActive = true;
-  if (btn) btn.textContent = 'Deep Test starting…';
+  if (btn) btn.textContent = tx('Deep Test starting…');
   try {
     for (let run = 0; run < maxRuns && _deepTestActive; run++) {
       if (_msrListening) { stopMsrListen('deep_reset'); await sleep(RESET); }
@@ -34401,7 +34553,7 @@ async function runDeepTest() {
 // back to back, each run tagged with its value. Local override drives the value (wins over the table).
 async function runMicSweep() {
   const btn = document.getElementById('mic-sweep-btn');
-  if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = tx('Cancelling…'); return; }
   if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Sweep needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
@@ -34732,7 +34884,7 @@ window._tgNativeCallback = function(data) {
       rateEl.style.color = 'color-mix(in srgb, var(--danger) 75%, transparent)';
       if (beEl) beEl.textContent = '—';
       const _stW = document.getElementById('msr-status-text');
-      if (_stW && _msrPhase !== 'converged') { _stW.textContent = 'Signal too weak · reseat the pickup'; _stW.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)'; }
+      if (_stW && _msrPhase !== 'converged') { _stW.textContent = tx('Signal too weak · reseat the pickup'); _stW.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)'; }
     }
 
     // BPH detection display (auto mode)
@@ -34768,7 +34920,7 @@ window._tgNativeCallback = function(data) {
         _msrShown.weak = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
-          statusText.textContent = 'WEAK SIGNAL \u00b7 move watch closer to mic';
+          statusText.textContent = tx('WEAK SIGNAL \u00b7 move watch closer to mic');
           statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
         }
       }
@@ -34785,13 +34937,13 @@ window._tgNativeCallback = function(data) {
         const statusText = document.getElementById('msr-status-text');
         if (hasSignal) {
           if (statusText && _msrPhase !== 'converged') {
-            statusText.textContent = 'Adjusting signal \u00b7 hold steady';
+            statusText.textContent = tx('Adjusting signal \u00b7 hold steady');
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
           }
         } else {
           _msrShown.weak = true;
           if (statusText && _msrPhase !== 'converged') {
-            statusText.textContent = 'No ticks yet \u00b7 try moving watch closer to mic';
+            statusText.textContent = tx('No ticks yet \u00b7 try moving watch closer to mic');
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
           }
         }
@@ -34807,7 +34959,7 @@ window._tgNativeCallback = function(data) {
         if (avgNoise > 0.15) {
           const statusText = document.getElementById('msr-status-text');
           if (statusText && _msrPhase !== 'converged' && _msrPhase !== 'measuring') {
-            statusText.textContent = 'Noisy environment \u00b7 results may be less accurate';
+            statusText.textContent = tx('Noisy environment \u00b7 results may be less accurate');
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
           }
         }
@@ -34832,7 +34984,7 @@ window._tgNativeCallback = function(data) {
         const idleOv2 = document.getElementById('msr-idle-overlay');
         if (idleOv2) idleOv2.style.display = 'none';
         const _retryLabel = document.getElementById('msr-btn-label');
-        if (_retryLabel) _retryLabel.textContent = 'Retry';
+        if (_retryLabel) _retryLabel.textContent = tx('Retry');
         return;
       }
       // Weak-signal graceful stop: SOME ticks but far too few to be reliable after
@@ -34851,7 +35003,7 @@ window._tgNativeCallback = function(data) {
         stopMsrListen('weak_signal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
-          statusText.textContent = 'Signal too weak · rest the watch on the bottom-edge mic in a quiet spot, then Retry';
+          statusText.textContent = tx('Signal too weak · rest the watch on the bottom-edge mic in a quiet spot, then Retry');
           statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
           statusText.style.fontSize = 'var(--fs-xs)';
           statusText.style.fontWeight = 'var(--fw-semibold)';
@@ -34859,7 +35011,7 @@ window._tgNativeCallback = function(data) {
         const idleOvW = document.getElementById('msr-idle-overlay');
         if (idleOvW) idleOvW.style.display = 'none';
         const _retryLabelW = document.getElementById('msr-btn-label');
-        if (_retryLabelW) _retryLabelW.textContent = 'Retry';
+        if (_retryLabelW) _retryLabelW.textContent = tx('Retry');
         return;
       }
       // Low acceptance warning: if 15s elapsed and acceptance rate < 15%, show warning
@@ -34867,7 +35019,7 @@ window._tgNativeCallback = function(data) {
         _msrShown.weak = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
-          statusText.textContent = 'WEAK SIGNAL \u00b7 result may be unreliable';
+          statusText.textContent = tx('WEAK SIGNAL \u00b7 result may be unreliable');
           statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
         }
       }
@@ -35113,7 +35265,7 @@ window._tgNativeCallback = function(data) {
             const idleOv2 = document.getElementById('msr-idle-overlay');
             if (idleOv2) idleOv2.style.display = 'none';
             const _retryLabel2 = document.getElementById('msr-btn-label');
-            if (_retryLabel2) _retryLabel2.textContent = 'Retry';
+            if (_retryLabel2) _retryLabel2.textContent = tx('Retry');
           } else if (_msrLastRate != null) {
             const r = _msrLastRate;
             const sign = r >= 0 ? '+' : '';
@@ -35124,14 +35276,14 @@ window._tgNativeCallback = function(data) {
             const idleOv2 = document.getElementById('msr-idle-overlay');
             if (idleOv2) idleOv2.style.display = 'none';
             const _retryLabel2 = document.getElementById('msr-btn-label');
-            if (_retryLabel2) _retryLabel2.textContent = 'Retry';
+            if (_retryLabel2) _retryLabel2.textContent = tx('Retry');
           } else {
-            statusText.textContent = 'No ticks detected \u00b7 move closer and retry';
+            statusText.textContent = tx('No ticks detected \u00b7 move closer and retry');
             statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
             statusText.style.fontSize = 'var(--fs-xs)';
             statusText.style.fontWeight = '';
             const _retryLabel3 = document.getElementById('msr-btn-label');
-            if (_retryLabel3) _retryLabel3.textContent = 'Retry';
+            if (_retryLabel3) _retryLabel3.textContent = tx('Retry');
           }
         }
         return;
@@ -35154,7 +35306,7 @@ window._tgNativeCallback = function(data) {
     } else {
       _tgListening = false;
       const _tgBtn = document.getElementById('tg-listen-btn');
-      if (_tgBtn) _tgBtn.textContent = 'Start Listening';
+      if (_tgBtn) _tgBtn.textContent = tx('Start Listening');
       if (data.rate != null) {
         const _tgRateIn = document.getElementById('tg-rate-input'); if (_tgRateIn) _tgRateIn.value = data.rate.toFixed(1);
         const _tgBeIn = document.getElementById('tg-be-input'); if (_tgBeIn && data.beatError != null) _tgBeIn.value = data.beatError.toFixed(2);
@@ -35167,12 +35319,12 @@ window._tgNativeCallback = function(data) {
       _msrTarget = null;
       const _errBtnMic = document.getElementById('msr-btn-mic'); if (_errBtnMic) _errBtnMic.style.display = '';
       const _errBtnStop = document.getElementById('msr-btn-stop'); if (_errBtnStop) _errBtnStop.style.display = 'none';
-      const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = 'Measure';
+      const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = tx('Measure');
       const _errListenBtn = document.getElementById('msr-listen-btn'); if (_errListenBtn) { _errListenBtn.style.borderColor = 'color-mix(in srgb, var(--tg-ink) 30%, transparent)'; _errListenBtn.style.color = 'var(--tg-ink)'; _errListenBtn.style.background = 'var(--tg-bg)'; }
     } else {
       _tgListening = false;
       const _tgBtn2 = document.getElementById('tg-listen-btn');
-      if (_tgBtn2) _tgBtn2.textContent = 'Start Listening';
+      if (_tgBtn2) _tgBtn2.textContent = tx('Start Listening');
     }
     toast(data.message || 'Microphone error', 'error');
   }
@@ -35816,7 +35968,7 @@ function _resetMsrState(bph) {
   const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
   const prelimBadge = document.getElementById('msr-preliminary-badge'); if (prelimBadge) prelimBadge.style.display = 'none';
   const statusText = document.getElementById('msr-status-text');
-  statusText.textContent = 'ACQUIRING · 0s';
+  statusText.textContent = tx('ACQUIRING · 0s');
   statusText.style.color = 'color-mix(in srgb, var(--tg-ink) 35%, transparent)';
   statusText.style.fontSize = '';
   statusText.style.fontWeight = '';
@@ -36090,9 +36242,9 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
     if (bar) bar.style.background = i <= bars ? barColor : dimColor;
   }
   if (label) {
-    if (bars === 0) { label.textContent = 'NO SIGNAL'; label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
-    else if (bars === 1) { label.textContent = 'WEAK'; label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
-    else if (bars === 2) { label.textContent = 'FAIR'; label.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)'; }
+    if (bars === 0) { label.textContent = tx('NO SIGNAL'); label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
+    else if (bars === 1) { label.textContent = tx('WEAK'); label.style.color = 'color-mix(in srgb, var(--danger) 60%, transparent)'; }
+    else if (bars === 2) { label.textContent = tx('FAIR'); label.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)'; }
     else { label.textContent = ''; }
   }
 }
@@ -36511,7 +36663,7 @@ function openMeasureInline() {
   const btnLabel = document.getElementById('msr-btn-label');
   if (btnMic) btnMic.style.display = '';
   if (btnStop) btnStop.style.display = 'none';
-  if (btnLabel) btnLabel.textContent = 'Measure';
+  if (btnLabel) btnLabel.textContent = tx('Measure');
   listenBtn.style.background = 'var(--tg-bg)'; listenBtn.style.color = 'var(--tg-ink)'; listenBtn.style.borderColor = 'color-mix(in srgb, var(--tg-ink) 30%, transparent)';
   _msrPhase = '';
   document.getElementById('msr-live-status').style.display = 'none';
@@ -36848,7 +37000,7 @@ function toggleMsrListen() {
     const listenBtnEl = document.getElementById('msr-listen-btn');
     if (btnMic) btnMic.style.display = 'none';
     if (btnStop) btnStop.style.display = '';
-    if (btnLabel) btnLabel.textContent = 'Stop';
+    if (btnLabel) btnLabel.textContent = tx('Stop');
     if (listenBtnEl) { listenBtnEl.style.borderColor = 'color-mix(in srgb, var(--danger) 40%, transparent)'; listenBtnEl.style.color = 'var(--danger)'; listenBtnEl.style.background = 'var(--tg-error-bg)'; }
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
@@ -36862,7 +37014,7 @@ function toggleMsrListen() {
   const warn = document.getElementById('msr-mic-warning');
   warn.style.display = 'none';
   if (!navigator.mediaDevices?.getUserMedia) {
-    warn.textContent = 'Microphone not available in this browser.';
+    warn.textContent = tx('Microphone not available in this browser.');
     warn.style.display = 'block';
     return;
   }
@@ -36888,7 +37040,7 @@ function toggleMsrListen() {
       const lb = document.getElementById('msr-listen-btn');
       const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
       const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
-      const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = 'Stop';
+      const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = tx('Stop');
       lb.style.background = 'var(--tg-error-bg)'; lb.style.color = 'var(--danger)'; lb.style.borderColor = 'color-mix(in srgb, var(--danger) 40%, transparent)';
       document.getElementById('msr-live-status').style.display = '';
       warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
@@ -37033,7 +37185,7 @@ function stopMsrListen(reason) {
   const listenBtnEl = document.getElementById('msr-listen-btn');
   if (btnMic) btnMic.style.display = '';
   if (btnStop) btnStop.style.display = 'none';
-  if (btnLabel) btnLabel.textContent = 'Measure';
+  if (btnLabel) btnLabel.textContent = tx('Measure');
   if (listenBtnEl) { listenBtnEl.style.borderColor = 'color-mix(in srgb, var(--tg-ink) 30%, transparent)'; listenBtnEl.style.color = 'var(--tg-ink)'; listenBtnEl.style.background = 'var(--tg-bg)'; }
   _msrPhase = '';
   _msrListenStart = null;
@@ -37119,13 +37271,13 @@ function stopMsrListen(reason) {
     const completeMsg = document.getElementById('msr-complete-msg');
     if (completeMsg) {
       if (wasConverged) {
-        completeMsg.textContent = 'Measurement complete';
+        completeMsg.textContent = tx('Measurement complete');
         completeMsg.style.color = 'var(--text)';
       } else if (_msrLastConf >= 0.45) {
-        completeMsg.textContent = 'Lower confidence — retry for better accuracy';
+        completeMsg.textContent = tx('Lower confidence — retry for better accuracy');
         completeMsg.style.color = 'color-mix(in srgb, var(--status-warn) 80%, transparent)';
       } else {
-        completeMsg.textContent = 'Low confidence — retry recommended';
+        completeMsg.textContent = tx('Low confidence — retry recommended');
         completeMsg.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
       }
     }
