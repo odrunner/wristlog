@@ -35,6 +35,8 @@ import {
   sanitizeHtml,
   segmentDateGte,
   segmentUserId,
+  segmentLanguage,
+  filterByLanguageTimezone,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -243,7 +245,7 @@ serve(async (req) => {
     const mkProfilesQuery = (from: number, to: number) => {
       let q = supabase
         .from("profiles")
-        .select("id, email_prefs, created_at")
+        .select("id, email_prefs, created_at, timezone")
         .eq("is_suspended", false)
         .order("created_at", { ascending: true });
       if (cohort) {
@@ -317,6 +319,20 @@ serve(async (req) => {
         return jsonResponse({ error: "Failed to resolve never-logged segment", details: nlErr }, 500);
       }
       eligibleProfiles = keepIds(eligibleProfiles, (nlRows || []).map((r: { user_id: string }) => r.user_id));
+    }
+
+    // Segment filter: "lang_<code>" — members whose timezone is in that
+    // language's region (lib.LANG_TIMEZONES), minus internal accounts.
+    const segLang = segmentLanguage(segment);
+    if (segLang) {
+      const { data: internalRows, error: intErr } = await supabase.from("internal_accounts").select("user_id");
+      if (intErr) {
+        return jsonResponse({ error: "Failed to resolve internal accounts", details: intErr }, 500);
+      }
+      eligibleProfiles = excludeIds(
+        filterByLanguageTimezone(eligibleProfiles, segLang),
+        (internalRows || []).map((r: { user_id: string }) => r.user_id),
+      );
     }
 
     // Resolve emails via paginated listUsers (1-2 requests) instead of one

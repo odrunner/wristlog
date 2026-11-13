@@ -22,6 +22,9 @@ import {
   SEGMENT_DATE_GTE,
   segmentDateGte,
   segmentUserId,
+  segmentLanguage,
+  filterByLanguageTimezone,
+  LANG_TIMEZONES,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -857,4 +860,45 @@ Deno.test("streakTripped — scattered mixed failures never trip", () => {
   streak = updateFailureStreak(streak, [{ ok: true }]);
   streak = updateFailureStreak(streak, run(TRANSPORT_FAILURE_STREAK_LIMIT - 1));
   assertEquals(streakTripped(streak), false);
+});
+
+// ---- language segments (lang_<code>) ----
+Deno.test("segmentLanguage — supported codes only", () => {
+  assertEquals(segmentLanguage("lang_es"), "es");
+  assertEquals(segmentLanguage("lang_tr"), "tr");
+  assertEquals(segmentLanguage("lang_pl"), null);   // no Polish list
+  assertEquals(segmentLanguage("lang_es_1of2"), null);
+  assertEquals(segmentLanguage("all"), null);
+  assertEquals(segmentLanguage(undefined), null);
+});
+
+Deno.test("isKnownSegment — language segments are known, unsupported ones rejected", () => {
+  for (const code of Object.keys(LANG_TIMEZONES)) assertEquals(isKnownSegment(`lang_${code}`), true);
+  assertEquals(isKnownSegment("lang_xx"), false);
+  assertEquals(isKnownSegment("lang_"), false);
+});
+
+Deno.test("filterByLanguageTimezone — exact zones, the Argentina prefix, never a missing timezone", () => {
+  const profiles = [
+    { id: "a", timezone: "Europe/Madrid" },
+    { id: "b", timezone: "America/Argentina/Buenos_Aires" },
+    { id: "c", timezone: "Europe/Rome" },
+    { id: "d", timezone: null },
+    { id: "e" },
+    { id: "f", timezone: "America/New_York" },
+    { id: "g", timezone: "Europe/Madrid_Fake" },
+  ];
+  assertEquals(filterByLanguageTimezone(profiles, "es").map((p) => p.id), ["a", "b"]);
+  assertEquals(filterByLanguageTimezone(profiles, "it").map((p) => p.id), ["c"]);
+  assertEquals(filterByLanguageTimezone(profiles, "xx"), []);
+});
+
+Deno.test("LANG_TIMEZONES — no timezone is claimed by two languages", () => {
+  const seen = new Map<string, string>();
+  for (const [lang, zones] of Object.entries(LANG_TIMEZONES)) {
+    for (const z of zones) {
+      assertEquals(seen.get(z), undefined, `${z} is in both ${seen.get(z)} and ${lang}`);
+      seen.set(z, lang);
+    }
+  }
 });

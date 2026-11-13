@@ -30,6 +30,57 @@ export function segmentUserId(segment: string): string | null {
   return m ? m[1] : null;
 }
 
+// Language segments: "lang_<code>" targets members whose profile timezone sits
+// where that language is the everyday one. A timezone is a LOCATION, not a
+// language (nothing server-side records a member's language yet), so copy sent
+// to these segments should carry an English half. Deliberately left out:
+// zones shared by several languages (Brussels, Toronto/Montreal, Luxembourg).
+// An entry ending in "/" is a prefix (America/Argentina/…).
+export const LANG_TIMEZONES: Record<string, string[]> = {
+  es: [
+    "Europe/Madrid", "Atlantic/Canary", "Africa/Ceuta",
+    "America/Mexico_City", "America/Monterrey", "America/Cancun", "America/Merida",
+    "America/Chihuahua", "America/Hermosillo", "America/Mazatlan", "America/Tijuana",
+    "America/Bogota", "America/Lima", "America/Santiago", "America/Caracas",
+    "America/Guayaquil", "America/La_Paz", "America/Asuncion", "America/Montevideo",
+    "America/Buenos_Aires", "America/Argentina/",
+    "America/Costa_Rica", "America/Panama", "America/Guatemala", "America/El_Salvador",
+    "America/Tegucigalpa", "America/Managua", "America/Santo_Domingo", "America/Havana",
+    "America/Puerto_Rico",
+  ],
+  it: ["Europe/Rome", "Europe/San_Marino", "Europe/Vatican"],
+  fr: ["Europe/Paris", "Europe/Monaco"],
+  tr: ["Europe/Istanbul", "Asia/Istanbul"],
+  de: ["Europe/Berlin", "Europe/Busingen", "Europe/Vienna", "Europe/Zurich", "Europe/Vaduz"],
+  pt: [
+    "Europe/Lisbon", "Atlantic/Madeira", "Atlantic/Azores",
+    "America/Sao_Paulo", "America/Bahia", "America/Fortaleza", "America/Recife",
+    "America/Belem", "America/Manaus", "America/Cuiaba", "America/Campo_Grande",
+    "America/Maceio", "America/Araguaina", "America/Porto_Velho", "America/Rio_Branco",
+    "Africa/Luanda", "Africa/Maputo",
+  ],
+};
+
+// "lang_es" → "es"; null for anything that isn't a supported language segment.
+export function segmentLanguage(segment: string | undefined | null): string | null {
+  const m = /^lang_([a-z]{2})$/.exec(segment || "");
+  return m && LANG_TIMEZONES[m[1]] ? m[1] : null;
+}
+
+// Keep only profiles whose timezone belongs to the language. A profile with no
+// timezone is never matched — an unknown location is not a guess.
+export function filterByLanguageTimezone<T extends { timezone?: string | null }>(
+  profiles: T[],
+  lang: string,
+): T[] {
+  const zones = LANG_TIMEZONES[lang] || [];
+  return (profiles || []).filter((p) => {
+    const tz = p.timezone;
+    if (!tz) return false;
+    return zones.some((z) => (z.endsWith("/") ? tz.startsWith(z) : tz === z));
+  });
+}
+
 // Whitelist of recognized segments. An unknown/typo'd segment used to fall through
 // batchSegment's pass-through and silently blast EVERY opted-in user, so anything
 // not matched here is rejected by validateBroadcastInput.
@@ -40,6 +91,7 @@ export function isKnownSegment(segment: string | undefined | null): boolean {
   if (segment === "never_logged") return true;
   if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") return true;
   if (segmentUserId(segment)) return true;                 // uid:<uuid>
+  if (segmentLanguage(segment)) return true;               // lang_<code>
   const hasSuffix = /_\d+of\d+$/.test(segment);
   const base = segment.replace(/_\d+of\d+$/, "");          // strip optional _NofM
   if (SEGMENT_DATE_GTE[base]) {                            // date-windowed (± batched)

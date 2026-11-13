@@ -3767,6 +3767,12 @@
             <option value="all">All users (updates opt-in)</option>
             <option value="one_done_winback">One-and-done loggers (win-back)</option>
             <option value="never_logged">Never logged a wear (excl. onboarding drip)</option>
+            <option value="lang_es">Spanish-speaking time zones</option>
+            <option value="lang_it">Italian time zones</option>
+            <option value="lang_fr">French time zones</option>
+            <option value="lang_tr">Turkish time zones</option>
+            <option value="lang_de">German-speaking time zones</option>
+            <option value="lang_pt">Portuguese-speaking time zones</option>
           </select>
         </div>
 
@@ -8458,7 +8464,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.08.02';
+const APP_VERSION = '13.12.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19516,6 +19522,7 @@ function showAdminPage() {
   seedWhatIfAiPicksDraft();
   seedWatchesDraft();
   seedAndroidWhatsNewDraft();
+  seedLanguageAnnouncementDrafts();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -19985,6 +19992,102 @@ The WRotate team`,
     savedAt: Date.now(),
   });
   safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// "WRotate now speaks your language" — six drafts, one per app language, each
+// carrying its own segment (lang_<code> = members whose timezone is in that
+// language's region; send-broadcast LANG_TIMEZONES). A timezone is a location,
+// not a language, so every draft ends with an English paragraph that says why
+// it was sent. Wording follows each language's i18n file (tu/vous/du, the
+// timegrapher term, the Send Feedback label). The Language card is named in
+// English because that is what the member sees before switching. DRAFTS only:
+// nothing sends until each is queued and the drain runs.
+function seedLanguageAnnouncementDrafts() {
+  const FLAG = 'wr_seed_language_drafts_v1';
+  if (safeLS.get(FLAG)) return;
+  safeLS.set(FLAG, '1');
+  const EN = (name, native) => `<b>In English:</b> WRotate is now available in ${name}. Open your profile and pick <b>${native}</b> under <b>Language</b>; you can switch back any time. We sent this because your time zone suggests ${name} may suit you. If it does not, nothing changes and there is nothing to do.`;
+  const CTA = (label) => `<a href="https://wrotate.com/open">${label} &#8594;</a>`;
+  const SEEDS = [
+    ['lang_pt', 'O WRotate já está em português', 'WRotate, agora em português',
+      `Já podes usar o WRotate em português: a tua coleção, o registo de usos, o cronocomparador e o feed.
+
+Para mudar o idioma, abre o teu perfil e escolhe <b>Português</b> no cartão <b>Language</b>. Podes voltar ao inglês quando quiseres.
+
+A tradução é nova. Se algo te soar estranho, diz-nos em <b>Enviar feedback</b> e nós corrigimos.
+
+${CTA('Abrir o WRotate')}
+
+A equipa do WRotate
+
+${EN('Portuguese', 'Português')}`],
+    ['lang_de', 'WRotate gibt es jetzt auf Deutsch', 'WRotate, jetzt auf Deutsch',
+      `Du kannst WRotate jetzt auf Deutsch nutzen: deine Sammlung, das Erfassen deiner getragenen Uhren, die Zeitwaage und den Feed.
+
+Um die Sprache zu ändern, öffne dein Profil und wähle <b>Deutsch</b> in der Karte <b>Language</b>. Du kannst jederzeit zu Englisch zurückwechseln.
+
+Die Übersetzung ist neu. Wenn etwas seltsam klingt, schreib uns über <b>Feedback senden</b>, dann korrigieren wir es.
+
+${CTA('WRotate öffnen')}
+
+Das WRotate-Team
+
+${EN('German', 'Deutsch')}`],
+    ['lang_tr', 'WRotate artık Türkçe', 'WRotate artık Türkçe',
+      `WRotate'i artık Türkçe kullanabilirsin: koleksiyonun, kullanım kayıtların, timegrapher ve feed.
+
+Dili değiştirmek için profilini aç ve <b>Language</b> kartında <b>Türkçe</b>'yi seç. İstediğin zaman İngilizceye dönebilirsin.
+
+Çeviri yeni. Kulağa tuhaf gelen bir şey olursa <b>Geri bildirim gönder</b> üzerinden bize yaz, düzeltelim.
+
+${CTA("WRotate'i aç")}
+
+WRotate ekibi
+
+${EN('Turkish', 'Türkçe')}`],
+    ['lang_fr', 'WRotate est maintenant en français', 'WRotate, maintenant en français',
+      `Vous pouvez désormais utiliser WRotate en français : votre collection, le suivi des ports, le chronocomparateur et le feed.
+
+Pour changer de langue, ouvrez votre profil et choisissez <b>Français</b> dans la carte <b>Language</b>. Vous pouvez revenir à l'anglais à tout moment.
+
+La traduction est récente. Si une tournure vous semble maladroite, dites-le-nous via <b>Envoyer un retour</b> et nous la corrigerons.
+
+${CTA('Ouvrir WRotate')}
+
+L'équipe WRotate
+
+${EN('French', 'Français')}`],
+    ['lang_it', 'WRotate ora è in italiano', 'WRotate, ora in italiano',
+      `Ora puoi usare WRotate in italiano: la tua collezione, il registro degli utilizzi, il cronocomparatore e il feed.
+
+Per cambiare lingua, apri il tuo profilo e scegli <b>Italiano</b> nella scheda <b>Language</b>. Puoi tornare all'inglese quando vuoi.
+
+La traduzione è nuova. Se qualcosa suona strano, scrivici da <b>Invia feedback</b> e lo correggiamo.
+
+${CTA('Apri WRotate')}
+
+Il team di WRotate
+
+${EN('Italian', 'Italiano')}`],
+    ['lang_es', 'WRotate ahora está en español', 'WRotate, ahora en español',
+      `Ya puedes usar WRotate en español: tu colección, el registro de usos, el cronocomparador y el feed.
+
+Para cambiar el idioma, abre tu perfil y elige <b>Español</b> en la tarjeta <b>Language</b>. Puedes volver al inglés cuando quieras.
+
+La traducción es nueva. Si algo suena raro, cuéntanoslo desde <b>Enviar comentarios</b> y lo corregimos.
+
+${CTA('Abrir WRotate')}
+
+El equipo de WRotate
+
+${EN('Spanish', 'Español')}`],
+  ];
+  const subjects = new Set(SEEDS.map(x => x[1]));
+  const drafts = getBroadcastDrafts().filter(d => !subjects.has(d.subject));
+  SEEDS.forEach(([segment, subject, heading, body], i) => {
+    drafts.unshift({ id: Date.now() + 20 + i, subject, heading, body, segment, imageUrls: [], savedAt: Date.now() });
+  });
+  safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 16)));
 }
 
 function seedWhatIfAiPicksDraft() {
@@ -23909,11 +24012,14 @@ function saveBroadcastDraft() {
     heading,
     body,
     imageUrls,
+    // The audience travels with the draft: a Spanish email re-saved and
+    // reloaded must not come back pointed at everyone.
+    segment: document.getElementById('broadcast-segment')?.value || 'all',
     savedAt: new Date().toISOString(),
   };
   drafts.unshift(draft);
-  // Keep max 10 drafts
-  if (drafts.length > 10) drafts.length = 10;
+  // Keep max 16 drafts
+  if (drafts.length > 16) drafts.length = 16;
   safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts));
 
   const statusEl = document.getElementById('broadcast-draft-status');
@@ -23932,6 +24038,10 @@ function loadBroadcastDraft(id) {
   document.getElementById('broadcast-subject').value = draft.subject || '';
   document.getElementById('broadcast-heading').value = draft.heading || '';
   document.getElementById('broadcast-body').value = draft.body || '';
+  // A draft that names its audience sets it; one that doesn't resets to
+  // everyone, so a language segment never lingers into the next draft.
+  const segEl = document.getElementById('broadcast-segment');
+  if (segEl) segEl.value = draft.segment || 'all';
 
   // Restore image URLs
   if (draft.imageUrls) {
