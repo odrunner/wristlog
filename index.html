@@ -6505,6 +6505,35 @@ function dismissLangBanner() {
   document.getElementById('lang-banner').classList.add('hidden');
 }
 function i18nLang() { return window.WR_I18N ? window.WR_I18N.lang : 'en'; }
+// Fun facts are written in English, one per watch model, and translated in the
+// background (watch_facts.translations, filled by the translate-facts job). A
+// reader in another language gets theirs when it exists and the English until
+// then. English readers never ask for the translations column at all.
+const FACT_COLS = window.WR_I18N ? 'id, fact, translations' : 'id, fact';
+function factTr(row) {
+  const t = row && row.translations, l = i18nLang();
+  return (l !== 'en' && t && typeof t[l] === 'string' && t[l]) || (row && row.fact) || '';
+}
+// feed_page() returns facts in English only (kept small for the first load).
+// Another language swaps its translations in before the feed is built; any
+// failure or timeout leaves the English, never an empty card.
+async function localizeFeedFacts(payload) {
+  if (!window.WR_I18N || !payload || !Array.isArray(payload.facts) || !payload.facts.length) return;
+  try {
+    const ids = payload.facts.map(f => f && f.id).filter(Boolean);
+    const { data } = await withTimeout(db.from('watch_facts').select(FACT_COLS).in('id', ids), 3000);
+    const byId = Object.fromEntries((data || []).map(r => [r.id, r]));
+    payload.facts.forEach(f => { if (f && byId[f.id]) f.fact = factTr(byId[f.id]) || f.fact; });
+  } catch (e) { /* English */ }
+}
+// For the paths that get a fact from an RPC (id + English text only).
+async function factTrById(id, english) {
+  if (!window.WR_I18N || !id) return english;
+  try {
+    const { data } = await db.from('watch_facts').select(FACT_COLS).eq('id', id).maybeSingle();
+    return data ? (factTr(data) || english) : english;
+  } catch (e) { return english; }
+}
 // The dictionary is read once, before boot, so a change of language is a reload. The
 // address is rebuilt without ?lang=, which would otherwise win over the new choice.
 function setLanguage(code) {
@@ -8470,7 +8499,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.13.04';
+const APP_VERSION = '13.13.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12527,6 +12556,7 @@ async function _loadFeedViaRpc() {
     if (!res || res.error) { if (res) _earlyFeedUsed = false; res = await withTimeout(db.rpc('feed_page'), 8000); }
     const { data, error } = res;
     if (error) throw error;
+    await localizeFeedFacts(data);
     const st = feedPageToState(data, todayStr());
     if (!st) throw new Error('unexpected feed_page payload');
     feedItems = st.items;
@@ -13013,7 +13043,7 @@ async function loadFeed() {
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
       factIds.length
-        ? db.from('watch_facts').select('id, fact').in('id', factIds)
+        ? db.from('watch_facts').select(FACT_COLS).in('id', factIds)
         : Promise.resolve({ data: [] }),
     ]), 8000);
 
@@ -13024,7 +13054,7 @@ async function loadFeed() {
     (profileResult.data || []).forEach(p => profileMap[p.id] = p);
 
     const factMap = {};
-    (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
+    (factResult.data || []).forEach(f => factMap[f.id] = factTr(f));
 
     feedLikes = {};
     logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
@@ -13124,7 +13154,7 @@ async function _enrichFeedBatch(batch) {
     db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
       .in('log_id', logIds).order('created_at', { ascending: true }).limit(2000), // audit F9: 500 across a whole page dropped the newest comments of later posts
     factIds.length
-      ? db.from('watch_facts').select('id, fact').in('id', factIds)
+      ? db.from('watch_facts').select(FACT_COLS).in('id', factIds)
       : Promise.resolve({ data: [] }),
   ]), 8000);
 
@@ -13133,7 +13163,7 @@ async function _enrichFeedBatch(batch) {
   const profileMap = {};
   (profileResult.data || []).forEach(p => profileMap[p.id] = p);
   const factMap = {};
-  (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
+  (factResult.data || []).forEach(f => factMap[f.id] = factTr(f));
 
   logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
   (likesResult.data || []).forEach(l => {
@@ -13833,7 +13863,7 @@ function maybeShowFactModal() {
         // needs_generation means the pool has nothing new; the RPC wrote nothing.
         // Skip silently and stay eligible rather than wait ~10-15s on a spinner.
         if (error || !data || data.needs_generation || !data.fact) return;
-        fact = data.fact;
+        fact = await factTrById(data.fact_id, data.fact);
         _factModalCache = { watchId: watch.id, fact };
       }
 
@@ -24640,7 +24670,7 @@ async function attachFunFact(logEntry, watch) {
     logEntry.factId = factId;
     markDirty('logs', logEntry.id);
     save();
-    return factText || '';
+    return await factTrById(factId, factText || '');
   } catch (e) {
     console.error('[funfact] attach failed:', e && e.message);
     return '';
@@ -27701,8 +27731,8 @@ async function loadAndRenderModel(modelId, owners) {
   if (!m) { el.innerHTML = '<div class="empty">Model not found.</div>'; return; }
   let facts = [];
   if (m.facts_key) {
-    const { data } = await db.from('watch_facts').select('fact,position').eq('model_key', m.facts_key).order('position').limit(6);
-    facts = (data || []).map(f => f.fact);
+    const { data } = await db.from('watch_facts').select(FACT_COLS + ',position').eq('model_key', m.facts_key).order('position').limit(6);
+    facts = (data || []).map(factTr);
   }
   if (modelPageId !== modelId) return;
   _mpCtx = { modelId, m, o: oRes.data || { total_owners: 0, visible: [] }, st: sRes.data || {}, facts };

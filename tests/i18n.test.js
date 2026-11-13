@@ -57,6 +57,26 @@ describe('i18n: a weekday inside a sentence', () => {
     expect(lookup('de', { 'Friday': 'Freitag', 'Often on {0}s': 'Oft am {0}' })('Often on Fridays')).toBe('Oft am Freitag'));
 });
 
+describe('i18n: fun facts in the reader\'s language', () => {
+  const src = /const FACT_COLS = [\s\S]*?\n}\n(?=\/\/ For the paths)/.exec(html)[0];
+  const make = (WR_I18N) => new Function('window', 'i18nLang', src + '; return { factTr, FACT_COLS };')(
+    { WR_I18N }, () => (WR_I18N ? WR_I18N.lang : 'en'));
+  const row = { fact: 'English fact.', translations: { es: 'Dato en español.', it: '' } };
+  it('an English reader never asks for translations and always gets the English', () => {
+    const { factTr, FACT_COLS } = make(undefined);
+    expect(FACT_COLS).toBe('id, fact');
+    expect(factTr(row)).toBe('English fact.');
+  });
+  it('another language gets its translation, or the English until one exists', () => {
+    expect(make({ lang: 'es' }).FACT_COLS).toBe('id, fact, translations');
+    expect(make({ lang: 'es' }).factTr(row)).toBe('Dato en español.');
+    expect(make({ lang: 'it' }).factTr(row)).toBe('English fact.');
+    expect(make({ lang: 'de' }).factTr(row)).toBe('English fact.');
+    expect(make({ lang: 'de' }).factTr({ fact: 'Only English.' })).toBe('Only English.');
+    expect(make({ lang: 'de' }).factTr(null)).toBe('');
+  });
+});
+
 describe('i18n: extraction', () => {
   it('collects literal tx() and toast() strings, skips interpolated and wordless ones', () => {
     const got = scriptStrings("toast('Saved'); x = tx(\"Couldn't save\", v); tx(`Plain`); toast(`Hi ${n}`); tx('—'); t('Local var call'); toast(msg, 'error'); format('Nope')");
