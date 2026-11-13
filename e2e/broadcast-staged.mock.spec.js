@@ -71,8 +71,9 @@ test.describe('staged broadcast — send dialog', () => {
       document.getElementById('page-admin').classList.add('active');
       document.querySelectorAll('.admin-tab').forEach((t) => { t.style.display = 'none'; });
       document.getElementById('admin-tab-broadcast').style.display = '';
-      const label = document.querySelector('label.radio-option');
-      const radio = label.querySelector('input[type="radio"]');
+      // The first staging option — the form also has checkbox and select option rows.
+      const radio = document.querySelector('label.radio-option input[type="radio"]');
+      const label = radio.closest('label.radio-option');
       const cs = getComputedStyle(label);
       return {
         transform: cs.textTransform,

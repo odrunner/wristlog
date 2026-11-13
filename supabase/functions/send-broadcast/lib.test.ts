@@ -25,6 +25,8 @@ import {
   segmentLanguage,
   filterByLanguageTimezone,
   LANG_TIMEZONES,
+  langsToTranslate,
+  countByLang,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -901,4 +903,24 @@ Deno.test("LANG_TIMEZONES — no timezone is claimed by two languages", () => {
       seen.set(z, lang);
     }
   }
+});
+
+// ---- translate at queue time ----
+Deno.test("langsToTranslate — every language the audience uses, never English", () => {
+  assertEquals(langsToTranslate([{ lang: "es" }, { lang: "en" }, { lang: "tr" }, { lang: "es" }, { lang: null }, {}]), ["es", "tr"]);
+  assertEquals(langsToTranslate([{ lang: "en" }, {}]), []);
+  assertEquals(langsToTranslate([]), []);
+});
+
+Deno.test("countByLang — rows with no language are English", () => {
+  assertEquals(countByLang([{ lang: "es" }, { lang: null }, {}, { lang: "es" }, { lang: "de" }]), { es: 2, en: 2, de: 1 });
+  assertEquals(countByLang([]), {});
+});
+
+Deno.test("withUnsubFooter — footer follows the row's language; English unchanged", () => {
+  const html = "<html><body><p>x</p></body></html>";
+  assertEquals(withUnsubFooter(html, "https://u", "es").includes(">Cancelar suscripción</a>"), true);
+  assertEquals(withUnsubFooter(html, "https://u", "es").includes("Unsubscribe"), false);
+  assertEquals(withUnsubFooter(html, "https://u"), withUnsubFooter(html, "https://u", "en"));
+  assertEquals(withUnsubFooter(html, "https://u").includes(">Unsubscribe</a>"), true);
 });

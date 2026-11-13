@@ -31,6 +31,13 @@ describe('campaignSubject — emails tagged with a message id', () => {
     expect(campaignGroupOf(campaignSubject('msg:wear_reminder'), new Set()).group).toBe(3);
     expect(campaignGroupOf(campaignSubject('msg:mention'), new Set()).group).toBe(1);
   });
+  it('files a translated onboarding drip under that day\'s English subject', () => {
+    expect(campaignSubject('msg:drip_d1')).toBe('Add your first watch');
+    expect(campaignSubject('msg:drip_d3')).toBe('A fun fact about your watch');
+    expect(campaignSubject('msg:drip_d21')).toBe('Which watch is next?');
+    expect(campaignGroupOf(campaignSubject('msg:drip_d7'), new Set()).group).toBe(0);
+    expect(campaignSubject('msg:drip_d4')).toBe('msg:drip_d4');
+  });
   it('shows an unknown id as itself rather than guessing', () => {
     expect(campaignSubject('msg:brand_new')).toBe('msg:brand_new');
   });

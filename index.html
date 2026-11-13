@@ -1817,7 +1817,7 @@
     .radio-option { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-1-5); margin-bottom:0;
                     font-size:var(--fs-base); font-weight:var(--fw-normal); color:var(--text);
                     text-transform:none; letter-spacing:normal; cursor:pointer; }
-    .radio-option input[type="radio"] { flex:none; margin:0; }
+    .radio-option input[type="radio"], .radio-option input[type="checkbox"] { flex:none; margin:0; }
     .draft-form-row textarea { resize:vertical; min-height:var(--size-12); }
     .draft-extract-preview { background:var(--surface2); border-radius:var(--radius-btn); padding:var(--space-3); margin-top:var(--space-2-5); }
     .draft-extract-preview img { max-width:var(--size-50); max-height:var(--size-50); border-radius:var(--radius-sm); margin-bottom:var(--space-2); }
@@ -3774,6 +3774,32 @@
             <option value="lang_de">German-speaking time zones</option>
             <option value="lang_pt">Portuguese-speaking time zones</option>
           </select>
+        </div>
+
+        <!-- Languages. A draft is written once in English; when it is queued,
+             send-broadcast translates it for every language the audience uses
+             in the app. Untick for a draft already written for one language.
+             "Test in" sends the test through the same translation. -->
+        <div class="draft-form-row u-mb-2">
+          <label for="broadcast-translate">Languages</label>
+          <div class="u-fd-column u-gap-1-5 u-d-flex">
+            <label class="radio-option">
+              <input type="checkbox" id="broadcast-translate" checked>
+              <span>Translate for members who use the app in another language</span>
+            </label>
+            <label class="radio-option">
+              <span>Send the test in</span>
+              <select id="broadcast-test-lang">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="fr">Français</option>
+                <option value="tr">Türkçe</option>
+                <option value="de">Deutsch</option>
+                <option value="pt">Português</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <!-- Staged send. On the form, not buried in the confirm step: a control
@@ -8499,7 +8525,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.13.12';
+const APP_VERSION = '13.13.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24088,6 +24114,7 @@ function saveBroadcastDraft() {
     // The audience travels with the draft: a Spanish email re-saved and
     // reloaded must not come back pointed at everyone.
     segment: document.getElementById('broadcast-segment')?.value || 'all',
+    translate: broadcastTranslateOn(),
     savedAt: new Date().toISOString(),
   };
   drafts.unshift(draft);
@@ -24115,6 +24142,10 @@ function loadBroadcastDraft(id) {
   // everyone, so a language segment never lingers into the next draft.
   const segEl = document.getElementById('broadcast-segment');
   if (segEl) segEl.value = draft.segment || 'all';
+  // A draft aimed at one language's time zones is already written in that
+  // language, so it is not translated again unless the draft says otherwise.
+  const trEl = document.getElementById('broadcast-translate');
+  if (trEl) trEl.checked = draft.translate ?? !/^lang_/.test(draft.segment || '');
 
   // Restore image URLs
   if (draft.imageUrls) {
@@ -24201,6 +24232,24 @@ function currentDraftPriority() {
 
 let _broadcastSending = false;
 
+const BROADCAST_LANG_NAMES = { en: 'English', es: 'Spanish', it: 'Italian', fr: 'French', tr: 'Turkish', de: 'German', pt: 'Portuguese' };
+function broadcastTranslateOn() {
+  return document.getElementById('broadcast-translate')?.checked !== false;
+}
+// "In Spanish 28, German 12; English 410." plus any language that could not be
+// translated and therefore went out in English. Empty when everything is English.
+function broadcastLangSummary(data) {
+  const by = (data && data.by_lang) || {};
+  const others = Object.keys(by).filter(l => l !== 'en').sort((a, b) => by[b] - by[a]);
+  const failed = (data && data.translation_failed) || [];
+  if (!others.length && !failed.length) return '';
+  const name = l => BROADCAST_LANG_NAMES[l] || l;
+  const parts = [];
+  if (others.length) parts.push(`Translated: ${others.map(l => `${name(l)} ${by[l]}`).join(', ')}${by.en ? `; English ${by.en}` : ''}.`);
+  if (failed.length) parts.push(`Could not translate ${failed.map(name).join(', ')} — those members get English.`);
+  return `<div class="text-meta u-mt-1">${escHtml(parts.join(' '))}</div>`;
+}
+
 function setBroadcastBtnsDisabled(disabled) {
   const testBtn = document.getElementById('broadcast-test-btn');
   const sendBtn = document.getElementById('broadcast-send-btn');
@@ -24220,6 +24269,7 @@ async function sendBroadcastTest() {
   try {
     const images = await uploadBroadcastImages();
     const html = buildFinalBroadcastHtml(images);
+    const testLang = document.getElementById('broadcast-test-lang')?.value || 'en';
 
     // Get current user's email
     const { data: { user } } = await db.auth.getUser();
@@ -24235,11 +24285,11 @@ async function sendBroadcastTest() {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
       },
-      body: JSON.stringify({ subject, html, test_email: user.email }),
+      body: JSON.stringify({ subject, html, test_email: user.email, test_lang: testLang }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    statusEl.innerHTML = `<span class="text-success">Test email sent to ${user.email}</span>`;
+    statusEl.innerHTML = `<span class="text-success">Test email sent to ${escHtml(user.email)}${testLang !== 'en' ? ` — translated to ${escHtml(BROADCAST_LANG_NAMES[testLang] || testLang)}` : ''}</span>`;
     toast('Test email sent! Check your inbox.');
   } catch (e) {
     statusEl.innerHTML = `<span class="text-danger">Error: ${escHtml(e.message)}</span>`;
@@ -24325,7 +24375,7 @@ async function confirmBroadcastAll() {
       },
       // priority = this draft's position in Saved Drafts, so the order set
       // there decides which queued broadcast drains first.
-      body: JSON.stringify({ subject, html, enqueue: true, priority: currentDraftPriority(), segment: document.getElementById('broadcast-segment')?.value || 'all', first_batch: firstBatch }),
+      body: JSON.stringify({ subject, html, enqueue: true, priority: currentDraftPriority(), segment: document.getElementById('broadcast-segment')?.value || 'all', first_batch: firstBatch, translate: broadcastTranslateOn() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
@@ -24333,9 +24383,10 @@ async function confirmBroadcastAll() {
     // the batch covers the whole audience, so echoing the requested number here
     // would promise a review gate that doesn't exist.
     const held = Number(data.held) || 0;
-    statusEl.innerHTML = held
+    statusEl.innerHTML = (held
       ? `<span class="text-success">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
-      : `<span class="text-success">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
+      : `<span class="text-success">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`)
+      + broadcastLangSummary(data);
     toast(held ? `First batch of ${data.first_batch} queued, ${held} held` : `Broadcast queued for ${data.queued} users`);
     renderBroadcastQueueStatus();
   } catch (e) {

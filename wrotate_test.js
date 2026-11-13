@@ -115,6 +115,13 @@ const CAMPAIGN_MSG_KEYS = {
 export function campaignSubject(subj) {
   if (typeof subj === 'string' && subj.startsWith('msg:')) {
     const k = subj.slice(4);
+    // A translated onboarding drip is tagged drip_d<day>; it belongs in the
+    // row of that day's English subject.
+    const drip = /^drip_d(\d+)$/.exec(k);
+    if (drip) {
+      const i = CAMPAIGN_DRIP_DAYS.indexOf(+drip[1]);
+      return i >= 0 ? CAMPAIGN_ONBOARDING[i] : subj;
+    }
     return Object.prototype.hasOwnProperty.call(CAMPAIGN_MSG_KEYS, k) ? CAMPAIGN_MSG_KEYS[k] : subj;
   }
   const t = (subj || '').toLowerCase();
@@ -151,6 +158,8 @@ const CAMPAIGN_ONBOARDING = [
   'Which watch is really your favorite?',
   'Which watch is next?',
 ];
+// The day each of those drips is sent (email_campaigns.delay_days), same order.
+const CAMPAIGN_DRIP_DAYS = [1, 2, 3, 5, 7, 10, 14, 21];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
 const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];

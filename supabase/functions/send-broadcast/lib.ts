@@ -1,5 +1,7 @@
 // send-broadcast — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
+import { SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
 
 // Signup-window cohorts. Each cohort maps to an optional [gte, lt) created_at range.
 export const COHORTS: Record<string, { gte?: string; lt?: string }> = {
@@ -255,13 +257,14 @@ export function batchSegment<T>(recipients: T[], segment: string): T[] {
 // makes it correct wherever it lands, which matters because the campaign mailer
 // builds its HTML from a different template than the broadcast composer — a fix
 // that depended on either template's exact closing markup would fix only one.
-export function unsubFooter(unsubUrl: string): string {
+export function unsubFooter(unsubUrl: string, lang: Lang = "en"): string {
+  const SH = SHELL_STRINGS[lang];
   return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">` +
     `<tr><td align="center" style="padding:0 20px 40px;">` +
     `<table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">` +
     `<tr><td align="center" style="font-size:11px;color:#999;line-height:1.5;">` +
-    `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · ` +
-    `<a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>` +
+    `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · ` +
+    `<a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>` +
     `</td></tr></table></td></tr></table>`;
 }
 
@@ -270,8 +273,8 @@ export function unsubFooter(unsubUrl: string): string {
 // content. Falls back to appending when there is no </body> — a partial
 // template must still carry an unsubscribe link, which is a legal requirement,
 // not a cosmetic one.
-export function withUnsubFooter(html: string, unsubscribeUrl: string): string {
-  const footer = unsubFooter(unsubscribeUrl);
+export function withUnsubFooter(html: string, unsubscribeUrl: string, lang: Lang = "en"): string {
+  const footer = unsubFooter(unsubscribeUrl, lang);
   const at = html.lastIndexOf("</body>");
   return at === -1 ? html + footer : html.slice(0, at) + footer + html.slice(at);
 }
@@ -489,4 +492,18 @@ export function splitFirstBatch<T>(rows: T[], firstBatch: unknown): { pending: T
 export function utcDayStart(nowMs: number): string {
   const d = new Date(nowMs);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();
+}
+
+// Which languages a queued broadcast must be translated into: every language
+// its recipients chose in the app, except English.
+export function langsToTranslate(recipients: { lang?: string | null }[]): string[] {
+  return [...new Set((recipients || []).map((r) => r.lang || "en"))].filter((l) => l !== "en").sort();
+}
+
+// How many queued rows went out in each language ("en" included), for the
+// admin's confirmation line.
+export function countByLang(rows: { lang?: string | null }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows || []) { const l = r.lang || "en"; out[l] = (out[l] || 0) + 1; }
+  return out;
 }

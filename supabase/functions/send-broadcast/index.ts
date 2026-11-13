@@ -37,6 +37,8 @@ import {
   segmentUserId,
   segmentLanguage,
   filterByLanguageTimezone,
+  langsToTranslate,
+  countByLang,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -58,7 +60,12 @@ import {
   personalizeSubject,
   watchLabel,
   watchPhrase,
+  watchPhraseIn,
 } from "../_shared/email-personalize.ts";
+import { pickLang } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import type { Fields, OtherLang } from "../_shared/translate-lib.ts";
+import { translateFields, translateMany } from "../_shared/translate.ts";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
@@ -153,7 +160,7 @@ serve(async (req) => {
     const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") ?? "";
 
     const body = await req.json();
-    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority, first_batch } = body;
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority, first_batch, translate, test_lang } = body;
     // Drain order for a queued broadcast: lower goes first, id breaks ties.
     // Comes from the draft's position in the admin's Saved Drafts list, so the
     // order can be set before anything is sent. Defaults to 0 = old FIFO.
@@ -205,6 +212,15 @@ serve(async (req) => {
       // Personalize against the caller's own collection — a test that shows
       // "{{fact}}" tells you nothing about what recipients will get.
       let tSubject = subject, tHtml = safeHtml;
+      // "Test in <language>": the same translation step a queued send uses, so
+      // the test shows what members in that language will actually receive.
+      const tLang = pickLang(test_lang);
+      let tTranslated = false;
+      if (tLang !== "en") {
+        const loc = await translateFields({ subject, html: safeHtml }, tLang, { tag: "broadcast test", timeoutMs: 90000 });
+        if (!loc) return jsonResponse({ error: `The ${tLang} translation failed or was rejected; members in that language would get the English.` }, 502);
+        tSubject = loc.subject; tHtml = loc.html; tTranslated = true;
+      }
       if (needsFactVars({ subject, body_html: safeHtml }) && adminUserId) {
         const vars = await factVarsFor(supabase, [adminUserId]);
         const v = vars.get(adminUserId) ?? { ...FALLBACK_FACT };
@@ -226,7 +242,7 @@ serve(async (req) => {
       if (adminUserId) {
         const sig = await hmacSign(adminUserId, "updates", unsubKey);
         const url = unsubUrl(supabaseUrl, adminUserId, sig, "updates");
-        tHtml = withUnsubFooter(tHtml, url);
+        tHtml = withUnsubFooter(tHtml, url, tTranslated ? tLang : "en");
         testHeaders = {
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -245,7 +261,7 @@ serve(async (req) => {
     const mkProfilesQuery = (from: number, to: number) => {
       let q = supabase
         .from("profiles")
-        .select("id, email_prefs, created_at, timezone")
+        .select("id, email_prefs, created_at, timezone, language")
         .eq("is_suspended", false)
         .order("created_at", { ascending: true });
       if (cohort) {
@@ -349,12 +365,12 @@ serve(async (req) => {
     }
 
     const DORMANT_CUTOFF_MS = dormantCutoffMs(Date.now());
-    const recipients: { uid: string; email: string }[] = [];
+    const recipients: { uid: string; email: string; lang: Lang }[] = [];
     for (const profile of eligibleProfiles) {
       const user = usersById.get(profile.id);
       if (!user?.email) continue;
       if (cohort && !isDormant(user.last_sign_in_at, DORMANT_CUTOFF_MS)) continue; // active user, skip
-      recipients.push({ uid: profile.id, email: user.email });
+      recipients.push({ uid: profile.id, email: user.email, lang: pickLang((profile as { language?: string | null }).language) });
     }
 
     // Drop permanently-bounced addresses. Applied BEFORE the cap so a dead
@@ -417,22 +433,39 @@ serve(async (req) => {
         .from("broadcast_queue")
         .select("uid")
         .in("status", ["pending", "held"])
-        .eq("subject", subject)
+        // By label, not subject: a translated row's subject is in another
+        // language, and it must still count as already queued on a re-click.
+        .eq("label", subject)
         .range(from, to));
       const alreadyQueued = new Set((pendingRows || []).map(r => r.uid));
       const toQueue = filteredRecipients.filter(r => !alreadyQueued.has(r.uid));
       // Rows are stored fully rendered, so the drain stays a dumb sender.
       const wantsFact = needsFactVars({ subject, body_html: safeHtml });
       const vars = wantsFact ? await factVarsFor(supabase, toQueue.map(r => r.uid)) : new Map();
+      // Written once in English, sent in each recipient's app language: one
+      // translation per language the audience uses, made here so the queue
+      // holds exactly what will be sent. `translate: false` opts a draft out
+      // (one already written for a single language). Batched "_NofM" segments
+      // stay English: their dedup matches on the subject in the send history.
+      // A language whose translation fails or is rejected gets English.
+      const wantLangs = (translate === false || batchInfo) ? [] : langsToTranslate(toQueue) as OtherLang[];
+      const translations = wantLangs.length
+        ? await translateMany({ subject, html: safeHtml }, wantLangs, { tag: "broadcast", timeoutMs: 90000 })
+        : new Map<OtherLang, Fields>();
       const baseRows = toQueue.map(r => {
-        const v = wantsFact ? (vars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
+        const loc = r.lang !== "en" ? translations.get(r.lang as OtherLang) : undefined;
+        const base = wantsFact ? (vars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
+        const v = (loc && wantsFact)
+          ? { ...base, watchPhrase: watchPhraseIn(r.lang, base.watch, base.watchPhrase !== FALLBACK_FACT.watchPhrase) }
+          : base;
         return {
           uid: r.uid,
           email: r.email,
-          subject: personalizeSubject(subject, null, v),
-          html: personalizeBody(safeHtml, null, v),
+          subject: personalizeSubject(loc?.subject ?? subject, null, v),
+          html: personalizeBody(loc?.html ?? safeHtml, null, v),
           label: subject,
           priority: queuePriority,
+          lang: loc ? r.lang : null,
         };
       });
       // Staged send: the first `first_batch` rows go out on the next drain, the
@@ -456,6 +489,10 @@ serve(async (req) => {
       console.log(`[send-broadcast] Queued ${queued} (${split.held.length} held, skipped ${alreadyQueued.size} already queued) for nightly drain`);
       return jsonResponse({
         queued,
+        // How many rows went into the queue in each language, and which
+        // languages were wanted but could not be translated (sent in English).
+        by_lang: countByLang(rows),
+        translation_failed: wantLangs.filter((l) => !translations.has(l)),
         held: split.held.length,
         first_batch: split.pending.length,
         skipped_already_queued: filteredRecipients.length - toQueue.length,
@@ -575,7 +612,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 
   const { data: rows, error: qErr } = await supabase
     .from("broadcast_queue")
-    .select("id, uid, email, subject, html, attempts")
+    .select("id, uid, email, subject, html, attempts, lang")
     .eq("status", "pending")
     // priority first (admin_move_broadcast reorders it), id as tie-breaker.
     // With every priority at its 0 default this is the original FIFO.
@@ -624,7 +661,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     .update({ status: "sending", claimed_at: new Date().toISOString() })
     .in("id", ids)
     .eq("status", "pending")
-    .select("id, uid, email, subject, html, attempts");
+    .select("id, uid, email, subject, html, attempts, lang");
   if (claimErr) {
     return jsonResponse({ error: "Queue claim failed", details: claimErr.message }, 500);
   }
@@ -650,7 +687,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
         from: FROM_EMAIL,
         to: [r.email],
         subject: r.subject,
-        html: withUnsubFooter(r.html, url),
+        html: withUnsubFooter(r.html, url, pickLang(r.lang)),
         headers: {
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
