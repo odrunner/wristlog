@@ -8218,7 +8218,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.37';
+const APP_VERSION = '12.20.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21065,11 +21065,17 @@ async function renderAdminTraffic() {
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
       //  undercounted cumulative campaign delivery/open/click totals.)
-      db.rpc('admin_email_engagement'),
+      // p_force on the two email keys only: this tab is opened to review a
+      // send that just happened, and the 10-min cache hid a broadcast queued
+      // 15 s after the last pre-warm (2026-11-13). A forced recompute of
+      // these two measures ~0.2 s on Micro — nothing like the all-ten cold
+      // refresh that got the ↻ button removed 2026-10-15; the other cached
+      // keys on this tab still serve the pre-warmed cache.
+      db.rpc('admin_email_engagement', { p_force: true }),
       // Click-through measured from our own page_visits utm tags. SES click
       // tracking is live only for broadcasts to iOS 2.6+ recipients (since
       // 2026-08-21), so this is the fuller count. Spec: sql/2026-08-14-email-clickthrough.sql.
-      db.rpc('admin_email_clickthrough'),
+      db.rpc('admin_email_clickthrough', { p_force: true }),
       // First-load timings per day (sql/2026-09-18-boot-timings.sql). ~100 narrow
       // rows/day, so it is computed live — no admin_stats_cache entry needed.
       db.rpc('admin_boot_timing_daily', { p_days: 14 }),
