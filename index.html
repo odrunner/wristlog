@@ -8218,7 +8218,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.23';
+const APP_VERSION = '12.20.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19695,7 +19695,9 @@ The WRotate team`,
 function seedAndroidWhatsNewDraft() {
   // v2 re-seeds over v1: drops the month-pattern item, adds the two screenshots
   // (the top menu with the Messages envelope, the search sheet with results).
-  const FLAG = 'wr_seed_android_whats_new_draft_v2';
+  // v3: a hairline divider between each callout (inline styles — mail clients
+  // have no CSS variables, and this function sits in ds-count's EMAIL_RANGES).
+  const FLAG = 'wr_seed_android_whats_new_draft_v3';
   if (safeLS.get(FLAG)) return;
   safeLS.set(FLAG, '1');
   const SUBJECT = 'WRotate is now on Android';
@@ -19708,11 +19710,15 @@ function seedAndroidWhatsNewDraft() {
 
 <a href="https://play.google.com/store/apps/details?id=com.wrotate.app">Get WRotate on Google Play &#8594;</a>
 
+<hr style="border:none;border-top:1px solid #eee;margin:8px 0;">
+
 And while we were building that, the app kept moving. A few more things you may have missed:
 
 <b>Private messages.</b> Send a message request from any member&#8217;s profile; once they accept, you can chat and share posts privately. Your inbox is the envelope in the top menu. You choose who can reach you under <b>Privacy</b>.
 
 [img1]
+
+<hr style="border:none;border-top:1px solid #eee;margin:8px 0;">
 
 <b>Search watches, not just people.</b> The search bar at the top of the feed now finds watch models too &#8212; type Speedmaster, SKX or Datejust and jump straight to that model&#8217;s page. And the view name at the top left of the feed is now a menu: all posts, people you follow, close friends, or just yours.
 
