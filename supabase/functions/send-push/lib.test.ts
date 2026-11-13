@@ -261,3 +261,28 @@ Deno.test("buildRoute — DM types route to the conversation", () => {
 Deno.test("buildRoute — DM types fall back to the bell with no conversation id", () => {
   assertEquals(buildRoute("message", null, "actor-1"), { route: "bell", id: null });
 });
+
+// ---- languages ----
+import { PUSH_STRINGS, PUSH_TYPES } from "./strings.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+Deno.test("buildMessage — every type has text in every language, with the name and no leftover hole", () => {
+  for (const lang of LANGS) {
+    for (const type of PUSH_TYPES) {
+      const m = buildMessage(type, "Mason", "Sinn", lang);
+      if (!m) throw new Error(`${lang}/${type}: no message`);
+      assertEquals(m.title, "WRotate");
+      assertEquals(/[{}]/.test(m.body), false, `${lang}/${type}: leftover hole`);
+      assertEquals(m.body.includes(type === "system" ? "Sinn" : "Mason"), true, `${lang}/${type}: value missing`);
+      if (lang !== "en") assertEquals(m.body === buildMessage(type, "Mason", "Sinn")!.body, false, `${lang}/${type}: still English`);
+    }
+  }
+});
+
+Deno.test("buildMessage — language does not change which rows send nothing", () => {
+  assertEquals(buildMessage("badge_earned", "Mason", null, "es"), null);
+  assertEquals(buildMessage("system", "Mason", null, "de"), null);
+  assertEquals(buildMessage("brand_new_type", "Mason", null, "es")!.body, "Mason te envió una notificación");
+  assertEquals(buildMessage("other", "Mason", null, "en")!.body, "Mason sent you a notification");
+  assertEquals(Object.keys(PUSH_STRINGS.tr).length, PUSH_TYPES.length);
+});

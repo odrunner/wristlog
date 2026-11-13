@@ -1,5 +1,9 @@
 // send-push — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
+import { fill } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { PUSH_STRINGS, PUSH_TYPES } from "./strings.ts";
+import type { PushType } from "./strings.ts";
 
 // True if a webhook record carries the fields required to process it.
 export function isValidRecord(
@@ -25,67 +29,22 @@ export function buildMessage(
   type: string,
   actorName: string,
   refId?: string | null,
+  lang: Lang = "en",
 ): { title: string; body: string } | null {
   const title = "WRotate";
-  switch (type) {
-    case "like":
-      return { title, body: `${actorName} liked your post` };
-    case "comment":
-      return { title, body: `${actorName} commented on your post` };
-    // Not a direct interaction — the actor commented on someone else's post that
-    // the recipient also liked or commented on. Say so: the generic fallback read
-    // as "they did something to you", which is misleading. Wording matches the
-    // bell panel (renderNotificationPanel in index.html).
-    case "comment_also":
-      return { title, body: `${actorName} also commented on a post you liked or commented on` };
-    case "follow":
-      return { title, body: `${actorName} started following you` };
-    case "follow_request":
-      return { title, body: `${actorName} requested to follow you` };
-    case "follow_accepted":
-      return { title, body: `${actorName} accepted your follow request` };
-    // DM types: never a body preview (privacy) — the alert only says who.
-    case "message_request":
-      return { title, body: `${actorName} wants to send you a message` };
-    case "message":
-      return { title, body: `${actorName} sent you a message` };
-    case "friend_request":
-      return { title, body: `${actorName} sent you a close friend request` };
-    case "friend_accepted":
-      return { title, body: `${actorName} accepted your close friend request` };
-    case "club_invite":
-      return { title, body: `${actorName} invited you to join a club` };
-    case "club_join_request":
-      return { title, body: `${actorName} wants to join your club` };
-    case "club_join_accepted":
-      return { title, body: `${actorName} approved your club request` };
-    // The panel names the club (it joins the row to clubs); naming it here would
-    // cost an extra lookup for a rare notification, so keep it generic like
-    // club_invite rather than leave it on the meaningless default.
-    case "club_promoted":
-      return { title, body: `${actorName} made you an owner of a club` };
-    case "mention":
-      return { title, body: `${actorName} mentioned you` };
-    case "comment_like":
-      return { title, body: `${actorName} liked your comment` };
-    // A comment left on a share link by someone with (usually) no account. The
-    // webhook resolves actorName from share_comments.name; no actor row exists.
-    case "share_comment":
-      return { title, body: `${actorName} commented on a link you shared` };
-    // The auto-add-brand confirmation: actor-less, brand name in ref_id. It used
-    // to push "Someone sent you a notification" (or a bystander's name, for the
-    // six rows that carry an actor) — no hint that a brand request came through.
-    // A row with no brand has nothing to report, so send nothing.
-    case "system":
-      return refId
-        ? { title, body: `Your requested brand "${refId}" has been added to WRotate!` }
-        : null;
-    case "badge_earned":
-      // Badges are pushed by the send-badge-push function (batched), not the insert webhook.
-      return null;
-    default:
-      return { title, body: `${actorName} sent you a notification` };
-  }
+  const S = PUSH_STRINGS[lang];
+  // Badges are pushed by the send-badge-push function (batched), not the insert webhook.
+  if (type === "badge_earned") return null;
+  // The auto-add-brand confirmation: actor-less, brand name in ref_id. It used
+  // to push "Someone sent you a notification" (or a bystander's name, for the
+  // six rows that carry an actor) — no hint that a brand request came through.
+  // A row with no brand has nothing to report, so send nothing.
+  if (type === "system") return refId ? { title, body: fill(S.system, { b: refId }) } : null;
+  // Every other type describes itself from the actor alone (wording matches the
+  // bell panel, renderNotificationPanel in index.html; DM types never carry a
+  // body preview). A type with no text of its own gets the generic line.
+  const known = (PUSH_TYPES as readonly string[]).includes(type) && type !== "other";
+  return { title, body: fill(S[(known ? type : "other") as PushType], { a: actorName }) };
 }
 
 // Where the app should navigate when a push is tapped. Mirrors the click targets

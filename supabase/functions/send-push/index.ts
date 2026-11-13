@@ -27,6 +27,7 @@ import {
   splitByPlatform,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pickLang } from "../_shared/lang.ts";
 import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 import { sendFcm } from "../_shared/fcm.ts";
 import { claimSend } from "../_shared/send-claim.ts";
@@ -188,7 +189,14 @@ serve(async (req) => {
         .maybeSingle();
       if (c?.name) actorName = c.name;
     }
-    const message = buildMessage(type, actorName, ref_id);
+    // In the language the recipient chose in the app. A failed lookup is English,
+    // never a dropped push.
+    const { data: recipient } = await supabase
+      .from("profiles")
+      .select("language")
+      .eq("id", user_id)
+      .maybeSingle();
+    const message = buildMessage(type, actorName, ref_id, pickLang(recipient?.language));
     if (!message) {
       return new Response(JSON.stringify({ skipped: "unknown type" }), {
         status: 200,
