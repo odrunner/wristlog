@@ -82,3 +82,36 @@ Deno.test("unsubUrl / hmacSign — reminders category, url-safe base64", async (
   assertEquals(/^[A-Za-z0-9_-]+$/.test(sig), true);
   assertEquals(sig, await hmacSign("u1", "reminders", "k"));
 });
+
+// ---- languages ----
+import { LANGS } from "../_shared/lang.ts";
+
+Deno.test("measure reminders — every language carries watch and rate, leaves no hole, and is translated", () => {
+  const first = { brand: "Omega", name: "Speedmaster", rate: "4.2", measured_at: "2026-11-03T10:00:00Z", prior_rate: null, prior_at: null };
+  const drift = { ...first, prior_rate: "2.2", prior_at: "2026-09-10T10:00:00Z" };
+  const same = { ...first, prior_rate: "4.2", prior_at: "2026-09-10T10:00:00Z" };
+  const slower = { ...first, prior_rate: "9.0", prior_at: "2026-09-10T10:00:00Z" };
+  for (const lang of LANGS) {
+    const texts = [buildMeasurePush(first, lang).body, buildMeasurePush(drift, lang).body, buildMeasurePush(same, lang).body,
+      buildMeasurePush(slower, lang).body, buildRemeasureD7Push(first, lang).body,
+      buildRemeasureD7Email(first, lang).subject, buildRemeasureD7Email(first, lang).body];
+    for (const x of texts) {
+      assertEquals(/[{}]/.test(x), false, `${lang}: leftover hole in "${x}"`);
+      assertEquals(x.includes("Omega Speedmaster"), true, `${lang}: watch missing in "${x}"`);
+    }
+    assertEquals(buildMeasurePush(first, lang).body.includes("+4.2 s/d"), true);
+    assertEquals(buildMeasurePush(drift, lang).body.includes("2.0 s/d"), true);
+    if (lang !== "en") assertEquals(buildMeasurePush(first, lang).body === buildMeasurePush(first).body, false);
+  }
+});
+
+Deno.test("measure reminders — dates and the no-name watch read naturally per language", () => {
+  const first = { brand: null, name: null, rate: "4.2", measured_at: "2026-11-03T10:00:00Z", prior_rate: null, prior_at: null };
+  assertEquals(buildMeasurePush(first, "es").body, "Mediste tu reloj a +4.2 s/d el 3 nov. Vuelve a medirlo para ver si se mantiene.");
+  assertEquals(buildRemeasureD7Push(first, "tr").body.startsWith("Saatin geçen hafta"), true);
+  assertEquals(buildRemeasureD7Email(first, "tr").subject, "Saatin aynı kaldı mı?");
+  const drift = { ...first, brand: "Omega", prior_rate: "2.2", prior_at: "2026-09-10T10:00:00Z" };
+  assertEquals(buildMeasurePush(drift, "de").body, "Deine Omega läuft mit +4.2 s/d: 2.0 s/d schneller als im September. Tippe, um neu zu messen.");
+  assertEquals(buildHtmlEmail("s", "b", "https://u", "remeasure-d7", "fr").includes(">Mesurer à nouveau</a>"), true);
+  assertEquals(buildHtmlEmail("s", "b", "https://u"), buildHtmlEmail("s", "b", "https://u", "remeasure-d7", "en"));
+});

@@ -5,15 +5,20 @@
 // Reminder message builders
 // ---------------------------------------------------------------------------
 
+import { fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { WEAR_STRINGS } from "./strings.ts";
+
 export type LastWatch = { brand: string; name: string } | null | undefined;
 const watchLabel = (w: LastWatch) => w ? [w.brand, w.name].filter(Boolean).join(" ").trim() : "";
 
 // Names the last-worn watch when the target RPC supplies one (2026-08-16). Push is
 // plain text; the email body is HTML — the caller escapes brand/name before passing.
-export function buildReminderPush(w?: LastWatch): { title: string; body: string } {
+export function buildReminderPush(w?: LastWatch, lang: Lang = "en"): { title: string; body: string } {
   const label = watchLabel(w);
-  if (label) return { title: "WRotate", body: `Wearing the ${label} again today? Tap to log it — or pick another watch.` };
-  return { title: "WRotate", body: "What did you wear today? Log it before the day's out." };
+  const S = WEAR_STRINGS[lang];
+  if (label) return { title: "WRotate", body: fill(S.pushWatch, { w: label }) };
+  return { title: "WRotate", body: S.push };
 }
 
 // Audit N6: the bounce lookup must never be able to kill the run — pushes
@@ -33,14 +38,10 @@ export function applyBounceFilter<
   });
 }
 
-export function buildReminderEmail(w?: LastWatch): { subject: string; body: string } {
+export function buildReminderEmail(w?: LastWatch, lang: Lang = "en"): { subject: string; body: string } {
   const label = watchLabel(w);
-  return {
-    subject: "What's on your wrist today?",
-    body: label
-      ? `Wearing the ${label} again today? Log it in WRotate before the day's out — or whatever's on your wrist. It keeps your wear history complete and your streak alive.`
-      : "Wearing something today? Log it in WRotate before the day's out — it keeps your collection's wear history complete and your streak alive.",
-  };
+  const S = WEAR_STRINGS[lang];
+  return { subject: S.subject, body: label ? fill(S.bodyWatch, { w: label }) : S.body };
 }
 
 // ---------------------------------------------------------------------------
@@ -174,8 +175,9 @@ export async function sendPush(
 // ---------------------------------------------------------------------------
 
 // Wrap a campaign body in the branded HTML email shell.
-export function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string {
-  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
+export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, lang: Lang = "en"): string {
+  const S = SHELL_STRINGS[lang];
+  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -195,7 +197,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string):
                EXCLUDES "/" and "/index.html", so a root link opens Safari instead
                of the installed iOS app. The utm_* params are kept — they do not
                affect Universal Link matching, which is path-based. -->
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=wear-reminder" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=wear-reminder" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">${S.open}</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

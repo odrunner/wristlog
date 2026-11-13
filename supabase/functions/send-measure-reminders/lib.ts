@@ -1,6 +1,10 @@
 // Supabase Edge Function: send-measure-reminders — pure helpers.
 // Copy for the re-measure / drift push, built from measurement_sessions (saved or not).
 
+import { fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { MEASURE_STRINGS } from "./strings.ts";
+
 export type MeasureTarget = {
   brand: string | null; name: string | null;
   rate: number | string; measured_at: string;
@@ -20,19 +24,33 @@ const FULL = ["January", "February", "March", "April", "May", "June", "July", "A
 // First reminder on a watch: "re-measure to see if it's holding". With a prior reading at
 // least 14 days earlier: the drift. A more positive rate means the watch runs FASTER
 // (+6.2 vs +2.2 → "4.0 s/d faster"). Rates arrive as numeric strings from PostgREST.
-export function buildMeasurePush(t: MeasureTarget): { title: string; body: string } {
-  const label = [t.brand, t.name].filter(Boolean).join(" ").trim() || "watch";
+export function buildMeasurePush(t: MeasureTarget, lang: Lang = "en"): { title: string; body: string } {
+  const S = MEASURE_STRINGS[lang];
+  const label = [t.brand, t.name].filter(Boolean).join(" ").trim() || S.watch;
   const rate = Number(t.rate);
   if (t.prior_rate == null || !t.prior_at) {
     const d = new Date(t.measured_at);
-    return { title: "WRotate", body: `You measured your ${label} at ${fmtRate(rate)} on ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}. Re-measure to see if it's holding.` };
+    // English keeps its hand-built "Nov 3"; every other language formats the date its own way.
+    const date = lang === "en"
+      ? `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
+      : new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", timeZone: "UTC" }).format(d);
+    return { title: "WRotate", body: capFirst(fill(S.first, { w: label, r: fmtRate(rate), date })) };
   }
   const delta = rate - Number(t.prior_rate);
-  const mon = FULL[new Date(t.prior_at).getUTCMonth()];
+  const prior = new Date(t.prior_at);
+  const mon = lang === "en"
+    ? FULL[prior.getUTCMonth()]
+    : new Intl.DateTimeFormat(lang, { month: "long", timeZone: "UTC" }).format(prior);
   const cmp = Math.abs(delta) < 0.1
-    ? `same as in ${mon}`
-    : `${Math.abs(delta).toFixed(1)} s/d ${delta > 0 ? "faster" : "slower"} than in ${mon}`;
-  return { title: "WRotate", body: `Your ${label} is running ${fmtRate(rate)} — ${cmp}. Tap to re-measure.` };
+    ? fill(S.same, { mon })
+    : fill(delta > 0 ? S.faster : S.slower, { d: Math.abs(delta).toFixed(1), mon });
+  return { title: "WRotate", body: capFirst(fill(S.drift, { w: label, r: fmtRate(rate), cmp })) };
+}
+
+// Turkish sentences open with the watch name; the no-name label ("saatin") is
+// lower-case, so the first letter is raised. A no-op wherever it is already a capital.
+function capFirst(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,22 +65,23 @@ export type RemeasureD7Target = {
   brand: string | null; name: string | null; rate: number | string; measured_at: string; local_today: string;
 };
 
-const d7Label = (t: { brand: string | null; name: string | null }) =>
-  [t.brand, t.name].filter(Boolean).join(" ").trim() || "watch";
+const d7Label = (t: { brand: string | null; name: string | null }, lang: Lang = "en") =>
+  [t.brand, t.name].filter(Boolean).join(" ").trim() || MEASURE_STRINGS[lang].watch;
 
-export function buildRemeasureD7Push(t: { brand: string | null; name: string | null; rate: number | string }): { title: string; body: string } {
-  return { title: "WRotate", body: `Your ${d7Label(t)} ran ${fmtRate(Number(t.rate))} last week. Measure again to see if it holds.` };
+export function buildRemeasureD7Push(t: { brand: string | null; name: string | null; rate: number | string }, lang: Lang = "en"): { title: string; body: string } {
+  return { title: "WRotate", body: capFirst(fill(MEASURE_STRINGS[lang].d7push, { w: d7Label(t, lang), r: fmtRate(Number(t.rate)) })) };
 }
 
 const escHtml = (x: string) => x.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 
 // Body is HTML (brand/name escaped here); subject is plain text.
-export function buildRemeasureD7Email(t: { brand: string | null; name: string | null; rate: number | string }): { subject: string; body: string } {
-  const label = d7Label(t);
+export function buildRemeasureD7Email(t: { brand: string | null; name: string | null; rate: number | string }, lang: Lang = "en"): { subject: string; body: string } {
+  const S = MEASURE_STRINGS[lang];
+  const label = d7Label(t, lang);
   const rate = fmtRate(Number(t.rate));
   return {
-    subject: `Did your ${label} hold its rate?`,
-    body: `A week ago your <strong>${escHtml(label)}</strong> measured <strong>${rate}</strong>. Measure it again in WRotate to see whether it's holding — two readings make a trend, one is just a number.`,
+    subject: capFirst(fill(S.d7subject, { w: label })),
+    body: fill(S.d7body, { w: escHtml(label), r: rate }),
   };
 }
 
@@ -73,8 +92,9 @@ export function buildRemeasureD7Email(t: { brand: string | null; name: string | 
 // "/index.html", so a root link opens Safari instead of the installed iOS app.
 // ---------------------------------------------------------------------------
 
-export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "remeasure-d7"): string {
-  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
+export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "remeasure-d7", lang: Lang = "en"): string {
+  const SH = SHELL_STRINGS[lang];
+  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(subject)}</title></head>
@@ -90,7 +110,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, 
           <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=${campaign}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Measure it again</a>
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=${campaign}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">${MEASURE_STRINGS[lang].d7button}</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

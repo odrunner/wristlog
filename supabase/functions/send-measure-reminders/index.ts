@@ -19,6 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { sendEmail } from "../_shared/mailer.ts";
 import { sendFcm } from "../_shared/fcm.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";
+import { fetchLangs } from "../_shared/lang.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import {
   apnsHost, buildHtmlEmail, buildMeasurePush, buildRemeasureD7Email, buildRemeasureD7Push,
@@ -100,6 +101,9 @@ serve(async (req) => {
       }), { status: 200 });
     }
 
+    // Each message goes out in the language its recipient chose in the app.
+    const langs = await fetchLangs(supabase, [...rows, ...d7rows].map((r) => r.user_id));
+
     let d7pushed = 0, d7emailed = 0, d7failed = 0, d7skipped = 0;
     if (d7rows.length) {
       const emailRows = d7rows.filter((r) => r.channel === "email");
@@ -111,6 +115,7 @@ serve(async (req) => {
         // "One message ever": claim the ledger row BEFORE sending and release it if
         // the send fails. An unchecked write after the send let a failed upsert
         // re-nudge the same user on day 8 (audit 2026-09-20 S2).
+        const lang = langs.get(t.user_id) ?? "en";
         const claim = { user_id: t.user_id, watch_id: t.watch_id, channel: t.channel, sent_on: t.local_today };
         let claimed = false;
         const release = async () => {
@@ -131,18 +136,19 @@ serve(async (req) => {
           }
           claimed = true;
           if (t.channel === "push") {
-            if (!await pushUser(t.user_id, buildRemeasureD7Push(t), "measure", t.watch_id)) { d7failed++; await release(); continue; }
+            if (!await pushUser(t.user_id, buildRemeasureD7Push(t, lang), "measure", t.watch_id)) { d7failed++; await release(); continue; }
             d7pushed++;
           } else {
             const to = (t.email ?? "").trim();
             const sig = await hmacSign(t.user_id, "reminders", UNSUB_KEY);
             const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
-            const mail = buildRemeasureD7Email(t);
+            const mail = buildRemeasureD7Email(t, lang);
             const result = await sendEmail({
               from: FROM_EMAIL,
               to: [to],
               subject: mail.subject,
-              html: buildHtmlEmail(mail.subject, mail.body, url),
+              html: buildHtmlEmail(mail.subject, mail.body, url, "remeasure-d7", lang),
+              msgKey: "remeasure_d7",
               headers: {
                 "List-Unsubscribe": `<${url}>`,
                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -163,7 +169,7 @@ serve(async (req) => {
     let pushed = 0, failed = 0;
     for (const t of rows) {
       try {
-        if (!await pushUser(t.user_id, buildMeasurePush(t), "measure", t.watch_id)) { failed++; continue; }
+        if (!await pushUser(t.user_id, buildMeasurePush(t, langs.get(t.user_id) ?? "en"), "measure", t.watch_id)) { failed++; continue; }
         pushed++;
         const { error: ledErr } = await supabase.from("measure_reminder_sends")
           .upsert({ user_id: t.user_id, watch_id: t.watch_id, sent_on: t.local_today }, { onConflict: "user_id,sent_on", ignoreDuplicates: true });

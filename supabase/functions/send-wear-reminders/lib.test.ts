@@ -94,3 +94,27 @@ Deno.test("applyBounceFilter — empty set keeps everyone", () => {
   const input = [T("email", "a@x.com"), T("push", null)];
   assertEquals(applyBounceFilter(input, new Set()), input);
 });
+
+// ---- languages ----
+import { WEAR_STRINGS } from "./strings.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+Deno.test("wear reminder — every language names the watch, leaves no hole, and is translated", () => {
+  const w = { brand: "Seiko", name: "SKX007" };
+  for (const lang of LANGS) {
+    const texts = [buildReminderPush(w, lang).body, buildReminderPush(null, lang).body,
+      buildReminderEmail(w, lang).subject, buildReminderEmail(w, lang).body, buildReminderEmail(null, lang).body];
+    for (const x of texts) assertEquals(/[{}]/.test(x), false, `${lang}: leftover hole in "${x}"`);
+    assertEquals(buildReminderPush(w, lang).body.includes("Seiko SKX007"), true);
+    assertEquals(buildReminderEmail(w, lang).body.includes("Seiko SKX007"), true);
+    if (lang !== "en") assertEquals(buildReminderEmail(w, lang).subject === WEAR_STRINGS.en.subject, false);
+  }
+  assertEquals(buildReminderPush(w), buildReminderPush(w, "en"));
+});
+
+Deno.test("wear reminder email shell — button and footer follow the language", () => {
+  const de = buildHtmlEmail("s", "b", "https://u", "de");
+  assertEquals(de.includes(">WRotate öffnen</a>"), true);
+  assertEquals(de.includes(">Abmelden</a>"), true);
+  assertEquals(buildHtmlEmail("s", "b", "https://u"), buildHtmlEmail("s", "b", "https://u", "en"));
+});

@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { sendEmail } from "../_shared/mailer.ts";
 import { sendFcm } from "../_shared/fcm.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";
+import { fetchLangs } from "../_shared/lang.ts";
 import {
   apnsHost, applyBounceFilter, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
@@ -76,11 +77,15 @@ serve(async (req) => {
     // Brand/name reach the email as HTML; push is plain text.
     const esc = (x: string) => x.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 
+    // Each reminder goes out in the language its recipient chose in the app.
+    const langs = await fetchLangs(supabase, rows.map((r: { user_id: string }) => r.user_id));
+
     for (const t of rows) {
       try {
+        const lang = langs.get(t.user_id) ?? "en";
         const lw = (t.last_brand || t.last_name) ? { brand: t.last_brand ?? "", name: t.last_name ?? "" } : null;
-        const push = buildReminderPush(lw);
-        const mail = buildReminderEmail(lw ? { brand: esc(lw.brand), name: esc(lw.name) } : null);
+        const push = buildReminderPush(lw, lang);
+        const mail = buildReminderEmail(lw ? { brand: esc(lw.brand), name: esc(lw.name) } : null, lang);
         if (t.channel === "push") {
           const { data: toks } = await supabase.from("device_tokens")
             .select("token, app_version, platform").eq("user_id", t.user_id);
@@ -106,12 +111,13 @@ serve(async (req) => {
           if (!t.email) continue;
           const sig = await hmacSign(t.user_id, "reminders", UNSUB_KEY);
           const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
-          const html = buildHtmlEmail(mail.subject, mail.body, url);
+          const html = buildHtmlEmail(mail.subject, mail.body, url, lang);
           const result = await sendEmail({
             from: FROM_EMAIL,
             to: [t.email],
             subject: mail.subject,
             html,
+            msgKey: "wear_reminder",
             headers: {
               "List-Unsubscribe": `<${url}>`,
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
