@@ -50,7 +50,7 @@
     <footer id="site-footer"><a href="/w/all/">Browse all watch models</a></footer>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js" integrity="sha384-NRo2jhGGHu91p1IOcVC3UWI5Vnd+xGXfD/8N7Hr9+aGTK0d/Pl0i+kUZsB/zIlrK" crossorigin="anonymous"></script>
-  <script src="/model-page.js?v=417f0b09"></script>
+  <script src="/model-page.js?v=6fa56b30"></script>
   <script>
     const SUPABASE_URL = 'https://api.wrotate.com';
     const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
@@ -96,7 +96,7 @@
       openPost(id) { if (id) location.href = `/p/?id=${encodeURIComponent(id)}`; },
       openProfile(uid, username) { if (username) location.href = `/profile/?u=${encodeURIComponent(username)}`; },
       openModel(id, slug) { if (slug) location.href = `/w/?m=${encodeURIComponent(slug)}`; },
-      openApp() { location.href = 'https://wrotate.com'; },
+      openApp() { location.href = 'https://wrotate.com/?utm_source=model_page&utm_medium=funnel&utm_campaign=' + encodeURIComponent(ctx?.m?.slug || ''); },
       track(ev, props) { if (window.posthog) posthog.capture(ev, { ...props, surface: 'public' }); },
     };
     async function load() {

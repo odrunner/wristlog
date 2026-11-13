@@ -334,7 +334,7 @@ function renderModelPage(el, ctx, h) {
         case 'follow': e.stopPropagation(); H.follow && H.follow(d.uid, t); if (H.track) H.track('model_owner_follow', { model: mm.slug }); break;
         case 'collect': H.addToCollection && H.addToCollection(mm.brand, mm.name); break;
         case 'wish': H.addToWishlist && H.addToWishlist(mm.brand, mm.name); break;
-        case 'app': H.openApp && H.openApp(); break;
+        case 'app': if (H.track) H.track('model_app_cta', { model: mm.slug }); H.openApp && H.openApp(); break;
       }
     };
     el.addEventListener('click', e => {
