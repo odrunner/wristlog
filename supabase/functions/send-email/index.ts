@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 // Transport: ../_shared/mailer.ts (AWS SES).
 import { sendEmail } from "../_shared/mailer.ts";
+import { pickLang } from "../_shared/lang.ts";
 import { trackedConfigSet } from "../_shared/tracked.ts";
 import {
   base64UrlEncode,
@@ -89,7 +90,7 @@ serve(async (req) => {
     // Look up recipient's email preferences
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("email_prefs, display_name, username")
+      .select("email_prefs, display_name, username, language")
       .eq("id", user_id)
       .single();
 
@@ -157,7 +158,9 @@ serve(async (req) => {
     }
 
     // Build email content
-    const content = buildEmailContent(type, actorName, commentBody, mentionSource);
+    // In the language the recipient chose in the app; English when none is recorded.
+    const lang = pickLang(profile.language);
+    const content = buildEmailContent(type, actorName, commentBody, mentionSource, lang);
     if (!content) {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });
     }
@@ -172,7 +175,7 @@ serve(async (req) => {
     const sig = await hmacSign(user_id, category, unsubKey);
     const unsubUrl = buildUnsubUrl(supabaseUrl, user_id, category, sig);
 
-    const html = buildHtmlEmail(content.subject, content.body, unsubUrl);
+    const html = buildHtmlEmail(content.subject, content.body, unsubUrl, lang);
 
     // Send via SES
     const result = await sendEmail({
@@ -180,6 +183,8 @@ serve(async (req) => {
       to: [recipientEmail],
       subject: content.subject,
       html,
+      // What this email IS, for the admin stats — the subject may be translated.
+      msgKey: type,
       headers: {
         "List-Unsubscribe": `<${unsubUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

@@ -1,5 +1,8 @@
 // send-email — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
+import { fill } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { EMAIL_STRINGS } from "./strings.ts";
 
 // Notification type → email category for preference lookup
 // like / comment_like are intentionally excluded — no email for hearts
@@ -67,43 +70,36 @@ export function buildEmailContent(
   actorName: string,
   commentBody?: string,
   mentionSource?: string,
+  lang: Lang = "en",
 ): { subject: string; body: string } | null {
+  const S = EMAIL_STRINGS[lang];
+  const f = (tpl: string) => fill(tpl, { a: actorName });
   const quote = commentBody ? commentQuote(commentBody) : '';
   // "…:" + the blockquote when we have the text, a plain sentence when we don't —
   // otherwise a missing/deleted body left the email ending in a dangling colon.
-  const withQuote = (lead: string) => quote ? `${lead}:${quote}` : `${lead}.`;
+  const withQuote = (lead: string) => quote ? `${lead}${S.colon}${quote}` : `${lead}.`;
   switch (type) {
     case "comment":
-      return { subject: `${actorName} commented on your post`, body: withQuote(`${actorName} commented on your post`) };
     case "comment_also":
-      return { subject: `${actorName} also commented`, body: withQuote(`${actorName} also commented on a post you interacted with`) };
+      return { subject: f(S[type][0]), body: withQuote(f(S[type][1])) };
     case "follow":
-      return { subject: `${actorName} started following you`, body: `${actorName} is now following you on WRotate.` };
     case "follow_request":
-      return { subject: `${actorName} wants to follow you`, body: `${actorName} sent you a follow request on WRotate. Open the app to approve or decline.` };
     case "follow_accepted":
-      return { subject: `${actorName} accepted your follow request`, body: `${actorName} accepted your follow request. You can now see their posts.` };
     case "message_request":
-      return { subject: `${actorName} wants to send you a message`, body: `${actorName} wants to send you a message on WRotate. Open the app to accept or decline.` };
     case "friend_request":
-      return { subject: `${actorName} sent a close friend request`, body: `${actorName} wants to be your close friend on WRotate. Open the app to respond.` };
     case "friend_accepted":
-      return { subject: `${actorName} accepted your friend request`, body: `You and ${actorName} are now close friends on WRotate!` };
     case "club_invite":
-      return { subject: `${actorName} invited you to a club`, body: `${actorName} invited you to join a club on WRotate. Open the app to accept.` };
     case "club_join_request":
-      return { subject: `${actorName} wants to join your club`, body: `${actorName} requested to join your club. Open the app to approve or decline.` };
     case "club_join_accepted":
-      return { subject: `${actorName} approved your club request`, body: `${actorName} approved your request to join the club. Welcome in!` };
     case "club_promoted":
-      return { subject: `You were promoted in a club`, body: `${actorName} made you an owner of the club on WRotate.` };
+      return { subject: f(S[type][0]), body: f(S[type][1]) };
     case "mention": {
       // Only claim a surface when we know it — a caption mention used to be
       // announced as "in a comment:" with nothing after the colon.
-      const where = mentionSource === "post" ? " in a post"
-        : (mentionSource === "comment" || commentBody) ? " in a comment"
-        : "";
-      return { subject: `${actorName} mentioned you`, body: withQuote(`${actorName} mentioned you${where}`) };
+      const lead = mentionSource === "post" ? S.mention[2]
+        : (mentionSource === "comment" || commentBody) ? S.mention[3]
+        : S.mention[1];
+      return { subject: f(S.mention[0]), body: withQuote(f(lead)) };
     }
     default:
       return null;
@@ -165,12 +161,13 @@ export function base64UrlEncode(bytes: Uint8Array): string {
 }
 
 // Build HTML email template — light theme with logo
-export function buildHtmlEmail(subject: string, body: string, unsubUrl?: string): string {
+export function buildHtmlEmail(subject: string, body: string, unsubUrl?: string, lang: Lang = "en"): string {
+  const S = EMAIL_STRINGS[lang];
   const unsubLine = unsubUrl
-    ? `You're receiving this because you have email notifications enabled in WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`
-    : `You're receiving this because you have email notifications enabled in WRotate. To change your preferences, open WRotate &rarr; Profile &rarr; Notifications.`;
+    ? `${S.why}<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`
+    : `${S.why} ${S.whyNoLink}`;
   return `<!DOCTYPE html>
-<html>
+<html${lang === "en" ? "" : ` lang="${lang}"`}>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
@@ -185,7 +182,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl?: string)
           <div style="font-size:14px;color:#555;line-height:1.55;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com/open" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">${S.open}</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

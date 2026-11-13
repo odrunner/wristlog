@@ -246,3 +246,63 @@ Deno.test("buildHtmlEmail — message_request email links /open and has no CSS v
   assertEquals(html.includes('href="https://wrotate.com/open"'), true);
   assertEquals(html.includes("var(--"), false);
 });
+
+// ---- languages ----
+import { EMAIL_STRINGS } from "./strings.ts";
+import { LANGS, pickLang, fill } from "../_shared/lang.ts";
+
+const ALL_TYPES = ["comment", "comment_also", "follow", "follow_request", "follow_accepted", "message_request",
+  "friend_request", "friend_accepted", "club_invite", "club_join_request", "club_join_accepted", "club_promoted", "mention"];
+
+Deno.test("pickLang — a supported code, otherwise English", () => {
+  assertEquals(pickLang("es"), "es");
+  assertEquals(pickLang("pl"), "en");
+  assertEquals(pickLang(null), "en");
+  assertEquals(pickLang(undefined), "en");
+  assertEquals(pickLang(7), "en");
+});
+
+Deno.test("fill — a name with replacement-pattern characters comes out as typed", () => {
+  assertEquals(fill("{a} and {a}", { a: "$& $1" }), "$& $1 and $& $1");
+});
+
+Deno.test("buildEmailContent — every type has text in every language, with the name and no leftover hole", () => {
+  for (const lang of LANGS) {
+    for (const type of ALL_TYPES) {
+      const c = buildEmailContent(type, "Mason", "nice dial", "comment", lang);
+      if (!c) throw new Error(`${lang}/${type}: no content`);
+      assertEquals(/[{}]/.test(c.subject + c.body), false, `${lang}/${type}: leftover hole`);
+      if (type !== "club_promoted") assertEquals(c.subject.includes("Mason"), true, `${lang}/${type}: subject lacks the name`);
+      assertEquals(c.body.includes("Mason"), true, `${lang}/${type}: body lacks the name`);
+    }
+  }
+});
+
+Deno.test("buildEmailContent — a translated language is actually translated", () => {
+  for (const lang of LANGS) {
+    if (lang === "en") continue;
+    for (const type of ALL_TYPES) {
+      const en = buildEmailContent(type, "Mason", undefined, undefined, "en")!;
+      const tr = buildEmailContent(type, "Mason", undefined, undefined, lang)!;
+      assertEquals(tr.subject === en.subject, false, `${lang}/${type}: subject is still English`);
+    }
+  }
+});
+
+Deno.test("buildEmailContent — Spanish mention names the surface; French puts a space before the colon", () => {
+  assertEquals(buildEmailContent("mention", "Mason", undefined, "post", "es")!.body, "Mason te mencionó en una publicación.");
+  assertEquals(buildEmailContent("mention", "Mason", undefined, undefined, "es")!.body, "Mason te mencionó.");
+  assertEquals(buildEmailContent("comment", "Mason", "hi", undefined, "fr")!.body.startsWith("Mason a commenté votre publication&nbsp;:<div"), true);
+});
+
+Deno.test("buildHtmlEmail — footer and button follow the language; English is unchanged", () => {
+  const es = buildHtmlEmail("s", "b", "https://u", "es");
+  assertEquals(es.includes(">Abrir WRotate</a>"), true);
+  assertEquals(es.includes(">Cancelar suscripción</a>"), true);
+  assertEquals(es.includes('<html lang="es">'), true);
+  assertEquals(es.includes("Unsubscribe"), false);
+  assertEquals(buildHtmlEmail("s", "b", "https://u"), buildHtmlEmail("s", "b", "https://u", "en"));
+  assertEquals(buildHtmlEmail("s", "b").includes("To change your preferences, open WRotate"), true);
+  assertEquals(buildHtmlEmail("s", "b", undefined, "de").includes("Um deine Einstellungen zu ändern"), true);
+  for (const lang of LANGS) assertEquals(EMAIL_STRINGS[lang].open.length > 0, true);
+});
