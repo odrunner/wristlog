@@ -412,6 +412,21 @@ export function streakTripped(streak: FailureStreak, limit = TRANSPORT_FAILURE_S
 // holding nothing is not a degenerate staged send, it IS an unstaged send, and
 // leaving a campaign marked HELD with zero held rows would strand a "Send
 // remaining 0" button in the admin list forever.
+// Fisher–Yates over a copy. The staged first batch is a review sample, and the
+// recipient list arrives ordered by profiles.created_at — an unshuffled
+// slice(0, N) would always sample the N OLDEST accounts, whose engagement says
+// nothing about the rest of the audience. Only the staged path shuffles: the
+// legacy positional batch_1/2/3 segments depend on a stable order across
+// invocations and must never go through this.
+export function shuffled<T>(rows: T[], rand: () => number = Math.random): T[] {
+  const out = rows.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 export function splitFirstBatch<T>(rows: T[], firstBatch: unknown): { pending: T[]; held: T[] } {
   const n = Math.trunc(Number(firstBatch));
   if (!Number.isFinite(n) || n <= 0 || n >= rows.length) return { pending: rows, held: [] };

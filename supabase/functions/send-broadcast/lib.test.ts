@@ -23,6 +23,7 @@ import {
   segmentDateGte,
   segmentUserId,
   shouldTripBreaker,
+  shuffled,
   splitFirstBatch,
   streakTripped,
   TRANSPORT_FAILURE_STREAK_LIMIT,
@@ -580,6 +581,28 @@ Deno.test("attempts — rows with no counter behave exactly as before", () => {
   );
   assertEquals(result.failedRows, []);
   assertEquals(result.deferredRows.map((r) => r.id).sort(), [2, 3]);
+});
+
+// ── shuffled ─────────────────────────────────────────────────────────────────
+Deno.test("shuffled — a permutation: same members, original untouched", () => {
+  const input = Array.from({ length: 50 }, (_, i) => i);
+  const frozen = input.slice();
+  const out = shuffled(input);
+  assertEquals(input, frozen); // copy, not in place
+  assertEquals(out.length, input.length);
+  assertEquals(out.slice().sort((a, b) => a - b), frozen);
+});
+
+Deno.test("shuffled — follows the injected rand (deterministic order)", () => {
+  // rand = 0 swaps every element to the front as Fisher–Yates walks down.
+  assertEquals(shuffled([1, 2, 3, 4], () => 0), [2, 3, 4, 1]);
+  // rand just under 1 leaves every element in place.
+  assertEquals(shuffled([1, 2, 3, 4], () => 0.999999), [1, 2, 3, 4]);
+});
+
+Deno.test("shuffled — empty and single-element lists pass through", () => {
+  assertEquals(shuffled([]), []);
+  assertEquals(shuffled([7]), [7]);
 });
 
 // ── splitFirstBatch ──────────────────────────────────────────────────────────

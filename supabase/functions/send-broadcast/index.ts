@@ -36,6 +36,7 @@ import {
   segmentDateGte,
   segmentUserId,
   shouldTripBreaker,
+  shuffled,
   splitFirstBatch,
   streakTripped,
   unsubUrl,
@@ -420,7 +421,10 @@ serve(async (req) => {
       });
       // Staged send: the first `first_batch` rows go out on the next drain, the
       // rest wait as 'held' until the operator has read the batch-1 metrics.
-      const split = splitFirstBatch(baseRows, first_batch);
+      // Shuffled first, so the review batch is a random sample rather than the
+      // N oldest accounts (the list arrives ordered by created_at). Harmless
+      // when nothing is held — queue order doesn't affect an unstaged drain.
+      const split = splitFirstBatch(shuffled(baseRows), first_batch);
       const rows = [
         ...split.pending.map(r => ({ ...r, status: "pending" })),
         ...split.held.map(r => ({ ...r, status: "held" })),
