@@ -162,3 +162,28 @@ Deno.test("share_comments is a labelled category and is included in 'all'", () =
   assertEquals(prefs.share_comments, false);
   assertEquals(applyUnsubscribe({}, "share_comments").share_comments, false);
 });
+
+// ---- languages ----
+import { successPage } from "./lib.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+Deno.test("successPage — English is the page as it always was", () => {
+  const p = successPage("en", "reminders", "/functions/v1/email-unsubscribe?uid=u&cat=all&sig=s");
+  assertEquals(p.title, "Unsubscribed");
+  assertEquals(p.body, `<h1>You've been unsubscribed</h1><p>You won't receive <strong>Daily reminders</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a><p class="muted"><a href="/functions/v1/email-unsubscribe?uid=u&cat=all&sig=s" style="color:#b8941f;">Unsubscribe from all emails</a></p>`);
+  assertEquals(successPage("en", "all", null).body.includes("Unsubscribe from all emails"), false);
+});
+
+Deno.test("successPage — every language labels every category and leaves no hole", () => {
+  for (const lang of LANGS) {
+    for (const cat of ["comments", "mentions", "friends", "clubs", "updates", "reminders", "share_comments", "all"]) {
+      const p = successPage(lang, cat, cat === "all" ? null : "/x");
+      assertEquals(/[{}]/.test(p.body), false, `${lang}/${cat}`);
+      assertEquals(p.body.includes(`<strong>${categoryLabel(cat, lang)}</strong>`), true);
+      if (lang !== "en" && cat !== "clubs" && cat !== "mentions") assertEquals(categoryLabel(cat, lang) === categoryLabel(cat), false, `${lang}/${cat}: label still English`);
+    }
+  }
+  assertEquals(categoryLabel("brand_new", "es"), "brand_new");
+  assertEquals(categoryLabel("constructor", "es"), "constructor");
+  assertEquals(successPage("tr", "reminders", null).body.includes("Günlük hatırlatmalar"), true);
+});

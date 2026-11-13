@@ -7,13 +7,14 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
   applyUnsubscribe,
-  categoryLabel,
+  successPage,
   hmacSign,
   renderPage,
   unsubscribeKeys,
   verifyHmacAny,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pickLang } from "../_shared/lang.ts";
 
 function htmlPage(title: string, body: string): Response {
   return new Response(renderPage(title, body), {
@@ -48,7 +49,7 @@ serve(async (req) => {
 
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
-    .select("email_prefs")
+    .select("email_prefs, language")
     .eq("id", uid)
     .single();
 
@@ -79,11 +80,12 @@ serve(async (req) => {
     console.error("[email-unsubscribe] event log failed:", e);
   }
 
-  const label = categoryLabel(cat);
-  const allLink = cat !== "all"
-    ? `<p class="muted"><a href="/functions/v1/email-unsubscribe?uid=${uid}&cat=all&sig=${await hmacSign(uid, "all", hmacKey)}" style="color:#b8941f;">Unsubscribe from all emails</a></p>`
-    : "";
+  const allHref = cat !== "all"
+    ? `/functions/v1/email-unsubscribe?uid=${uid}&cat=all&sig=${await hmacSign(uid, "all", hmacKey)}`
+    : null;
 
   console.log(`[email-unsubscribe] ${uid} unsubscribed from ${cat}`);
-  return htmlPage("Unsubscribed", `<h1>You've been unsubscribed</h1><p>You won't receive <strong>${label}</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a>${allLink}`);
+  // In the language the member chose in the app.
+  const page = successPage(pickLang(profile.language), cat, allHref);
+  return htmlPage(page.title, page.body);
 });

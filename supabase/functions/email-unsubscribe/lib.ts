@@ -3,6 +3,10 @@
 // Uses only Web Crypto + standard web APIs (crypto.subtle, btoa, TextEncoder),
 // which run under Deno test without any permissions or network.
 
+import { fill } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { UNSUB_STRINGS } from "./strings.ts";
+
 export const CATEGORY_LABELS: Record<string, string> = {
   comments: "Comments & replies",
   mentions: "Mentions",
@@ -15,8 +19,24 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 /** Human label for an unsubscribe category, falling back to the raw category. */
-export function categoryLabel(cat: string): string {
-  return CATEGORY_LABELS[cat] || cat;
+export function categoryLabel(cat: string, lang: Lang = "en"): string {
+  const cats = UNSUB_STRINGS[lang].cats;
+  const own = (o: Record<string, string>) => Object.prototype.hasOwnProperty.call(o, cat) ? o[cat] : "";
+  return own(cats) || own(CATEGORY_LABELS) || cat;
+}
+
+/** The success page: its <title> and the card body, in the member's language.
+ *  `allHref` is the signed "unsubscribe from everything" link, or null when
+ *  this click already was that one. */
+export function successPage(lang: Lang, cat: string, allHref: string | null): { title: string; body: string } {
+  const S = UNSUB_STRINGS[lang];
+  const allLink = allHref
+    ? `<p class="muted"><a href="${allHref}" style="color:#b8941f;">${S.all}</a></p>`
+    : "";
+  return {
+    title: S.title,
+    body: `<h1>${S.h1}</h1><p>${fill(S.wont, { c: categoryLabel(cat, lang) })}</p><p>${S.reenable}</p><a href="https://wrotate.com/open" class="btn">${S.open}</a>${allLink}`,
+  };
 }
 
 /** Base64url HMAC-SHA256 of `${uid}:${cat}` using the given key. */
