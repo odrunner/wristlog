@@ -507,3 +507,15 @@ export function countByLang(rows: { lang?: string | null }[]): Record<string, nu
   for (const r of rows || []) { const l = r.lang || "en"; out[l] = (out[l] || 0) + 1; }
   return out;
 }
+
+// Which page may call this function from a browser: the live site, or the local
+// dev server (localhost, a .local hostname or a private LAN address, port 3000).
+// Anything else is answered as if it were the live site, which the browser then
+// refuses — the same outcome as before for an unknown page.
+export function corsOrigin(origin: string | null | undefined): string {
+  const LIVE = "https://wrotate.com";
+  const o = (origin || "").trim();
+  if (o === LIVE) return LIVE;
+  if (/^http:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]+\.local|192\.168\.\d{1,3}\.\d{1,3}):3000$/i.test(o)) return o;
+  return LIVE;
+}

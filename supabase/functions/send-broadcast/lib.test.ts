@@ -27,6 +27,7 @@ import {
   LANG_TIMEZONES,
   langsToTranslate,
   countByLang,
+  corsOrigin,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -923,4 +924,15 @@ Deno.test("withUnsubFooter — footer follows the row's language; English unchan
   assertEquals(withUnsubFooter(html, "https://u", "es").includes("Unsubscribe"), false);
   assertEquals(withUnsubFooter(html, "https://u"), withUnsubFooter(html, "https://u", "en"));
   assertEquals(withUnsubFooter(html, "https://u").includes(">Unsubscribe</a>"), true);
+});
+
+Deno.test("corsOrigin — the live site and the local dev server, nothing else", () => {
+  assertEquals(corsOrigin("https://wrotate.com"), "https://wrotate.com");
+  assertEquals(corsOrigin("http://ozgurs-mac-mini-4.local:3000"), "http://ozgurs-mac-mini-4.local:3000");
+  assertEquals(corsOrigin("http://localhost:3000"), "http://localhost:3000");
+  assertEquals(corsOrigin("http://192.168.1.246:3000"), "http://192.168.1.246:3000");
+  for (const bad of ["https://evil.example", "http://evil.example:3000", "http://localhost:8080", "https://wrotate.com.evil.example",
+    "http://x.local:3000.evil.example", "http://10.0.0.1:3000", "", null, undefined]) {
+    assertEquals(corsOrigin(bad), "https://wrotate.com");
+  }
 });

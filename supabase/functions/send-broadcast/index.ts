@@ -39,6 +39,7 @@ import {
   filterByLanguageTimezone,
   langsToTranslate,
   countByLang,
+  corsOrigin,
   shouldTripBreaker,
   shuffled,
   splitFirstBatch,
@@ -85,10 +86,16 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-const CORS_HEADERS = {
+// The admin composer runs on the live site and on the local dev server (the
+// Mac Mini's :3000). The origin is set per request by corsOrigin(); every real
+// action still needs the admin's JWT, so this only decides which pages a
+// browser lets talk to the function at all. One admin, one request at a time:
+// a module-level value is enough.
+const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "https://wrotate.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
 };
 
 function jsonResponse(body: object, status = 200) {
@@ -146,6 +153,7 @@ async function factVarsFor(
 
 
 serve(async (req) => {
+  CORS_HEADERS["Access-Control-Allow-Origin"] = corsOrigin(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
