@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=cff64cd9', it: 'i18n/it.js?v=d6c7b896' };
+      var FILES = { es: 'i18n/es.js?v=4e707f4b', it: 'i18n/it.js?v=889c69cf', fr: 'i18n/fr.js?v=42f1dae8', tr: 'i18n/tr.js?v=66649ecd' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2821,6 +2821,10 @@
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">WRotate in Your Language</div>
+        <div class="body-muted">The app now speaks <strong>Spanish, Italian, French and Turkish</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">WRotate Is Now on Android</div>
         <div class="body-muted">The full app &#8212; timegrapher, collection, wear tracking and the social feed &#8212; is now on <strong>Google Play</strong>. Search for WRotate or grab it from the badge on wrotate.com; sign in with the same account and everything syncs across your devices.</div>
       </div>
@@ -3375,6 +3379,16 @@
       <div class="reminder-banner-sub" id="warranty-banner-sub"></div>
     </div>
     <button class="reminder-banner-close" aria-label="Dismiss" onclick="dismissWarrantyBanner()" title="Dismiss">✕</button>
+  </div>
+
+  <!-- ════ LANGUAGE OFFER ════ shown once, in the device's own language, when that
+       language is available and no choice has been made (showLangBanner). -->
+  <div id="lang-banner" class="reminder-banner hidden" role="status" data-i18n-skip>
+    <div class="reminder-banner-body">
+      <div class="reminder-banner-title" id="lang-banner-title"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" id="lang-banner-go" onclick="acceptLangBanner()"></button>
+    <button class="reminder-banner-close" aria-label="Dismiss" onclick="dismissLangBanner()">✕</button>
   </div>
 
   <!-- ════ TRACK PAGE ════ -->
@@ -4473,6 +4487,13 @@
           </div>
           <div class="help-step">
             <div class="help-step-num">7</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Language</div>
+              <div class="help-step-desc">WRotate is available in English, Spanish, Italian, French and Turkish. Pick yours in the <strong>Language</strong> card on your profile; the app reloads in that language and remembers it on this device. Posts, comments and watch names stay as their authors wrote them.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">8</div>
             <div class="help-step-body">
               <div class="help-step-title">Recent Posts grid</div>
               <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed &#8212; or tap the <strong>Posts</strong> title to filter the feed to just that member&#8217;s posts.</div>
@@ -6397,7 +6418,34 @@ function i18nLookup(k) {
 // i18n-runtime:end
 // The languages offered in Profile -> Language, each named in its own language. A new one
 // also needs its file in the loader's FILES (head) and i18n/<code>.json.
-const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano']];
+const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano'], ['fr', 'Français'], ['tr', 'Türkçe']];
+// The one-time offer, written in the language it offers: [sentence, button].
+const I18N_OFFER = {
+  es: ['WRotate está disponible en español', 'Cambiar'],
+  it: ['WRotate è disponibile in italiano', 'Cambia'],
+  fr: ['WRotate est disponible en français', 'Changer'],
+  tr: ['WRotate artık Türkçe', 'Değiştir'],
+};
+// Pure: which language to offer, or null. Offered only while no choice is stored (picking
+// English in the profile, or dismissing, stores one) and the device's first language is
+// one we have. Never guessed from country or timezone.
+function langOffer(stored, deviceLang) {
+  if (stored) return null;
+  const code = String(deviceLang || '').slice(0, 2).toLowerCase();
+  return I18N_OFFER[code] ? code : null;
+}
+function showLangBanner() {
+  const code = langOffer(safeLS.get('wr_lang'), navigator.language);
+  if (!code) return;
+  document.getElementById('lang-banner-title').textContent = I18N_OFFER[code][0];
+  document.getElementById('lang-banner-go').textContent = I18N_OFFER[code][1];
+  document.getElementById('lang-banner').classList.remove('hidden');
+}
+function acceptLangBanner() { setLanguage(langOffer(safeLS.get('wr_lang'), navigator.language)); }
+function dismissLangBanner() {
+  safeLS.set('wr_lang', 'en');
+  document.getElementById('lang-banner').classList.add('hidden');
+}
 function i18nLang() { return window.WR_I18N ? window.WR_I18N.lang : 'en'; }
 // The dictionary is read once, before boot, so a change of language is a reload. The
 // address is rebuilt without ?lang=, which would otherwise win over the new choice.
@@ -8363,7 +8411,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.07.26';
+const APP_VERSION = '13.07.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -34147,6 +34195,7 @@ function initApp() {
   });
   initOEMStraps();
   fetchWeather();
+  showLangBanner();
   initReminder();
   initHeaderPostBtn();
   // ── Two-track social loading for sub-2s feed ──────────────────────────────

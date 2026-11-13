@@ -55,7 +55,7 @@ test('Profile -> Language switches the app and back, English stays the default',
   await boot(page, '/');
   await page.evaluate(() => openProfileModal());
   const chips = page.locator('#pp-lang-chips .chip');
-  await expect(chips).toHaveText(['English', 'Español', 'Italiano']);
+  await expect(chips).toHaveText(['English', 'Español', 'Italiano', 'Français', 'Türkçe']);
   await expect(page.locator('#pp-lang-chips .chip.selected')).toHaveText('English');
   await Promise.all([page.waitForEvent('load'), chips.nth(2).click()]);
   await waitForAppBoot(page);
@@ -87,4 +87,36 @@ test('Spanish: labels the script draws later are translated, user text is not', 
   await page.waitForTimeout(200);
   await expect(page.locator('#i18n-probe .f')).toHaveText('Newest');
   await expect(page.locator('#i18n-probe .e')).toHaveAttribute('placeholder', dict['Search']);
+});
+
+// The one-time offer: device language, never country. Shown only until a choice exists.
+test.describe('language offer banner', () => {
+  test('an English device never sees it', async ({ page }) => {
+    await boot(page, '/');
+    await expect(page.locator('#lang-banner')).toBeHidden();
+    expect(await page.evaluate(() => [langOffer(null, 'en-US'), langOffer(null, 'de-DE'), langOffer(null, ''), langOffer('en', 'it-IT'), langOffer(null, 'IT'), langOffer(null, 'tr-TR')]))
+      .toEqual([null, null, null, null, 'it', 'tr']);
+  });
+
+  test.describe('on an Italian device', () => {
+    test.use({ locale: 'it-IT' });
+    test('offers Italian in Italian, stays English until accepted, then switches', async ({ page }) => {
+      await boot(page, '/');
+      expect(await page.evaluate(() => window.WR_I18N)).toBeUndefined();
+      await expect(page.locator('#lang-banner-title')).toHaveText('WRotate è disponibile in italiano');
+      await Promise.all([page.waitForEvent('load'), page.locator('#lang-banner-go').click()]);
+      await waitForAppBoot(page);
+      expect(await page.evaluate(() => window.WR_I18N.lang)).toBe('it');
+      await expect(page.locator('#lang-banner')).toBeHidden();
+    });
+    test('dismissing keeps English and never asks again', async ({ page }) => {
+      await boot(page, '/');
+      await page.locator('#lang-banner .reminder-banner-close').click();
+      await expect(page.locator('#lang-banner')).toBeHidden();
+      await page.goto('/');
+      await waitForAppBoot(page);
+      await expect(page.locator('#lang-banner')).toBeHidden();
+      expect(await page.evaluate(() => window.WR_I18N)).toBeUndefined();
+    });
+  });
 });
