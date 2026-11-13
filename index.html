@@ -6428,11 +6428,16 @@ function i18nLookup(k) {
   for (var i = 0; i < pats.length; i++) {
     if (k.indexOf(pats[i].chunk) < 0) continue;
     var m = pats[i].re.exec(k);
-    if (m) return pats[i].out.replace(/\{(\d+)\}/g, function (x, n) {
+    if (m) return pats[i].out.replace(/\{(\d+)\}/g, function (x, n, off) {
       var at = pats[i].order.indexOf(+n);
       if (at < 0) return x;
       var c = m[at + 1].trim();
-      return /[A-Za-z]{2}/.test(c) && c.length < 40 ? (i18nLookup(c) || c) : c;
+      var r = /[A-Za-z]{2}/.test(c) && c.length < 40 ? (i18nLookup(c) || c) : c;
+      // Spanish, French, Italian and Portuguese write a weekday in lower case inside a
+      // sentence ("los viernes"); the dictionary entry is capitalised for use on its own.
+      if (off > 0 && r !== c && /^(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day$/.test(c) &&
+          /^(es|fr|it|pt)$/.test(window.WR_I18N.lang || '')) r = r.charAt(0).toLowerCase() + r.slice(1);
+      return r;
     });
   }
   // Several sentences in one line ("… its first wear. One of your top-ranked watches."):
@@ -8464,7 +8469,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.12.07';
+const APP_VERSION = '13.12.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8913,6 +8918,16 @@ async function loadMyProfile() {
     if (_tz && currentUser && myProfile && myProfile.timezone !== _tz) {
       db.from('profiles').update({ timezone: _tz }).eq('id', currentUser.id)
         .then(() => { if (window.myProfile) window.myProfile.timezone = _tz; });
+    }
+  } catch (e) { /* ignore */ }
+  // Record the chosen app language server-side (emails, push and reminders read it).
+  // Only an actual choice is written: no stored wr_lang means the member was never
+  // asked, and that stays NULL rather than being recorded as English.
+  try {
+    const _lang = safeLS.get('wr_lang');
+    if (_lang && /^[a-z]{2}$/.test(_lang) && currentUser && myProfile.language !== _lang) {
+      db.from('profiles').update({ language: _lang }).eq('id', currentUser.id)
+        .then(({ error }) => { if (!error && myProfile) myProfile.language = _lang; });
     }
   } catch (e) { /* ignore */ }
   const theme = isNewUser ? 'light' : (data.theme_preference || 'light');

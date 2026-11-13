@@ -87,7 +87,8 @@ test('Spanish: labels the script draws later are translated, user text is not', 
     '<span class="g">Submariner Date has never been logged — today could be its first wear. One of your top-ranked watches.</span><span class="h">Worn once on Friday</span><span class="i">3 watches</span>'));
   const s1 = dict['{0} has never been logged — today could be its first wear.'].replace('{0}', 'Submariner Date');
   await expect(page.locator('#i18n-probe .g')).toHaveText(s1 + ' ' + dict['One of your top-ranked watches'] + '.');
-  await expect(page.locator('#i18n-probe .h')).toHaveText(dict['Worn once on {0}'].replace('{0}', dict['Friday']));
+  // Spanish writes a weekday in lower case inside a sentence.
+  await expect(page.locator('#i18n-probe .h')).toHaveText(dict['Worn once on {0}'].replace('{0}', dict['Friday'].toLowerCase()));
   await expect(page.locator('#i18n-probe .i')).toHaveText(dict['{0} watches'].replace('{0}', '3'));
   // A translation that spells another English label is not translated twice.
   await page.evaluate(() => { window.WR_I18N.dict['Chain A'] = 'Newest'; document.getElementById('i18n-probe').insertAdjacentHTML('beforeend', '<span class="f">Chain A</span>'); });

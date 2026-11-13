@@ -47,6 +47,16 @@ describe('i18n: translation lookup', () => {
   it('never resolves an inherited property', () => expect(makeT({})('constructor')).toBe('constructor'));
 });
 
+describe('i18n: a weekday inside a sentence', () => {
+  const dict = { 'Friday': 'Viernes', 'Often on {0}s': 'A menudo los {0}', '{0} is your busiest day of all': '{0} es tu día más activo' };
+  const lookup = (lang, d) => new Function('window', runtimeSource(html) + '; return i18nLookup;')({ WR_I18N: { lang, dict: d } });
+  it('is lower-case mid-sentence in Spanish', () => expect(lookup('es', dict)('Often on Fridays')).toBe('A menudo los viernes'));
+  it('keeps its capital at the start of the sentence', () => expect(lookup('es', dict)('Friday is your busiest day of all')).toBe('Viernes es tu día más activo'));
+  it('keeps its capital on its own', () => expect(lookup('es', dict)('Friday')).toBe('Viernes'));
+  it('keeps its capital in German', () =>
+    expect(lookup('de', { 'Friday': 'Freitag', 'Often on {0}s': 'Oft am {0}' })('Often on Fridays')).toBe('Oft am Freitag'));
+});
+
 describe('i18n: extraction', () => {
   it('collects literal tx() and toast() strings, skips interpolated and wordless ones', () => {
     const got = scriptStrings("toast('Saved'); x = tx(\"Couldn't save\", v); tx(`Plain`); toast(`Hi ${n}`); tx('—'); t('Local var call'); toast(msg, 'error'); format('Nope')");
