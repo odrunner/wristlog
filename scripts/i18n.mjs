@@ -65,7 +65,16 @@ const unescape = (s) => s.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => String.fromC
 const clean = (s) => number(decode(unescape(s)).replace(/\s+/g, ' ').trim());
 const wordy = (s) => /[A-Za-z]{2}/.test(s.replace(/\{\d+\}/g, '')) && !/&\w+;/.test(s);
 export function templateStrings(src) {
-  const out = new Set(), flat = holes(src);
+  const out = new Set();
+  // A hole that only picks an ending (${n !== 1 ? 's' : ''}) is written out both ways first,
+  // so the list holds "{0} watch" and "{0} watches", never "{0} watch{1}".
+  const pick = /\$\{[^{}`]*\?\s*'(\w{0,3})'\s*:\s*'(\w{0,3})'\s*\}/g;
+  const variants = [src.replace(pick, '$1'), src.replace(pick, '$2')];
+  for (const v of variants) scan(v, out);
+  return out;
+}
+function scan(src, out) {
+  const flat = holes(src);
   // Twice: with ${…} collapsed (text around a value), and as written, because collapsing
   // also swallows a template nested inside a ${cond ? `…` : ''}.
   for (const m of [...flat.matchAll(/>([^<>`\n]{2,240})</g), ...src.matchAll(/>([^<>`$\n]{2,240})</g)]) {
@@ -99,7 +108,6 @@ export function templateStrings(src) {
     if (/^(Bearer|Content|Authorization|Accept|Enter|Escape|Arrow\w+|Tab|Backspace|Delete|Shift|Meta|Control|Alt|Inter|Segoe UI|Helvetica|Arial|Roboto|Georgia|Menlo|Monaco|Courier New)\b/.test(raw)) continue;
     out.add(clean(raw));
   }
-  return out;
 }
 
 // The walker and tx() exactly as the page runs them, so extraction can never drift from runtime.
@@ -119,7 +127,10 @@ async function markupStrings(html) {
     return await page.evaluate((runtime) => {
       const walk = new Function(runtime + '; return i18nWalk;')();
       const seen = [];
-      walk(document.body, (k) => { seen.push(k); });
+      // wholeOnly: a sentence with inline tags is listed once, whole, not also in pieces.
+      const collect = (k) => { seen.push(k); };
+      collect.wholeOnly = true;
+      walk(document.body, collect);
       return seen;
     }, runtimeSource(html));
   } finally { await browser.close(); }

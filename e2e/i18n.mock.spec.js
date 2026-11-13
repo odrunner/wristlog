@@ -82,6 +82,13 @@ test('Spanish: labels the script draws later are translated, user text is not', 
   await expect(page.locator('#i18n-probe .b')).toHaveText(dict['{0}h ago'].replace('{0}', '3'));
   await expect(page.locator('#i18n-probe .c')).toHaveText(dict['{0}h ago'].replace('{0}', '2') + ' · ' + dict['work']);
   await expect(page.locator('#i18n-probe .d')).toHaveText('My grail Speedmaster');
+  // Sentences built around a watch name or a weekday, and several sentences in one line.
+  await page.evaluate(() => document.getElementById('i18n-probe').insertAdjacentHTML('beforeend',
+    '<span class="g">Submariner Date has never been logged — today could be its first wear. One of your top-ranked watches.</span><span class="h">Worn once on Friday</span><span class="i">3 watches</span>'));
+  const s1 = dict['{0} has never been logged — today could be its first wear.'].replace('{0}', 'Submariner Date');
+  await expect(page.locator('#i18n-probe .g')).toHaveText(s1 + ' ' + dict['One of your top-ranked watches'] + '.');
+  await expect(page.locator('#i18n-probe .h')).toHaveText(dict['Worn once on {0}'].replace('{0}', dict['Friday']));
+  await expect(page.locator('#i18n-probe .i')).toHaveText(dict['{0} watches'].replace('{0}', '3'));
   // A translation that spells another English label is not translated twice.
   await page.evaluate(() => { window.WR_I18N.dict['Chain A'] = 'Newest'; document.getElementById('i18n-probe').insertAdjacentHTML('beforeend', '<span class="f">Chain A</span>'); });
   await page.waitForTimeout(200);

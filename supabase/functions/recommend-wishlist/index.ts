@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1024,
-        messages: [{ role: "user", content: buildRecommendPrompt(payload) }],
+        messages: [{ role: "user", content: buildRecommendPrompt(payload, body?.lang) }],
       }),
     });
     if (!resp.ok) {

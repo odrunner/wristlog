@@ -94,7 +94,17 @@ function wishLine(w: RecWishItem): string {
   return `- [${w.id}] ${watchTitle(w)}${details ? ` — ${details}` : ""}`;
 }
 
-export function buildRecommendPrompt(p: RecPayload): string {
+// Languages the app is offered in (index.html I18N_LANGS). Anything else, including
+// English and a missing value, leaves the prompt exactly as it was.
+const REC_LANGUAGES: Record<string, string> = {
+  es: "Spanish", it: "Italian", fr: "French", tr: "Turkish", de: "German", pt: "European Portuguese",
+};
+export function recLanguageName(lang: unknown): string | null {
+  return typeof lang === "string" && Object.prototype.hasOwnProperty.call(REC_LANGUAGES, lang) ? REC_LANGUAGES[lang] : null;
+}
+
+export function buildRecommendPrompt(p: RecPayload, lang?: unknown): string {
+  const language = recLanguageName(lang);
   const coll = p.collection.length
     ? `THEIR COLLECTION (${p.collection.length} watches):\n${p.collection.map(collectionLine).join("\n")}`
     : "THEIR COLLECTION: empty — this would be their first watch.";
@@ -114,7 +124,7 @@ Rules:
 - Price is a real factor: use the prices given. A pick pitched for daily, beater or worry-free duty must be genuinely inexpensive next to their collection — never call a luxury piece a beater.
 - Every reason must point at their own collection or wear habits, never generic praise.
 - Address the user directly in every reason and the summary: write "you" and "your", never "they" or "their".
-- Plain language a non-expert understands.`;
+- Plain language a non-expert understands.${language ? `\n- Write "oneLiner", "why" and "summary" in ${language}, addressing the user informally. Keep "shortName" as the watch's own name and keep the JSON keys in English.` : ""}`;
 }
 
 export type RecPick = { id: string; shortName: string; oneLiner: string; why: string };

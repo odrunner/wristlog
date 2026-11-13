@@ -1,8 +1,9 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
+import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import {
   buildRecommendPrompt,
   parseRecommendResponse,
   sanitizeRecommendPayload,
+  recLanguageName,
 } from "./lib.ts";
 
 // ── sanitizeRecommendPayload ─────────────────────────────────────────────────
@@ -192,4 +193,23 @@ Deno.test("parse: missing summary and gapTag default to empty strings", () => {
   const out = parseRecommendResponse('{"picks":[{"id":"w1","why":"good"}]}', WISH_IDS);
   assertEquals(out?.summary, "");
   assertEquals(out?.gapTag, "");
+});
+
+Deno.test("buildRecommendPrompt: English and unknown languages leave the prompt untouched", () => {
+  const p = { collection: [], wishlist: [{ id: "w1", brand: "Tudor", name: "Black Bay", tags: [], price: null }] } as any;
+  const base = buildRecommendPrompt(p);
+  assertEquals(buildRecommendPrompt(p, "en"), base);
+  assertEquals(buildRecommendPrompt(p, "xx"), base);
+  assertEquals(buildRecommendPrompt(p, 42), base);
+  assertEquals(buildRecommendPrompt(p, "constructor"), base);
+});
+
+Deno.test("buildRecommendPrompt: a supported language asks for prose in it and keeps the JSON keys", () => {
+  const p = { collection: [], wishlist: [{ id: "w1", brand: "Tudor", name: "Black Bay", tags: [], price: null }] } as any;
+  const it = buildRecommendPrompt(p, "it");
+  assert(it.startsWith(buildRecommendPrompt(p)));
+  assert(it.includes('in Italian'));
+  assert(it.includes('keep the JSON keys in English'));
+  assertEquals(recLanguageName("pt"), "European Portuguese");
+  assertEquals(recLanguageName("en"), null);
 });

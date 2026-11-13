@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=db704468', it: 'i18n/it.js?v=b2e86743', fr: 'i18n/fr.js?v=4306c2fd', tr: 'i18n/tr.js?v=4c1b06b5', de: 'i18n/de.js?v=21a5767d', pt: 'i18n/pt.js?v=846255b6' };
+      var FILES = { es: 'i18n/es.js?v=3d45bb82', it: 'i18n/it.js?v=f1384fe1', fr: 'i18n/fr.js?v=85dab052', tr: 'i18n/tr.js?v=ce135d11', de: 'i18n/de.js?v=bafceb2b', pt: 'i18n/pt.js?v=7b19870d' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -6378,7 +6378,9 @@ function i18nWalk(root, lookup) {
         if (ra) { var rec = done.get(el) || {}; rec[ATTRS[i]] = ra; done.set(el, rec); el.setAttribute(ATTRS[i], ra); }
       }
     }
-    if (isPhrase(el)) { var rp = lookup(norm(el.innerHTML)); if (rp) el.innerHTML = rp; return; }
+    // A sentence with bare inline tags is tried whole first; if there is no entry for it,
+    // its pieces are still translated one by one below.
+    if (isPhrase(el)) { var rp = lookup(norm(el.innerHTML)); if (rp) { el.innerHTML = rp; return; } if (lookup.wholeOnly) return; }
     for (var c = el.firstChild; c; c = c.nextSibling) {
       if (c.nodeType === 1) walk(c);
       else if (c.nodeType === 3) {
@@ -6413,7 +6415,50 @@ function i18nLookup(k) {
     });
     if (hit) return joined;
   }
+  // A sentence built around a name or a watch: "{0} has never been logged" matches
+  // "Submariner Date has never been logged". What a hole caught is itself looked up, so a
+  // weekday or an occasion inside the sentence is translated too; a name comes back as is.
+  var pats = i18nPatterns(d);
+  for (var i = 0; i < pats.length; i++) {
+    if (k.indexOf(pats[i].chunk) < 0) continue;
+    var m = pats[i].re.exec(k);
+    if (m) return pats[i].out.replace(/\{(\d+)\}/g, function (x, n) {
+      var at = pats[i].order.indexOf(+n);
+      if (at < 0) return x;
+      var c = m[at + 1].trim();
+      return /[A-Za-z]{2}/.test(c) && c.length < 40 ? (i18nLookup(c) || c) : c;
+    });
+  }
+  // Several sentences in one line ("… its first wear. One of your top-ranked watches."):
+  // each is looked up on its own, with and without its full stop.
+  var sents = k.split(/(?<=[.!?])\s+(?=\S)/);
+  if (sents.length > 1) {
+    var any = false, outS = sents.map(function (sn) {
+      var r = i18nLookup(sn);
+      if (!r && /\.$/.test(sn)) { r = i18nLookup(sn.slice(0, -1)); if (r) r += '.'; }
+      if (r) any = true;
+      return r || sn;
+    });
+    if (any) return outS.join(' ');
+  }
   if (window.__i18nMiss && /[A-Za-z]{2}/.test(k)) window.__i18nMiss.add(k);
+}
+// Entries with {0}-style holes, as regular expressions, most specific first. Built once.
+// An entry needs real words around its holes (8+ letters), or it would match anything.
+function i18nPatterns(d) {
+  if (i18nPatterns.list) return i18nPatterns.list;
+  var list = [];
+  for (var key in d) {
+    if (key.indexOf('{') < 0 || !Object.prototype.hasOwnProperty.call(d, key) || d[key] === key) continue;
+    var parts = key.split(/\{\d+\}/), letters = parts.join('').replace(/[^A-Za-z]/g, '').length;
+    if (parts.length < 2 || letters < 8) continue;
+    var order = (key.match(/\{\d+\}/g) || []).map(function (h) { return +h.slice(1, -1); });
+    var chunk = parts.slice().sort(function (a, b) { return b.length - a.length; })[0];
+    var re = new RegExp('^' + parts.map(function (p) { return p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('(.+?)') + '$');
+    list.push({ re: re, chunk: chunk, out: d[key], order: order, weight: letters });
+  }
+  list.sort(function (a, b) { return b.weight - a.weight; });
+  return (i18nPatterns.list = list);
 }
 // i18n-runtime:end
 // The languages offered in Profile -> Language, each named in its own language. A new one
@@ -8413,7 +8458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.07.51';
+const APP_VERSION = '13.08.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26801,7 +26846,8 @@ function recommendCacheKey(payload) {
   return h.toString(36) + '-' + s.length;
 }
 
-function recKey() { return currentUser ? 'wr_rec_' + currentUser.id : null; }
+// Picks are prose, so each language keeps its own cached set.
+function recKey() { return currentUser ? 'wr_rec_' + currentUser.id + (i18nLang() === 'en' ? '' : '_' + i18nLang()) : null; }
 
 // Picks load automatically when a surface opens (there is no Recommend button):
 // cache-first (7 days, keyed on the data), one silent background fetch on a
@@ -26835,7 +26881,7 @@ async function fetchRecommendations(payload, key) {
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/recommend-wishlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(i18nLang() === 'en' ? payload : Object.assign({}, payload, { lang: i18nLang() })),
     }, 60000);
     if (r.status === 429) {
       if (vocal) { _recWlVisible = false; toast('Daily AI picks limit reached — try again tomorrow', 'info'); }
@@ -28459,7 +28505,7 @@ async function fetchWeather() {
   // fresh is fine and the wttr.in request drops off most boots.
   try {
     const c = JSON.parse(safeLS.get('wr_weatherCache') || 'null');
-    if (c && c.data && (Date.now() - c.at) < 1800000) {
+    if (c && c.data && (c.lang || 'en') === i18nLang() && (Date.now() - c.at) < 1800000) {
       weatherData = c.data;
       renderWatchRecommendation();
       return;
@@ -28467,18 +28513,20 @@ async function fetchWeather() {
   } catch (_) {}
   try {
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000));
-    const r = await Promise.race([fetch('https://wttr.in/?format=j1'), timeout]);
+    // wttr.in adds the description in the asked language as lang_<code>; English is the plain request.
+    const wl = i18nLang();
+    const r = await Promise.race([fetch('https://wttr.in/?format=j1' + (wl === 'en' ? '' : '&lang=' + wl)), timeout]);
     const d = await r.json();
     const cc    = d.current_condition[0];
     const code  = parseInt(cc.weatherCode);
-    const desc  = cc.weatherDesc[0].value;
+    const desc  = (cc['lang_' + wl] && cc['lang_' + wl][0] && cc['lang_' + wl][0].value) || cc.weatherDesc[0].value;
     const tempC = parseInt(cc.temp_C);
     let condition = 'sunny';
     if      (code >= 176) condition = 'rainy';
     else if (code >= 119) condition = 'cloudy';
     else if (code >= 116) condition = 'partly-cloudy';
     weatherData = { condition, desc, tempC };
-    try { safeLS.set('wr_weatherCache', JSON.stringify({ at: Date.now(), data: weatherData })); } catch (_) {}
+    try { safeLS.set('wr_weatherCache', JSON.stringify({ at: Date.now(), lang: wl, data: weatherData })); } catch (_) {}
   } catch(e) {
     weatherData = null;
   }
