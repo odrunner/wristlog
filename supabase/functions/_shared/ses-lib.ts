@@ -10,6 +10,18 @@ export interface SesMessage {
   // Overrides the isolate-wide config set for this one message. Used to pick
   // the click-tracked set per recipient (see _shared/tracked-lib.ts).
   configSet?: string;
+  // Stable id of WHAT this email is ("follow", "wear_reminder"), sent as the SES
+  // message tag wr_msg. SES echoes tags on every event, ses-webhook stores it in
+  // email_events.msg_key, and the admin stats group by it — so a subject line
+  // translated into the recipient's language still counts in the right row.
+  msgKey?: string;
+}
+
+// SES rejects a tag value outside [A-Za-z0-9_-] (and the whole send with it),
+// so anything else is dropped rather than sent: a lost tag costs a stats row,
+// a rejected send costs the email.
+export function msgTag(key: string | undefined | null): { Name: string; Value: string }[] | null {
+  return key && /^[A-Za-z0-9_-]{1,64}$/.test(key) ? [{ Name: "wr_msg", Value: key }] : null;
 }
 
 export function sesEndpoint(region: string): string {
@@ -32,12 +44,15 @@ export function buildSesPayload(
   if (entries.length) {
     simple.Headers = entries.map(([Name, Value]) => ({ Name, Value }));
   }
-  return {
+  const payload: Record<string, unknown> = {
     FromEmailAddress: msg.from,
     Destination: { ToAddresses: msg.to },
     Content: { Simple: simple },
     ConfigurationSetName: msg.configSet ?? configSet,
   };
+  const tags = msgTag(msg.msgKey);
+  if (tags) payload.EmailTags = tags;
+  return payload;
 }
 
 export function chunk<T>(arr: T[], size: number): T[][] {

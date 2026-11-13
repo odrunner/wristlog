@@ -39,6 +39,7 @@ Deno.test("buildEmailEventRow shapes a row from a SES event", () => {
     created_at: "2026-07-19T10:00:00.000Z",
     raw: ev,
     sns_message_id: "sns-msg-1",
+    msg_key: null,
   });
 });
 
@@ -156,4 +157,13 @@ Deno.test("buildEmailEventRow falls back to mail.timestamp for Send", () => {
 Deno.test("buildEmailEventRow falls back to now when no timestamp at all", () => {
   const row = buildEmailEventRow({ eventType: "Open" }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-30T00:00:00.000Z");
+});
+
+Deno.test("buildEmailEventRow — msg_key comes from the wr_msg tag, null without one", () => {
+  const tagged = buildEmailEventRow(
+    { eventType: "Open", mail: { messageId: "m1", tags: { "ses:configuration-set": ["wrotate-events"], wr_msg: ["follow"] } } },
+    "2026-11-13T10:00:00.000Z", "sns-1");
+  assertEquals(tagged.msg_key, "follow");
+  assertEquals(buildEmailEventRow({ eventType: "Send", mail: { tags: {} } }, "2026-11-13T10:00:00.000Z", null).msg_key, null);
+  assertEquals(buildEmailEventRow({ eventType: "Send", mail: {} }, "2026-11-13T10:00:00.000Z", null).msg_key, null);
 });

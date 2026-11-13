@@ -52,3 +52,11 @@ Deno.test("buildSesPayload honours a per-message configSet override", () => {
   ) as Record<string, any>;
   assertEquals(p.ConfigurationSetName, "wrotate-events-tracked");
 });
+
+Deno.test("buildSesPayload — msgKey becomes the wr_msg tag; none or an unsafe one sends no tags", () => {
+  const base = { from: "f@x.com", to: ["a@b.com"], subject: "s", html: "h" };
+  assertEquals(buildSesPayload({ ...base, msgKey: "wear_reminder" }, "cs").EmailTags, [{ Name: "wr_msg", Value: "wear_reminder" }]);
+  assertEquals("EmailTags" in buildSesPayload(base, "cs"), false);
+  assertEquals("EmailTags" in buildSesPayload({ ...base, msgKey: "has space" }, "cs"), false);
+  assertEquals("EmailTags" in buildSesPayload({ ...base, msgKey: "" }, "cs"), false);
+});

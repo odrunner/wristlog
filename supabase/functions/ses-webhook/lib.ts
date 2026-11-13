@@ -31,6 +31,9 @@ export interface SesEvent {
     timestamp?: string;
     destination?: string[];
     commonHeaders?: { subject?: string };
+    // Message tags, echoed on every event. wr_msg is the sender's message id
+    // (_shared/ses-lib.ts msgKey).
+    tags?: Record<string, string[] | undefined>;
   };
 }
 
@@ -48,6 +51,7 @@ export function buildEmailEventRow(ev: SesEvent, nowIso: string, snsMessageId: s
   created_at: string;
   raw: unknown;
   sns_message_id: string | null;
+  msg_key: string | null;
 } {
   const mail = ev.mail ?? {};
   return {
@@ -58,6 +62,7 @@ export function buildEmailEventRow(ev: SesEvent, nowIso: string, snsMessageId: s
     created_at: sesEventTimestamp(ev) ?? nowIso,
     raw: ev,
     sns_message_id: snsMessageId,
+    msg_key: mail.tags?.wr_msg?.[0] ?? null,
   };
 }
 

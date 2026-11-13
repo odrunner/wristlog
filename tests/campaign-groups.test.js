@@ -19,6 +19,26 @@ const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
 // Reported 2026-07-27: same class of bug for "X accepted your friend request"
 // and for the personalized fun-fact subjects.
 
+describe('campaignSubject — emails tagged with a message id', () => {
+  it('lands a tagged email in the row its English subject used', () => {
+    expect(campaignSubject('msg:follow')).toBe('Connections');
+    expect(campaignSubject('msg:friend_accepted')).toBe('Connections');
+    expect(campaignSubject('msg:comment_also')).toBe('Comments');
+    expect(campaignSubject('msg:mention')).toBe('Mentions');
+    expect(campaignSubject('msg:wear_reminder')).toBe("What's on your wrist today?");
+  });
+  it('keeps the recurring wear reminder in the Recurring group', () => {
+    expect(campaignGroupOf(campaignSubject('msg:wear_reminder'), new Set()).group).toBe(3);
+    expect(campaignGroupOf(campaignSubject('msg:mention'), new Set()).group).toBe(1);
+  });
+  it('shows an unknown id as itself rather than guessing', () => {
+    expect(campaignSubject('msg:brand_new')).toBe('msg:brand_new');
+  });
+  it('is not fooled by an inherited property name', () => {
+    expect(campaignSubject('msg:constructor')).toBe('msg:constructor');
+  });
+});
+
 describe('campaignSubject', () => {
   it('collapses mentions into one bucket', () => {
     expect(campaignSubject('masont mentioned you')).toBe('Mentions');

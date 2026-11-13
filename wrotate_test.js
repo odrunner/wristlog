@@ -98,7 +98,25 @@ export function brandRequestTitle(name) {
 // watch ("A fun fact about your Seiko Sekonda" — the day-3 onboarding drip).
 export const CAMPAIGN_FUNFACT_DRIP = 'A fun fact about your watch';
 export const CAMPAIGN_WINBACK_FUNFACT = 'Your watches miss you';
+// Emails tagged by their sender arrive keyed 'msg:<id>' instead of by subject
+// (email_events.msg_key, sql/2026-11-13-email-msg-key.sql), because a subject
+// may be written in the recipient's language. Each id maps onto the same row
+// its English subject always landed in. An id missing here shows as itself.
+const CAMPAIGN_MSG_KEYS = {
+  follow: 'Connections', follow_request: 'Connections', follow_accepted: 'Connections',
+  friend_request: 'Connections', friend_accepted: 'Connections', message_request: 'Connections',
+  comment: 'Comments', comment_also: 'Comments',
+  mention: 'Mentions',
+  club_invite: 'Clubs', club_join_request: 'Clubs', club_join_accepted: 'Clubs', club_promoted: 'Clubs',
+  wear_reminder: "What's on your wrist today?",
+  remeasure_d7: 'Did it hold its rate?',
+  share_comment: 'Comments on shared pages',
+};
 export function campaignSubject(subj) {
+  if (typeof subj === 'string' && subj.startsWith('msg:')) {
+    const k = subj.slice(4);
+    return Object.prototype.hasOwnProperty.call(CAMPAIGN_MSG_KEYS, k) ? CAMPAIGN_MSG_KEYS[k] : subj;
+  }
   const t = (subj || '').toLowerCase();
   if (t.includes('mentioned you')) return 'Mentions';
   if (t.includes('commented')) return 'Comments';
