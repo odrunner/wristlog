@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { apnsHost, buildBadgePushMessage, createAPNsJWT, sendPush } from "./lib.ts";
 import { serviceKey, publishableKey } from "../_shared/keys.ts";
 import { sendFcm } from "../_shared/fcm.ts";
+import { pickLang } from "../_shared/lang.ts";
 
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
@@ -60,7 +61,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const badgeNames: string[] = Array.isArray(body?.badgeNames) ? body.badgeNames : [];
-    const message = buildBadgePushMessage(badgeNames);
+    // The client says which language its badge names are in (it translated them).
+    const message = buildBadgePushMessage(badgeNames, pickLang(body?.lang));
     if (!message) {
       return json({ skipped: "no badges" }, 200);
     }

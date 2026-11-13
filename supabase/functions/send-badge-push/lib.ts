@@ -1,18 +1,33 @@
 // send-badge-push — pure logic + APNs helpers (self-contained; mirrors send-push's
 // stable APNs code intentionally — see spec "Accepted tradeoff").
 
+import { fill } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+
 const BUNDLE_ID = "com.wrotate.Wrotate";
+
+// [one badge ({b} = its name), several ({n} = how many)]. The client sends the
+// names already in its own language, with that language, so frame and name match.
+export const BADGE_STRINGS: Record<Lang, [string, string]> = {
+  en: ['You earned the "{b}" badge', "You earned {n} badges!"],
+  es: ['Ganaste la insignia "{b}"', "¡Ganaste {n} insignias!"],
+  it: ['Hai ottenuto il badge "{b}"', "Hai ottenuto {n} badge!"],
+  fr: ["Vous avez obtenu le badge « {b} »", "Vous avez obtenu {n} badges !"],
+  tr: ['"{b}" rozetini kazandın', "{n} rozet kazandın!"],
+  de: ["Du hast das Abzeichen „{b}“ erhalten", "Du hast {n} Abzeichen erhalten!"],
+  pt: ['Ganhaste a insígnia "{b}"', "Ganhaste {n} insígnias!"],
+};
 
 // Badge name list -> single APNs message. null when there is nothing to send.
 export function buildBadgePushMessage(
   badgeNames: string[],
+  lang: Lang = "en",
 ): { title: string; body: string } | null {
   if (!badgeNames || badgeNames.length === 0) return null;
   const title = "WRotate";
-  if (badgeNames.length === 1) {
-    return { title, body: `You earned the "${badgeNames[0]}" badge 🏅` };
-  }
-  return { title, body: `You earned ${badgeNames.length} badges! 🏅` };
+  const S = BADGE_STRINGS[lang];
+  if (badgeNames.length === 1) return { title, body: fill(S[0], { b: String(badgeNames[0]) }) };
+  return { title, body: fill(S[1], { n: String(badgeNames.length) }) };
 }
 
 // `badge` is the recipient's real unread count; omitted when unknown, which

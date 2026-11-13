@@ -7242,7 +7242,8 @@ async function notifyBadgesEarned(badges) {
     loadNotifications();
   } catch (e) { console.warn('[Badges] notif insert failed:', e?.message); }
   try {
-    await db.functions.invoke('send-badge-push', { body: { badgeNames: badges.map(b => b.name) } });
+    // Names go out in the app's language, with that language, so the push reads as one sentence.
+    await db.functions.invoke('send-badge-push', { body: { badgeNames: badges.map(b => tx(b.name)), lang: i18nLang() } });
   } catch (e) { console.warn('[Badges] push invoke failed:', e?.message); }
 }
 
@@ -8469,7 +8470,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.12.45';
+const APP_VERSION = '13.12.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
