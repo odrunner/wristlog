@@ -1,6 +1,6 @@
 // send-broadcast — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
-import { SHELL_STRINGS } from "../_shared/lang.ts";
+import { aiNote, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 
 // Signup-window cohorts. Each cohort maps to an optional [gte, lt) created_at range.
@@ -263,6 +263,7 @@ export function unsubFooter(unsubUrl: string, lang: Lang = "en"): string {
     `<tr><td align="center" style="padding:0 20px 40px;">` +
     `<table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">` +
     `<tr><td align="center" style="font-size:11px;color:#999;line-height:1.5;">` +
+    aiNote(lang) +
     `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · ` +
     `<a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>` +
     `</td></tr></table></td></tr></table>`;

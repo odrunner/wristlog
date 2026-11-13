@@ -5,7 +5,7 @@
 // Reminder message builders
 // ---------------------------------------------------------------------------
 
-import { fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import { aiNote, fill, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { WEAR_STRINGS } from "./strings.ts";
 
@@ -177,7 +177,7 @@ export async function sendPush(
 // Wrap a campaign body in the branded HTML email shell.
 export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, lang: Lang = "en"): string {
   const S = SHELL_STRINGS[lang];
-  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`;
+  const unsubLine = `${aiNote(lang)}<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>

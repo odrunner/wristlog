@@ -1,4 +1,4 @@
-import { fill, SHELL_STRINGS } from "./lang.ts";
+import { aiNote, fill, SHELL_STRINGS } from "./lang.ts";
 import type { Lang } from "./lang.ts";
 import { SHARE_COMMENT_STRINGS } from "./share-comment-strings.ts";
 // share-comments — pure logic shared by share-wishlist and share-watches.
@@ -208,7 +208,7 @@ export function buildCommentEmail(
     ${linkLine}
     <blockquote style="margin:0 0 16px;padding:10px 14px;border-left:3px solid #b8941f;background:#faf7ee;border-radius:6px;white-space:pre-wrap;">${esc(comment.body)}</blockquote>
     <p style="margin:0;">${S.outro}</p>`;
-  const unsubLine = `<a href="${esc(unsubUrl)}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
+  const unsubLine = `${aiNote(lang)}<a href="${esc(unsubUrl)}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>

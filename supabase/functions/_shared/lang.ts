@@ -47,3 +47,19 @@ export const SHELL_STRINGS: Record<Lang, { open: string; unsub: string; manage: 
   de: { open: "WRotate öffnen", unsub: "Abmelden", manage: "Einstellungen verwalten" },
   pt: { open: "Abrir o WRotate", unsub: "Cancelar subscrição", manage: "Gerir preferências" },
 };
+
+// Every email that is not in English was translated by a machine, and says so:
+// one line above the unsubscribe links, in the reader's language, with where to
+// tell us about wording that reads wrong. English emails carry nothing.
+export const AI_NOTE: Record<Lang, string> = {
+  en: "",
+  es: "Este correo se tradujo automáticamente con IA. Si algo suena raro, cuéntanoslo desde Enviar comentarios en la app.",
+  it: "Questa email è stata tradotta automaticamente con l'IA. Se qualcosa suona strano, scrivici da Invia feedback nell'app.",
+  fr: "Cet e-mail a été traduit automatiquement par IA. Si une tournure vous semble maladroite, dites-le-nous via Envoyer un retour dans l'app.",
+  tr: "Bu e-posta yapay zekâ ile otomatik olarak çevrildi. Kulağa tuhaf gelen bir şey varsa uygulamadaki Geri bildirim gönder üzerinden bize yaz.",
+  de: "Diese E-Mail wurde automatisch mit KI übersetzt. Wenn etwas seltsam klingt, schreib uns über Feedback senden in der App.",
+  pt: "Este e-mail foi traduzido automaticamente por IA. Se algo te soar estranho, diz-nos em Enviar feedback na app.",
+};
+export function aiNote(lang: Lang): string {
+  return AI_NOTE[lang] ? `${AI_NOTE[lang]}<br>` : "";
+}

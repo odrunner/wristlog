@@ -1,6 +1,6 @@
 // send-email — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
-import { fill } from "../_shared/lang.ts";
+import { aiNote, fill } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { EMAIL_STRINGS } from "./strings.ts";
 
@@ -164,8 +164,8 @@ export function base64UrlEncode(bytes: Uint8Array): string {
 export function buildHtmlEmail(subject: string, body: string, unsubUrl?: string, lang: Lang = "en"): string {
   const S = EMAIL_STRINGS[lang];
   const unsubLine = unsubUrl
-    ? `${S.why}<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`
-    : `${S.why} ${S.whyNoLink}`;
+    ? `${aiNote(lang)}${S.why}<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${S.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${S.manage}</a>`
+    : `${aiNote(lang)}${S.why} ${S.whyNoLink}`;
   return `<!DOCTYPE html>
 <html${lang === "en" ? "" : ` lang="${lang}"`}>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>

@@ -936,3 +936,17 @@ Deno.test("corsOrigin — the live site and the local dev server, nothing else",
     assertEquals(corsOrigin(bad), "https://wrotate.com");
   }
 });
+
+// ---- the "translated by AI" line ----
+import { AI_NOTE, LANGS } from "../_shared/lang.ts";
+
+Deno.test("AI-translation note — every non-English footer carries it, English never does", () => {
+  const html = "<html><body><p>x</p></body></html>";
+  for (const lang of LANGS) {
+    const out = withUnsubFooter(html, "https://u", lang);
+    if (lang === "en") { assertEquals(AI_NOTE.en, ""); assertEquals(/AI|IA|KI/.test(unsubFooter("https://u")), false); continue; }
+    assertEquals(AI_NOTE[lang].length > 20, true);
+    assertEquals(out.includes(AI_NOTE[lang] + "<br>"), true, `${lang}: note missing`);
+    assertEquals(out.indexOf(AI_NOTE[lang]) < out.indexOf("https://u"), true, `${lang}: note should sit above the links`);
+  }
+});

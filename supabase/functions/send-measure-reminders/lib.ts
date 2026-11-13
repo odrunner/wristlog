@@ -1,7 +1,7 @@
 // Supabase Edge Function: send-measure-reminders — pure helpers.
 // Copy for the re-measure / drift push, built from measurement_sessions (saved or not).
 
-import { fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import { aiNote, fill, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { MEASURE_STRINGS } from "./strings.ts";
 
@@ -94,7 +94,7 @@ export function buildRemeasureD7Email(t: { brand: string | null; name: string | 
 
 export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "remeasure-d7", lang: Lang = "en"): string {
   const SH = SHELL_STRINGS[lang];
-  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
+  const unsubLine = `${aiNote(lang)}<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(subject)}</title></head>

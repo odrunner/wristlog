@@ -1,4 +1,4 @@
-import { SHELL_STRINGS } from "../_shared/lang.ts";
+import { aiNote, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 // run-campaign — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
@@ -67,7 +67,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, 
   // Per-campaign utm tag. Defaulted rather than required so the broadcast
   // preview path (which passes no campaign) still renders a valid link.
   const ctaHref = campaignLink(campaignSlug(campaign));
-  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
+  const unsubLine = `${aiNote(lang)}<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   const footerRow = unsubUrl
     ? `
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
