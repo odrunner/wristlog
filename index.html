@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=3d45bb82', it: 'i18n/it.js?v=f1384fe1', fr: 'i18n/fr.js?v=85dab052', tr: 'i18n/tr.js?v=ce135d11', de: 'i18n/de.js?v=6fc5bc32', pt: 'i18n/pt.js?v=3143013d' };
+      var FILES = { es: 'i18n/es.js?v=fc4e106f', it: 'i18n/it.js?v=ba301bb2', fr: 'i18n/fr.js?v=c0740af6', tr: 'i18n/tr.js?v=87b0f054', de: 'i18n/de.js?v=d50a0653', pt: 'i18n/pt.js?v=42e12150' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2822,7 +2822,7 @@
       </div>
       <div class="stack-3">
         <div class="item-title">WRotate in Your Language</div>
-        <div class="body-muted">The app now speaks <strong>Spanish, Italian, French, Turkish, German and Portuguese</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
+        <div class="body-muted">The app now speaks <strong>Spanish, Italian, French, Turkish, German and Portuguese</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over, and so do the emails, notifications and fun facts we send you. Your choice follows your account to every device. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">WRotate Is Now on Android</div>
@@ -4521,7 +4521,7 @@
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">Language</div>
-              <div class="help-step-desc">WRotate is available in several languages. Pick yours in the <strong>Language</strong> card on your profile; the app reloads in that language and remembers it on this device. Posts, comments and watch names stay as their authors wrote them.</div>
+              <div class="help-step-desc">WRotate is available in several languages. Pick yours in the <strong>Language</strong> card on your profile; the app reloads in that language and remembers it on this device. Posts, comments and watch names stay as their authors wrote them. Emails, notifications and fun facts follow the same choice, and so does any other device you sign in on.</div>
             </div>
           </div>
           <div class="help-step">
@@ -8525,7 +8525,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.13.18';
+const APP_VERSION = '13.13.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9007,7 +9007,14 @@ async function loadMyProfile() {
   // Only an actual choice is written: no stored wr_lang means the member was never
   // asked, and that stays NULL rather than being recorded as English.
   try {
-    const _lang = safeLS.get('wr_lang');
+    let _lang = safeLS.get('wr_lang');
+    // A language chosen on another device follows the account to this one: with
+    // no choice stored here yet, take the profile's. Another language reloads
+    // once into it; English is just remembered, so the offer banner stays away.
+    if (!_lang && myProfile.language && I18N_LANGS.some(([c]) => c === myProfile.language)) {
+      if (myProfile.language !== 'en') { setLanguage(myProfile.language); return; }
+      safeLS.set('wr_lang', 'en'); _lang = 'en';
+    }
     if (_lang && /^[a-z]{2}$/.test(_lang) && currentUser && myProfile.language !== _lang) {
       db.from('profiles').update({ language: _lang }).eq('id', currentUser.id)
         .then(({ error }) => { if (!error && myProfile) myProfile.language = _lang; });

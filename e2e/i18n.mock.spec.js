@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES } from './helpers.js';
+import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES, FAKE_PROFILE } from './helpers.js';
 
 // Languages (docs/i18n.md). English is the default and must stay byte-identical in
 // behaviour: no language file requested, no text changed. ?lang=es stores the choice,
@@ -95,6 +95,45 @@ test('Spanish: labels the script draws later are translated, user text is not', 
   await page.waitForTimeout(200);
   await expect(page.locator('#i18n-probe .f')).toHaveText('Newest');
   await expect(page.locator('#i18n-probe .e')).toHaveAttribute('placeholder', dict['Search']);
+});
+
+// A language chosen on another device is on the profile; a device with no choice of
+// its own adopts it. A device that has chosen keeps its choice.
+test.describe('language follows the account', () => {
+  const bootWith = async (page, language) => {
+    await injectSession(page);
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [], profile: { ...FAKE_PROFILE, language } });
+    await page.goto('/');
+  };
+  test('a fresh device loads the profile language', async ({ page }) => {
+    await bootWith(page, 'it');
+    await page.waitForFunction(() => window.WR_I18N && window.WR_I18N.lang === 'it');
+    await waitForAppBoot(page);
+    expect(await page.evaluate(() => safeLS.get('wr_lang'))).toBe('it');
+    expect(await page.evaluate(() => document.documentElement.lang)).toBe('it');
+  });
+  test('English on the profile is remembered without loading anything', async ({ page }) => {
+    const asked = [];
+    page.on('request', (r) => { if (r.url().includes('/i18n/')) asked.push(r.url()); });
+    await bootWith(page, 'en');
+    await waitForAppBoot(page);
+    await page.waitForFunction(() => safeLS.get('wr_lang') === 'en');
+    expect(asked).toEqual([]);
+    expect(await page.evaluate(() => window.WR_I18N)).toBeUndefined();
+  });
+  test('a device that already chose keeps its own choice', async ({ page }) => {
+    await injectSession(page);
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: [], profile: { ...FAKE_PROFILE, language: 'it' } });
+    await page.goto('/?lang=es');
+    await waitForAppBoot(page);
+    expect(await page.evaluate(() => window.WR_I18N.lang)).toBe('es');
+  });
+  test('no language on the profile changes nothing', async ({ page }) => {
+    await bootWith(page, null);
+    await waitForAppBoot(page);
+    expect(await page.evaluate(() => window.WR_I18N)).toBeUndefined();
+    expect(await page.evaluate(() => safeLS.get('wr_lang'))).toBeNull();
+  });
 });
 
 // The one-time offer: device language, never country. Shown only until a choice exists.
