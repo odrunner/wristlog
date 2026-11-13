@@ -93,11 +93,12 @@ test.describe('Landing page (mocked)', () => {
     await expect(page.locator('.landing-auth .btn-apple')).toBeVisible();
   });
 
-  test('App Store badge visible above sign-in buttons', async ({ page }) => {
+  test('App Store and Google Play badges visible above sign-in buttons', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    await expect(page.locator('.landing-app-badge img')).toBeVisible();
+    await expect(page.locator('.landing-app-badge img[alt="Download on the App Store"]')).toBeVisible();
+    await expect(page.locator('.landing-app-badge img[alt="Get it on Google Play"]')).toBeVisible();
   });
 });
 

@@ -300,8 +300,11 @@
     .landing-tagline { font-size:var(--fs-xl); color:var(--muted); line-height:var(--lh-body); text-align:center; margin-bottom:var(--space-5); }
     .landing-auth { display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-6); margin-bottom:var(--space-2-5); }
     .landing-auth .btn-google, .landing-auth .btn-apple, .landing-auth .btn-demo { font-size:var(--fs-md); padding:var(--space-2) var(--space-3-5); max-width:var(--size-70); margin-left:auto; margin-right:auto; }
-    .landing-app-badge { text-align:center; margin-bottom:var(--space-0-5); }
+    .landing-app-badge { display:flex; justify-content:center; align-items:center; gap:var(--space-1-5); margin-bottom:var(--space-0-5); }
     .landing-app-badge img { height:var(--size-8); }
+    /* Google's badge PNG carries transparent padding (~20% of its height), so it
+       renders taller to match the Apple badge's visible height. */
+    .landing-app-badge .play-badge img { height:var(--size-10); }
     .landing-fine-print { font-size:var(--fs-xs); color:var(--muted); text-align:center; line-height:var(--lh-body); margin-bottom:var(--space-4); }
     .landing-fine-print a { color:var(--muted); text-decoration:underline; }
     .landing-divider { height:var(--size-px); background:var(--border); margin:0 calc(-1 * var(--space-5)) var(--space-4); }
@@ -2722,6 +2725,9 @@
       <div class="landing-app-badge" id="landing-app-badge">
         <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" onclick="trackAppStoreClick()">
           <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
+        </a>
+        <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.wrotate.app" target="_blank" rel="noopener noreferrer" onclick="trackPlayStoreClick()">
+          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
         </a>
       </div>
       <script>
@@ -7610,6 +7616,11 @@ function trackAppStoreClick() {
   trackVisit({ utm_source: 'appstore_click', utm_medium: 'landing', path: window.location.pathname, referrer: document.referrer || null });
 }
 
+function trackPlayStoreClick() {
+  if (window.posthog) posthog.capture('playstore_clicked');
+  trackVisit({ utm_source: 'playstore_click', utm_medium: 'landing', path: window.location.pathname, referrer: document.referrer || null });
+}
+
 // Wrap a promise with a timeout to prevent hung queries
 function withTimeout(promise, ms = 10000) {
   let tid;
@@ -8202,7 +8213,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.18.59';
+const APP_VERSION = '12.19.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
