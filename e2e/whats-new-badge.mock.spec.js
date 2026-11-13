@@ -25,9 +25,12 @@ test.describe("What's New unread dot (wn_badge, mocked)", () => {
 
     // Open What's New the way a user does: Help page button.
     await page.evaluate(() => showHelpPage());
+    // The header dot lands on Help; a second dot marks the What's New button there.
+    await expect(page.locator('#wn-dot-help')).toBeVisible();
     await page.click('#page-help button:has-text("What\'s New")');
     await expect(page.locator('#whats-new-modal')).toBeVisible();
     await expect(page.locator('#wn-dot')).toBeHidden();
+    await expect(page.locator('#wn-dot-help')).toBeHidden();
 
     // Seen marker persists: a reload with unchanged content shows no dot.
     await page.goto('/');
@@ -47,6 +50,8 @@ test.describe("What's New unread dot (wn_badge, mocked)", () => {
     await boot(page, 'control');
     await expect(page.locator('#help-btn')).toBeVisible();
     await expect(page.locator('#wn-dot')).toBeHidden();
+    await page.evaluate(() => showHelpPage());
+    await expect(page.locator('#wn-dot-help')).toBeHidden();
   });
 
   test('unknown key (experiment deleted): no dot, no errors', async ({ page }) => {

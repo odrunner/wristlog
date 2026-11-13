@@ -1658,6 +1658,8 @@
     .help-btn:hover { box-shadow: var(--ring); color: var(--text); }
     /* What's New unread dot (experiment wn_badge) */
     .wn-dot { position: absolute; top: var(--space-0-5); right: var(--space-0-5); width: var(--size-2); height: var(--size-2); border-radius: var(--radius-round); background: var(--gold); }
+    /* Same dot, inline after the Help page's What's New label, so the header dot has somewhere to lead */
+    .wn-dot.wn-dot-inline { position: static; flex-shrink: 0; }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
@@ -3943,7 +3945,7 @@
     <div class="help-wrap">
 
       <div class="u-gap-2 u-fw--wrap u-mb-8 u-d-flex">
-        <button class="btn btn-ghost btn-grow u-ws-nowrap u-justify-center" onclick="openWhatsNew()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost btn-grow u-ws-nowrap u-justify-center" onclick="openWhatsNew()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New<span id="wn-dot-help" class="wn-dot wn-dot-inline hidden" aria-hidden="true"></span></button>
         <button class="btn btn-ghost btn-grow u-ws-nowrap u-justify-center" onclick="shareApp()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
         <button class="btn btn-primary btn-grow u-ws-nowrap u-justify-center" onclick="openFeedback()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
@@ -8218,7 +8220,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.47';
+const APP_VERSION = '12.21.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19099,10 +19101,12 @@ function wnVersion() {
   return h.toString(36);
 }
 function updateWnBadge() {
-  const dot = document.getElementById('wn-dot');
-  if (!dot) return;
   const show = !!currentUser && experiment('wn_badge') && safeLS.get('wristlog_wn_seen') !== wnVersion();
-  dot.classList.toggle('hidden', !show);
+  // Header ? dot + the matching dot on the Help page's What's New button.
+  ['wn-dot', 'wn-dot-help'].forEach(id => {
+    const dot = document.getElementById(id);
+    if (dot) dot.classList.toggle('hidden', !show);
+  });
 }
 document.addEventListener('experiments:loaded', updateWnBadge);
 
