@@ -8218,7 +8218,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.12';
+const APP_VERSION = '12.20.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19687,13 +19687,15 @@ The WRotate team`,
 
 // Android launched on Google Play (open testing → released, 2026-11). The hero
 // is the platform itself — same account, everything syncs — followed by the
-// What's-New tail nobody has been emailed about yet: private messages, the
-// unified feed search + views, and the month-pattern slide. The Play link sits
-// in the hero paragraph; the template's footer already carries both store
-// badges. Seeded as a DRAFT only: nothing sends until it is queued and the
-// drain runs.
+// What's-New tail nobody has been emailed about yet: private messages and the
+// unified feed search + views. The Play link sits in the hero paragraph; the
+// template's footer already carries both store badges. Screenshots captured by
+// e2e/_screenshots-android-email.mjs on the mocked setup. Seeded as a DRAFT
+// only: nothing sends until it is queued and the drain runs.
 function seedAndroidWhatsNewDraft() {
-  const FLAG = 'wr_seed_android_whats_new_draft_v1';
+  // v2 re-seeds over v1: drops the month-pattern item, adds the two screenshots
+  // (the top menu with the Messages envelope, the search sheet with results).
+  const FLAG = 'wr_seed_android_whats_new_draft_v2';
   if (safeLS.get(FLAG)) return;
   safeLS.set(FLAG, '1');
   const SUBJECT = 'WRotate is now on Android';
@@ -19708,16 +19710,21 @@ function seedAndroidWhatsNewDraft() {
 
 And while we were building that, the app kept moving. A few more things you may have missed:
 
-<b>Private messages.</b> Send a message request from any member&#8217;s profile; once they accept, you can chat and share posts privately. You choose who can reach you under <b>Privacy</b>.
+<b>Private messages.</b> Send a message request from any member&#8217;s profile; once they accept, you can chat and share posts privately. Your inbox is the envelope in the top menu. You choose who can reach you under <b>Privacy</b>.
+
+[img1]
 
 <b>Search watches, not just people.</b> The search bar at the top of the feed now finds watch models too &#8212; type Speedmaster, SKX or Datejust and jump straight to that model&#8217;s page. And the view name at the top left of the feed is now a menu: all posts, people you follow, close friends, or just yours.
 
-<b>Your month&#8217;s pattern.</b> The month-in-review card can now spot a habit in your wear log and give it a slide of its own &#8212; the watch that owned your Saturdays, or a comeback after months in the box. One pattern per month, and only when the numbers genuinely back it up.
+[img2]
 
 <a href="https://wrotate.com/open">See what&#8217;s new &#8594;</a>
 
 The WRotate team`,
-    imageUrls: [],
+    imageUrls: [
+      { url: 'https://api.wrotate.com/storage/v1/object/public/media/broadcast/messages-top-menu-2026-11.png', caption: 'Messages live in the top menu — the envelope' },
+      { url: 'https://api.wrotate.com/storage/v1/object/public/media/broadcast/search-watches-2026-11.png', caption: 'One search bar for watch models and people' },
+    ],
     savedAt: Date.now(),
   });
   safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
