@@ -12,6 +12,8 @@ export interface MailMessage {
   headers?: Record<string, string>;
   // Per-message SES configuration set override (click-tracked sends).
   configSet?: string;
+  // Stable id of what this email is, for the admin stats (see ses-lib.ts).
+  msgKey?: string;
 }
 
 export type MailResult =

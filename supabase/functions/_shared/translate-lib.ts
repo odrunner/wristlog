@@ -40,7 +40,7 @@ Translate every value of the JSON object below and return a JSON object with exa
 
 Rules:
 - Translate only the human-readable words. Write the way a native speaker who collects watches would, not word for word.
-- A value may contain HTML. Copy every tag exactly as it is, in the same order, with every attribute unchanged (href, src, style, alt, width). Never add, remove, reorder or rewrite a tag.
+- A value may contain HTML. Copy every tag exactly as it is, in the same order, with every attribute unchanged (href, src, style, width). The one exception: translate the text inside an image's alt="…". Never add, remove, reorder or rewrite a tag.
 - Copy placeholders such as {{name}}, {{watch}}, {{watchPhrase}}, {{fact}} and [img1] exactly. They are filled in later.
 - Keep "WRotate", brand names, watch model names, reference numbers, numbers, units (s/d) and URLs unchanged.
 - No emoji. Do not add notes, explanations or anything that is not in the English.
@@ -51,9 +51,10 @@ JSON to translate:
 ${JSON.stringify(fields)}`;
 }
 
-/** Every tag, verbatim and in order. */
+/** Every tag, in order, verbatim except for the text of alt="…": image
+ *  descriptions are words, so a translation may (and should) change them. */
 export function tagsOf(s: string): string[] {
-  return s.match(/<[^>]+>/g) ?? [];
+  return (s.match(/<[^>]+>/g) ?? []).map((t) => t.replace(/\salt="[^"]*"/g, ' alt=""'));
 }
 
 /** Every {{token}} and [imgN] marker, sorted. */

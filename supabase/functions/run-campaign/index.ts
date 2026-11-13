@@ -41,6 +41,12 @@ import { sendBatch } from "../_shared/mailer.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pickLang } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { freshTranslation, OTHER_LANGS, srcHash } from "../_shared/translate-lib.ts";
+import type { Fields, OtherLang } from "../_shared/translate-lib.ts";
+import { translateFields } from "../_shared/translate.ts";
+import { watchPhraseIn } from "../_shared/email-personalize.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = serviceKey();
@@ -77,10 +83,11 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
 }
 
 type PassResult = { sent: number; skipped: number; failed: number; trackingFailed: boolean };
-type Recipient = { uid: string; email: string; displayName: string };
+type Recipient = { uid: string; email: string; displayName: string; lang: Lang };
 type ProfileRow = {
   id: string;
   display_name: string | null;
+  language?: string | null;
   email_prefs: { updates?: boolean } | null;
   created_at?: string;
 };
@@ -113,10 +120,24 @@ async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Rec
   for (const u of users) {
     const { data: authUser } = await supabase.auth.admin.getUserById(u.id);
     if (authUser?.user?.email) {
-      recipients.push({ uid: u.id, email: authUser.user.email, displayName: u.display_name || "" });
+      recipients.push({ uid: u.id, email: authUser.user.email, displayName: u.display_name || "", lang: pickLang(u.language) });
     }
   }
   return excludeBounced(recipients, await fetchBouncedEmails(supabase));
+}
+
+// Make sure every active drip has an up-to-date translation in every language.
+// Runs at the top of each daily run, where it normally finds nothing to do: it
+// only calls the model for a drip whose English changed since it was last
+// translated (or a new drip). Sends nothing.
+async function pretranslateDrips(supabase: Db, campaigns: Campaign[]): Promise<Record<string, string[]>> {
+  const report: Record<string, string[]> = {};
+  for (const c of campaigns) {
+    if (c.campaign_type !== "drip") continue;
+    const got = await campaignTranslations(supabase, c, OTHER_LANGS);
+    report[c.name] = OTHER_LANGS.filter((l) => got.has(l));
+  }
+  return report;
 }
 
 // A fact to headline the email, plus the pool coordinates needed to advance the
@@ -129,7 +150,39 @@ type ResolvedFact = {
   key: string | null;
   factId: string | null;
   position: number | null;
+  // The fact in other languages, when the background job has made them.
+  translations?: Record<string, string> | null;
 };
+
+// A drip in the other languages its recipients need. Uses what is stored while
+// it was made from the current English, translates and stores the rest. A
+// language that fails is simply absent, and its recipients get English.
+async function campaignTranslations(
+  supabase: Db,
+  campaign: Campaign,
+  langs: OtherLang[],
+): Promise<Map<Lang, Fields>> {
+  const out = new Map<Lang, Fields>();
+  const src: Fields = { subject: campaign.subject ?? "", body_html: campaign.body_html ?? "" };
+  const made: Record<string, Record<string, string>> = {};
+  await Promise.all(langs.map(async (lang) => {
+    const stored = freshTranslation(campaign.translations, lang, src);
+    if (stored) { out.set(lang, stored); return; }
+    const fresh = await translateFields(src, lang, { tag: `drip "${campaign.name}"` });
+    if (!fresh) { console.warn(`[run-campaign] "${campaign.name}": no ${lang} translation, sending English`); return; }
+    out.set(lang, fresh);
+    made[lang] = { src: srcHash(src), ...fresh };
+  }));
+  if (Object.keys(made).length) {
+    // Re-read before writing: another run may have stored a language meanwhile.
+    const { data: cur } = await supabase.from("email_campaigns").select("translations").eq("id", campaign.id).maybeSingle();
+    const merged = { ...((cur?.translations as Record<string, unknown>) ?? {}), ...made };
+    const { error } = await supabase.from("email_campaigns").update({ translations: merged }).eq("id", campaign.id);
+    if (error) console.error(`[run-campaign] "${campaign.name}": storing translations failed:`, error.message);
+    else campaign.translations = merged;
+  }
+  return out;
+}
 
 // One grounded Gemini fact for a model, same call the in-app path makes.
 // Returns null on any failure — the caller falls back rather than failing send.
@@ -206,9 +259,9 @@ async function resolveFact(
   if (!looksLikeRealWatchLabel(label)) return fallback;
   const phrase = watchPhrase(label);
 
-  type PoolRow = { id: string; position: number; fact: string };
+  type PoolRow = { id: string; position: number; fact: string; translations?: Record<string, string> | null };
   const { data: poolRows, error: pErr } = await supabase
-    .from("watch_facts").select("id, position, fact").eq("model_key", key);
+    .from("watch_facts").select("id, position, fact, translations").eq("model_key", key);
   if (pErr) {
     console.error(`[run-campaign] fact pool fetch failed for ${key}:`, pErr);
     return fallback;
@@ -216,7 +269,7 @@ async function resolveFact(
   const pool = (poolRows ?? []) as PoolRow[];
   const hit = pickPoolFact(pool);
   if (hit) {
-    return { watch: label, watchPhrase: phrase, fact: hit.fact, key, factId: hit.id, position: hit.position };
+    return { watch: label, watchPhrase: phrase, fact: hit.fact, key, factId: hit.id, position: hit.position, translations: hit.translations ?? null };
   }
 
   // Nothing usable in the pool. Generate — but only while budget remains, and
@@ -299,6 +352,12 @@ async function deliver(
   // sequentially outside the message fan-out, under a per-run budget.
   const wantsFact = needsFactVars(campaign);
   const factBudget = { left: MAX_FACT_GENERATIONS };
+  // Drips go out in each recipient's app language. Only drips: their stats row
+  // is keyed by a message id, so a translated subject cannot scatter it.
+  const wanted = campaign.campaign_type === "drip"
+    ? [...new Set(toSend.map((r) => r.lang))].filter((l): l is OtherLang => l !== "en")
+    : [];
+  const localized = wanted.length ? await campaignTranslations(supabase, campaign, wanted) : new Map<Lang, Fields>();
 
   for (let i = 0; i < toSend.length; i += batchSize) {
     const batch = toSend.slice(i, i + batchSize);
@@ -314,20 +373,30 @@ async function deliver(
       const sig = await hmacSign(r.uid, "updates", UNSUB_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
       const f = facts.get(r.uid);
+      const loc = localized.get(r.lang);          // undefined = English
+      const lang: Lang = loc ? r.lang : "en";
       const vars: Record<string, string> = f
-        ? { watch: f.watch, watchPhrase: f.watchPhrase, fact: f.fact }
+        ? (loc
+          ? {
+            watch: f.watch,
+            watchPhrase: watchPhraseIn(lang, f.watch, f.watchPhrase !== FALLBACK_FACT.watchPhrase),
+            fact: f.translations?.[lang] || f.fact,
+          }
+          : { watch: f.watch, watchPhrase: f.watchPhrase, fact: f.fact })
         : {};
-      const subject = personalizeSubject(campaign.subject, r.displayName, vars);
-      const personalizedBody = personalizeBody(campaign.body_html, r.displayName, vars);
+      const subject = personalizeSubject(loc?.subject ?? campaign.subject, r.displayName, vars);
+      const personalizedBody = personalizeBody(loc?.body_html ?? campaign.body_html, r.displayName, vars);
       // Tag by campaign NAME, not the rendered subject: a personalized subject
       // ("A fun fact about {{watchPhrase}}") differs per recipient and would
       // scatter one drip across hundreds of utm_campaign buckets.
-      const html = buildHtmlEmail(subject, personalizedBody, url, campaign.name);
+      const html = buildHtmlEmail(subject, personalizedBody, url, campaign.name, lang);
       return {
         from: FROM_EMAIL,
         to: [r.email],
         subject,
         html,
+        // A translated drip is counted by what it is, not by its subject line.
+        ...(loc ? { msgKey: `drip_d${campaign.delay_days}` } : {}),
         headers: {
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -391,7 +460,7 @@ async function windowPass(
 
   const { data: eligible, error: eligErr } = await supabase
     .from("profiles")
-    .select("id, display_name, email_prefs")
+    .select("id, display_name, email_prefs, language")
     .eq("is_suspended", false)
     .gte("created_at", windowStart)
     .lt("created_at", windowEnd);
@@ -480,7 +549,7 @@ async function backfillPass(
   const { data: profiles, error: profErr } = await fetchAllRows<ProfileRow>((from, to) =>
     supabase
       .from("profiles")
-      .select("id, display_name, email_prefs, created_at")
+      .select("id, display_name, email_prefs, created_at, language")
       .eq("is_suspended", false)
       .lt("created_at", windowStart)
       .order("created_at", { ascending: false })
@@ -807,6 +876,18 @@ Deno.serve(async (req: Request) => {
 
     if (!campaigns?.length) {
       return new Response(JSON.stringify({ message: "No active campaigns" }), { status: 200 });
+    }
+
+    // Keep every drip translated. {"pretranslate": true} does only this and
+    // reports which languages each drip now has; the daily run does it first
+    // and carries on whatever happens.
+    if (body?.pretranslate) {
+      const report = await pretranslateDrips(supabase, campaigns);
+      console.log(`[run-campaign] pretranslate:`, JSON.stringify(report));
+      return new Response(JSON.stringify({ pretranslate: report }), { status: 200 });
+    }
+    try { await pretranslateDrips(supabase, campaigns); } catch (e) {
+      console.error("[run-campaign] pretranslate failed (drips will send in English where missing):", (e as Error)?.message);
     }
 
     // Get internal accounts to exclude. Fail safe: if this read errors we can't

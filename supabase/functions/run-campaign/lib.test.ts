@@ -454,3 +454,23 @@ Deno.test("campaignSlug collapses punctuation and never yields an empty tag", ()
   // Bounded so a long subject cannot blow up the query string.
   assertEquals(campaignSlug("x".repeat(200)).length, 48);
 });
+
+// ---- languages ----
+import { watchPhraseIn } from "../_shared/email-personalize.ts";
+
+Deno.test("buildHtmlEmail — shell button and footer follow the language; English unchanged", () => {
+  const fr = buildHtmlEmail("s", "b", "https://u", "Onboarding 1", "fr");
+  assertEquals(fr.includes(">Ouvrir WRotate</a>"), true);
+  assertEquals(fr.includes(">Se désabonner</a>"), true);
+  assertEquals(buildHtmlEmail("s", "b", "https://u", "Onboarding 1"), buildHtmlEmail("s", "b", "https://u", "Onboarding 1", "en"));
+});
+
+Deno.test("watchPhraseIn — own watch vs the curated fallback, per language", () => {
+  assertEquals(watchPhraseIn("es", "Seiko SKX007", true), "tu Seiko SKX007");
+  assertEquals(watchPhraseIn("es", "Omega Speedmaster", false), "el Omega Speedmaster");
+  assertEquals(watchPhraseIn("de", "Seiko SKX007", true), "deine Seiko SKX007");
+  assertEquals(watchPhraseIn("tr", "Seiko SKX007", true), "Seiko SKX007");
+  assertEquals(watchPhraseIn("en", "Seiko SKX007", true), "your Seiko SKX007");
+  assertEquals(watchPhraseIn("en", "Omega Speedmaster", false), "the Omega Speedmaster");
+  assertEquals(watchPhraseIn("constructor", "X", true), "your X");
+});

@@ -148,6 +148,23 @@ export function watchPhrase(label: string): string {
   return `your ${label}`;
 }
 
+// The same two phrases in the other app languages, for a translated email.
+// `own` = a watch the recipient added ("your …"); otherwise the curated
+// fallback model, which they may not own ("the …").
+const PHRASES: Record<string, [string, string]> = {
+  es: ["tu {w}", "el {w}"],
+  it: ["il tuo {w}", "l'{w}"],
+  fr: ["votre {w}", "l'{w}"],
+  tr: ["{w}", "{w}"],
+  de: ["deine {w}", "die {w}"],
+  pt: ["o teu {w}", "o {w}"],
+};
+export function watchPhraseIn(lang: string, label: string, own: boolean): string {
+  const p = Object.prototype.hasOwnProperty.call(PHRASES, lang) ? PHRASES[lang] : null;
+  if (!p) return own ? watchPhrase(label) : `the ${label}`;
+  return p[own ? 0 : 1].split("{w}").join(label);
+}
+
 // Used when the recipient has no watch yet, or when the pool is empty and
 // generation is unavailable. A real, well-known fact — the email still has to
 // deliver on its subject line.

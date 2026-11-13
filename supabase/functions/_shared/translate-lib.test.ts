@@ -74,3 +74,10 @@ Deno.test("buildTranslatePrompt — names the language, the glossary and carries
   assertEquals(buildTranslatePrompt(SRC, "fr").includes("French, formal (vous)"), true);
   assertEquals(buildTranslatePrompt(SRC, "de").includes("Zeitwaage"), true);
 });
+
+Deno.test("validateTranslation — an image's alt text may be translated, its src may not", () => {
+  const src = { b: 'See <img src="https://x/a.png" alt="The What-if simulator" width="380"> here' };
+  assertEquals(validateTranslation(src, { b: 'Mira <img src="https://x/a.png" alt="El simulador" width="380"> aquí' }) !== null, true);
+  assertEquals(validateTranslation(src, { b: 'Mira <img src="https://x/b.png" alt="El simulador" width="380"> aquí' }), null);
+  assertEquals(validateTranslation(src, { b: 'Mira <img src="https://x/a.png" alt="El simulador" width="100%"> aquí' }), null);
+});
