@@ -1,41 +1,52 @@
-# WRotate — Feature Backlog
+# WRotate — Backlog
 
-## In Progress
+Each open item is one action a single session can pick up. Order = priority. Detail for the long ones is under **Notes**.
 
+## In Progress (running on their own — nothing to do unless they stall)
+- **Model spec + reference-note translation backfill** — started 2026-11-14, 6 models per 3-minute run, 367 total. Check: `SELECT count(*) FILTER (WHERE translations->'de'->>'extras' IS NOT NULL), count(*) FROM watch_models WHERE coalesce(history, description) IS NOT NULL;`
+- **Knob trial `tgknob_stabfresh_1`** — running since 2026-11-09, judged by the Sunday loop; `tgknob_bphdecisive_2` and `tgknob_phaselock_1` follow from the loop's queue.
+- **Experiments running:** `review_first_good_msr` (review prompt after a good measurement, since 11-02), `wn_badge` (11-08), `result_share` (11-09). The nightly judge decides; a `won`/`killed` one needs its branch removed.
 
+## Waiting on you
+- **Upload Android 1.9 (vC9)** — bundle built 2026-11-14 with the translated shell strings: `android/app/build/outputs/bundle/release/app-release.aab`.
+- **Build + submit iOS 2.11** — translated permission prompts, quick actions, offline screen. In Xcode confirm the `.lproj` folders are in both targets; check the three with the phone in German.
 
-## Up Next
-**Left over from the two 2026-11-13 audits (untranslated strings, hardcoded design values).** Reports: `audit-results/2026-11-13-i18n-audit.md` (status table at the top) and `audit-results/2026-11-13-design-hardcode-audit.md`. Shipped the same day in `3191f6d5` (sw v1433): model page labels, timegrapher lines, error toast labels, notification sentences, dates, share text, What's New from November 2026, Enhance in the member's language, model-page story translations.
+## Up Next (prioritized)
+1. **Profile privacy, part 1: `is_admin()` function + rewrite the 21 policies that read `profiles.is_admin`.** Security (audit S1): anyone logged out can read every profile column. No visible change; it is the prerequisite for part 2. Steps 1–3 in Notes → Profile privacy.
+2. **Profile privacy, part 2: restrict logged-out reads of `profiles` to 9 columns.** Only after part 1 is verified over the REST API. Steps 4–5 in Notes.
+3. **Share pages + unsubscribe page: move to the current palette and drop the two emoji icons.** 98 colours / 229 sizes in 5 edge-function files are an old copy; two fail contrast. Add a token-copy test. Redeploy the five `share-*` + `email-unsubscribe`.
+4. **Buttons with no font rule use the browser's default font.** Add a base `button { font-family }` rule (22 button groups affected: "Measure", "Cancel", "Add to collection", close glyphs), give `#logagain-other` a variant class, add a control-font test.
+5. **Measure how share-post links perform** (opens per week, second-tap "Open WRotate" rate). Decides whether to build first-tap app opening (next item in To Explore). Read-only.
+6. **Translate the public `/w/` model page.** `model_page` RPC returns English; return the visitor's language the way the share pages do.
+7. **Android: foreground push shows no banner.** Find out whether it lands silently (channel importance) or never posts (`onMessageReceived`); fix likely needs a new HIGH-importance channel id. Needs a Play release.
+8. **Admin Users view: list only users with a record** (a watch, wear or post) instead of the last 498, so column sorting ranks real users.
+9. **Purge test traffic from `page_visits`.** 23,805 of 41,643 rows are HeadlessChrome (source already stopped). Delete in batches of ~2k with a pause, never one statement. Hygiene only.
+10. **Daily recommendation: stop scoring weather from the watch's saved colour.** Nobody picks that colour (747 gold / 489 slate of 1,512 are defaults). Drop it from `computeWatchRec`, then remove the dead picker and `data-watch-color` plumbing.
+11. **Remove web-measurement remnants** (~100 unreachable lines in `toggleMsrListen` / `stopMsrListen`, `_tgListening`). Own commit; verify on a device build. Detail: `audit-results/2026-09-20-dead-code-audit.md` → Follow-up.
+12. **Remove Standard-engine leftovers** (`msr-std-preset-section`, `msr-std-tuning-section`, the Standard branch of `_msrSettingsApplyEngine()` / `_tgAlgo()`). Field has been 100% 2.5+ since October. Own commit; verify on a device build.
+13. **Sold status for watches.** `watches.sold_at` + "Mark as sold" with undo; sold watches greyed at the bottom, excluded from Today's Pick, reminders, value and the ranking game; model page "Still owned: 20 of 22". Scope agreed 2026-08-29.
+14. **Translate `og:` tags and the first `<title>` on `p/` and `profile/`** (the keys are already in the dictionary; nothing applies them).
+15. **Fix the 9 script-built styles the design counter misses** (`'12px'` margin in `loadModelOwnersRow`, two scroll-highlight shadows, drag-ghost `borderRadius: '10px'`).
+16. **Native shell colours onto the palette** (12 literals; iOS loading/offline screens; `manifest.json` dark vs first-paint light). Rides the next native release.
+17. **Tick-log archival stage 2** — rolling 30-day retention for `timegrapher_tick_logs`. Needs your sign-off first: it changes how the rollout cumulative count is computed. Design: `docs/superpowers/specs/2026-06-22-tick-log-archival-design.md`.
 
-*Translation, done 2026-11-14 (sw v1435):* member-written text is never translated (`escUser()` / `i18nMine()`), known server sentences translate in toasts, `p/` `profile/` `open.html` follow `wr_lang` (generated `i18n/page.js`), the five share pages + unsubscribe error pages follow the visitor's browser language, model-page spec values + reference notes translate (`sql/2026-11-14-model-spec-translations.sql`, applied), the fun fact inside a translated broadcast, "Someone", money grouping, native shell strings (Android in the 1.9/vC9 bundle; iOS 2.11 needs an Xcode build), Enhance in German checked live, model-story backlog 367/367.
+## To Explore (not decided, not scheduled)
+- **First-tap app opening for shared post links** — Cloudflare Worker on `wrotate.com/p/` serving crawler-only OG HTML. Decide after Up Next 5.
+- **Profile privacy, part 3:** move private columns to a `profile_private` table so logged-in users cannot read them either. Schema migration + client refactor.
+- **Measurement repeatability, one at a time:** (a) converge on the rate's standard error instead of a dot count; (b) tighter outlier rejection on short runs; (c) show ± on the reading; (d) "measure in the same position" prompt; (e) replace the two-point bucket slope with the engine's Theil-Sen rate for the convergence decision. Background in Notes.
+- **Piezo auto-BPH "reset to manual at lock"** — tried (0aaaf77) and reverted (952f3d5); re-test under good signal first.
+- **Monthly collection-value digest email** — code done on branch `value-digest-parked`; see Notes.
+- **Design values worth doing only before a restyle:** border widths, colour-mix percentages, icon sizes, spinner timings, 12 duplicate tokens.
+- **Still English on purpose:** legal pages, `404.html`, `delete-account.html`, `manifest.json`, og:image text, native bridge error messages, "present" in model year ranges, the sign-in screen.
+- Edit a comment.
+- Pulsing microphone on the Measure screen.
+- Advanced batch mode.
+- Suggest a watch I might like from my collection, purchases and missing styles.
 
-*Translation, still open:*
-1. **Native releases parked (user submits when ready):** Android 1.9/vC9 bundle is built with the translated strings (`android/app/build/outputs/bundle/release/app-release.aab`); iOS 2.11 needs an Xcode build — confirm the `.lproj` folders land in both targets, then check the permission prompts, quick actions and offline screen with the phone in German.
-2. ~~Server half deployed~~ DONE 2026-11-14 (user deployed; smoke 22/22; German share page verified live). Model spec + note backfill running (6 models per run).
-3. ~~24 stuck fun facts~~ FIXED 2026-11-14 (`b464441c`: a refused batch is asked again in halves) — 2,446 of 2,446 translated.
-4. **Share pages keep two emoji state icons** (watch, lock) because English output was held byte-identical. Replace with glyphs or SVG.
-5. **Still English:** `w/` public model page (`model_page` RPC returns English), `og:` tags and first `<title>` on `p/` and `profile/`, og:image SVG text, `404.html`, `privacy.html`, `terms.html`, `delete-account.html`, `manifest.json`, native bridge error messages, "present" inside model year ranges.
-6. ~~Translated broadcast test~~ DONE by the user (2026-11-13): readable but not a good translation, which is why translated emails carry the "translated by AI" note. 
+## Notes
 
-*Design values, all still open (nothing from this audit was changed):*
-1. **Share pages + unsubscribe page carry an old copy of the palette** (98 colours, 229 sizes in 5 edge-function files; light `--bg #f5f5f8`, `--gold #9a7628`, `--muted #70708a` vs the stylesheet's `#e9edf1`, `#87661a`, `#566070`). Two of the old values are ones the stylesheet's comments record as failing contrast. Fix + a token-copy test.
-2. **Buttons with no font rule use the browser's default font** — no base `button { font-family }` rule; `font-family: inherit` is typed per class 42 times and missing elsewhere (22 button groups seen in Chromium: "Measure", "Cancel", "Add to collection", close glyphs). `#logagain-other` ("Different watch") also has no variant class. Fix + a control-font test.
-3. **Not tokenised but consistent on screen:** border/outline widths (223 declarations, 6 widths), colour-mix percentages (218, 30 values), inline icon sizes and stroke widths (191 icons), animation timings (3 spinner speeds), grid minimums, canvas fonts, modal `vh` heights, 12 tokens that are typed copies of other tokens. Worth doing only before a restyle.
-4. **Script-built styles the counter misses** (9; member-visible: `'12px'` margin in `loadModelOwnersRow`, two scroll-highlight box-shadows, drag-ghost `borderRadius: '10px'`).
-5. **Native shell colours** (12 literals; iOS loading/offline screens on the old palette; `manifest.json` uses the dark background while the first-paint meta uses the light one).
-6. **CLAUDE.md says 45 inline `style=` attributes; the count and budget are 43.**
-
-**Engine-knob experiments from the Android-port review (2026-10-23; code SHIPPED 2026-10-25).** Both engines are at `TG_ENGINE_REV` 2: the **blank-rate restart bug is fixed plain** (compute/log markers reset when elapsed rewinds — covers capture rebuilds AND recalibration restarts), and the two new knobs exist dark at ship defaults — `tg_stabfresh` (0; 1 = fresh-only rate history + stable flag drops across rate gaps) and `tg_bphdecisive` (1.5; auto-BPH runner-up decisive ratio). Web payload + bridge + Kotlin + `[TGTUNE]` echo + `accuracy_loop.py` (`FLEET_DEFAULTS`/`_TUNE_FIELD`) all carry them; the weekly report prints per-platform (iOS/Android) splits once Android sessions appear. **phaselock finding corrected:** the fleet has ALWAYS run `phaseLock=false` (web payload hidden input; 2800/2800 field sessions) — the engine-source "default ON" never reached users, so field psBE is honest; the trial `tgknob_phaselock_1` turns it ON (its tick-selection benefit vs the ~14x psBE under-read) and works on shipped builds via `_tgKnob0('tg_phaselock', 0)`.
-Remaining before trials: (1) the Sunday slot (one at a time — `tgknob_driftband_4` running since 2026-10-25); (2) `tg_stabfresh`/`tg_bphdecisive` need iOS 2.10 (`MARKETING_VERSION` bumped, user builds/submits) + an Android build with adoption; phaselock-toggle is exempt. (3) Before starting phaselock: check `rollout-check.py`'s `psBE=` marker dependency survives the treatment arm. Trial order: phaselock → stability-honesty (`tgknob_stabfresh_1`) → autobph (`tgknob_bphdecisive_2`), started by hand via `--start` as slots free. The Sunday review prints this queue (`QUEUED_NATIVE_EXPERIMENTS`); remove a line once its trial has started.
-
-**Daily recommendation: stop using the watch's saved colour as a weather signal (parked 2026-09-22).** `computeWatchRec` (index.html, `WARM`/`COOL`/`DARK` sets) scores a watch "Warm tone for sunny skies" / "Cool tone suits today's weather" from `watches.color`. Nobody chooses that colour — the picker is on no screen: a hand-added watch is always saved gold (`PALETTE[0]`), a photo-added one gets the AI's guess or slate. So the weather reason rests on how the watch was added, not on the watch (real users 2026-09-22: 747 gold, 489 slate of 1,512). Since 2026-09-22 the colour is no longer shown anywhere (the no-photo square is always the design-system `--watch-default`), so this is its last reader. Options: drop colour from the weather score, or base it on something real (dial colour from the AI identification / the model record). Once nothing reads it, the saved `color`, the dead picker (`buildSwatches`/`pickColor`/`selColor`) and the `data-watch-color` plumbing can go too.
-
-**Sold status for watches (from the model-page work, 2026-08-29).** `watches.sold_at` (date, nullable) + "Mark as sold" in the watch modal (with undo). Collection: sold watches greyed and grouped at the bottom (or a Sold filter chip); excluded from Today's Pick, reminders, collection value and the ranking game; wear history stays. Model page: "Still owned: 20 of 22"; sold examples leave the wear-share / cost-per-wear population but stay in ownership-by-era. Public profile/showcase hides sold by default. Scope agreed 2026-08-29; not started.
-
-**Profile privacy — stop anonymous scraping of the user table (audit S1). DEFERRED 2026-08-13, needs doing properly.**
-Anyone logged-out can currently read all 517 profile rows: every column, including `is_admin` (which names the one account worth attacking) and 251 users' `timezone`. 128 users have set their profile to Followers-only or Private; that setting is honoured by the UI only, not by the database.
-
-Attempted 2026-08-13 and REVERTED after it broke the logged-out landing page. Do not retry the naive version.
+### Profile privacy (audit S1; deferred 2026-08-13)
+Anyone logged-out can read all profile rows and columns, including `is_admin` and `timezone`; the Followers-only / Private setting is honoured by the UI only. Attempted 2026-08-13 and REVERTED after it broke the logged-out landing page. Do not retry the naive version.
 
 *Two wrong approaches, both ruled out with evidence:*
 1. **Hide private users' rows via RLS** — breaks search, the Follow/Request button (`friendActionBtn` reads `profile_privacy`), and feed author names. Hiding the row removes the only route by which a stranger can *request* access. Never applied.
@@ -53,42 +64,23 @@ Prep already shipped: the profile view no longer fetches other users' `email_pre
 Still NOT covered by any of the above: logged-in users can read all 23 columns of anyone. Column privileges are per-role, not per-row, so that needs the private columns moved to a `profile_private` table keyed on user_id with own-row-only RLS — a schema migration plus client refactor, separate again.
 Full write-up: `audit-results/2026-08-13-security-audit.md` S1.
 
-**Standard-engine leftovers (selector retired 2026-10-25).** The engine dropdown and per-session choice are gone (archived in `docs/archive/standard-engine-selector-retired-2026-10-25.md`); every 2.1+ build runs Pro V2. Still in the page as the pre-2.1 fallback UI: `msr-std-preset-section` / `msr-std-tuning-section` and the Standard branch of `_msrSettingsApplyEngine()` / `_tgAlgo()`. Once pre-2.1 binaries are formally dropped (field has been 100% 2.5+ since October), those sections + the `'original'` fallback can go the same way — own commit, it edits live measurement code.
+### Measurement repeatability background
+Measurement precision — increase repeatability (feedback: "measurements vary a lot"). Backed by analysis of 200 real-user sessions (June 3-7, 19 users / 30 watches). Findings: median repeat-spread 14.2 s/day, but the engine floor (controlled long repeats) is only ~1.5-4 s/day — e.g. qbb251's Grand Seiko 6145 measured 6× at 35-60 dots = ±1.4 s/day. The rest is run-length noise + real watch/position variation (dexter888's Submariner spanned ±41 across 20 runs incl. 60-92 dot ones = position changes, not engine). Precision curve: 15-25 dots → median dev 5.4 s/day; 26-40 → 3.5; 41-60 → 3.5 (saturates ~40 dots). DONE: raised JS convergence dot floor 20→30 (index.html `minDots`).
 
-**Web-measurement remnants (from the dead-code cleanup, 2026-09-23).** WRotate does not do web measurement and the Measure tab only shows under the native bridge, so the Web Audio fallback inside `toggleMsrListen` / `stopMsrListen` and the old listener leftovers (`stopTgListen`, `_tgListening` and its 4 guards, non-measure branches in the native event handler, `tg-listen-btn` lookups) are unreachable. ~100 lines. Own commit — it edits live measurement code; verify on a device build. Detail: `audit-results/2026-09-20-dead-code-audit.md` → Follow-up. (The dead-code cleanup itself shipped 2026-09-23: 23134c4, 5463df3, a222346.)
-
-In admin view, don't show the last 498, filter out users with no watch, wears, posts, etc to only have users with a record, so that i can hit columns to rank
-
-tick-log archival Stage 2 (PAUSED 2026-06-22) — sustainable rolling retention for timegrapher_tick_logs. Stage 1 done (archived 37,564 pre-approval rows offline + pruned, 60MB→14MB). Stage 2 = make rollout-check.py track its cumulative count incrementally (persisted state file) instead of re-scanning the full table, then a weekly LaunchAgent archives+prunes a rolling 30-day tail. Needs sign-off: it changes how the rollout cumulative number is computed. Design: docs/superpowers/specs/2026-06-22-tick-log-archival-design.md
-
-
-
-purge historical test traffic from page_visits (2026-08-14) — 23,718 of 32,013 rows (74%) are HeadlessChrome, written by the mocked Playwright suite between 2026-03-18 and 2026-08-14 at ~400 rows per run. The suite serves the real index.html with the production Supabase key baked in, so any spec that didn't intercept the route inserted for real. **Already stopped at the source**: trackVisit() bails on navigator.webdriver (index.html), verified by a full 409-test run adding zero rows. What's left is deleting the backlog. Nothing displayed is affected — admin_traffic_stats and admin_email_clickthrough both filter the user agent — so this is table hygiene, not a correctness fix. **Delete in batches, never one statement**: `DELETE FROM page_visits WHERE user_agent ~* 'HeadlessChrome|Playwright|Puppeteer|Electron'` in chunks of ~2k with a pause between, on an instance with 406 MB RAM. A single bulk operation against production is exactly what took the project down on 2026-08-13. Table is only 10 MB, so there is no urgency.
-
-
-
-## To Explore
-ability to edit comment
-
+### Monthly value digest
 **Monthly collection-value digest email — PARKED 2026-08-16, code done on branch `value-digest-parked`.** Decided to ship only the Stats tile (freshness + tap-to-Update) for now. What's parked: `send-value-digest` edge fn (SES via mailer, `dry_run` + `limit`), `value_digest_targets()` RPC + `value_digest_sends` table (already in the DB, inert), `digest` email pref + unsubscribe category, Profile → Notifications toggle, smoke check. Copy: "Your collection is worth $X — Month" · gain vs paid · most valuable · "N haven't been checked in 60+ days → Update prices" · "we don't change values without you". Audience today ≈105 (priced watch, active 90d, ≤1/25d). Deliberately deterministic (sums SAVED values, no server-side refresh) because estimates are LLM-noisy ($6.5k→$5.8k→$10k on one watch) and prices need user approval since 41aa749. To ship: merge branch, deploy `email-unsubscribe` + `send-value-digest`, cron `0 16 1 * *`, first run `{"limit":25}`; metrics = CTR vs ~5% and value-checks 7d after vs before. Only revisit an auto-refresh "your collection moved" version with a noise guard (≥10% Δ confirmed by a second lookup). Data as of 2026-08-16: 649 priced watches / 144 users, only 123 watches (20 users) have ≥2 price points.
 
-show microphone on measurement (pulsating) 
-
-Measurement precision — increase repeatability (feedback: "measurements vary a lot"). Backed by analysis of 200 real-user sessions (June 3-7, 19 users / 30 watches). Findings: median repeat-spread 14.2 s/day, but the engine floor (controlled long repeats) is only ~1.5-4 s/day — e.g. qbb251's Grand Seiko 6145 measured 6× at 35-60 dots = ±1.4 s/day. The rest is run-length noise + real watch/position variation (dexter888's Submariner spanned ±41 across 20 runs incl. 60-92 dot ones = position changes, not engine). Precision curve: 15-25 dots → median dev 5.4 s/day; 26-40 → 3.5; 41-60 → 3.5 (saturates ~40 dots). DONE: raised JS convergence dot floor 20→30 (index.html `minDots`). Still to try:
-  - **Standard-error convergence** (the real fix): converge on the rate's standard error / CI from the Theil-Sen regression residuals, target SE ≤ ~3 s/day, instead of a fixed dot count. Adapts — clean signals finish fast, noisy ones run longer. Cap at maxDuration so a low-grade SKX doesn't run forever (accept some watches can't go tighter).
-  - **Tighten per-beat outlier rejection on short runs** — a single bad beat swings a ~20-30 pt regression a lot (fandom's SKX swings ±12 at 20 dots). More aggressive pair-deviation trimming helps the floor cases specifically.
-  - **Show ± confidence interval on the reading** (e.g. `+2 ± 4 s/day`) so a short/noisy read self-identifies instead of looking authoritative.
-  - **Position-consistency UX** — prompt "measure in the same position each time"; note dial-up vs crown-down genuinely differ 5-15 s/day by design. ~40% of the felt variance is physics, not the app — without this, users blame the engine for real watch behavior.
-
-Piezo auto-BPH "reset to manual at lock" — attempted (commit 0aaaf77) then reverted (952f3d5) because auto seemed worse after (though that session also had weak signal / junk manual runs, so not conclusively the reset's fault). Idea: after the autocorr locks the BPH, rebase the wall clock + clear phase/regression state so it runs like a fresh manual start. Re-approach carefully — first confirm under GOOD signal whether auto truly regressed, isolate vs the EMA, and consider keeping the wall-clock rebase out of the rate path.
-
-Bucket-rate convergence (mic + all sources): the JS `bucketMedian = (last.cd - start.cd)/dT` is a fragile two-point endpoint slope of the scatter dots (computed as a side effect of chart rendering) used for the convergence decision + the ± error bar + early prelim. It can disagree with the engine's robust Theil-Sen rate — wrong magnitude/sign on near-zero or noisy measurements (this is what bit the piezo: truth +4, bucket −8). The mic's *headline* rate is shielded (it shows engine `data.rate`), so the risk is limited to convergence timing + a misleading error bar on near-zero/noisy runs. Fix = replace the two-point bucket slope with the engine's Theil-Sen rate (as already done for piezo).
-
-advance batch mode
-
-show me a watch i might like based on my collection, and what i've been purchasing, also look at what style i am missing
-
 ## Done
+- **2026-11-14 — Languages, the open list** (sw v1435, `274ff3e2`, `b464441c`): member-written text is never translated (`escUser()` / `i18nMine()`); known server sentences translate in toasts; `p/`, `profile/`, `open.html` follow `wr_lang` (generated `i18n/page.js`); share pages + unsubscribe error pages follow the visitor's language; model spec values + reference notes; the fun fact inside a translated broadcast; "Someone"; money grouping; native shell strings written; Enhance in German checked live; 24 stuck fun facts fixed (2,446 of 2,446); translated broadcast tested by the user (hence the "translated by AI" note).
+- **2026-11-13 — Languages, audit pass** (`3191f6d5`, sw v1433): model page labels, timegrapher lines, error toast labels, notification sentences, dates, share text, What's New from November 2026, Enhance in the member's language, model-page stories. Reports: `audit-results/2026-11-13-i18n-audit.md`, `audit-results/2026-11-13-design-hardcode-audit.md`.
+- **2026-11-09 — Engine-knob trials handed to the Sunday loop** (code shipped 2026-10-25, `TG_ENGINE_REV` 2; blank-rate restart bug fixed).
+- **2026-11-02 — Review-prompt timing experiment started** (`review_first_good_msr`).
+- **2026-10-25 — Standard-engine selector retired** (`docs/archive/standard-engine-selector-retired-2026-10-25.md`).
+- **2026-09-23 — Dead-code cleanup** (23134c4, 5463df3, a222346).
+- Flaky mocked e2e tests fixed 2026-11-13.
+- `page_visits` test traffic stopped at the source 2026-08-14 (`trackVisit()` bails on `navigator.webdriver`).
+
+Earlier:
 Change default visibility to public
 delete comment (per-comment kebab menu, double-tap confirm; commenter deletes own, post owner moderates any on their post)
 Make notifications shown as closed by default, not expanded
@@ -104,7 +96,3 @@ multiple pictures in a post
 if someone used advanced settings show that it's not default anymore
 measurement advance settings
 measurement v2
-
-Android foreground push shows no banner (background works): check whether the notification lands silently in the shade (channel importance DEFAULT -> no heads-up; fix = HIGH-importance channel, needs new channel id since importance is fixed after creation) or never posts at all (PushService.onMessageReceived not running). Parked 2026-10-26 during push UAT.
-Public-post share links open the browser, never the app (both platforms): sharePost() uses api.wrotate.com/functions/v1/share-post for rich chat previews, but only wrotate.com is app-link/AASA verified, so the first tap always lands in the browser and the app needs a second tap. Fix candidates: Cloudflare Worker on wrotate.com/p/ serving crawler-only OG HTML (reuse share-post logic) so links become wrotate.com and open the app first-tap; or accept the two-tap flow. Before building, measure: share-post opens/week and second-tap (Open WRotate) conversion. Parked 2026-10-26.
-Review-prompt timing experiment: move the Apple review prompt to fire right after a successful measurement (the delight moment) instead of its current trigger — as an experiment() A/B with the standard guardrails, per the growth agent's 2026-10-26 proposal. Baseline: 33 ratings at the 2026-10-10 direct-sheet ship; compare App Store Connect ratings count. Parked 2026-10-30 (App Store listing pass already done; this is the remaining in-app half).
