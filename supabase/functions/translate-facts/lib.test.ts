@@ -176,3 +176,10 @@ Deno.test("modelSource — changes with any English the translations were made f
   assertEquals(modelSource({ ...full, refs_by_era: [refs[0], refs[2], refs[1]] }) === base, false);      // reordered
   assertEquals(modelSource({ ...full, refs_by_era: [...refs, { reference: "X", years: "2020" }] }) === base, false);  // one more, no note
 });
+
+Deno.test("halves — a refused batch is cut in two, keys kept; a single fact is not cut", async () => {
+  const { halves } = await import("./lib.ts");
+  const parts = halves({ f0: "a", f1: "b", f2: "c" });
+  if (JSON.stringify(parts) !== JSON.stringify([{ f0: "a", f1: "b" }, { f2: "c" }])) throw new Error(JSON.stringify(parts));
+  if (halves({ f4: "x" }).length !== 1 || halves({}).length !== 1) throw new Error("single");
+});

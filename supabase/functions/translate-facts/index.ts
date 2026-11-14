@@ -20,7 +20,7 @@ import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 import { OTHER_LANGS } from "../_shared/translate-lib.ts";
 import type { Fields, OtherLang } from "../_shared/translate-lib.ts";
 import { translateFields } from "../_shared/translate.ts";
-import { batchFields, chunk, mergeAnswers, mergeModelAnswers, modelBatchFields, modelMissingLangs, modelSource } from "./lib.ts";
+import { batchFields, chunk, halves, mergeAnswers, mergeModelAnswers, modelBatchFields, modelMissingLangs, modelSource } from "./lib.ts";
 import type { FactRow, ModelRow } from "./lib.ts";
 
 const BATCH = 12;      // facts per model call
@@ -71,6 +71,19 @@ async function translateModels(supabase: any, missingAny: string) {
   return { rows: rows.length, stored, calls, rejected };
 }
 
+// One answer covers a whole batch, and one fact the check refuses used to cost the other
+// eleven their translation, run after run. A refused batch is asked again in halves, down
+// to single facts, so only the fact at fault stays English.
+async function translateSplit(fields: Fields, lang: OtherLang, onCall: () => void): Promise<Fields> {
+  const out = await translateFields(fields, lang, { timeoutMs: 45000, tag: "facts" });
+  if (out) return out;
+  const parts = halves(fields);
+  if (parts.length < 2) return {};
+  const got: Fields = {};
+  for (const part of parts) { onCall(); Object.assign(got, await translateSplit(part, lang, onCall)); }
+  return got;
+}
+
 serve(async (req) => {
   if (!triggerSecretOk(req.headers.get("x-campaign-secret"), Deno.env.get("CAMPAIGN_TRIGGER_SECRET"))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
@@ -112,8 +125,9 @@ serve(async (req) => {
         const fields = batchFields(batch, lang);
         if (!Object.keys(fields).length) return;
         calls++;
-        const out = await translateFields(fields, lang, { timeoutMs: 45000, tag: "facts" });
-        if (out) answers.set(lang, out); else rejected++;
+        const out = await translateSplit(fields, lang, () => { calls++; });
+        if (Object.keys(out).length) answers.set(lang, out);
+        if (Object.keys(out).length < Object.keys(fields).length) rejected++;
       }));
       const merged = mergeAnswers(batch, answers);
       const gained = new Set(merged.map((m) => m.id));

@@ -37,6 +37,16 @@ export function mergeAnswers(
   return out;
 }
 
+/** A batch cut in two, for asking again after a refused answer. One field (or none)
+ *  cannot be cut: returns it alone. */
+export function halves(fields: Fields): Fields[] {
+  const keys = Object.keys(fields);
+  if (keys.length < 2) return [fields];
+  const mid = Math.ceil(keys.length / 2);
+  const pick = (ks: string[]) => Object.fromEntries(ks.map((k) => [k, fields[k]]));
+  return [pick(keys.slice(0, mid)), pick(keys.slice(mid))];
+}
+
 export function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
