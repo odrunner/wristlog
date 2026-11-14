@@ -15,8 +15,7 @@
 3. ~~24 stuck fun facts~~ FIXED 2026-11-14 (`b464441c`: a refused batch is asked again in halves) — 2,446 of 2,446 translated.
 4. **Share pages keep two emoji state icons** (watch, lock) because English output was held byte-identical. Replace with glyphs or SVG.
 5. **Still English:** `w/` public model page (`model_page` RPC returns English), `og:` tags and first `<title>` on `p/` and `profile/`, og:image SVG text, `404.html`, `privacy.html`, `terms.html`, `delete-account.html`, `manifest.json`, native bridge error messages, "present" inside model year ranges.
-6. ~~Translated broadcast test~~ DONE by the user (2026-11-13): readable but not a good translation, which is why translated emails carry the "translated by AI" note. Quality is the open point, see 7.
-7. **Native-speaker review** of all six languages, incl. French "fil" / Turkish "akış" and "Snap to Track"; then consider starting new users in their device language.
+6. ~~Translated broadcast test~~ DONE by the user (2026-11-13): readable but not a good translation, which is why translated emails carry the "translated by AI" note. 
 
 *Design values, all still open (nothing from this audit was changed):*
 1. **Share pages + unsubscribe page carry an old copy of the palette** (98 colours, 229 sizes in 5 edge-function files; light `--bg #f5f5f8`, `--gold #9a7628`, `--muted #70708a` vs the stylesheet's `#e9edf1`, `#87661a`, `#566070`). Two of the old values are ones the stylesheet's comments record as failing contrast. Fix + a token-copy test.
