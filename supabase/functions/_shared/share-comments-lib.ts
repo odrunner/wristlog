@@ -145,22 +145,22 @@ export function commentsSectionHtml(kind: ShareKind, token: string, comments: Pu
   const n = (comments || []).length;
   return `
     <style>
-      .sc-wrap { margin-top: 1.5rem; }
-      .sc-title { font-size: .95rem; font-weight: 800; margin-bottom: .6rem; }
-      .sc-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .75rem; margin-bottom: .5rem; }
-      .sc-meta { font-size: .72rem; color: var(--muted); margin-bottom: .2rem; }
-      .sc-name { font-weight: 700; color: var(--text); }
-      .sc-body { font-size: .88rem; white-space: pre-wrap; word-break: break-word; }
-      .sc-empty { font-size: .85rem; color: var(--muted); margin-bottom: .75rem; }
-      .sc-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem; margin-top: .75rem; }
-      .sc-form label { display: block; font-size: .72rem; color: var(--muted); margin: .35rem 0 .2rem; }
-      .sc-form input, .sc-form textarea { width: 100%; font: inherit; font-size: .9rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; }
-      .sc-form textarea { min-height: 84px; resize: vertical; }
-      .sc-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-      .sc-note { font-size: .72rem; color: var(--muted); margin-top: .4rem; }
-      .sc-btn { display: inline-block; margin-top: .6rem; background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .55rem 1.2rem; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
-      .sc-btn[disabled] { opacity: .6; cursor: default; }
-      .sc-err { font-size: .8rem; color: #c0392b; margin-top: .4rem; min-height: 1em; }
+      .sc-wrap { margin-top: var(--space-6); }
+      .sc-title { font-size: var(--fs-body); font-weight: var(--fw-heavy); margin-bottom: var(--space-2-5); }
+      .sc-item { background: var(--surface); border: var(--space-px) solid var(--border); border-radius: var(--radius); padding: var(--space-2-5) var(--space-3); margin-bottom: var(--space-2); }
+      .sc-meta { font-size: var(--fs-sm); color: var(--muted); margin-bottom: var(--space-1); }
+      .sc-name { font-weight: var(--fw-bold); color: var(--text); }
+      .sc-body { font-size: var(--fs-md); white-space: pre-wrap; word-break: break-word; }
+      .sc-empty { font-size: var(--fs-md); color: var(--muted); margin-bottom: var(--space-3); }
+      .sc-form { background: var(--surface); border: var(--space-px) solid var(--border); border-radius: var(--radius); padding: var(--space-3); margin-top: var(--space-3); }
+      .sc-form label { display: block; font-size: var(--fs-sm); color: var(--muted); margin: var(--space-1-5) 0 var(--space-1); }
+      .sc-form input, .sc-form textarea { width: 100%; font: inherit; font-size: var(--fs-input); color: var(--text); background: var(--bg); border: var(--space-px) solid var(--border); border-radius: var(--radius-btn); padding: var(--space-2) var(--space-2-5); }
+      .sc-form textarea { min-height: var(--size-20); resize: vertical; }
+      .sc-hp { position: absolute; left: calc(-1 * var(--size-max)); width: var(--size-px); height: var(--size-px); overflow: hidden; }
+      .sc-note { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-1-5); }
+      .sc-btn { display: inline-block; margin-top: var(--space-2-5); background: var(--gold); color: var(--white); border: none; border-radius: var(--radius-btn); padding: var(--space-2) var(--space-5); font: inherit; font-size: var(--fs-md); font-weight: var(--fw-semibold); cursor: pointer; }
+      .sc-btn[disabled] { opacity: var(--opacity-dim); cursor: default; }
+      .sc-err { font-size: var(--fs-base); color: var(--danger-text); margin-top: var(--space-1-5); min-height: 1em; }
     </style>
     <section class="sc-wrap" id="sc-wrap" data-kind="${esc(kind)}" data-token="${esc(token)}">
       <div class="sc-title">${S.title}${n ? ` (${num(lang, n)})` : ""}</div>

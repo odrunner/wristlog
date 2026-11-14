@@ -4,6 +4,7 @@
 // The page is written in the reader's language (pageLang in _shared/lang.ts);
 // every `lang` below defaults to English, which is the text the page always
 // had. The og:image SVG stays English: only preview fetchers request it.
+import { PAGE_TOKENS_CSS } from "../_shared/page-tokens.ts";
 import { count, fill, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { SHARE_STRINGS } from "../_shared/share-strings.ts";
@@ -93,45 +94,34 @@ export function htmlPage(title: string, description: string, imageUrl: string, c
   <link rel="icon" type="image/svg+xml" href="https://wrotate.com/icon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #e9edf1; --surface: #ffffff; --surface2: #f1f4f7;
-      --border: #d3d9e1; --gold: #87661a; --gold-lt: #c9a84c;
-      --text: #141a24; --muted: #566070; --radius: 10px;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
-        --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
-        --text: #e6e6f0; --muted: #82829d;
-      }
-    }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
+    ${PAGE_TOKENS_CSS}
+    body { background: var(--bg); color: var(--text); font-family: var(--font-sans); min-height: 100vh; font-size: var(--fs-body); }
     a { color: var(--gold); text-decoration: none; }
-    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
-    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
+    .topbar { position: sticky; top: 0; z-index: var(--z-header); display: flex; align-items: center; justify-content: center; padding: var(--space-3) var(--space-5); background: var(--surface); border-bottom: var(--space-px) solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); color: var(--gold); text-decoration: none; }
+    .topbar-logo img { width: var(--size-6); height: var(--size-6); border-radius: var(--radius-sm); }
     .topbar-logo:hover { color: var(--gold-lt); }
-    .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-    .col-hero { text-align: center; padding: 0 0 1.25rem; }
-    .col-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); overflow: hidden; margin: 0 auto .75rem; }
+    .page-wrap { max-width: var(--size-130); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-16); }
+    .col-hero { text-align: center; padding: 0 0 var(--space-5); }
+    .col-avatar { width: var(--size-18); height: var(--size-18); border-radius: var(--radius-round); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: var(--muted); overflow: hidden; margin: 0 auto var(--space-3); }
     .col-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .col-name { font-size: 1.2rem; font-weight: 800; margin-bottom: .15rem; }
-    .col-uname { font-size: .82rem; color: var(--muted); margin-bottom: .4rem; }
-    .col-bio { font-size: .88rem; color: var(--muted); line-height: 1.5; max-width: 340px; margin: 0 auto; }
-    .watch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-    .watch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .col-name { font-size: var(--fs-2xl); font-weight: var(--fw-heavy); margin-bottom: var(--space-0-5); }
+    .col-uname { font-size: var(--fs-base); color: var(--muted); margin-bottom: var(--space-1-5); }
+    .col-bio { font-size: var(--fs-md); color: var(--muted); line-height: var(--lh-body); max-width: var(--size-85); margin: 0 auto; }
+    .watch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .watch-card { background: var(--surface); border: var(--space-px) solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .watch-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-    .watch-card-ph { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); }
-    .watch-card-body { padding: .6rem .75rem; }
-    .watch-card-brand { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    .watch-card-name { font-size: .85rem; font-weight: 700; margin: .1rem 0; }
-    .watch-card-wears { font-size: .72rem; color: var(--muted); }
+    .watch-card-ph { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: var(--muted); }
+    .watch-card-body { padding: var(--space-2-5) var(--space-3); }
+    .watch-card-brand { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing: var(--ls-tight); }
+    .watch-card-name { font-size: var(--fs-md); font-weight: var(--fw-bold); margin: var(--space-0-5) 0; }
+    .watch-card-wears { font-size: var(--fs-sm); color: var(--muted); }
     .link-block { display: block; text-decoration: none; color: inherit; }
-    .state-wrap { text-align: center; padding: 3rem 1rem; }
-    .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
-    .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
-    .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; }
-    .btn-cta { display: inline-block; background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .6rem 1.5rem; font-size: .92rem; font-weight: 600; text-decoration: none; font-family: inherit; margin-top: 1rem; }
+    .state-wrap { text-align: center; padding: var(--space-12) var(--space-4); }
+    .state-icon { font-size: var(--fs-4xl); margin-bottom: var(--space-2); }
+    .state-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-1); }
+    .state-sub { font-size: var(--fs-md); color: var(--muted); line-height: var(--lh-body); }
+    .btn-cta { display: inline-block; background: var(--gold); color: var(--white); border: none; border-radius: var(--radius-btn); padding: var(--space-2-5) var(--space-6); font-size: var(--fs-body); font-weight: var(--fw-semibold); text-decoration: none; font-family: inherit; margin-top: var(--space-4); }
   </style>
 </head>
 <body>
@@ -224,7 +214,7 @@ export function collectionStatePage(kind: "missing" | "notFound", supabaseUrl: s
       "https://wrotate.com/",
       `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">${S.collection.none}</div>
        <div class="state-sub">${S.visit}</div>
-       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">${open}</a></div></div>`,
+       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:var(--space-4)">${open}</a></div></div>`,
       lang,
     );
   }
@@ -234,7 +224,7 @@ export function collectionStatePage(kind: "missing" | "notFound", supabaseUrl: s
     "https://wrotate.com/",
     `<div class="state-wrap"><div class="state-icon">🔒</div><div class="state-title">${S.collection.notFound}</div>
        <div class="state-sub">${S.collection.notFoundSub}</div>
-       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">${open}</a></div></div>`,
+       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:var(--space-4)">${open}</a></div></div>`,
     lang,
   );
 }

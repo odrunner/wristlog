@@ -2,14 +2,15 @@
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Invalid link — WRotate</title>
 <style>
-  body { margin:0; padding:40px 20px; background:#e9edf1; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
-  .card { max-width:420px; margin:0 auto; background:#fff; border-radius:12px; padding:32px; box-shadow:0 1px 4px rgba(0,0,0,.08); text-align:center; }
-  .logo { width:40px; height:40px; border-radius:9px; margin-bottom:8px; }
-  .brand { font-size:18px; font-weight:700; color:#87661a; letter-spacing:.03em; margin-bottom:20px; }
-  h1 { font-size:18px; color:#141a24; margin:0 0 12px; }
-  p { font-size:14px; color:#566070; line-height:1.55; margin:0 0 16px; }
-  a.btn { display:inline-block; background:#87661a; color:#fff; font-size:13px; font-weight:600; padding:10px 24px; border-radius:8px; text-decoration:none; }
-  .muted { font-size:12px; color:#566070; margin-top:20px; }
+  :root { --bg: #e9edf1; --surface: #ffffff; --surface2: #f1f4f7; --border: #d3d9e1; --gold: #87661a; --gold-lt: #c9a84c; --text: #141a24; --muted: #566070; --danger-text: #b03636; --white: #fff; --radius: 10px; --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px; --radius-round: 50%; --space-px: 1px; --space-0-5: .125rem; --space-1: .25rem; --space-1-5: .375rem; --space-2: .5rem; --space-2-5: .625rem; --space-3: .75rem; --space-3-5: .875rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem; --fs-body: .9375rem; --fs-input: 1rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem; --fs-md: .88rem; --fs-xl: 1.1rem; --fs-2xl: 1.3rem; --fs-3xl: 1.6rem; --fs-4xl: 2.5rem; --fs-display: 2rem; --fw-semibold: 600; --fw-bold: 700; --fw-heavy: 800; --lh-none: 1; --lh-body: 1.55; --ls-snug: .02em; --ls-tight: .04em; --ls-eyebrow: .08em; --ls-wide: .16em; --ls-display: -.02em; --size-px: 1px; --size-6: 24px; --size-9: 36px; --size-10: 40px; --size-18: 72px; --size-20: 80px; --size-85: 340px; --size-105: 420px; --size-130: 520px; --size-max: 9999px; --opacity-dim: .5; --shadow-1: 0 1px 4px rgba(0,0,0,.18); --shadow-3: 0 4px 16px rgba(0,0,0,.25); --dur-fast: .15s; --z-header: 100; --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { margin:0; padding:var(--space-10) var(--space-5); background:var(--bg); font-family:var(--font-sans); }
+  .card { max-width:var(--size-105); margin:0 auto; background:var(--surface); border-radius:var(--radius); padding:var(--space-8); box-shadow:var(--shadow-1); text-align:center; }
+  .logo { width:var(--size-10); height:var(--size-10); border-radius:var(--radius); margin-bottom:var(--space-2); }
+  .brand { font-size:var(--fs-xl); font-weight:var(--fw-bold); color:var(--gold); letter-spacing:var(--ls-snug); margin-bottom:var(--space-5); }
+  h1 { font-size:var(--fs-xl); color:var(--text); margin:0 0 var(--space-3); }
+  p { font-size:var(--fs-md); color:var(--muted); line-height:var(--lh-body); margin:0 0 var(--space-4); }
+  a.btn { display:inline-block; background:var(--gold); color:var(--white); font-size:var(--fs-base); font-weight:var(--fw-semibold); padding:var(--space-2-5) var(--space-6); border-radius:var(--radius-btn); text-decoration:none; }
+  .muted { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-5); }
 </style></head><body>
 <div class="card">
   <img src="https://wrotate.com/icon.svg" alt="WRotate" class="logo">

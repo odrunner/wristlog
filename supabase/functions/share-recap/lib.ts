@@ -14,6 +14,7 @@
 // The page is written in the reader's language (pageLang in _shared/lang.ts);
 // every `lang` below defaults to English, which is the text the page always
 // had. The og:image SVG stays English: only preview fetchers request it.
+import { PAGE_TOKENS_CSS } from "../_shared/page-tokens.ts";
 import { count, fill, isCrawlerUA, LOCALES, num, SHELL_STRINGS } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { SHARE_STRINGS } from "../_shared/share-strings.ts";
@@ -239,47 +240,36 @@ export function htmlPage(title: string, description: string, imageUrl: string, c
   <link rel="icon" type="image/svg+xml" href="https://wrotate.com/icon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #e9edf1; --surface: #ffffff; --surface2: #f1f4f7;
-      --border: #d3d9e1; --gold: #87661a; --gold-lt: #c9a84c;
-      --text: #141a24; --muted: #566070;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
-        --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
-        --text: #e6e6f0; --muted: #82829d;
-      }
-    }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
+    ${PAGE_TOKENS_CSS}
+    body { background: var(--bg); color: var(--text); font-family: var(--font-sans); min-height: 100vh; font-size: var(--fs-body); }
     a { color: var(--gold); text-decoration: none; }
-    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); }
-    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
-    .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-    .rc-eyebrow { text-align: center; font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
-    .rc-month { text-align: center; font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; margin: .15rem 0 .1rem; }
-    .rc-who { text-align: center; font-size: .9rem; color: var(--muted); margin-bottom: 1.5rem; }
-    .rc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: 1.25rem; }
-    .rc-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: .9rem .5rem; text-align: center; }
-    .rc-stat-val { font-size: 1.7rem; font-weight: 800; color: var(--gold); line-height: 1.1; }
-    .rc-stat-lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: .2rem; }
-    .rc-sect { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 1.25rem 0 .6rem; text-align: center; }
-    .rc-podium { display: flex; justify-content: center; gap: 1rem; }
+    .topbar { position: sticky; top: 0; z-index: var(--z-header); display: flex; align-items: center; justify-content: center; padding: var(--space-3) var(--space-5); background: var(--surface); border-bottom: var(--space-px) solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); color: var(--gold); }
+    .topbar-logo img { width: var(--size-6); height: var(--size-6); border-radius: var(--radius-sm); }
+    .page-wrap { max-width: var(--size-130); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-16); }
+    .rc-eyebrow { text-align: center; font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--gold); }
+    .rc-month { text-align: center; font-size: var(--fs-4xl); font-weight: var(--fw-heavy); letter-spacing: var(--ls-display); margin: var(--space-0-5) 0 var(--space-0-5); }
+    .rc-who { text-align: center; font-size: var(--fs-md); color: var(--muted); margin-bottom: var(--space-6); }
+    .rc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2-5); margin-bottom: var(--space-5); }
+    .rc-stat { background: var(--surface); border: var(--space-px) solid var(--border); border-radius: var(--radius); padding: var(--space-3-5) var(--space-2); text-align: center; }
+    .rc-stat-val { font-size: var(--fs-3xl); font-weight: var(--fw-heavy); color: var(--gold); line-height: var(--lh-none); }
+    .rc-stat-lbl { font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--muted); margin-top: var(--space-1); }
+    .rc-sect { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--muted); margin: var(--space-5) 0 var(--space-2-5); text-align: center; }
+    .rc-podium { display: flex; justify-content: center; gap: var(--space-4); }
     .rc-item { flex: 1 1 0; min-width: 0; text-align: center; }
-    .rc-thumb { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto .4rem; overflow: hidden; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--muted); }
+    .rc-thumb { width: var(--size-18); height: var(--size-18); border-radius: var(--radius-round); margin: 0 auto var(--space-1-5); overflow: hidden; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-bold); color: var(--muted); }
     .rc-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .rc-name { font-size: .8rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rc-count { font-size: .72rem; color: var(--muted); }
-    .rc-streak { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; text-align: center; margin-top: 1.25rem; }
-    .rc-streak-val { font-size: 2rem; font-weight: 800; color: var(--gold); line-height: 1; }
-    .rc-streak-lbl { font-size: .85rem; color: var(--muted); margin-top: .2rem; }
-    .state-wrap { text-align: center; padding: 3rem 1rem; }
-    .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
-    .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
-    .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; }
-    .cta-wrap { text-align: center; margin-top: 2rem; }
-    .btn-cta { display: inline-block; background: var(--gold); color: #fff; border-radius: 8px; padding: .7rem 1.6rem; font-size: .95rem; font-weight: 700; }
+    .rc-name { font-size: var(--fs-base); font-weight: var(--fw-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rc-count { font-size: var(--fs-sm); color: var(--muted); }
+    .rc-streak { background: var(--surface); border: var(--space-px) solid var(--border); border-radius: var(--radius); padding: var(--space-4); text-align: center; margin-top: var(--space-5); }
+    .rc-streak-val { font-size: var(--fs-display); font-weight: var(--fw-heavy); color: var(--gold); line-height: var(--lh-none); }
+    .rc-streak-lbl { font-size: var(--fs-md); color: var(--muted); margin-top: var(--space-1); }
+    .state-wrap { text-align: center; padding: var(--space-12) var(--space-4); }
+    .state-icon { font-size: var(--fs-4xl); margin-bottom: var(--space-2); }
+    .state-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: var(--space-1); }
+    .state-sub { font-size: var(--fs-md); color: var(--muted); line-height: var(--lh-body); }
+    .cta-wrap { text-align: center; margin-top: var(--space-8); }
+    .btn-cta { display: inline-block; background: var(--gold); color: var(--white); border-radius: var(--radius-btn); padding: var(--space-3) var(--space-6); font-size: var(--fs-body); font-weight: var(--fw-bold); }
   </style>
 </head>
 <body>

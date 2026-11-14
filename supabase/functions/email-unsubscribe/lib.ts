@@ -3,6 +3,7 @@
 // Uses only Web Crypto + standard web APIs (crypto.subtle, btoa, TextEncoder),
 // which run under Deno test without any permissions or network.
 
+import { TOKENS_LIGHT } from "../_shared/page-tokens.ts";
 import { fill } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { UNSUB_STRINGS } from "./strings.ts";
@@ -31,7 +32,7 @@ export function categoryLabel(cat: string, lang: Lang = "en"): string {
 export function successPage(lang: Lang, cat: string, allHref: string | null): { title: string; body: string } {
   const S = UNSUB_STRINGS[lang];
   const allLink = allHref
-    ? `<p class="muted"><a href="${allHref}" style="color:#87661a;">${S.all}</a></p>`
+    ? `<p class="muted"><a href="${allHref}" style="color:var(--gold);">${S.all}</a></p>`
     : "";
   return {
     title: S.title,
@@ -132,14 +133,15 @@ export function renderPage(title: string, body: string, lang: Lang = "en"): stri
 <html${lang === "en" ? "" : ` lang="${lang}"`}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} — WRotate</title>
 <style>
-  body { margin:0; padding:40px 20px; background:#e9edf1; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
-  .card { max-width:420px; margin:0 auto; background:#fff; border-radius:12px; padding:32px; box-shadow:0 1px 4px rgba(0,0,0,.08); text-align:center; }
-  .logo { width:40px; height:40px; border-radius:9px; margin-bottom:8px; }
-  .brand { font-size:18px; font-weight:700; color:#87661a; letter-spacing:.03em; margin-bottom:20px; }
-  h1 { font-size:18px; color:#141a24; margin:0 0 12px; }
-  p { font-size:14px; color:#566070; line-height:1.55; margin:0 0 16px; }
-  a.btn { display:inline-block; background:#87661a; color:#fff; font-size:13px; font-weight:600; padding:10px 24px; border-radius:8px; text-decoration:none; }
-  .muted { font-size:12px; color:#566070; margin-top:20px; }
+  :root { ${TOKENS_LIGHT} }
+  body { margin:0; padding:var(--space-10) var(--space-5); background:var(--bg); font-family:var(--font-sans); }
+  .card { max-width:var(--size-105); margin:0 auto; background:var(--surface); border-radius:var(--radius); padding:var(--space-8); box-shadow:var(--shadow-1); text-align:center; }
+  .logo { width:var(--size-10); height:var(--size-10); border-radius:var(--radius); margin-bottom:var(--space-2); }
+  .brand { font-size:var(--fs-xl); font-weight:var(--fw-bold); color:var(--gold); letter-spacing:var(--ls-snug); margin-bottom:var(--space-5); }
+  h1 { font-size:var(--fs-xl); color:var(--text); margin:0 0 var(--space-3); }
+  p { font-size:var(--fs-md); color:var(--muted); line-height:var(--lh-body); margin:0 0 var(--space-4); }
+  a.btn { display:inline-block; background:var(--gold); color:var(--white); font-size:var(--fs-base); font-weight:var(--fw-semibold); padding:var(--space-2-5) var(--space-6); border-radius:var(--radius-btn); text-decoration:none; }
+  .muted { font-size:var(--fs-sm); color:var(--muted); margin-top:var(--space-5); }
 </style></head><body>
 <div class="card">
   <img src="https://wrotate.com/icon.svg" alt="WRotate" class="logo">
