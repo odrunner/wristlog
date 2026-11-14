@@ -8541,7 +8541,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.17.25';
+const APP_VERSION = '14.05.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20923,6 +20923,9 @@ function _adminStatsBatch2() {
     // Private messaging (dm tables are participant-RLS'd, so the counts must
     // come from the SECURITY DEFINER RPC). Spec: sql/2026-11-06-admin-dm-stats.sql.
     db.rpc('admin_dm_stats'),
+    // App language members explicitly chose (profiles.language) + net 24h change
+    // per language, from the language_changes log. Spec: sql/2026-11-14-admin-language-stats.sql.
+    db.rpc('admin_language_stats'),
   ]), 20000);
 }
 
@@ -21023,7 +21026,7 @@ async function loadAdminStats() {
     // between formats.
     const avg = (n, d) => d > 0 ? (n / d).toFixed(3) : '0.000';
 
-    const [dodRes, factRes, dauRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes, dmRes] = await b2P;
+    const [dodRes, factRes, dauRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes, npIdoRes, snapIdoRes, simRes, wlRecRes, dmRes, langRes] = await b2P;
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
     const dauDod = dauRes.data || {};
@@ -21035,6 +21038,7 @@ async function loadAdminStats() {
     const sim = (simRes && simRes.data) || {};
     const wlRec = (wlRecRes && wlRecRes.data) || {};
     const dms = (dmRes && dmRes.data) || {};
+    const langs = (langRes && langRes.data) || {};
     const ido = idoRes.data || {};
     const idoBy = ido.by_source || {};
     const idoDecided = (Number(idoBy.accepted) || 0) + (Number(idoBy.edited) || 0) + (Number(idoBy.rejected) || 0);
@@ -21390,6 +21394,13 @@ async function loadAdminStats() {
         ${statRow('DM messages', Number(dms.messages_total) || 0, null,
           (Number(dms.messages_24h) || 0) + ' (24h)' + inlineDelta((Number(dms.messages_24h) || 0) - (Number(dms.messages_prev24h) || 0), false))}
         ${statRow('DM users', Number(dms.users_total) || 0, Number(dms.users_24h) || 0, dmUsersSub)}
+      </div>
+      <div class="admin-card">
+        <div class="eyebrow stack-2">Languages (explicit choice)</div>
+        ${statRow('Chose a language', Number(langs.chosen_total) || 0, Number(langs.chosen_24h) || 0,
+          (extUsers > 0 ? Math.round((Number(langs.chosen_total) || 0) / extUsers * 100) : 0) + '% of users')}
+        ${(langs.by_lang || []).map(l => statRow(escHtml((I18N_LANGS.find(([c]) => c === l.lang) || [, l.lang])[1]),
+          Number(l.users) || 0, Number(l.d1) || 0)).join('')}
       </div>
       <div class="admin-card">
         <div class="eyebrow stack-2">Per-User Averages (external)</div>

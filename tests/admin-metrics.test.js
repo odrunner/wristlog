@@ -170,7 +170,7 @@ describe('Totals card day-over-day deltas', () => {
   // with an internal account on either side.
   it('fetches DM stats from the admin_dm_stats RPC in batch 2', () => {
     expect(html).toContain("db.rpc('admin_dm_stats')");
-    expect(html).toMatch(/snapIdoRes, simRes, wlRecRes, dmRes\] = await b2P;/);
+    expect(html).toMatch(/snapIdoRes, simRes, wlRecRes, dmRes, langRes\] = await b2P;/);
   });
 
   it('DM messages row: total stands alone, 24h figure + change vs prior 24h in the sub', () => {
@@ -186,6 +186,30 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/const dmUsersSub = dmSenders \+ ' sender'/);
     expect(html).toMatch(/dmConvs \+ ' conversation'/);
     expect(html).toMatch(/dmPending > 0 \? ' · ' \+ dmPending \+ ' pending' : ''/);
+  });
+});
+
+describe('Languages card', () => {
+  // How many external members explicitly chose an app language and which, each
+  // with the net last-24h change. Spec: sql/2026-11-14-admin-language-stats.sql.
+  it('fetches admin_language_stats in batch 2', () => {
+    expect(html).toContain("db.rpc('admin_language_stats')");
+    expect(html).toMatch(/const langs = \(langRes && langRes\.data\) \|\| \{\};/);
+  });
+
+  it('renders a Languages card on the Usage tab, after Social', () => {
+    const card = html.indexOf('Languages (explicit choice)');
+    expect(card).toBeGreaterThan(html.indexOf("statRow('DM users'"));
+    expect(card).toBeLessThan(html.indexOf('Per-User Averages (external)'));
+  });
+
+  it('total row: chosen count with its 24h change and share of external users', () => {
+    expect(html).toMatch(/statRow\('Chose a language', Number\(langs\.chosen_total\) \|\| 0, Number\(langs\.chosen_24h\) \|\| 0,/);
+    expect(html).toMatch(/\(Number\(langs\.chosen_total\) \|\| 0\) \/ extUsers \* 100\) : 0\) \+ '% of users'/);
+  });
+
+  it('one row per language, named from I18N_LANGS, users with net 24h change', () => {
+    expect(html).toMatch(/\(langs\.by_lang \|\| \[\]\)\.map\(l => statRow\(escHtml\(\(I18N_LANGS\.find\(\(\[c\]\) => c === l\.lang\) \|\| \[, l\.lang\]\)\[1\]\),\s*Number\(l\.users\) \|\| 0, Number\(l\.d1\) \|\| 0\)\)/);
   });
 });
 
