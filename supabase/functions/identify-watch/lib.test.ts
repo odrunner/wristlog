@@ -106,6 +106,22 @@ Deno.test("buildEnhancePrompt — includes reference line when present", () => {
   assertStringIncludes(p, "Reference: 126610LN");
 });
 
+Deno.test("buildEnhancePrompt — English, a missing language and an unknown one leave the prompt untouched", () => {
+  const base = buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" });
+  assertEquals(buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" }, "en"), base);
+  assertEquals(buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" }, "xx"), base);
+  assertEquals(buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" }, null), base);
+});
+
+Deno.test("buildEnhancePrompt — a supported language asks for the two prose fields in it, nothing else", () => {
+  const base = buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" });
+  const p = buildEnhancePrompt({ brand: "Omega", model: "Speedmaster" }, "de");
+  assertEquals(p.startsWith(base), true);
+  assertStringIncludes(p, 'Write "description" and "background" in German.');
+  assertStringIncludes(p, "Keep every other field");
+});
+
+
 // ── buildCollectionPrompt ──
 Deno.test("buildCollectionPrompt — lists owned watches with refs", () => {
   const p = buildCollectionPrompt([

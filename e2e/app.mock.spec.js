@@ -1643,6 +1643,10 @@ test.describe('Post location (mocked)', () => {
     await waitForAppBoot(page);
     await page.evaluate(() => openNewPost());
     await expect(page.locator('#new-post-modal')).toBeVisible();
+    // openNewPost() focuses the caption 50ms after opening. A test that types into the
+    // location field inside that window loses the keystrokes to the caption (the text
+    // lands there, the chip stays selected), so wait until that focus has happened.
+    await expect(page.locator('#np-body')).toBeFocused();
   });
 
   // 9390b33 ("one-line occasion & location rows") trimmed POST_LOCATION_PRESETS to

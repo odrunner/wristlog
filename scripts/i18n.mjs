@@ -1,6 +1,6 @@
 // Languages: collect the app's English strings, build each language file, check both.
 //
-//   node scripts/i18n.mjs extract    index.html -> i18n/en.keys.json (needs Playwright's chromium)
+//   node scripts/i18n.mjs extract    index.html + model-page.js -> i18n/en.keys.json (needs Playwright's chromium)
 //   node scripts/i18n.mjs build      i18n/<lang>.json -> i18n/<lang>.js, and stamp its ?v= hash in index.html
 //   node scripts/i18n.mjs status     per language: translated / missing / stale counts
 //   node scripts/i18n.mjs --check    exit 1 if a built file or its stamp is out of date (unit test runs this)
@@ -28,8 +28,12 @@ export const translatable = (s) => /[A-Za-z]{2}/.test(s);
 // Template literals count only when they have no ${…}; interpolated text goes through
 // tx('… {name} …', { name }) instead.
 const CALL_RE = /\b(?:tx|toast)\(\s*(?:'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\$]|\\.)*)`)\s*[,)]/g;
+// toast('Could not save — ' + error.message): the label in front of the dash or colon is
+// a key of its own; the page's toastText() translates it and leaves the server's tail.
+const PREFIX_RE = /\btoast\(\s*(['"])((?:(?!\1)[^\\\n])+?)\s*(?:[—–]|:)\s*\1\s*\+/g;
 export function scriptStrings(src) {
   const out = new Set();
+  for (const m of src.matchAll(PREFIX_RE)) if (translatable(m[2])) out.add(m[2]);
   for (const m of src.matchAll(CALL_RE)) {
     const raw = m[1] ?? m[2] ?? m[3];
     let val;
@@ -142,12 +146,21 @@ function scriptOnly(script) {
   return script.replace(/<!DOCTYPE html>[\s\S]*?<\/html>/gi, '');
 }
 
+// Script files other than index.html whose labels land inside the app.
+export const EXTRA_SOURCES = ['model-page.js'];
+
 export async function extract() {
   const html = read('index.html');
   const keys = new Set((await markupStrings(html)).filter(translatable));
   const script = html.slice(html.indexOf('// i18n-runtime:end'));
   for (const s of scriptStrings(script)) keys.add(s);
   for (const s of templateStrings(scriptOnly(script))) keys.add(s);
+  // The model page is drawn by its own file, inside the app (#page-model) as well as on /w/.
+  for (const f of EXTRA_SOURCES) {
+    const src = read(f);
+    for (const s of scriptStrings(src)) keys.add(s);
+    for (const s of templateStrings(src)) keys.add(s);
+  }
   // Labels no pattern above can see (lower-case list values and the like), added by hand.
   for (const s of readJson('i18n/extra.keys.json')) keys.add(s);
   return [...keys].sort((a, b) => a.localeCompare(b, 'en'));

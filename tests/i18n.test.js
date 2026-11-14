@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
-import { scriptStrings, runtimeSource, stamp, builtSource, hashOf, liveDict, languages, translatable } from '../scripts/i18n.mjs';
+import { scriptStrings, templateStrings, runtimeSource, stamp, builtSource, hashOf, liveDict, languages, translatable, EXTRA_SOURCES } from '../scripts/i18n.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(join(root, 'index.html'), 'utf8');
@@ -77,7 +77,58 @@ describe('i18n: fun facts in the reader\'s language', () => {
   });
 });
 
+describe('i18n: an error toast keeps the server message and translates its label', () => {
+  const src = /function toastText\(msg\) \{[\s\S]*?\n\}\n/.exec(html)[0];
+  const make = (dict) => {
+    const window = dict ? { WR_I18N: { dict } } : {};
+    return new Function('window', runtimeSource(html) + ';' + src + '; return toastText;')(window);
+  };
+  const de = make({ 'Could not save': 'Speichern fehlgeschlagen', 'Enhance failed': 'Verbessern fehlgeschlagen', 'Saved': 'Gespeichert' });
+  it('translates a whole message that has an entry', () => expect(de('Saved')).toBe('Gespeichert'));
+  it('translates the label before a dash and leaves the tail', () =>
+    expect(de('Could not save — permission denied for table x')).toBe('Speichern fehlgeschlagen — permission denied for table x'));
+  it('does the same before a colon', () => expect(de('Enhance failed: timeout: 30s')).toBe('Verbessern fehlgeschlagen: timeout: 30s'));
+  it('leaves a message alone when the label has no entry', () => expect(de('Odd thing — detail')).toBe('Odd thing — detail'));
+  it('is a pass-through in English', () => expect(make(null)('Could not save — x')).toBe('Could not save — x'));
+});
+
+describe('i18n: the model page', () => {
+  const mp = readFileSync(join(root, 'model-page.js'), 'utf8');
+  it('is read by the extractor, so its labels reach the dictionary', () => {
+    expect(EXTRA_SOURCES).toContain('model-page.js');
+    const keys = json('i18n/en.keys.json');
+    for (const k of [...scriptStrings(mp)]) expect(keys, k).toContain(k);
+    for (const k of ['The story', 'Reference spec', 'I own one']) { expect([...templateStrings(mp)]).toContain(k); expect(keys).toContain(k); }
+  });
+  it('story text comes in the reader\'s language when the model has it, English otherwise', () => {
+    const src = /const MODEL_COLS_EN = [\s\S]*?\n}\n/.exec(html)[0];
+    const make = (lang) => new Function('window', 'i18nLang', src + '; return { modelTr, MODEL_COLS };')(lang === 'en' ? {} : { WR_I18N: { lang } }, () => lang);
+    const m = { id: 1, description: 'A dive watch.', history: 'Born in 1953.', translations: { de: { description: 'Eine Taucheruhr.', history: ' ' }, fr: {} } };
+    expect(make('en').MODEL_COLS).not.toContain('translations');
+    expect(make('de').MODEL_COLS).toContain('translations');
+    expect(make('en').modelTr(m)).toBe(m);
+    expect(make('de').modelTr(m)).toMatchObject({ description: 'Eine Taucheruhr.', history: 'Born in 1953.' });
+    expect(make('fr').modelTr(m)).toMatchObject({ description: 'A dive watch.', history: 'Born in 1953.' });
+    expect(make('tr').modelTr(m)).toBe(m);
+    expect(make('de').modelTr(null)).toBe(null);
+  });
+});
+
+describe('i18n: What\'s New', () => {
+  it('is translated from November 2026 on; only the older notes are skipped', () => {
+    expect(html).not.toMatch(/#whats-new-modal,\[data-i18n-skip\]/);
+    const modal = /<div id="whats-new-modal"[\s\S]*?closeWhatsNew\(\)">Close/.exec(html)[0];
+    const skipAt = modal.indexOf('<div data-i18n-skip>');
+    expect(skipAt).toBeGreaterThan(modal.indexOf('>November 2026<'));
+    expect(skipAt).toBeLessThan(modal.indexOf('>October 2026<'));
+  });
+});
+
 describe('i18n: extraction', () => {
+  it('lists the label of a toast that carries a server message', () => {
+    const got = scriptStrings("toast('Could not save — ' + error.message, 'error'); toast(\"Couldn't delete comment — \" + e.message); toast('Enhance failed: ' + (e?.message || e), 'error'); toast('Fine — whole')");
+    expect([...got].sort()).toEqual(['Could not save', "Couldn't delete comment", 'Enhance failed', 'Fine — whole']);
+  });
   it('collects literal tx() and toast() strings, skips interpolated and wordless ones', () => {
     const got = scriptStrings("toast('Saved'); x = tx(\"Couldn't save\", v); tx(`Plain`); toast(`Hi ${n}`); tx('—'); t('Local var call'); toast(msg, 'error'); format('Nope')");
     expect([...got].sort()).toEqual(["Couldn't save", 'Plain', 'Saved']);

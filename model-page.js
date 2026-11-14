@@ -13,6 +13,13 @@
   const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const escAttr = escHtml;
 
+  // Labels. Inside the app the host page has a dictionary: plain labels in the templates
+  // below are translated as they land (the app's live translator), and tx() does the ones
+  // built around a name or a count. The public /w/ page has neither and shows English.
+  const tx = (s, vars) => (typeof window.tx === 'function' ? window.tx(s, vars)
+    : vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : s);
+  const lookup = s => (typeof window.i18nLookup === 'function' && window.i18nLookup(s)) || s;
+
   // Stored images are 1500 px originals (~170-245 KB). Supabase Storage render
   // transforms downscale on the fly — /storage/v1/render/image/public/media/…?
   // width=…&height=…&resize=cover returns the box at 2x DPR (never upscaled).
@@ -158,28 +165,36 @@ function renderModelPage(el, ctx, h) {
     const within = pool ? (pool.members || []).filter(v => Math.abs(Number(v)) <= 5).length : 0;
     let head, big, sub;
     if (me) {
-      const refBits = [me.ref, me.caliber ? `cal. ${me.caliber}` : ''].filter(Boolean).join(' · ');
-      head = `<div class="mp-yours-top"><div class="mp-eyebrow">Your ${escHtml(m.name)}</div>${refBits ? `<div class="mp-yours-ref">${escHtml(refBits)}</div>` : ''}</div>`;
+      const refBits = [me.ref, me.caliber ? tx('cal. {n}', { n: me.caliber }) : ''].filter(Boolean).join(' · ');
+      head = `<div class="mp-yours-top"><div class="mp-eyebrow">${tx('Your {name}', { name: escHtml(m.name) })}</div>${refBits ? `<div class="mp-yours-ref">${escHtml(refBits)}</div>` : ''}</div>`;
       if (myRate != null) {
         big = `<div class="mp-rate"><span class="mp-rate-v">${rateNum(myRate)}</span><span class="mp-rate-u">s/day</span></div>`;
         const when = agoText(me.last_at);
-        sub = [when ? `Measured ${when}` : '', me.last_amp ? `${me.last_amp}° amplitude` : ''].filter(Boolean).join(' · ');
+        sub = [when ? tx('Measured {when}', { when: lookup(when) }) : '', me.last_amp ? tx('{n}° amplitude', { n: me.last_amp }) : ''].filter(Boolean).join(' · ');
       } else {
         big = `<div class="mp-rate-none">Not measured yet</div>`;
         sub = pool ? 'Measure it to see where it sits among members’ watches.' : '';
       }
     } else {
-      head = `<div class="mp-eyebrow">${acc ? 'How they run' : `How calibre ${escHtml(calLabel)} runs`}</div>`;
+      head = `<div class="mp-eyebrow">${acc ? 'How they run' : tx('How calibre {cal} runs', { cal: escHtml(calLabel) })}</div>`;
       big = `<div class="mp-rate"><span class="mp-rate-v">${rateNum(pool.med)}</span><span class="mp-rate-u">s/day median</span></div>`;
-      sub = `${plural(pool.n_members, 'member')} measured ${acc ? 'theirs' : 'one'} · ${within} of ${pool.n_members} within ±5 s/d`;
+      const nm = Number(pool.n_members);
+      sub = [nm === 1 ? (acc ? tx('1 member measured theirs') : tx('1 member measured one'))
+        : (acc ? tx('{n} members measured theirs', { n: pool.n_members }) : tx('{n} members measured one', { n: pool.n_members })),
+        tx('{k} of {n} within ±5 s/d', { k: within, n: pool.n_members })].join(' · ');
     }
+    // Each tx() call names its string outright: the extractor reads literal first arguments only.
+    const one = pool && Number(pool.n_members) === 1;
+    const lv = pool ? { n: pool.n_members, name: escHtml(m.name), cal: escHtml(calLabel), med: rateNum(pool.med) } : null;
     const legend = pool ? `<div class="mp-legend">
         <div class="mp-legend-row"><span class="mp-key-dot"></span><span>${acc
-          ? `${plural(pool.n_members, 'member')}’ ${escHtml(m.name)} · median <b>${rateNum(pool.med)}</b> s/d`
-          : `${plural(pool.n_members, 'member')}’ calibre ${escHtml(calLabel)} watches · median <b>${rateNum(pool.med)}</b> s/d`}</span></div>
+          ? (one ? tx('1 member’ {name} · median <b>{med}</b> s/d', lv) : tx('{n} members’ {name} · median <b>{med}</b> s/d', lv))
+          : (one ? tx('1 member’ calibre {cal} watches · median <b>{med}</b> s/d', lv) : tx('{n} members’ calibre {cal} watches · median <b>{med}</b> s/d', lv))}</span></div>
         ${myRate != null ? `<div class="mp-legend-row"><span class="mp-key-you"></span><span>Your watch</span></div>` : ''}
       </div>
-      <div class="mp-note">Each dot is one member’s typical reading.${acc ? '' : ` Not enough members have measured a ${escHtml(m.name)} yet, so this compares the movement inside — ${plural(cal.n_models, 'model')} on WRotate.`}</div>`
+      <div class="mp-note">${tx('Each dot is one member’s typical reading.')}${acc ? '' : ' ' + (Number(cal.n_models) === 1
+          ? tx('Not enough members have measured a {name} yet, so this compares the movement inside — 1 model on WRotate.', { name: escHtml(m.name) })
+          : tx('Not enough members have measured a {name} yet, so this compares the movement inside — {n} models on WRotate.', { name: escHtml(m.name), n: cal.n_models }))}</div>`
       : `<div class="mp-note">Once 3 members have measured one, you’ll see how yours compares.</div>`;
     yours = `<section class="mp-yours" id="mp-yours">${head}${big}${sub ? `<div class="mp-note">${escHtml(sub)}</div>` : ''}${s ? stripHtml(s) : ''}${legend}</section>`;
   }
@@ -230,7 +245,7 @@ function renderModelPage(el, ctx, h) {
       </div>`;
     };
     ownersHtml = `<section class="mp-sec" id="mp-owners">
-      <h2 class="mp-sec-h">${plural(owners, 'member')} ${owners === 1 ? 'owns' : 'own'} one</h2>
+      <h2 class="mp-sec-h">${owners === 1 ? tx('1 member owns one') : tx('{n} members own one', { n: owners })}</h2>
       <div class="mp-sub mp-sec-gap">${vis.length ? (publicMode ? 'Public collections' : 'Owners whose collections you can see') : (publicMode ? 'No public collections yet.' : 'Their collections aren’t visible to you.')}</div>
       ${vis.length ? `<div class="mp-list">${vis.map(row).join('')}</div>` : ''}
     </section>`;
@@ -277,8 +292,8 @@ function renderModelPage(el, ctx, h) {
     const n = mine.length > 1 ? ` (${mine.length})` : '';
     actions = `<div class="mp-actions">${ctx.canMeasure
       ? `<button class="mp-act mp-act-primary" data-mp="measure" data-id="${escAttr(me.id)}">${myRate != null ? 'Measure again' : 'Measure it'}</button>
-         <button class="mp-act mp-act-ghost" data-mp="watch" data-id="${escAttr(me.id)}">Open your watch${n}</button>`
-      : `<button class="mp-act mp-act-primary" data-mp="watch" data-id="${escAttr(me.id)}">Open your ${escHtml(m.name)}${n}</button>`}</div>`;
+         <button class="mp-act mp-act-ghost" data-mp="watch" data-id="${escAttr(me.id)}">${tx('Open your watch')}${n}</button>`
+      : `<button class="mp-act mp-act-primary" data-mp="watch" data-id="${escAttr(me.id)}">${tx('Open your {name}', { name: escHtml(m.name) })}${n}</button>`}</div>`;
   } else if (loggedIn) {
     actions = `<div class="mp-actions">
       <button class="mp-act mp-act-primary" data-mp="collect">I own one</button>

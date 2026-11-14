@@ -231,8 +231,10 @@ test.describe('promo feed injection (mocked)', () => {
     });
     // p1 is placed (priority 1 sorts first). Simulate the one impression its
     // own max_impressions:1 cap allows — exactly what observePromoImpressions()
-    // does when the card scrolls into view.
+    // does when the card scrolls into view. On a slow run the real observer has
+    // already done it by now; logging it a second time here made the count 2.
     await page.evaluate(() => {
+      if (_promoImpressed.has('p1')) return;
       _promoImpressed.add('p1');
       logPromoEvent('p1', 'impression');
     });

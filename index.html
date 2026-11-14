@@ -79,7 +79,7 @@
        is in the filename, so upgrading it means renaming here, in SITE_FILES,
        in sw.js PRECACHE and in tests/page-weight.test.js -->
   <script src="/supabase-js-2.98.0.min.js"></script>
-  <script src="/model-page.js?v=6fa56b30"></script>
+  <script src="/model-page.js?v=90d875b2"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Safe storage accessor. Reading localStorage THROWS rather than returning null
        in several real configurations: Safari with "Block all cookies", some corporate
@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=fc4e106f', it: 'i18n/it.js?v=ba301bb2', fr: 'i18n/fr.js?v=c0740af6', tr: 'i18n/tr.js?v=87b0f054', de: 'i18n/de.js?v=d50a0653', pt: 'i18n/pt.js?v=42e12150' };
+      var FILES = { es: 'i18n/es.js?v=db9f5fe1', it: 'i18n/it.js?v=6d712245', fr: 'i18n/fr.js?v=3af669b8', tr: 'i18n/tr.js?v=4f5471ff', de: 'i18n/de.js?v=6871ea95', pt: 'i18n/pt.js?v=b9137854' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2856,6 +2856,8 @@
         <div class="item-title">Your Month&#8217;s Pattern</div>
         <div class="body-muted">The month-in-review card can now spot a habit in your wear log and give it a slide of its own: the watch that owned your Saturdays, a comeback after months in the box, a run of days back to back on one watch, or the watch you most often reach for next. One pattern per month, and only when the numbers genuinely back it up &#8212; no slide beats a stretched claim.</div>
       </div>
+      <!-- Release notes up to October 2026 were written before the app had languages and stay in English. Newer entries go above this line and are translated like any other text. -->
+      <div data-i18n-skip>
       <div class="stack-3">
         <span class="eyebrow eyebrow-muted">October 2026</span>
       </div>
@@ -3168,6 +3170,7 @@
       <div>
         <div class="item-title">Security</div>
         <div class="body-muted">Hardened input escaping, query timeouts prevent hung requests, debounced saves reduce data writes, and graceful session expiry handling.</div>
+      </div>
       </div>
     </div>
     <div class="modal-actions u-mt-4">
@@ -6379,10 +6382,10 @@ function tx(s, vars) {
 }
 // Translates the static markup in place. lookup(english) returns the translation or
 // nothing. Skipped: the sign-in screen (not to be modified), the admin portal, and
-// the release-notes archive. A run of text with bare inline tags ("Tap <b>Add</b>")
+// the older release notes (data-i18n-skip). A run of text with bare inline tags ("Tap <b>Add</b>")
 // is one entry keyed by its innerHTML, so the sentence is translated whole.
 function i18nWalk(root, lookup) {
-  var SKIP = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,#whats-new-modal,[data-i18n-skip]';
+  var SKIP = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,[data-i18n-skip]';
   var SKIP_TAG = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|TEXTAREA|svg|CANVAS)$/;
   var INLINE = /^(B|STRONG|EM|I|U|BR|CODE|KBD)$/;
   var ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
@@ -6540,6 +6543,16 @@ function factTr(row) {
   const t = row && row.translations, l = i18nLang();
   return (l !== 'en' && t && typeof t[l] === 'string' && t[l]) || (row && row.fact) || '';
 }
+// The model page's description and history work the same way (watch_models.translations,
+// {lang: {description, history}}, filled by the same job).
+const MODEL_COLS_EN = 'id,brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era';
+const MODEL_COLS = MODEL_COLS_EN + (window.WR_I18N ? ',translations' : '');
+function modelTr(m) {
+  const t = m && m.translations && m.translations[i18nLang()];
+  if (!t || i18nLang() === 'en') return m;
+  const pick = k => (typeof t[k] === 'string' && t[k].trim()) || m[k];
+  return Object.assign({}, m, { description: pick('description'), history: pick('history') });
+}
 // feed_page() returns facts in English only (kept small for the first load).
 // Another language swaps its translations in before the feed is built; any
 // failure or timeout leaves the English, never an empty card.
@@ -6569,13 +6582,16 @@ function setLanguage(code) {
 }
 // Dates follow the chosen language; English keeps the US format it always had.
 const I18N_LOCALE = window.WR_I18N ? window.WR_I18N.lang : 'en-US';
+// For dates that follow the device's own format in English (day-month order, 24-hour
+// clock): the chosen language when there is one, otherwise whatever the device uses.
+const I18N_DATE_LOCALE = window.WR_I18N ? window.WR_I18N.lang : undefined;
 if (window.WR_I18N) {
   i18nWalk(document.body, i18nLookup);
   // Everything the script draws later (cards, lists, modals) is translated as it lands.
   // Whole-string matches only, so a caption or a watch name is left alone unless it is
   // letter-for-letter a label of ours. Our own writes come back through here and are
   // recognised by the walker's memory, which ends the loop.
-  var _i18nSkip = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,#whats-new-modal,[data-i18n-skip]';
+  var _i18nSkip = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,[data-i18n-skip]';
   var _i18nSeen = function (k) { return i18nLookup(k); };
   new MutationObserver(function (muts) {
     for (var i = 0; i < muts.length; i++) {
@@ -7118,7 +7134,7 @@ function openBadgeWall() {
 
   const earnedCards = earned.map(b => {
     const ub = _earnedBadges.find(e => e.badge_ref === b.ref);
-    const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
+    const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString(I18N_DATE_LOCALE) : '';
     return `<div class="badge-wall-card" onclick="openBadgeDetail(${b.ref})">
       ${badgeMedallionSvg(b, 88, true)}
       <div class="badge-wall-name">${escHtml(b.name)}</div>
@@ -7241,7 +7257,7 @@ function openBadgeDetail(ref) {
   if (!b) return;
   const ub = _earnedBadges.find(e => e.badge_ref === ref);
   const earned = !!ub;
-  const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
+  const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString(I18N_DATE_LOCALE) : '';
   const cc = BADGE_COLORS[b.category] || BADGE_COLORS.hidden;
   const catLabels = { onboarding: 'Onboarding', collection: 'Collection', connoisseur: 'Connoisseur', timegrapher: 'Timegrapher', habit: 'Habit', hidden: 'Hidden' };
   const catChip = '<span class="badge-cat-chip" style="background:' + cc.chipBg + ';color:' + cc.chipText + ';">' + (catLabels[b.category] || b.category) + '</span>';
@@ -7451,7 +7467,7 @@ function renderStreakCalendar() {
   const logged = new Set(logs.map(l => l.date));
   const noWatchSet = noWatchOnlyDates(logs);
   const { year, month } = _streakCalYM;
-  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthTitle = new Date(year, month, 1).toLocaleDateString(I18N_LOCALE, { month: 'long', year: 'numeric' });
   const cells = streakCalendarGrid(logged, year, month, t);
   const head = sk.status === 'none'
     ? `Start a streak${sk.best >= 1 ? ` · best ${sk.best}` : ''}`
@@ -7464,7 +7480,7 @@ function renderStreakCalendar() {
     `<div class="streak-cal-freezes">${FREEZE_SVG} ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` +
     `<div class="streak-cal-nav">` +
       `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(-1)" aria-label="Previous month">‹</button>` +
-      `<span class="streak-cal-month">${MONTHS[month]} ${year}</span>` +
+      `<span class="streak-cal-month">${escHtml(monthTitle)}</span>` +
       `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(1)" ${atCurrent ? 'disabled' : ''} aria-label="Next month">›</button>` +
     `</div>` +
     `<div class="streak-cal-grid">` +
@@ -8071,7 +8087,7 @@ async function deleteAccount() {
     await del('profiles', { eq: ['id', uid] });
   } catch (e) {
     console.error(`[WristLog] deleteAccount failed at ${e.message}:`, e);
-    toast(`Delete failed at ${escHtml(e.message)}. Please try again — already-deleted data will be skipped.`, 'error');
+    toast(tx('Delete failed at {step}. Please try again — already-deleted data will be skipped.', { step: e.message }), 'error');
     if (btn) { btn.disabled = false; btn.textContent = tx('Permanently Delete Everything'); }
     return;
   }
@@ -8525,7 +8541,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.13.46';
+const APP_VERSION = '13.17.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10053,7 +10069,7 @@ async function sharePublicProfile() {
     return;
   }
   const url = `https://api.wrotate.com/functions/v1/share-collection?u=${encodeURIComponent(uname)}`;
-  const title = `${myProfile?.display_name || uname}'s Watch Collection — WRotate`;
+  const title = tx("{name}'s Watch Collection — WRotate", { name: myProfile?.display_name || uname });
   if (navigator.share) {
     try { await navigator.share({ title, url }); } catch(e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
   } else if (navigator.clipboard) {
@@ -10208,8 +10224,8 @@ async function loadBlockedUsers() {
 async function blockUser(userId, displayName) {
   if (demoGuard()) return;
   if (!userId || userId === currentUser?.id) return;
-  const who = displayName || 'this user';
-  if (!await showConfirm(`${who}'s content will be hidden from your feed and they won't be able to interact with you.`, { title: `Block ${who}?`, confirmLabel: 'Block' })) return;
+  const who = displayName || tx('this user');
+  if (!await showConfirm(`${who}'s content will be hidden from your feed and they won't be able to interact with you.`, { title: tx('Block {name}?', { name: who }), confirmLabel: 'Block' })) return;
 
   const { error } = await db.from('user_blocks').insert({
     blocker_id: currentUser.id,
@@ -11927,12 +11943,12 @@ function renderNotificationPanel() {
                : n.type === 'comment'         ? `${nm} commented on your post`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'comment_like'   ? `${nm} liked your comment`
-               : n.type === 'share_comment'  ? `${nm} commented on your shared ${n.shareComment?.kind === 'collection' ? 'collection' : 'wishlist'} link`
+               : n.type === 'share_comment'  ? (n.shareComment?.kind === 'collection' ? `${nm} commented on your shared collection link` : `${nm} commented on your shared wishlist link`)
                : n.type === 'mention'        ? `${nm} mentioned you`
-               : n.type === 'club_join_request'  ? `${nm} wants to join ${n.club?.name ? escHtml(n.club.name) : 'your club'}`
-               : n.type === 'club_join_accepted' ? `${nm} approved your request to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
-               : n.type === 'club_invite'        ? `${nm} invited you to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
-               : n.type === 'club_promoted'        ? `${nm} made you an owner of ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
+               : n.type === 'club_join_request'  ? (n.club?.name ? `${nm} wants to join ${escHtml(n.club.name)}` : `${nm} wants to join your club`)
+               : n.type === 'club_join_accepted' ? (n.club?.name ? `${nm} approved your request to join ${escHtml(n.club.name)}` : `${nm} approved your request to join a club`)
+               : n.type === 'club_invite'        ? (n.club?.name ? `${nm} invited you to join ${escHtml(n.club.name)}` : `${nm} invited you to join a club`)
+               : n.type === 'club_promoted'        ? (n.club?.name ? `${nm} made you an owner of ${escHtml(n.club.name)}` : `${nm} made you an owner of a club`)
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends`
                : n.type === 'system'               ? (n.ref_id ? `Your requested brand "${escHtml(n.ref_id)}" has been added to WRotate!` : 'System notification')
@@ -13505,7 +13521,11 @@ function updateScopeChip() {
   // anything from the menu clears it via setFeedScope.
   chip.classList.toggle('feed-scope-chip--active', !!(feedUserFilter || feedModelFilter));
   const lbl = chip.querySelector('.feed-scope-label');
-  if (lbl) lbl.textContent = scopeChipLabel(feedScope, feedUserFilter, feedModelFilter);
+  // scopeChipLabel() is mirrored in the tests and stays plain English; the two labels
+  // that carry a name are short ("{name} posts"), so they are translated here.
+  if (lbl) lbl.textContent = feedUserFilter ? tx('{name}’s posts', { name: feedFilterLabel(feedUserFilter.uname, feedUserFilter.dname) })
+    : feedModelFilter ? tx('{name} posts', { name: modelFeedLabel(feedModelFilter.brand, feedModelFilter.name) })
+    : scopeChipLabel(feedScope, feedUserFilter, feedModelFilter);
 }
 
 async function loadMoreFeed() {
@@ -14537,10 +14557,13 @@ async function shareMonthRecap() {
   if (!token) { toast('Share link not ready — try again in a moment', 'error'); return; }
 
   const monthName = new Date(recap.year, recap.month, 1)
-    .toLocaleDateString('en-US', { month: 'long' });
+    .toLocaleDateString(I18N_LOCALE, { month: 'long' });
   const url = `https://api.wrotate.com/functions/v1/share-recap?t=${encodeURIComponent(token)}`;
-  const title = `My ${monthName} on WRotate`;
-  const text = `${recap.totalWears} wear${recap.totalWears !== 1 ? 's' : ''} across ${recap.uniqueCount} watch${recap.uniqueCount !== 1 ? 'es' : ''} in ${monthName}.`;
+  const title = tx('My {month} on WRotate', { month: monthName });
+  const rv = { n: recap.totalWears, m: recap.uniqueCount, month: monthName };
+  const text = recap.totalWears === 1 ? tx('1 wear across 1 watch in {month}.', rv)
+    : recap.uniqueCount === 1 ? tx('{n} wears across 1 watch in {month}.', rv)
+    : tx('{n} wears across {m} watches in {month}.', rv);
 
   if (navigator.share) {
     try {
@@ -14698,7 +14721,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
 
   const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const monthName = new Date(recap.year, recap.month, 1)
-    .toLocaleDateString('en-US', { month: 'long' });
+    .toLocaleDateString(I18N_LOCALE, { month: 'long' });
   const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
   const wOf = (id) => (watches || []).find((w) => w && w.id === id) || null;
   const top = recap.top.map((t) => ({ ...t, w: wOf(t.watchId) }));
@@ -14743,7 +14766,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
     const dw = recap.totalWears - recap.prev.totalWears;
     const dv = recap.uniqueCount - recap.prev.uniqueCount;
     const prevName = new Date(recap.prev.period + '-15T12:00:00')
-      .toLocaleDateString('en-US', { month: 'long' });
+      .toLocaleDateString(I18N_LOCALE, { month: 'long' });
     const trend = (n, one, many) => n === 0
       ? `<span class="promo-recap-flat">Level with ${escHtml(prevName)}</span>`
       : `<span class="promo-recap-delta ${n > 0 ? 'is-up' : 'is-down'}">${n > 0 ? '▲' : '▼'} ${Math.abs(n)} ${Math.abs(n) === 1 ? one : many}</span>`;
@@ -14883,7 +14906,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
       <div class="promo-recap-actions">
         <button type="button" class="promo-recap-share" data-recap-share>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          Share ${escHtml(monthName)}
+          ${escHtml(tx('Share {month}', { month: monthName }))}
         </button>
         ${recapVoteHtml(slot.id)}
       </div>
@@ -16258,7 +16281,7 @@ function renderFeedCard(item) {
     badgeRibbon = item.badge_refs.map(r => {
       const _rb = BADGE_BY_REF[Number(r)];
       return _rb ? `<div class="feed-badge-ribbon" onclick="openBadgeDetail(${_rb.ref})">`
-        + badgeMedallionSvg(_rb, 16, true) + `<span>Earned: ${escHtml(_rb.name)}</span></div>` : '';
+        + badgeMedallionSvg(_rb, 16, true) + `<span>${escHtml(tx('Earned: {name}', { name: tx(_rb.name) }))}</span></div>` : '';
     }).join('');
   }
 
@@ -16644,9 +16667,9 @@ async function openReport(contentType, contentId, userId, contextName, logIdForC
   if (isOwnPost) {
     document.getElementById('report-context').textContent = tx('Report a comment on your post');
   } else if (contentType === 'comment') {
-    document.getElementById('report-context').textContent = 'Reporting: comment by ' + (contextName || 'User');
+    document.getElementById('report-context').textContent = tx('Reporting: comment by {name}', { name: contextName || tx('User') });
   } else {
-    document.getElementById('report-context').textContent = 'Reporting: post by ' + (contextName || 'User');
+    document.getElementById('report-context').textContent = tx('Reporting: post by {name}', { name: contextName || tx('User') });
   }
 
   // Build target selection
@@ -18008,7 +18031,7 @@ async function saveNewPost() {
       }
       if (entry.photoUrl) { deletePostPhotos(entry.photoUrl); }
     }
-    toast('Post failed — ' + (e?.message || 'unexpected error'), 'error');
+    toast('Post failed — ' + (e?.message || tx('unexpected error')), 'error');
   } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = tx('Post'); } }
 }
 
@@ -18866,7 +18889,9 @@ async function showFollowSuggestAfterAdd(watchId) {
   const w = watches.find(x => x.id === watchId);
   const label = w ? [w.brand, w.name].filter(Boolean).join(' ').trim() : '';
   document.getElementById('follow-sugg-modal-title').textContent =
-    (owners.length === 1 ? '1 member also owns' : owners.length + ' members also own') + (label ? ` the ${label}` : ' this watch');
+    owners.length === 1
+      ? (label ? tx('1 member also owns the {watch}', { watch: label }) : tx('1 member also owns this watch'))
+      : (label ? tx('{n} members also own the {watch}', { n: owners.length, watch: label }) : tx('{n} members also own this watch', { n: owners.length }));
   document.getElementById('follow-sugg-modal-row').innerHTML = owners.map(s => followSuggestTileHtml(s)).join('');
   modal.classList.remove('hidden');
   _logFollowSuggest('shown', { surface: 'add', n: owners.length });
@@ -19384,9 +19409,19 @@ function showConfirm(message, { title = 'Are you sure?', confirmLabel = 'Confirm
 function _confirmOk()     { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(true);  _confirmResolve = null; } }
 function _confirmCancel() { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; } }
 
+// "Could not save — <what the server said>": the label in front of the dash or colon
+// is ours and is translated; the tail is the server's own message, shown as it came.
+function toastText(msg) {
+  const s = String(msg), out = tx(s);
+  if (out !== s || !window.WR_I18N) return out;
+  const m = /^(.*?\S)(\s[—–]\s|:\s)([\s\S]+)$/.exec(s);
+  if (!m) return s;
+  const label = tx(m[1]);
+  return label === m[1] ? s : label + m[2] + m[3];
+}
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
-  el.textContent = tx(msg);
+  el.textContent = toastText(msg);
   el.className = `toast ${type} show`;
   clearTimeout(el._t);
   el._t = setTimeout(() => el.className = `toast ${type}`, type === 'error' ? 5000 : 2600);
@@ -22297,12 +22332,12 @@ function dmDayLabel(key) {
   const opts = { month: 'short', day: 'numeric' };
   if (diff > 1 && diff < 7) opts.weekday = 'long';
   if (day.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
-  return day.toLocaleDateString(undefined, opts);
+  return day.toLocaleDateString(I18N_DATE_LOCALE, opts);
 }
 
 function dmTimeLabel(iso) {
   const d = new Date(iso);
-  return Number.isFinite(d.getTime()) ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  return Number.isFinite(d.getTime()) ? d.toLocaleTimeString(I18N_DATE_LOCALE, { hour: 'numeric', minute: '2-digit' }) : '';
 }
 
 function dmSharedPlaceholder(text) {
@@ -22648,7 +22683,7 @@ function openDmReport(messageId) {
   document.getElementById('report-user-id').value = t.otherId;
   document.getElementById('report-details').value = '';
   setReportReason('inappropriate');
-  document.getElementById('report-context').textContent = 'Reporting: message from ' + dmWho(t.profile);
+  document.getElementById('report-context').textContent = tx('Reporting: message from {name}', { name: dmWho(t.profile) });
   document.getElementById('report-target-section').classList.add('hidden');
   const btn = document.getElementById('report-submit-btn');
   btn.disabled = false; btn.textContent = tx('Submit Report');
@@ -24527,7 +24562,7 @@ function renderWornNotice() {
     const w = watches.find(x => x.id === l.watchId);
     return w ? w.name : '';
   }).filter(Boolean);
-  ind.textContent = `✓ ${names.join(', ')} logged`;
+  ind.textContent = tx('✓ {names} logged', { names: names.join(', ') });
 }
 
 function renderWatchSelector() {
@@ -25674,7 +25709,7 @@ function snapToTrack() {
     } catch (e) {
       console.error('[WRotate] Snap to track error:', e);
       logSnapIdentifyOutcome('error', { msg: String(e && e.message || e).slice(0, 120) });
-      toast('Identification failed: ' + (e.message || 'Unknown error'), 'error');
+      toast('Identification failed: ' + (e.message || tx('Unknown error')), 'error');
       resetSnapStatus();
     }
   };
@@ -25924,7 +25959,7 @@ function saveEditLog() {
     closeEditLog();
     renderTrack();
     updateStreakChip();
-    toast('Noted — no watch on ' + fmtDate(date));
+    toast(tx('Noted — no watch on {date}', { date: fmtDate(date) }));
     if (window.posthog) posthog.capture('no_watch_logged', { backfill: true });
     return;
   }
@@ -27265,7 +27300,7 @@ function updateDocsSummary() {
   else if (ins === 'not_insured') parts.push('Not covered');
   if (warranty) {
     const d = new Date(warranty + 'T00:00:00');
-    if (!isNaN(d)) parts.push('expires ' + d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+    if (!isNaN(d)) parts.push(tx('expires {date}', { date: d.toLocaleDateString(I18N_LOCALE, { month: 'short', year: 'numeric' }) }));
   }
   sum.textContent = parts.length ? parts.join(' · ') : '—';
 }
@@ -27789,12 +27824,15 @@ async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
   el.innerHTML = '<div class="empty">Loading…</div>';
   const [mRes, oRes, sRes] = await Promise.all([
-    db.from('watch_models').select('id,brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
+    // A read that fails with the translations column asked for is tried once more in
+    // plain English: the page must never depend on the translations being there.
+    db.from('watch_models').select(MODEL_COLS).eq('id', modelId).maybeSingle()
+      .then(r => (r.error && MODEL_COLS !== MODEL_COLS_EN) ? db.from('watch_models').select(MODEL_COLS_EN).eq('id', modelId).maybeSingle() : r),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
     db.rpc('model_stats', { p_model_id: modelId }),
   ]);
   if (modelPageId !== modelId) return;
-  const m = mRes.data;
+  const m = modelTr(mRes.data);
   if (!m) { el.innerHTML = '<div class="empty">Model not found.</div>'; return; }
   let facts = [];
   if (m.facts_key) {
@@ -27834,7 +27872,7 @@ async function shareModelPage() {
   if (!_mpCtx) return;
   const { m } = _mpCtx;
   const url = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug || '')}`;
-  const title = `${m.brand} ${m.name} on WRotate`;
+  const title = tx('{watch} on WRotate', { watch: `${m.brand} ${m.name}` });
   if (navigator.share) { try { await navigator.share({ title, url }); } catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); } }
   else { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch (e) { toast(url); } }
 }
@@ -28558,7 +28596,7 @@ function renderYearInReview() {
   const mMap = {};
   yLogs.forEach(l => { const m = l.date.slice(0,7); mMap[m] = (mMap[m]||0) + 1; });
   const topMonth = Object.keys(mMap).sort((a,b) => mMap[b]-mMap[a])[0] || null;
-  const topMonthLabel = topMonth ? new Date(topMonth+'-15').toLocaleDateString('en-US',{month:'long'}) : null;
+  const topMonthLabel = topMonth ? new Date(topMonth+'-15').toLocaleDateString(I18N_LOCALE,{month:'long'}) : null;
 
   const na = '<span class="text-muted">—</span>';
   const canPrev = yirYear > 2020;
@@ -28633,8 +28671,7 @@ function monthRevNav(dir) {
 function renderMonthlyReview() {
   const el = document.getElementById('monthly-review');
   if (!el) return;
-  const MONTHS = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
+  const monthTitle = new Date(monthRevYear, monthRevMonth, 1).toLocaleDateString(I18N_LOCALE, { month: 'long', year: 'numeric' });
   const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const watchIds = new Set(watches.map(w => w.id));
   const prefix = `${monthRevYear}-${String(monthRevMonth+1).padStart(2,'0')}`;
@@ -28647,12 +28684,12 @@ function renderMonthlyReview() {
     <div class="yir-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="u-va-middle u-mr-1"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Review</div>
     <div class="yir-year-nav">
       <button class="yir-year-btn" onclick="monthRevNav(-1)" aria-label="Previous month" ${canPrev?'':'disabled'}>‹</button>
-      <span class="yir-year-label u-minw-30 u-fs-base">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
+      <span class="yir-year-label u-minw-30 u-fs-base">${escHtml(monthTitle)}</span>
       <button class="yir-year-btn" onclick="monthRevNav(1)" aria-label="Next month"  ${canNext?'':'disabled'}>›</button>
     </div>
   </div>`;
   if (!mLogs.length) {
-    el.innerHTML = `<div class="yir-card">${hdr}<div class="text-secondary u-pt-2 u-pr-0 u-pb-2 u-pl-0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}.</div></div>`;
+    el.innerHTML = `<div class="yir-card">${hdr}<div class="text-secondary u-pt-2 u-pr-0 u-pb-2 u-pl-0">${escHtml(tx('No wears logged in {month}.', { month: monthTitle }))}</div></div>`;
     return;
   }
   const totalWears   = uniqueWears(mLogs);
@@ -29019,7 +29056,7 @@ function recCardHTML(rec) {
   if (weatherData) tags.push({ text: `${weatherData.desc}, ${weatherData.tempC}°C`, cls: 'rec-tag-weather' });
   if (weekendScore > 0) tags.push({ text: 'Dinner watch', cls: 'rec-tag-weekend' });
   if (eloReason) tags.push({ text: '★ Top ranked', cls: '' });
-  if (anniversaryReason) tags.push({ text: `🎂 ${anniversaryYears}yr anniversary`, cls: '' });
+  if (anniversaryReason) tags.push({ text: tx('{n}yr anniversary', { n: anniversaryYears }), cls: '' });
   if (honeymoonReason) tags.push({ text: 'New pickup', cls: '' });
   if (neglectedReason) tags.push({ text: 'Needs love', cls: '' });
   if (useCaseReason) tags.push({ text: useCaseReason, cls: '' });
@@ -30816,7 +30853,7 @@ function af2RenderRow(watch, idx) {
   const ref = watch.reference ? `<div class="af2-ref">Ref. ${escHtml(watch.reference)}</div>` : '';
   const specParts = [watch.caseDiameter, watch.caseMaterial, watch.movementType].filter(Boolean);
   const specLine = specParts.length ? `<div class="af2-specs">${escHtml(specParts.join(' · '))}</div>` : '';
-  const yearLine = watch.yearRange ? `<div class="af2-specs">Years: ${escHtml(watch.yearRange)}</div>` : '';
+  const yearLine = watch.yearRange ? `<div class="af2-specs">${escHtml(tx('Years: {range}', { range: watch.yearRange }))}</div>` : '';
   const dupWarn = watch._af2Duplicate ? '<div class="af2-warn-chip">⚠ Already in collection</div>' : '';
 
   switch (s) {
@@ -31354,7 +31391,7 @@ async function af2RunEnhance(idx) {
   if (!watchObj) { w._af2State = 'done'; af2ClearTimer('enhance_' + idx); af2RenderSheet(); return; }
 
   try {
-    const payload = { mode: 'enhance', watchInfo: { brand: watchObj.brand, model: watchObj.name, reference: watchObj.ref || '' } };
+    const payload = { mode: 'enhance', lang: i18nLang(), watchInfo: { brand: watchObj.brand, model: watchObj.name, reference: watchObj.ref || '' } };
     if (w._croppedBlob) {
       try {
         const b64 = await blobToResizedBase64ForIdentify(w._croppedBlob);
@@ -31659,6 +31696,7 @@ async function enhanceSingleWatch() {
   try {
     const payload = {
       mode: 'enhance',
+      lang: i18nLang(),   // description + background come back in the member's language
       watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' },
     };
     if (w.image && !w.image.startsWith('data:')) {
@@ -31678,7 +31716,7 @@ async function enhanceSingleWatch() {
       body: JSON.stringify(payload),
     }, 120000);
     const data = await resp.json();
-    if (!resp.ok || data.error) throw new Error(data.message || data.error || 'Server error ' + resp.status);
+    if (!resp.ok || data.error) throw new Error(data.message || data.error || tx('Server error {n}', { n: resp.status }));
     const fieldMap = {
       movementType: { el: 'w-movement-type', label: 'Movement' },
       caliber: { el: 'w-caliber', label: 'Caliber' },
@@ -32046,7 +32084,7 @@ async function enhanceAllWatches(scopedIds) {
       };
       card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       try {
-        const payload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
+        const payload = { mode: 'enhance', lang: i18nLang(), watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
         if (w.image && !w.image.startsWith('data:')) {
           try {
             const imgResp = await Promise.race([fetch(w.image), new Promise((_, rej) => setTimeout(() => rej('timeout'), 5000))]);
@@ -32102,7 +32140,7 @@ async function enhanceAllWatches(scopedIds) {
         clearInterval(_enhMsgTimer);
         if (statusEl) { statusEl.textContent = tx('Retrying…'); statusEl.style.color = 'var(--gold)'; }
         try {
-          const retryPayload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
+          const retryPayload = { mode: 'enhance', lang: i18nLang(), watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
           const retryResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(retryPayload),
           });
@@ -32450,7 +32488,8 @@ async function mintWishlistShare() {
 
 async function shareWishlistUrl(token) {
   const url = wlShareUrl(token);
-  const title = `${myProfile?.display_name || myProfile?.username || 'My'} wishlist — WRotate`;
+  const shareName = myProfile?.display_name || myProfile?.username;
+  const title = shareName ? tx('{name} wishlist — WRotate', { name: shareName }) : tx('My wishlist — WRotate');
   if (navigator.share) {
     try { await navigator.share({ title, url }); }
     catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
@@ -32747,7 +32786,8 @@ async function mintCollectionShare() {
 
 async function shareCollectionUrl(token) {
   const url = collShareUrl(token);
-  const title = `${myProfile?.display_name || myProfile?.username || 'My'} watches — WRotate`;
+  const shareName = myProfile?.display_name || myProfile?.username;
+  const title = shareName ? tx('{name} watches — WRotate', { name: shareName }) : tx('My watches — WRotate');
   if (navigator.share) {
     try { await navigator.share({ title, url }); }
     catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
@@ -34137,7 +34177,7 @@ async function sharePost(logId) {
     ? `${location.origin}/p/?id=${logId}`
     : `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
   const watchName = item?.watch ? `${item.watch.brand || ''} ${item.watch.name || ''}`.trim() : '';
-  const title = watchName ? `Check out this ${watchName} on WRotate` : 'Check out this post on WRotate';
+  const title = watchName ? tx('Check out this {watch} on WRotate', { watch: watchName }) : tx('Check out this post on WRotate');
   if (navigator.share) {
     try {
       await navigator.share({ title, url });
@@ -34155,16 +34195,19 @@ async function sharePost(logId) {
 async function shareApp() {
   const name = currentUser ? (document.getElementById('pp-display-name')?.value || '').trim() : '';
   const handle = currentUser ? (document.getElementById('pp-username')?.dataset?.original || '') : '';
-  const intro = name ? `${name} invited you to` : `You're invited to`;
-  const text = `${intro} WRotate — the watch collection tracker for enthusiasts.
-
-- Track every wear with photos & notes
-- Measure your watch's accuracy with the built-in timegrapher
-- Market value & collection stats
-- Follow collectors, like & comment on wears
-- Share securely with close friends or go public
-
-${handle ? `Find me @${handle} — ` : ''}Join free: https://wrotate.com`;
+  // Sent in the member's own language: it goes out under their name.
+  const intro = name ? tx('{name} invited you to WRotate — the watch collection tracker for enthusiasts.', { name })
+    : tx("You're invited to WRotate — the watch collection tracker for enthusiasts.");
+  const join = 'https://wrotate.com';
+  const text = [intro, '',
+    '- ' + tx('Track every wear with photos & notes'),
+    '- ' + tx("Measure your watch's accuracy with the built-in timegrapher"),
+    '- ' + tx('Market value & collection stats'),
+    '- ' + tx('Follow collectors, like & comment on wears'),
+    '- ' + tx('Share securely with close friends or go public'),
+    '',
+    handle ? tx('Find me @{handle} — Join free: {url}', { handle, url: join }) : tx('Join free: {url}', { url: join }),
+  ].join('\n');
   if (navigator.share) {
     try {
       await navigator.share({ text });
@@ -35315,8 +35358,8 @@ window._tgNativeCallback = function(data) {
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
           statusText.textContent = recalExhausted
-            ? 'Could not lock ticks \u00b7 try repositioning or check BPH'
-            : 'No signal detected \u00b7 try placing watch on mic';
+            ? tx('Could not lock ticks \u00b7 try repositioning or check BPH')
+            : tx('No signal detected \u00b7 try placing watch on mic');
           statusText.style.color = 'color-mix(in srgb, var(--danger) 70%, transparent)';
           statusText.style.fontSize = 'var(--fs-xs)';
           statusText.style.fontWeight = 'var(--fw-semibold)';
@@ -35542,37 +35585,37 @@ window._tgNativeCallback = function(data) {
           const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
           switch (_msrPhase) {
             case 'acquiring':
-              statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+              statusText.textContent = tx('ACQUIRING') + ' \u00b7 ' + timeStr;
               statusText.style.color = 'color-mix(in srgb, var(--tg-ink) 35%, transparent)';
               break;
             case 'estimating_bph':
-              statusText.textContent = 'DETECTING BPH \u00b7 ' + timeStr;
+              statusText.textContent = tx('DETECTING BPH') + ' \u00b7 ' + timeStr;
               statusText.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)';
               break;
             case 'calibrating':
               if (data.tickCount > 0 && data.tickCount <= 4) {
-                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'HEARING TICKS \u00b7 ' + timeStr;
+                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + tx('HEARING TICKS') + ' \u00b7 ' + timeStr;
                 statusText.style.color = 'color-mix(in srgb, var(--tg-ink) 50%, transparent)';
               } else {
-                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
+                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + tx('CALIBRATING') + ' \u00b7 ' + timeStr;
                 statusText.style.color = 'color-mix(in srgb, var(--status-warn) 60%, transparent)';
               }
               break;
             case 'measuring':
               if (_msrScatterData.length > 0 && _msrScatterData.length <= 10) {
-                statusText.textContent = 'MEASURING \u00b7 ' + _msrScatterData.length + ' ticks \u00b7 ' + timeStr;
+                statusText.textContent = tx('MEASURING') + ' \u00b7 ' + tx('{n} ticks', { n: _msrScatterData.length }) + ' \u00b7 ' + timeStr;
               } else {
-                statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
+                statusText.textContent = tx('MEASURING') + ' \u00b7 ' + timeStr;
               }
               statusText.style.color = 'color-mix(in srgb, var(--tg-ink) 60%, transparent)';
               _msrShown.weak = false;
               break;
             case 'converged':
-              statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
+              statusText.textContent = tx('CONVERGED') + ' \u00b7 ' + timeStr;
               statusText.style.color = 'var(--tg-ink)';
               break;
             default:
-              statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+              statusText.textContent = tx('ACQUIRING') + ' \u00b7 ' + timeStr;
               statusText.style.color = 'color-mix(in srgb, var(--tg-ink) 35%, transparent)';
           }
         }
@@ -35609,7 +35652,7 @@ window._tgNativeCallback = function(data) {
           } else if (_msrLastRate != null) {
             const r = _msrLastRate;
             const sign = r >= 0 ? '+' : '';
-            statusText.textContent = sign + r.toFixed(1) + ' s/day \u00b7 low confidence \u00b7 retry recommended';
+            statusText.textContent = tx('{rate} s/day \u00b7 low confidence \u00b7 retry recommended', { rate: sign + r.toFixed(1) });
             statusText.style.color = 'color-mix(in srgb, var(--status-warn) 70%, transparent)';
             statusText.style.fontSize = 'var(--fs-xs)';
             statusText.style.fontWeight = 'var(--fw-semibold)';
@@ -35721,10 +35764,10 @@ async function loadTgHistory() {
   if (error || !data || data.length === 0) { listEl.innerHTML = '<div class="note">No readings yet.</div>'; updateAccuracySummary(); loadUnsavedReadings(); return; }
   listEl.innerHTML = data.map(r => {
     const d = new Date(r.created_at);
-    const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const dateStr = d.toLocaleDateString(I18N_DATE_LOCALE, { month: 'short', day: 'numeric' });
     const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
-    const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
+    const ampStr = r.amplitude ? tx('Amp: {n}°', { n: r.amplitude }) : '';
     const noteStr = r.notes ? `<div class="text-caption u-mt-0-5 u-fst-italic">${escHtml(r.notes)}</div>` : '';
     const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? 'var(--status-good)' : Math.abs(r.rate) <= 15 ? 'var(--status-warn)' : 'var(--danger)') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
@@ -36042,7 +36085,7 @@ async function fetchAccuracyRows(watchId, limit = 500) {
 function _fmtRateSigned(r) { const v = Number(r); const mag = Math.abs(v).toFixed(1); return (mag === '0.0' ? '' : v > 0 ? '+' : '-') + mag + ' s/d'; }
 function _fmtDayLabel(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+  return d.toLocaleDateString(I18N_DATE_LOCALE, { month: 'short', day: 'numeric' }) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
 }
 async function refreshMsrHistoryHint() {
   const card = document.getElementById('msr-history-hint');
@@ -36128,8 +36171,8 @@ function renderMsrHistoryView() {
       const open = d.date === _msrHistSelectedDay;
       const spread = d.n > 1 ? `<span class="u-c-muted u-ml-1-5">${_fmtRateSigned(d.min)} … ${_fmtRateSigned(d.max)}</span>` : '';
       const rowsHtml = open ? d.rows.map(r => {
-        const t = new Date(r.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-        const extra = [r.amplitude ? 'Amp ' + r.amplitude + '°' : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
+        const t = new Date(r.created_at).toLocaleTimeString(I18N_DATE_LOCALE, { hour: 'numeric', minute: '2-digit' });
+        const extra = [r.amplitude ? tx('Amp {n}°', { n: r.amplitude }) : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
         return `<div class="row-between u-pt-1 u-pr-0 u-pb-1 u-pl-4 u-fs-sm u-bdt-1px-dashed-border">
           <div><span class="u-fw-semibold">${_fmtRateSigned(r.rate)}</span>${extra ? `<span class="u-c-muted u-ml-1-5">${extra}</span>` : ''}<span class="text-caption u-ml-1-5">${t}</span></div>
           <button data-rid="${escAttr(r.id)}" onclick="event.stopPropagation(); discardHistoryReading(this.dataset.rid)" aria-label="Discard reading" class="text-alert u-bg-none u-bd-none u-cur-pointer u-minh-8 u-minw-8">✕</button>
@@ -37362,7 +37405,7 @@ function toggleMsrListen() {
     try {
       _tgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     } catch (e) {
-      warn.textContent = e.name === 'NotAllowedError' ? 'Microphone permission denied.' : 'Could not access microphone: ' + e.message;
+      warn.textContent = e.name === 'NotAllowedError' ? tx('Microphone permission denied.') : tx('Could not access microphone') + ': ' + e.message;
       warn.style.display = 'block';
       return;
     }
@@ -37400,7 +37443,7 @@ function toggleMsrListen() {
       source.connect(scriptNode);
       scriptNode.connect(_tgAudioCtx.destination);
     } catch (e) {
-      warn.textContent = 'Audio error: ' + e.message;
+      warn.textContent = tx('Audio error') + ': ' + e.message;
       warn.style.display = 'block';
     }
   })();
@@ -37578,7 +37621,7 @@ function stopMsrListen(reason) {
     // Keep the rate shown in HUD
     if (rateEl) rateEl.textContent = sign + r.toFixed(1);
     // Show result in status bar
-    statusText.textContent = sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
+    statusText.textContent = tx('{rate} s/day', { rate: sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) });
     statusText.style.color = 'var(--tg-ink)';
     statusText.style.fontSize = 'var(--fs-sm)';
     statusText.style.fontWeight = 'var(--fw-semibold)';
@@ -37879,7 +37922,7 @@ function showMsrSharePopup(watchId, rate) {
   const r = Number(rate);
   const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
   const msg = document.getElementById('msr-share-popup-msg');
-  if (msg) msg.innerHTML = `Your <strong>${escHtml(name)}</strong> measured <strong>${rateStr} s/d</strong>. Share it to the feed?`;
+  if (msg) msg.innerHTML = tx('Your <strong>{name}</strong> measured <strong>{rate} s/d</strong>. Share it to the feed?', { name: escHtml(name), rate: rateStr });
   _msrSharePopupCtx = { watchId, rate: r };
   const confirmBtn = document.getElementById('msr-share-popup-confirm');
   if (confirmBtn) confirmBtn.onclick = () => confirmMsrSharePopup();
@@ -37969,10 +38012,12 @@ function shareMsrToFeed(watchId, rate, opts) {
 // nothing available → copy the text.
 function shareMsrExternal(watchId, rate) {
   const w = watches.find(x => x.id === watchId);
-  const name = w ? `${w.brand} ${w.name}` : 'my watch';
   const r = Number(rate);
   const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
-  const text = `Measured my ${name}: ${rateStr} s/day with WRotate — https://wrotate.com/?utm_source=result_share`;
+  const name = w ? `${w.brand} ${w.name}` : '';
+  const sv = { watch: name, rate: rateStr, url: 'https://wrotate.com/?utm_source=result_share' };
+  const text = w ? tx('Measured my {watch}: {rate} s/day with WRotate — {url}', sv)
+    : tx('Measured my watch: {rate} s/day with WRotate — {url}', sv);
   const logShare = (how) => {
     if (currentUser && !_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'result_share', meta: { how } }).then(() => {});
   };

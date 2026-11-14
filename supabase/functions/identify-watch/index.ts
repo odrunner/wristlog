@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection: rawCollection, mode, watchInfo, commit, modelInfo, modelId } = await req.json();
+    const { image, collection: rawCollection, mode, watchInfo, commit, modelInfo, modelId, lang } = await req.json();
     // Bound what reaches the prompt (audit SEC-23-18): the owned-watch list is
     // trimmed, anything else oversized is refused.
     const collection = sanitizeCollection(rawCollection);
@@ -289,7 +289,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const enhancePrompt = buildEnhancePrompt({ brand, model, reference });
+      const enhancePrompt = buildEnhancePrompt({ brand, model, reference }, lang);
 
       if (!GEMINI_API_KEY) {
         await logAttempt(null, "enhance_no_gemini_key");

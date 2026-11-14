@@ -1,5 +1,6 @@
 // identify-watch — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
+import { promptLanguage } from "../_shared/lang.ts";
 
 // Single shared JSON extractor — index.ts previously defined this inline twice.
 export function extractJson(text: string) {
@@ -59,8 +60,12 @@ interface WatchInfo {
 }
 
 // Build the enhance-mode prompt (specs/history enrichment).
-export function buildEnhancePrompt(info: WatchInfo): string {
+// `lang` is the member's app language (index.html i18nLang()). The two prose fields
+// are saved onto their own watch, so they are written in that language; every other
+// field is matched against fixed English values by the client and stays as specified.
+export function buildEnhancePrompt(info: WatchInfo, lang?: unknown): string {
   const { brand, model, reference } = info;
+  const language = promptLanguage(lang);
   return `Search for detailed specifications of this watch:
 Brand: ${brand}
 Model: ${model}
@@ -99,7 +104,7 @@ Rules:
 - For description: describe what makes this watch visually distinctive.
 - For background: focus on what makes this model interesting or significant — history, heritage, notable wearers, records, etc.
 - For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")
-- If a field like caseDiameter or caseThickness is commonly published for this brand, search harder before returning empty.`;
+- If a field like caseDiameter or caseThickness is commonly published for this brand, search harder before returning empty.${language ? `\n- Write "description" and "background" in ${language}. Keep every other field, the JSON keys, and all brand, model and reference names exactly as specified above.` : ""}`;
 }
 
 // ── Model mode: one era-spanning write-up per watch FAMILY (Submariner across

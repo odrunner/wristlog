@@ -10,6 +10,16 @@ export function pickLang(v: unknown): Lang {
   return typeof v === "string" && (LANGS as readonly string[]).includes(v) ? (v as Lang) : "en";
 }
 
+// The language's name as written into a prompt ("Write the description in German").
+// English, a missing value and anything we do not offer give null, and the caller
+// then leaves its prompt exactly as it was.
+const PROMPT_LANGUAGES: Record<string, string> = {
+  es: "Spanish", it: "Italian", fr: "French", tr: "Turkish", de: "German", pt: "European Portuguese",
+};
+export function promptLanguage(v: unknown): string | null {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(PROMPT_LANGUAGES, v) ? PROMPT_LANGUAGES[v] : null;
+}
+
 // Fill {name} holes. split/join, not String.replace: a display name containing
 // "$&" must come out as typed, not be read as a replacement pattern.
 export function fill(tpl: string, vars: Record<string, string>): string {
