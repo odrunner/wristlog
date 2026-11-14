@@ -1,6 +1,7 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
 import {
   buildWatchDesc,
+  describeEmptyAnswer,
   extractJson,
   geminiAttemptTimeouts,
   isCacheFresh,
@@ -228,4 +229,52 @@ Deno.test("roundEstimate — invalid input returns null", () => {
   assertEquals(roundEstimate("n/a"), null);
   assertEquals(roundEstimate(-100), null);
   assertEquals(roundEstimate(0), null);
+});
+
+// Shape of the 2026-11-13 Tissot failure: finish=STOP, no parts, search ran.
+Deno.test("describeEmptyAnswer — keeps reason fields and search shape, not page text", () => {
+  const out = JSON.parse(describeEmptyAnswer({
+    candidates: [{
+      finishReason: "STOP",
+      finishMessage: "why",
+      content: { role: "model" },
+      safetyRatings: [
+        { category: "HARM_CATEGORY_HARASSMENT", probability: "NEGLIGIBLE" },
+        { category: "HARM_CATEGORY_DANGEROUS", probability: "LOW", blocked: true },
+      ],
+      groundingMetadata: {
+        webSearchQueries: ["Tissot T120.407.22.041.00 price"],
+        groundingChunks: [{ web: { uri: "https://x", title: "long page text" } }, {}],
+      },
+    }],
+    promptFeedback: { blockReason: "OTHER" },
+    modelVersion: "gemini-2.5-flash",
+  }));
+  assertEquals(out.candidates, 1);
+  assertEquals(out.candidateKeys, ["finishReason", "finishMessage", "content", "safetyRatings", "groundingMetadata"]);
+  assertEquals(out.finishMessage, "why");
+  assertEquals(out.contentKeys, ["role"]);
+  assertEquals(out.role, "model");
+  assertEquals(out.promptFeedback, { blockReason: "OTHER" });
+  assertEquals(out.safetyFlagged.length, 1);
+  assertEquals(out.searchQueries, ["Tissot T120.407.22.041.00 price"]);
+  assertEquals(out.groundingChunks, 2);
+  assertEquals(out.groundingKeys, ["webSearchQueries", "groundingChunks"]);
+  assertEquals(out.modelVersion, "gemini-2.5-flash");
+});
+
+Deno.test("describeEmptyAnswer — tolerates a missing or empty response", () => {
+  const out = JSON.parse(describeEmptyAnswer(undefined));
+  assertEquals(out.candidates, 0);
+  assertEquals(out.candidateKeys, []);
+  assertEquals(out.contentKeys, null);
+  assertEquals(out.searchQueries, null);
+  assertEquals(out.groundingChunks, null);
+  assertEquals(JSON.parse(describeEmptyAnswer({ candidates: [{ content: null }] })).contentKeys, null);
+});
+
+Deno.test("describeEmptyAnswer — caps the length", () => {
+  const out = describeEmptyAnswer({ promptFeedback: { x: "a".repeat(5000) } }, 100);
+  assertEquals(out.length, 101);
+  assertEquals(out.endsWith("…"), true);
 });

@@ -122,3 +122,36 @@ export function roundEstimate(v: unknown, step = 50): number | null {
   const rounded = Math.round(n / step) * step;
   return rounded === 0 ? Math.round(n) : rounded;
 }
+
+// Everything Google says about WHY a candidate came back with no text. Gemini
+// sometimes runs its search, bills thinking + output tokens, then returns
+// finish=STOP with zero parts (7 times 2026-08-16..11-13; one watch, Tissot
+// T120.407.22.041.00, does it every time). The usage line alone can't explain
+// that, so this keeps the reason fields and the shape of what DID come back —
+// key names, search queries, source count — never page text, so the log stays
+// small. Returns a compact JSON string capped at `max` chars.
+export function describeEmptyAnswer(result: unknown, max = 1500): string {
+  const r = (result ?? {}) as Record<string, unknown>;
+  const cands = Array.isArray(r.candidates) ? r.candidates : [];
+  const c = (cands[0] ?? {}) as Record<string, unknown>;
+  const content = (c.content ?? null) as Record<string, unknown> | null;
+  const gm = (c.groundingMetadata ?? null) as Record<string, unknown> | null;
+  const flagged = Array.isArray(c.safetyRatings)
+    ? (c.safetyRatings as Record<string, unknown>[])
+      .filter((s) => s.blocked || (s.probability && s.probability !== "NEGLIGIBLE"))
+    : [];
+  const out = JSON.stringify({
+    candidates: cands.length,
+    candidateKeys: Object.keys(c),
+    finishMessage: c.finishMessage ?? null,
+    contentKeys: content ? Object.keys(content) : null,
+    role: content?.role ?? null,
+    promptFeedback: r.promptFeedback ?? null,
+    safetyFlagged: flagged,
+    searchQueries: Array.isArray(gm?.webSearchQueries) ? gm!.webSearchQueries : null,
+    groundingChunks: Array.isArray(gm?.groundingChunks) ? (gm!.groundingChunks as unknown[]).length : null,
+    groundingKeys: gm ? Object.keys(gm) : null,
+    modelVersion: r.modelVersion ?? null,
+  });
+  return out.length > max ? out.slice(0, max) + "…" : out;
+}

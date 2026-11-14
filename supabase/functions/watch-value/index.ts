@@ -10,6 +10,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildWatchDesc,
+  describeEmptyAnswer,
   extractJson,
   geminiAttemptTimeouts,
   isCacheFresh,
@@ -231,6 +232,11 @@ Rules:
               console.error(
                 `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
               );
+              // A separate line on purpose: cost-report.py counts the one above,
+              // and this must not double the failure count.
+              if (text.length === 0) {
+                console.log(`[watch-value] DIAG empty-answer ${describeEmptyAnswer(geminiResult)}`);
+              }
             }
           } else {
             const errText = await geminiResponse.text();
