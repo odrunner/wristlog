@@ -172,8 +172,8 @@ export function generateRecapSvg(
   watchById: Record<string, any>,
 ): string {
   const W = 1200, H = 630;
-  const bg = "#f5f5f8", surface = "#ffffff", ph = "#e8e9f2";
-  const gold = "#9a7628", text = "#16161e", muted = "#70708a", border = "#d8d9e8";
+  const bg = "#e9edf1", surface = "#ffffff", ph = "#e8e9f2";
+  const gold = "#87661a", text = "#141a24", muted = "#566070", border = "#d3d9e1";
   const font = `font-family="Arial, Helvetica, sans-serif"`;
 
   // Baselines, not a layout engine — SVG text has no flow, so the vertical
@@ -240,15 +240,15 @@ export function htmlPage(title: string, description: string, imageUrl: string, c
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
-      --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
-      --text: #16161e; --muted: #70708a;
+      --bg: #e9edf1; --surface: #ffffff; --surface2: #f1f4f7;
+      --border: #d3d9e1; --gold: #87661a; --gold-lt: #c9a84c;
+      --text: #141a24; --muted: #566070;
     }
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
         --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
-        --text: #e6e6f0; --muted: #7a7a95;
+        --text: #e6e6f0; --muted: #82829d;
       }
     }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }

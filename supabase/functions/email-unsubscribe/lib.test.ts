@@ -170,7 +170,7 @@ import { LANGS } from "../_shared/lang.ts";
 Deno.test("successPage — English is the page as it always was", () => {
   const p = successPage("en", "reminders", "/functions/v1/email-unsubscribe?uid=u&cat=all&sig=s");
   assertEquals(p.title, "Unsubscribed");
-  assertEquals(p.body, `<h1>You've been unsubscribed</h1><p>You won't receive <strong>Daily reminders</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a><p class="muted"><a href="/functions/v1/email-unsubscribe?uid=u&cat=all&sig=s" style="color:#b8941f;">Unsubscribe from all emails</a></p>`);
+  assertEquals(p.body, `<h1>You've been unsubscribed</h1><p>You won't receive <strong>Daily reminders</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a><p class="muted"><a href="/functions/v1/email-unsubscribe?uid=u&cat=all&sig=s" style="color:#87661a;">Unsubscribe from all emails</a></p>`);
   assertEquals(successPage("en", "all", null).body.includes("Unsubscribe from all emails"), false);
 });
 
