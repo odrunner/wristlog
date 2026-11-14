@@ -187,3 +187,56 @@ Deno.test("successPage — every language labels every category and leaves no ho
   assertEquals(categoryLabel("constructor", "es"), "constructor");
   assertEquals(successPage("tr", "reminders", null).body.includes("Günlük hatırlatmalar"), true);
 });
+
+// ---- the four error pages ----
+import { errorPage, type UnsubError } from "./lib.ts";
+import { UNSUB_STRINGS } from "./strings.ts";
+
+// The golden files are the four pages exactly as the function served them
+// before they learned any other language (captured 2026-11-14).
+const goldenPage = (name: string) => Deno.readTextFileSync(new URL(`./golden/${name}.html`, import.meta.url));
+const KINDS: [UnsubError, string][] = [["incomplete", "incomplete"], ["expired", "expired"], ["noAccount", "no-account"], ["noUpdate", "no-update"]];
+
+Deno.test("errorPage — English pages are byte-identical to the pre-translation pages", () => {
+  for (const [kind, file] of KINDS) {
+    const p = errorPage("en", kind);
+    assertEquals(renderPage(p.title, p.body), goldenPage(file), kind);
+    assertEquals(renderPage(p.title, p.body, "en"), goldenPage(file), kind);
+  }
+});
+
+Deno.test("errorPage — German pages, declared as German", () => {
+  const bad = errorPage("de", "expired");
+  const html = renderPage(bad.title, bad.body, "de");
+  assertStringIncludes(html, '<html lang="de">');
+  assertStringIncludes(html, "<title>Ungültiger Link — WRotate</title>");
+  assertStringIncludes(html, "<h1>Ungültiger Abmeldelink</h1><p>Dieser Link ist abgelaufen oder ungültig.");
+  assertStringIncludes(html, "<a href='https://wrotate.com/open' class='btn'>WRotate öffnen</a>");
+  assertStringIncludes(errorPage("de", "incomplete").body, "Dieser Link scheint unvollständig zu sein.");
+  assertEquals(errorPage("de", "noAccount").title, "Fehler");
+  assertStringIncludes(errorPage("de", "noAccount").body, "<h1>Etwas ist schiefgelaufen</h1><p>Wir konnten dein Konto nicht finden.");
+  assertStringIncludes(errorPage("de", "noUpdate").body, "Wir konnten deine Einstellungen nicht aktualisieren.");
+});
+
+Deno.test("errorPage — every language has every error string, translated, with the CTA to /open", () => {
+  const keys = Object.keys(UNSUB_STRINGS.en.err).sort();
+  for (const lang of LANGS) {
+    assertEquals(Object.keys(UNSUB_STRINGS[lang].err).sort(), keys, lang);
+    assertEquals(Object.keys(UNSUB_STRINGS[lang]).sort(), Object.keys(UNSUB_STRINGS.en).sort(), lang);
+    for (const [kind] of KINDS) {
+      const p = errorPage(lang, kind);
+      assertEquals(/[{}]|undefined/.test(p.title + p.body), false, `${lang}/${kind}`);
+      assertStringIncludes(p.body, "href='https://wrotate.com/open'");
+      assertStringIncludes(p.body, "WRotate");
+      if (lang !== "en") {
+        assertNotEquals(p.body, errorPage("en", kind).body, `${lang}/${kind} is still English`);
+        assertNotEquals(UNSUB_STRINGS[lang].err.invalidH1, UNSUB_STRINGS.en.err.invalidH1);
+      }
+    }
+  }
+});
+
+Deno.test("renderPage — only a non-English page declares its language", () => {
+  assertStringIncludes(renderPage("T", "<p>b</p>"), "<html><head>");
+  assertStringIncludes(renderPage("T", "<p>b</p>", "it"), '<html lang="it"><head>');
+});

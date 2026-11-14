@@ -39,6 +39,20 @@ export function successPage(lang: Lang, cat: string, allHref: string | null): { 
   };
 }
 
+/** The four pages shown when the link cannot be honoured. `incomplete` and
+ *  `expired` (a bad signature) come before we know whose link it is and
+ *  `noAccount` when nobody is behind it, so index.ts passes the request's
+ *  language for those; `noUpdate` knows the member and uses theirs. */
+export type UnsubError = "incomplete" | "expired" | "noAccount" | "noUpdate";
+export function errorPage(lang: Lang, kind: UnsubError): { title: string; body: string } {
+  const S = UNSUB_STRINGS[lang];
+  const invalid = kind === "incomplete" || kind === "expired";
+  return {
+    title: invalid ? S.err.invalidTitle : S.err.errorTitle,
+    body: `<h1>${invalid ? S.err.invalidH1 : S.err.errorH1}</h1><p>${S.err[kind]}</p><a href='https://wrotate.com/open' class='btn'>${S.open}</a>`,
+  };
+}
+
 /** Base64url HMAC-SHA256 of `${uid}:${cat}` using the given key. */
 export async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
   const enc = new TextEncoder();
@@ -111,10 +125,11 @@ export function applyUnsubscribe(prefs: EmailPrefs, cat: string): EmailPrefs {
   return prefs;
 }
 
-/** Full confirmation HTML page (card chrome + injected body). */
-export function renderPage(title: string, body: string): string {
+/** Full confirmation HTML page (card chrome + injected body). English keeps the
+ *  bare <html> it always had; any other language is declared on it. */
+export function renderPage(title: string, body: string, lang: Lang = "en"): string {
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html${lang === "en" ? "" : ` lang="${lang}"`}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} — WRotate</title>
 <style>
   body { margin:0; padding:40px 20px; background:#f4f4f4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }

@@ -5,6 +5,14 @@
 // which is addressed by username and gated on profile privacy, this page is
 // reached only by possessing the token — so the privacy gate lives in the token,
 // and what the page may SHOW is restricted here instead.
+//
+// The page is written in the reader's language (pageLang in _shared/lang.ts);
+// every `lang` below defaults to English, which is the text the page always
+// had. The og:image SVG stays English: only preview fetchers request it.
+import { count, fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { SHARE_STRINGS } from "../_shared/share-strings.ts";
+import { commentsSectionHtml, type PublicComment } from "../_shared/share-comments-lib.ts";
 
 export type ShareWatch = {
   id: string;
@@ -115,14 +123,16 @@ export function buildWishlistOg(
   displayName: string,
   label: string | null | undefined,
   items: ShareWatch[],
+  lang: Lang = "en",
 ): { ogTitle: string; ogDescription: string } {
+  const S = SHARE_STRINGS[lang];
   const n = (items || []).length;
-  const ogTitle = `${displayName}'s wishlist — WRotate`;
+  const ogTitle = `${fill(S.wishlist.heading, { n: displayName })} — WRotate`;
   const names = (items || []).slice(0, 3)
     .map((w) => `${w.brand || ""} ${w.name || ""}`.trim())
     .filter(Boolean)
     .join(", ");
-  const parts = [`${n} watch${n !== 1 ? "es" : ""}`];
+  const parts = [count(lang, n, S.watches)];
   const trimmedLabel = (label || "").trim();
   if (trimmedLabel) parts.push(trimmedLabel);
   if (names) parts.push(names);
@@ -197,9 +207,10 @@ export function htmlPage(
   imageUrl: string,
   canonicalUrl: string,
   bodyHtml: string,
+  lang: Lang = "en",
 ): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -270,4 +281,74 @@ export function htmlPage(
   </main>
 </body>
 </html>`;
+}
+
+// The two pages with no list on them, for share-wishlist and share-watches
+// alike: a link with no token (400) and a token that is revoked or unknown (404).
+export function shareStatePage(
+  page: "wishlist" | "watches",
+  kind: "missing" | "dead",
+  supabaseUrl: string,
+  lang: Lang = "en",
+): string {
+  const S = SHARE_STRINGS[lang];
+  const P = page === "wishlist" ? S.wishlist : S.watchesPage;
+  const title = kind === "missing" ? "WRotate" : P.deadTitle;
+  const icon = kind === "missing" ? "⌚" : "🔒";
+  const heading = kind === "missing" ? P.none : P.dead;
+  const sub = kind === "missing" ? S.incomplete : S.revoked;
+  return htmlPage(
+    title,
+    sub,
+    `${supabaseUrl}/functions/v1/share-${page}?img=1`,
+    "https://wrotate.com/",
+    `<div class="state-wrap"><div class="state-icon">${icon}</div><div class="state-title">${esc(heading)}</div>
+     <div class="state-sub">${esc(sub)}</div>
+     <div><a href="https://wrotate.com/open" class="btn-cta">${SHELL_STRINGS[lang].open}</a></div></div>`,
+    lang,
+  );
+}
+
+export type SharePageData = {
+  supabaseUrl: string;
+  token: string;
+  profile: { username?: string | null; display_name?: string | null; avatar_url?: string | null };
+  items: ShareWatch[];
+  label: string | null;
+  comments: PublicComment[];
+  nowMs: number;
+};
+
+// The whole page behind a live token, for share-wishlist and share-watches
+// alike. The name, the owner's note and the watch names are theirs and go out
+// as written. (`Ref.` is said the same way in every app language.)
+export function renderSharePage(page: "wishlist" | "watches", d: SharePageData, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang];
+  const P = page === "wishlist" ? S.wishlist : S.watchesPage;
+  const { profile, items, label, token, supabaseUrl } = d;
+  const displayName = profile.display_name || profile.username || S.someone;
+  const heading = fill(P.heading, { n: displayName });
+  const n = items.length;
+
+  // The two pages describe themselves the same way; only the heading differs.
+  const { ogDescription } = buildWishlistOg(displayName, label, items, lang);
+
+  const ogImage = `${supabaseUrl}/functions/v1/share-${page}?img=1&t=${encodeURIComponent(token)}`;
+  const canonicalUrl = `${supabaseUrl}/functions/v1/share-${page}?t=${encodeURIComponent(token)}`;
+
+  const body = `
+    <div class="col-hero">
+      <div class="col-avatar">${avatarInnerHtml(profile.avatar_url, displayName)}</div>
+      <div class="col-name">${esc(heading)}</div>
+      <div class="col-uname">${count(lang, n, S.watches)}</div>
+      ${label ? `<div class="col-label">${esc(label)}</div>` : ""}
+    </div>
+    ${n === 0
+      ? `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">${P.emptied}</div>
+         <div class="state-sub">${P.emptiedSub}</div></div>`
+      : `<div class="wl-grid">${wishlistCardsHtml(items)}</div>`}
+    ${commentsSectionHtml(page === "wishlist" ? "wishlist" : "collection", token, d.comments, d.nowMs, lang)}
+    <div class="foot">${S.sharedFrom} · <a href="https://wrotate.com/open">${P.cta}</a></div>`;
+
+  return htmlPage(`${heading} — WRotate`, ogDescription, ogImage, canonicalUrl, body, lang);
 }

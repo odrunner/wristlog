@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Someone's wishlist — WRotate</title>
+  <meta name="robots" content="noindex,nofollow">
+  <meta property="og:site_name" content="WRotate">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Someone's wishlist — WRotate">
+  <meta property="og:description" content="0 watches · For my &lt;dealer&gt;
+Budget 10k">
+  <meta property="og:image" content="https://api.wrotate.com/functions/v1/share-wishlist?img=1&amp;t=tok">
+  <meta property="og:url" content="https://api.wrotate.com/functions/v1/share-wishlist?t=tok">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Someone's wishlist — WRotate">
+  <meta name="twitter:description" content="0 watches · For my &lt;dealer&gt;
+Budget 10k">
+  <meta name="twitter:image" content="https://api.wrotate.com/functions/v1/share-wishlist?img=1&amp;t=tok">
+  <link rel="icon" type="image/svg+xml" href="https://wrotate.com/icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
+      --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
+      --text: #16161e; --muted: #70708a; --radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
+        --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
+        --text: #e6e6f0; --muted: #7a7a95;
+      }
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
+    a { color: var(--gold); text-decoration: none; }
+    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
+    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
+    .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .col-hero { text-align: center; padding: 0 0 1.25rem; }
+    .col-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); overflow: hidden; margin: 0 auto .75rem; }
+    .col-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .col-name { font-size: 1.2rem; font-weight: 800; margin-bottom: .15rem; }
+    .col-uname { font-size: .82rem; color: var(--muted); margin-bottom: .4rem; }
+    .col-label { font-size: .88rem; color: var(--muted); line-height: 1.5; white-space: pre-wrap; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .85rem; margin-top: .6rem; }
+    .wl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .wl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    /* The surface2 background is the broken-image fallback: an image URL that
+       404s leaves a neutral square rather than a torn-page icon. */
+    .wl-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--surface2); }
+    .wl-card-ph { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); }
+    .wl-card-body { padding: .6rem .75rem; }
+    .wl-card-brand { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .wl-card-name { font-size: .85rem; font-weight: 700; margin: .1rem 0; }
+    .wl-card-ref { font-size: .72rem; color: var(--muted); }
+    .wl-card-url { display: inline-block; font-size: .72rem; margin-top: .3rem; word-break: break-all; }
+    .state-wrap { text-align: center; padding: 3rem 1rem; }
+    .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+    .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
+    .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; }
+    .btn-cta { display: inline-block; background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .6rem 1.5rem; font-size: .92rem; font-weight: 600; text-decoration: none; font-family: inherit; margin-top: 1rem; }
+    .foot { text-align: center; margin-top: 2rem; font-size: .8rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="https://wrotate.com/" class="topbar-logo"><img src="https://wrotate.com/icon.svg" alt=""> WRotate</a>
+  </header>
+  <main class="page-wrap">
+    
+    <div class="col-hero">
+      <div class="col-avatar">S</div>
+      <div class="col-name">Someone's wishlist</div>
+      <div class="col-uname">0 watches</div>
+      <div class="col-label">For my &lt;dealer&gt;
+Budget 10k</div>
+    </div>
+    <div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">Nothing left in this list</div>
+         <div class="state-sub">The watches on this link are no longer on the owner's wishlist.</div></div>
+    
+    <style>
+      .sc-wrap { margin-top: 1.5rem; }
+      .sc-title { font-size: .95rem; font-weight: 800; margin-bottom: .6rem; }
+      .sc-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .75rem; margin-bottom: .5rem; }
+      .sc-meta { font-size: .72rem; color: var(--muted); margin-bottom: .2rem; }
+      .sc-name { font-weight: 700; color: var(--text); }
+      .sc-body { font-size: .88rem; white-space: pre-wrap; word-break: break-word; }
+      .sc-empty { font-size: .85rem; color: var(--muted); margin-bottom: .75rem; }
+      .sc-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem; margin-top: .75rem; }
+      .sc-form label { display: block; font-size: .72rem; color: var(--muted); margin: .35rem 0 .2rem; }
+      .sc-form input, .sc-form textarea { width: 100%; font: inherit; font-size: .9rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; }
+      .sc-form textarea { min-height: 84px; resize: vertical; }
+      .sc-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+      .sc-note { font-size: .72rem; color: var(--muted); margin-top: .4rem; }
+      .sc-btn { display: inline-block; margin-top: .6rem; background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .55rem 1.2rem; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
+      .sc-btn[disabled] { opacity: .6; cursor: default; }
+      .sc-err { font-size: .8rem; color: #c0392b; margin-top: .4rem; min-height: 1em; }
+    </style>
+    <section class="sc-wrap" id="sc-wrap" data-kind="wishlist" data-token="tok">
+      <div class="sc-title">Comments</div>
+      <div id="sc-list"><div class="sc-empty" id="sc-empty">No comments yet — be the first.</div></div>
+      <form class="sc-form" id="sc-form" autocomplete="off">
+        <label for="sc-name">Your name</label>
+        <input id="sc-name" name="name" maxlength="40" placeholder="So they know who this is from" required>
+        <label for="sc-body">Comment</label>
+        <textarea id="sc-body" name="body" maxlength="500" placeholder="Say something about these watches…" required></textarea>
+        <div class="sc-hp" aria-hidden="true"><label for="sc-hp">Website</label><input id="sc-hp" name="hp" tabindex="-1" autocomplete="off"></div>
+        <div class="sc-note">Visible to everyone who has this link.</div>
+        <div class="sc-err" id="sc-err"></div>
+        <button type="submit" class="sc-btn" id="sc-submit">Post comment</button>
+      </form>
+    </section>
+    <script>
+    (function () {
+      var wrap = document.getElementById('sc-wrap'); if (!wrap) return;
+      var form = document.getElementById('sc-form'), list = document.getElementById('sc-list');
+      var nameEl = document.getElementById('sc-name'), bodyEl = document.getElementById('sc-body');
+      var err = document.getElementById('sc-err'), btn = document.getElementById('sc-submit');
+      try { var saved = localStorage.getItem('wr_sc_name'); if (saved && !nameEl.value) nameEl.value = saved; } catch (e) {}
+      function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault(); err.textContent = ''; btn.disabled = true;
+        var payload = { t: wrap.getAttribute('data-token'), name: nameEl.value, body: bodyEl.value, hp: document.getElementById('sc-hp').value };
+        fetch(location.pathname + '?t=' + encodeURIComponent(payload.t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
+          .then(function (res) {
+            btn.disabled = false;
+            if (!res.j || !res.j.ok) { err.textContent = (res.j && res.j.error) || 'Could not post your comment. Please try again.'; return; }
+            var c = res.j.comment; try { localStorage.setItem('wr_sc_name', c.name); } catch (e) {}
+            var empty = document.getElementById('sc-empty'); if (empty) empty.remove();
+            var div = document.createElement('div'); div.className = 'sc-item';
+            div.innerHTML = '<div class="sc-meta"><span class="sc-name">' + esc(c.name) + '</span> · <span class="sc-time">just now</span></div><div class="sc-body">' + esc(c.body) + '</div>';
+            list.appendChild(div); bodyEl.value = '';
+          })
+          .catch(function () { btn.disabled = false; err.textContent = 'Could not post your comment. Please try again.'; });
+      });
+    })();
+    </script>
+    <div class="foot">Shared from WRotate · <a href="https://wrotate.com/open">Start your own wishlist</a></div>
+  </main>
+</body>
+</html>

@@ -175,3 +175,70 @@ Deno.test("htmlPage — embeds escaped OG meta and body", () => {
   assertStringIncludes(html, "<p>hi</p>");
   assertStringIncludes(html, `<meta property="og:type" content="profile">`);
 });
+
+// ── Languages ────────────────────────────────────────────────────────────────
+// The golden files are the page exactly as it was served before it learned any
+// other language (captured from the pre-change function, 2026-11-14). English,
+// and every request with no usable language, must still produce them byte for
+// byte.
+const golden = (name: string) => Deno.readTextFileSync(new URL(`./golden/${name}.html`, import.meta.url));
+const API = "https://api.wrotate.com";
+const PROFILE = { id: "u1", username: "alice", display_name: "Alice <B> & Co", bio: 'Collector of "things"', avatar_url: null, is_official: true };
+const WATCHES = [
+  { id: "w1", brand: "Rolex", name: "Submariner", ref: "124060", image: "https://x/sub.jpg", url: "https://www.chrono24.com/rolex/x" },
+  { id: "w2", brand: "Omega", name: "Speedmaster", ref: null, image: null, url: null },
+  { id: "w3", brand: "", name: "", ref: "", image: null, url: "javascript:alert(1)" },
+];
+import { collectionStatePage, renderCollectionPage } from "./lib.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+// deno-lint-ignore no-explicit-any
+const CW = WATCHES as any[];
+const WEARS = computeWearCounts(
+  [{ watch_id: "w1", date: "2026-01-01" }, { watch_id: "w1", date: "2026-01-02" }, { watch_id: "w2", date: "2026-01-02" }],
+  new Set(["w1", "w2", "w3"]),
+);
+const COLLECTION = { supabaseUrl: API, username: "alice", profile: PROFILE, watches: CW, sorted: sortByWears(CW, WEARS), wearCounts: WEARS };
+const COLLECTION_EMPTY = { supabaseUrl: API, username: "alice", profile: PROFILE, watches: [], sorted: [], wearCounts: {} };
+
+Deno.test("share-collection — English pages are byte-identical to the pre-translation pages", () => {
+  assertEquals(renderCollectionPage(COLLECTION), golden("collection"));
+  assertEquals(renderCollectionPage(COLLECTION, "en"), golden("collection"));
+  assertEquals(renderCollectionPage(COLLECTION_EMPTY), golden("collection-empty"));
+  assertEquals(collectionStatePage("missing", API, null), golden("missing"));
+  assertEquals(collectionStatePage("notFound", API, "bob"), golden("not-found"));
+});
+
+Deno.test("share-collection — German page: German chrome, lang=de, the member's words untouched", () => {
+  const html = renderCollectionPage(COLLECTION, "de");
+  assertStringIncludes(html, '<html lang="de">');
+  assertStringIncludes(html, "<title>Uhrensammlung von Alice &lt;B&gt; &amp; Co — WRotate</title>");
+  assertStringIncludes(html, 'content="3 Uhren · insgesamt 3× getragen · Meistgetragen: Rolex Submariner"');
+  assertStringIncludes(html, '<div class="watch-card-wears">2× getragen</div>');
+  assertStringIncludes(html, '<div class="col-bio">Collector of &quot;things&quot;</div>', "the bio is the member's");
+  assertEquals(/\d wears?</.test(html), false);
+  assertEquals(html.split("\n").length, golden("collection").split("\n").length);
+  assertStringIncludes(renderCollectionPage(COLLECTION_EMPTY, "de"), "Noch keine öffentlichen Uhren");
+  const nf = collectionStatePage("notFound", API, "bob", "de");
+  assertStringIncludes(nf, "<title>Private Sammlung — WRotate</title>");
+  assertStringIncludes(nf, '<div class="state-title">Sammlung nicht gefunden</div>');
+  assertStringIncludes(collectionStatePage("missing", API, null, "de"), "Kein Nutzer angegeben");
+});
+
+Deno.test("share-collection — every language renders with its own lang attribute and no leftover hole", () => {
+  for (const lang of LANGS) {
+    for (const html of [renderCollectionPage(COLLECTION, lang), renderCollectionPage(COLLECTION_EMPTY, lang), collectionStatePage("missing", API, null, lang), collectionStatePage("notFound", API, "bob", lang)]) {
+      assertStringIncludes(html, `<html lang="${lang}">`);
+      assertEquals(/\{[a-z]\}|undefined/.test(html.replace(/<style>[\s\S]*?<\/style>/, "")), false, lang);
+    }
+  }
+});
+
+Deno.test("buildCollectionOg — plurals per language; the og:image SVG stays English", () => {
+  const one = [{ id: "a", brand: "Tudor", name: "BB58" }];
+  assertEquals(buildCollectionOg("Ana", one, one, { a: 1 }, "fr").ogDescription, "1 montre · 1 port au total · La plus portée : Tudor BB58");
+  assertEquals(buildCollectionOg("Ana", [], [], {}, "fr").ogDescription, "0 montre · 0 port au total");
+  assertEquals(buildCollectionOg("Ana", [], [], {}, "es").ogDescription, "0 relojes · 0 usos en total");
+  assertEquals(buildCollectionOg("Ana", one, one, { a: 2 }, "tr").ogTitle, "Ana · Saat koleksiyonu — WRotate");
+  assertStringIncludes(generateOgSvg("Alice", [], {}), "No public watches yet");
+});

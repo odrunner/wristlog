@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; object-src 'none'; base-uri 'self';">
 <title>Open WRotate</title>
 <!-- Redirect stub, not a content page — keep it out of the index. -->
 <meta name="robots" content="noindex, follow">
@@ -22,6 +22,25 @@
 <!-- AFTER the redirect script on purpose: a stylesheet before an inline script makes the browser wait
      for the stylesheet before running it, which would delay the redirect. -->
 <link rel="stylesheet" href="/design-system.css?v=e096b945">
+<!-- AFTER the redirect script too, so it never delays the redirect.
+     Languages (docs/i18n.md). English runs none of this: no request, no work. A member who
+     chose another language in the app (wr_lang, same origin) gets that dictionary plus the
+     shared runtime /i18n/page.js; both are generated, and their ?v= hashes stamped here,
+     by scripts/i18n.mjs. -->
+<script>
+  (function () {
+    try {
+      var FILES = { es: 'i18n/es.js?v=d1028d54', it: 'i18n/it.js?v=52aa8bc7', fr: 'i18n/fr.js?v=048f6812', tr: 'i18n/tr.js?v=802f1f95', de: 'i18n/de.js?v=151f8310', pt: 'i18n/pt.js?v=072cd4ab' };
+      var RUNTIME = 'i18n/page.js?v=96e7201d';
+      var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
+      if (m) localStorage.setItem('wr_lang', m[1]);
+      var lang = localStorage.getItem('wr_lang');
+      if (!lang || !FILES[lang]) return;
+      document.documentElement.lang = lang;
+      document.write('<script src=/' + FILES[lang] + '><\/script><script src=/' + RUNTIME + '><\/script>');
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body class="row-center u-mt-0 u-mr-0 u-mb-0 u-ml-0 u-ff-font-sans u-bg-bg u-c-text u-minh-100vh u-ta-center">
   <div>

@@ -166,8 +166,17 @@ serve(async (req) => {
       );
     }
 
+    // In the language the recipient chose in the app. A failed lookup is English,
+    // never a dropped push.
+    const { data: recipient } = await supabase
+      .from("profiles")
+      .select("language")
+      .eq("id", user_id)
+      .maybeSingle();
+    const lang = pickLang(recipient?.language);
+
     // Look up actor's display name
-    let actorName = "Someone";
+    let actorName = resolveActorName(null, lang);
     if (actor_id) {
       const { data: actor } = await supabase
         .from("profiles")
@@ -175,7 +184,7 @@ serve(async (req) => {
         .eq("id", actor_id)
         .single();
       if (actor) {
-        actorName = resolveActorName(actor);
+        actorName = resolveActorName(actor, lang);
       }
     }
 
@@ -189,14 +198,7 @@ serve(async (req) => {
         .maybeSingle();
       if (c?.name) actorName = c.name;
     }
-    // In the language the recipient chose in the app. A failed lookup is English,
-    // never a dropped push.
-    const { data: recipient } = await supabase
-      .from("profiles")
-      .select("language")
-      .eq("id", user_id)
-      .maybeSingle();
-    const message = buildMessage(type, actorName, ref_id, pickLang(recipient?.language));
+    const message = buildMessage(type, actorName, ref_id, lang);
     if (!message) {
       return new Response(JSON.stringify({ skipped: "unknown type" }), {
         status: 200,

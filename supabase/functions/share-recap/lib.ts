@@ -10,6 +10,13 @@
 // contradicting ourselves. Those rules: a measurement share is not a wear, a
 // log for a watch no longer in the collection does not count, and a watch worn
 // twice in one day counts once.
+//
+// The page is written in the reader's language (pageLang in _shared/lang.ts);
+// every `lang` below defaults to English, which is the text the page always
+// had. The og:image SVG stays English: only preview fetchers request it.
+import { count, fill, isCrawlerUA, LOCALES, num, SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { SHARE_STRINGS } from "../_shared/share-strings.ts";
 
 export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -20,29 +27,36 @@ export function initials(brand: string, name: string): string {
   return raw.split(/\s+/).map((p: string) => p[0] || "").join("").slice(0, 2).toUpperCase() || "?";
 }
 
-// "2026-07" and nothing else. The month comes from a URL anyone can edit, and
-// it is interpolated into SQL filters and page copy.
 // Link-preview crawlers fetch the page and og:image the moment a link is
 // pasted, before anyone taps it. They are counted separately so "views" means
-// people, not iMessage.
-const CRAWLER_RE =
-  /bot|crawler|spider|facebookexternalhit|facebookcatalog|whatsapp|telegram|slack|discord|twitter|linkedin|pinterest|skype|snapchat|iframely|embedly|quora|preview|fetch|curl|wget|python|go-http|java\/|okhttp|axios|headless/i;
-export function isCrawlerUA(ua: string | null | undefined): boolean {
-  if (!ua) return true;                 // no UA at all: nothing a real browser sends
-  return CRAWLER_RE.test(ua);
-}
+// people, not iMessage. The test itself lives in _shared/lang.ts, which also
+// uses it to keep previews English.
+export { isCrawlerUA };
 
+// "2026-07" and nothing else. The month comes from a URL anyone can edit, and
+// it is interpolated into SQL filters and page copy.
 export function isValidPeriod(m: string | null | undefined): boolean {
   if (!m || !/^\d{4}-(0[1-9]|1[0-2])$/.test(m)) return false;
   const y = Number(m.slice(0, 4));
   return y >= 2020 && y <= 2100;
 }
 
-export function monthLabel(period: string, withYear = true): string {
+// "July 2026" / "July". In another language the month is written by that
+// locale ("julio de 2026", "Juli 2026"); alone it is a heading, so it gets a
+// capital where the locale writes months in lower case.
+export function monthLabel(period: string, withYear = true, lang: Lang = "en"): string {
   const NAMES = ["January", "February", "March", "April", "May", "June",
                  "July", "August", "September", "October", "November", "December"];
-  const name = NAMES[Number(period.slice(5, 7)) - 1] || "";
-  return withYear ? `${name} ${period.slice(0, 4)}` : name;
+  const mi = Number(period.slice(5, 7)) - 1;
+  if (lang === "en" || !NAMES[mi]) {
+    const name = NAMES[mi] || "";
+    return withYear ? `${name} ${period.slice(0, 4)}` : name;
+  }
+  const d = new Date(Date.UTC(Number(period.slice(0, 4)), mi, 15));
+  const loc = LOCALES[lang];
+  if (withYear) return new Intl.DateTimeFormat(loc, { month: "long", year: "numeric", timeZone: "UTC" }).format(d);
+  const name = new Intl.DateTimeFormat(loc, { month: "long", timeZone: "UTC" }).format(d);
+  return name.charAt(0).toLocaleUpperCase(loc) + name.slice(1);
 }
 
 // Same gate as share-collection: a private profile, or one whose collection is
@@ -136,14 +150,16 @@ export function buildRecapOg(
   displayName: string,
   recap: Recap,
   watchName: string | null,
+  lang: Lang = "en",
 ): { ogTitle: string; ogDescription: string } {
-  const ogTitle = `${displayName}'s ${monthLabel(recap.period)} — WRotate`;
+  const S = SHARE_STRINGS[lang];
+  const ogTitle = fill(S.recap.title, { n: displayName, m: monthLabel(recap.period, true, lang) });
   const bits = [
-    `${recap.totalWears} wear${recap.totalWears !== 1 ? "s" : ""}`,
-    `${recap.uniqueCount} watch${recap.uniqueCount !== 1 ? "es" : ""}`,
-    `${recap.wearDays} day${recap.wearDays !== 1 ? "s" : ""} logged`,
+    count(lang, recap.totalWears, S.wears),
+    count(lang, recap.uniqueCount, S.watches),
+    count(lang, recap.wearDays, S.recap.daysLogged),
   ];
-  if (watchName) bits.push(`Most worn: ${watchName}`);
+  if (watchName) bits.push(fill(S.mostWornIs, { w: watchName }));
   return { ogTitle, ogDescription: bits.join(" · ") };
 }
 
@@ -202,9 +218,9 @@ export function generateRecapSvg(
 </svg>`;
 }
 
-export function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string): string {
+export function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string, lang: Lang = "en"): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -275,4 +291,100 @@ export function htmlPage(title: string, description: string, imageUrl: string, c
   </main>
 </body>
 </html>`;
+}
+
+function recapStateHtml(supabaseUrl: string, title: string, icon: string, heading: string, sub: string, lang: Lang): string {
+  return htmlPage(
+    title,
+    sub,
+    `${supabaseUrl}/functions/v1/share-recap?img=1`,
+    "https://wrotate.com/open",
+    `<div class="state-wrap">
+      <div class="state-icon">${icon}</div>
+      <div class="state-title">${esc(heading)}</div>
+      <div class="state-sub">${esc(sub)}</div>
+      <div class="cta-wrap"><a href="https://wrotate.com/open" class="btn-cta">${SHELL_STRINGS[lang].open}</a></div>
+    </div>`,
+    lang,
+  );
+}
+
+// The pages with no recap on them: a link missing its collector or month
+// (400), and a profile that is private or gone (404).
+export function recapStatePage(kind: "bad" | "private", supabaseUrl: string, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang];
+  return kind === "bad"
+    ? recapStateHtml(supabaseUrl, "WRotate", "⌚", S.recap.bad, S.recap.badSub, lang)
+    : recapStateHtml(supabaseUrl, S.recap.privateTitle, "🔒", S.recap.private, S.collPrivate, lang);
+}
+
+export type RecapPageData = {
+  supabaseUrl: string;
+  token: string | null;
+  username: string | null;
+  profile: { username?: string | null; display_name?: string | null };
+  recap: Recap;
+  // deno-lint-ignore no-explicit-any
+  watchById: Record<string, any>;
+};
+
+// The whole page for a month that can be shown (including the "no wears that
+// month" page, which is a 200). Names are the member's own and go out as written.
+export function renderRecapPage(d: RecapPageData, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang];
+  const { profile, recap, watchById, supabaseUrl, token, username } = d;
+  const displayName = profile.display_name || profile.username || S.someone;
+
+  if (!recap.totalWears) {
+    const m = monthLabel(recap.period, true, lang);
+    return recapStateHtml(supabaseUrl, fill(S.recap.title, { n: displayName, m }), "⌚",
+      S.recap.noWears, fill(S.recap.noWearsSub, { n: displayName, m }), lang);
+  }
+
+  const topWatch = recap.top[0] ? watchById[recap.top[0].id] : null;
+  const topName = topWatch ? `${topWatch.brand || ""} ${topWatch.name || ""}`.trim() : null;
+  const { ogTitle, ogDescription } = buildRecapOg(displayName, recap, topName, lang);
+
+  // The og:image URL has to be fetchable by a crawler with no session, so it
+  // repeats whichever credential the page itself was opened with — the token
+  // for a shared link, the username for a public one.
+  const q = token
+    ? `t=${encodeURIComponent(token)}`
+    : `u=${encodeURIComponent(username as string)}&m=${encodeURIComponent(recap.period)}`;
+  const ogImage = `${supabaseUrl}/functions/v1/share-recap?img=1&${q}`;
+  const canonicalUrl = `${supabaseUrl}/functions/v1/share-recap?${q}`;
+
+  const podium = recap.top.map((t) => {
+    const w = watchById[t.id] || {};
+    const art = w.image
+      ? `<img src="${esc(w.image)}" alt="" loading="lazy">`
+      : esc(initials(w.brand || "", w.name || ""));
+    return `<div class="rc-item">
+      <div class="rc-thumb">${art}</div>
+      <div class="rc-name">${esc(w.name || "—")}</div>
+      <div class="rc-count">${count(lang, t.count, S.wears)}</div>
+    </div>`;
+  }).join("");
+
+  const streakHtml = recap.streak
+    ? `<div class="rc-streak">
+         <div class="rc-streak-val">${num(lang, recap.streak.days)}</div>
+         <div class="rc-streak-lbl">${S.recap.streak}</div>
+       </div>`
+    : "";
+
+  const bodyHtml = `
+    <div class="rc-eyebrow">${S.recap.eyebrow}</div>
+    <div class="rc-month">${esc(monthLabel(recap.period, false, lang))}</div>
+    <div class="rc-who">${esc(displayName)} · ${esc(recap.period.slice(0, 4))}</div>
+    <div class="rc-stats">
+      <div class="rc-stat"><div class="rc-stat-val">${num(lang, recap.totalWears)}</div><div class="rc-stat-lbl">${S.recap.statWears}</div></div>
+      <div class="rc-stat"><div class="rc-stat-val">${num(lang, recap.uniqueCount)}</div><div class="rc-stat-lbl">${S.recap.statWatches}</div></div>
+      <div class="rc-stat"><div class="rc-stat-val">${num(lang, recap.wearDays)}</div><div class="rc-stat-lbl">${S.recap.statDays}</div></div>
+    </div>
+    ${podium ? `<div class="rc-sect">${S.recap.mostWorn}</div><div class="rc-podium">${podium}</div>` : ""}
+    ${streakHtml}
+    <div class="cta-wrap"><a href="https://wrotate.com/open" class="btn-cta">${S.recap.cta}</a></div>`;
+
+  return htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml, lang);
 }

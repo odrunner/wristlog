@@ -2,7 +2,8 @@
 //
 // Fills watch_facts.translations (sql/2026-11-13-fact-translations.sql) and, once
 // the facts are done, watch_models.translations: the model page's description
-// and history (sql/2026-11-13-model-translations.sql). Run by
+// and history (sql/2026-11-13-model-translations.sql), its spec values and the
+// notes under its references (sql/2026-11-14-model-spec-translations.sql). Run by
 // pg_cron every five minutes with the campaign secret; each run takes the oldest
 // facts still missing a language, asks the model once per language per batch,
 // and stores only answers that pass _shared/translate-lib.ts. It works through
@@ -19,23 +20,24 @@ import { triggerSecretOk } from "../_shared/trigger-auth.ts";
 import { OTHER_LANGS } from "../_shared/translate-lib.ts";
 import type { Fields, OtherLang } from "../_shared/translate-lib.ts";
 import { translateFields } from "../_shared/translate.ts";
-import { batchFields, chunk, mergeAnswers, mergeModelAnswers, modelBatchFields, modelMissingLangs } from "./lib.ts";
+import { batchFields, chunk, mergeAnswers, mergeModelAnswers, modelBatchFields, modelMissingLangs, modelSource } from "./lib.ts";
 import type { FactRow, ModelRow } from "./lib.ts";
 
 const BATCH = 12;      // facts per model call
 const MAX_FACTS = 36;  // facts per run: 3 batches x 6 languages = 18 calls
-const MAX_MODELS = 6;  // model pages per run (~900 characters each): one call per language
+const MAX_MODELS = 6;  // model pages per run (~900 characters for the story, about as much again for specs + notes): one call per language
+const MODEL_SRC = "id, description, history, specs, refs_by_era";
 
 // Model pages are done only on a run with no fact waiting, so one run never does
 // both workloads inside the cron's two-minute limit.
 // deno-lint-ignore no-explicit-any
 async function translateModels(supabase: any, missingAny: string) {
   const { data, error } = await supabase.from("watch_models")
-    .select("id, description, history, translations, translate_attempts")
+    .select(`${MODEL_SRC}, translations, translate_attempts`)
     .or("description.not.is.null,history.not.is.null").or(missingAny).lt("translate_attempts", 3)
     .order("created_at", { ascending: true }).limit(MAX_MODELS);
   if (error) throw error;
-  const rows = ((data ?? []) as ModelRow[]).filter((r) => modelMissingLangs(r).length);
+  let rows = ((data ?? []) as ModelRow[]).filter((r) => modelMissingLangs(r).length);
   if (!rows.length) return { rows: 0, stored: 0, calls: 0, rejected: 0 };
   let stored = 0, calls = 0, rejected = 0;
   const answers = new Map<OtherLang, Fields>();
@@ -46,7 +48,16 @@ async function translateModels(supabase: any, missingAny: string) {
     const out = await translateFields(fields, lang, { timeoutMs: 45000, tag: "models" });
     if (out) answers.set(lang, out); else rejected++;
   }));
-  const merged = mergeModelAnswers(rows, answers);
+  // The calls take a while. A model whose English changed meanwhile (Enrich, an
+  // approved edit) is dropped here and picked up fresh on a later run: reference
+  // notes are stored by position, so they must never be laid over other English.
+  const { data: nowRows, error: nowErr } = await supabase.from("watch_models").select(MODEL_SRC).in("id", rows.map((r) => r.id));
+  if (nowErr) throw nowErr;
+  const srcNow = new Map(((nowRows ?? []) as ModelRow[]).map((r) => [r.id, modelSource(r)]));
+  // Dropped rows stay in `asked` so the answers still line up by position.
+  const asked = rows;
+  rows = rows.filter((r) => srcNow.get(r.id) === modelSource(r));
+  const merged = mergeModelAnswers(asked, answers).filter((m) => rows.some((r) => r.id === m.id));
   for (const m of merged) {
     const { error: upErr } = await supabase.from("watch_models").update({ translations: m.translations }).eq("id", m.id);
     if (upErr) console.error("[translate-facts] model store failed:", upErr.message); else stored++;
@@ -71,12 +82,15 @@ serve(async (req) => {
     // PostgREST has no "has all keys" operator, so the work list comes from a
     // filter on each language key being absent, OR-ed together.
     const missingAny = OTHER_LANGS.map((l) => `translations->>${l}.is.null`).join(",");
+    // A model also waits while any language lacks the marker the job writes once
+    // its spec values and reference notes are done (lib.ts EXTRAS_V).
+    const modelMissingAny = `${missingAny},${OTHER_LANGS.map((l) => `translations->${l}->>extras.is.null`).join(",")}`;
     if (body?.dry_run) {
       const { count } = await supabase.from("watch_facts")
         .select("id", { count: "exact", head: true }).or(missingAny).lt("translate_attempts", 3);
       const { count: models } = await supabase.from("watch_models")
         .select("id", { count: "exact", head: true })
-        .or("description.not.is.null,history.not.is.null").or(missingAny).lt("translate_attempts", 3);
+        .or("description.not.is.null,history.not.is.null").or(modelMissingAny).lt("translate_attempts", 3);
       return new Response(JSON.stringify({ dry_run: true, waiting: count ?? null, models_waiting: models ?? null }), { status: 200 });
     }
     const { data, error } = await supabase.from("watch_facts")
@@ -86,7 +100,7 @@ serve(async (req) => {
     if (error) throw error;
     const rows = (data ?? []) as FactRow[];
     if (!rows.length) {
-      const models = await translateModels(supabase, missingAny);
+      const models = await translateModels(supabase, modelMissingAny);
       if (models.rows) console.log(`[translate-facts] models ${models.rows}, stored ${models.stored}, calls ${models.calls}, rejected ${models.rejected}`);
       return new Response(JSON.stringify({ translated: 0, waiting: 0, models }), { status: 200 });
     }

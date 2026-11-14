@@ -1,5 +1,12 @@
 // share-collection — pure logic extracted for testability (no Deno/IO/network).
-// index.ts imports these; lib.test.ts tests them. Behavior unchanged.
+// index.ts imports these; lib.test.ts tests them.
+//
+// The page is written in the reader's language (pageLang in _shared/lang.ts);
+// every `lang` below defaults to English, which is the text the page always
+// had. The og:image SVG stays English: only preview fetchers request it.
+import { count, fill, SHELL_STRINGS } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { SHARE_STRINGS } from "../_shared/share-strings.ts";
 
 export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -66,9 +73,9 @@ export function generateOgSvg(displayName: string, watches: any[], wearCounts: R
 </svg>`;
 }
 
-export function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string): string {
+export function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string, lang: Lang = "en"): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -184,14 +191,17 @@ export function buildCollectionOg(
   watches: { id: string; brand?: string; name?: string }[],
   sorted: { id: string; brand?: string; name?: string }[],
   wearCounts: Record<string, number>,
+  lang: Lang = "en",
 ): { ogTitle: string; ogDescription: string } {
-  const ogTitle = `${displayName}'s Watch Collection — WRotate`;
+  const S = SHARE_STRINGS[lang];
+  const ogTitle = fill(S.collection.title, { n: displayName });
   const mostWorn = sorted[0] && (wearCounts[sorted[0].id] || 0) > 0 ? sorted[0] : null;
   const mostWornName = mostWorn ? `${mostWorn.brand || ""} ${mostWorn.name || ""}`.trim() : null;
   const totalWears = Object.values(wearCounts).reduce((a: number, b: number) => a + b, 0);
+  const counts = `${count(lang, watches.length, S.watches)} · ${count(lang, totalWears, S.collection.totalWears)}`;
   const ogDescription = mostWornName
-    ? `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""} · Most worn: ${mostWornName}`
-    : `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""}`;
+    ? `${counts} · ${fill(S.mostWornIs, { w: mostWornName })}`
+    : counts;
   return { ogTitle, ogDescription };
 }
 
@@ -200,4 +210,88 @@ export function avatarInnerHtml(avatarUrl: string | null | undefined, displayNam
   return avatarUrl
     ? `<img src="${esc(avatarUrl)}" alt="">`
     : esc((displayName).trim().split(/\s+/).map((w: string) => w[0] || "").join("").slice(0, 2).toUpperCase());
+}
+
+// The two pages with no collection on them: a link with no username (400) and
+// a profile that is private, hidden or gone (404).
+export function collectionStatePage(kind: "missing" | "notFound", supabaseUrl: string, username: string | null, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang];
+  const open = SHELL_STRINGS[lang].open;
+  if (kind === "missing") {
+    return htmlPage(
+      "WRotate", S.tagline,
+      `${supabaseUrl}/functions/v1/share-collection?img=1&u=`,
+      "https://wrotate.com/",
+      `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">${S.collection.none}</div>
+       <div class="state-sub">${S.visit}</div>
+       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">${open}</a></div></div>`,
+      lang,
+    );
+  }
+  return htmlPage(
+    S.collection.privateTitle, S.collPrivate,
+    `${supabaseUrl}/functions/v1/share-collection?img=1&u=${encodeURIComponent(username || "")}`,
+    "https://wrotate.com/",
+    `<div class="state-wrap"><div class="state-icon">🔒</div><div class="state-title">${S.collection.notFound}</div>
+       <div class="state-sub">${S.collection.notFoundSub}</div>
+       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">${open}</a></div></div>`,
+    lang,
+  );
+}
+
+type CollectionWatch = { id: string; brand?: string; name?: string; image?: string };
+export type CollectionPageData = {
+  supabaseUrl: string;
+  username: string;
+  profile: { username?: string | null; display_name?: string | null; bio?: string | null; avatar_url?: string | null; is_official?: boolean | null };
+  watches: CollectionWatch[];
+  sorted: CollectionWatch[];
+  wearCounts: Record<string, number>;
+};
+
+// The whole page for a public collection. Name, bio and watch names are the
+// member's own and go out as written.
+export function renderCollectionPage(d: CollectionPageData, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang];
+  const { profile, watches, sorted, wearCounts, supabaseUrl, username } = d;
+  const displayName = profile.display_name || profile.username || S.someone;
+  const { ogTitle, ogDescription } = buildCollectionOg(displayName, watches, sorted, wearCounts, lang);
+  const ogImage = `${supabaseUrl}/functions/v1/share-collection?img=1&u=${encodeURIComponent(username)}`;
+  const canonicalUrl = `${supabaseUrl}/functions/v1/share-collection?u=${encodeURIComponent(username)}`;
+
+  const avatarInner = avatarInnerHtml(profile.avatar_url, displayName);
+
+  const officialBadge = profile.is_official
+    ? ' <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)" style="vertical-align:middle;"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 12c0 4.418 2.865 8.166 6.839 9.489.308.105.633.105.941.005L12 21.056l1.22.438a1.1 1.1 0 0 0 .941-.005C18.135 20.166 21 16.418 21 12c0-.69-.058-1.365-.17-2.022Z"/></svg>'
+    : "";
+
+  const bioHtml = profile.bio ? `<div class="col-bio">${esc(profile.bio)}</div>` : "";
+
+  const gridHtml = sorted.slice(0, 12).map((w) => {
+    const wears = wearCounts[w.id] || 0;
+    const imgHtml = w.image
+      ? `<img class="watch-card-img" src="${esc(w.image)}" alt="" loading="lazy">`
+      : `<div class="watch-card-ph">${esc(initials(w.brand || "", w.name || ""))}</div>`;
+    return `<a href="https://wrotate.com/" class="watch-card link-block">
+      ${imgHtml}
+      <div class="watch-card-body">
+        ${w.brand ? `<div class="watch-card-brand">${esc(w.brand)}</div>` : ""}
+        <div class="watch-card-name">${esc(w.name || "—")}</div>
+        <div class="watch-card-wears">${count(lang, wears, S.wears)}</div>
+      </div>
+    </a>`;
+  }).join("");
+
+  const bodyHtml = `
+    <a href="https://wrotate.com/" class="col-hero link-block">
+      <div class="col-avatar">${avatarInner}</div>
+      <div class="col-name">${esc(displayName)}${officialBadge}</div>
+      <div class="col-uname">@${esc(profile.username || "")}</div>
+      ${bioHtml}
+    </a>
+    ${watches.length > 0
+      ? `<div class="watch-grid">${gridHtml}</div>`
+      : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">${S.collection.empty}</div></div>`}`;
+
+  return htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml, lang);
 }

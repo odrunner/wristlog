@@ -273,7 +273,7 @@ class ShellActivity : ComponentActivity() {
         captureCandidates = candidates
         val chooser = Intent(Intent.ACTION_CHOOSER).apply {
             putExtra(Intent.EXTRA_INTENT, content)
-            putExtra(Intent.EXTRA_TITLE, "Add a photo")
+            putExtra(Intent.EXTRA_TITLE, getString(R.string.photo_chooser_title))
             if (extras.isNotEmpty()) putExtra(Intent.EXTRA_INITIAL_INTENTS, extras.toTypedArray())
         }
         return try {
@@ -385,19 +385,19 @@ class ShellActivity : ComponentActivity() {
             isClickable = true // swallow touches so the error page behind is inert
         }
         column.addView(android.widget.TextView(this).apply {
-            text = "No Connection"
+            text = getString(R.string.offline_title)
             textSize = 20f
             setTextColor(0xFF222222.toInt())
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         })
         column.addView(android.widget.TextView(this).apply {
-            text = "Check your internet connection and try again."
+            text = getString(R.string.offline_message)
             textSize = 14f
             setTextColor(0xFF666666.toInt())
             setPadding(0, (8 * dp).toInt(), 0, (24 * dp).toInt())
         })
         column.addView(android.widget.Button(this).apply {
-            text = "Try Again"
+            text = getString(R.string.offline_retry)
             setOnClickListener {
                 errorOverlay.visibility = android.view.View.GONE
                 webView.reload()

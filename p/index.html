@@ -23,6 +23,24 @@
       } catch(e) {}
     })();
   </script>
+  <!-- Languages (docs/i18n.md). English runs none of this: no request, no work. A member who
+       chose another language in the app (wr_lang, same origin) gets that dictionary plus the
+       shared runtime /i18n/page.js; both are generated, and their ?v= hashes stamped here,
+       by scripts/i18n.mjs. -->
+  <script>
+    (function () {
+      try {
+        var FILES = { es: 'i18n/es.js?v=d1028d54', it: 'i18n/it.js?v=52aa8bc7', fr: 'i18n/fr.js?v=048f6812', tr: 'i18n/tr.js?v=802f1f95', de: 'i18n/de.js?v=151f8310', pt: 'i18n/pt.js?v=072cd4ab' };
+        var RUNTIME = 'i18n/page.js?v=96e7201d';
+        var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
+        if (m) localStorage.setItem('wr_lang', m[1]);
+        var lang = localStorage.getItem('wr_lang');
+        if (!lang || !FILES[lang]) return;
+        document.documentElement.lang = lang;
+        document.write('<script src=/' + FILES[lang] + '><\/script><script src=/' + RUNTIME + '><\/script>');
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="/design-system.css?v=e096b945">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -133,6 +151,14 @@
       return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Languages (docs/i18n.md). I18N is the chosen language, or null for English, when nothing
+    // below does anything. Text a member wrote is never translated, even when it spells one of
+    // our labels: escUser() writes it between the markers the translator steps over, mine()
+    // registers it for the places a marker cannot go (an attribute, a name inside a sentence).
+    const I18N = window.WR_I18N ? window.WR_I18N.lang : null;
+    function mine(s) { return I18N && s ? i18nMine(String(s)) : s; }
+    function escUser(s) { const h = esc(mine(s)); return I18N && h ? '<!--u-->' + h + '<!--/u-->' : h; }
+
     function initials(name) {
       return (name || '').trim().split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?';
     }
@@ -183,7 +209,8 @@
     }
 
     function renderPost(log, profile, watch) {
-      const displayName = profile?.display_name || profile?.username || 'Someone';
+      const memberName = profile?.display_name || profile?.username || '';
+      const displayName = memberName || 'Someone';
       const watchName = watch ? (watch.brand || '') + ' ' + (watch.name || '') : '';
       const trimmedWatch = watchName.trim();
       const caption = log.notes || '';
@@ -193,13 +220,13 @@
       // a `|| log.use_case` fallback (which would print the raw "unspecified").
       const visibleUseCase = (log.use_case && useCaseLabels.hasOwnProperty(log.use_case))
         ? useCaseLabels[log.use_case]
-        : (log.use_case || '');
+        : (mine(log.use_case) || '');
 
       let dateLabel = '';
       if (log.date) {
         try {
           const d = new Date(log.date + 'T12:00:00');
-          dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          dateLabel = d.toLocaleDateString(I18N || 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         } catch { dateLabel = log.date; }
       }
       const metaParts = [dateLabel, visibleUseCase].filter(Boolean).join(' · ');
@@ -213,18 +240,18 @@
 
       const avatarHtml = profile?.avatar_url
         ? `<img ${thumbSrcAttrs(profile.avatar_url, esc)} alt="">`
-        : esc(initials(displayName));
+        : escUser(initials(displayName));
 
       const photoHtml = photoUrl
-        ? `<img class="post-photo" src="${esc(photoUrl)}" alt="${esc(trimmedWatch || 'Watch post')}">`
+        ? `<img class="post-photo" src="${esc(photoUrl)}" alt="${esc(mine(trimmedWatch) || 'Watch post')}">`
         : '';
 
       const captionHtml = caption
-        ? `<div class="post-caption">${esc(caption)}</div>`
+        ? `<div class="post-caption">${escUser(caption)}</div>`
         : '';
 
       const watchChipHtml = trimmedWatch
-        ? `<div class="post-watch">${watch?.image ? `<img ${thumbSrcAttrs(watch.image, esc)} alt="">` : ''} ${esc(trimmedWatch)}</div>`
+        ? `<div class="post-watch">${watch?.image ? `<img ${thumbSrcAttrs(watch.image, esc)} alt="">` : ''} ${escUser(trimmedWatch)}</div>`
         : '';
 
       document.getElementById('main-content').innerHTML = `
@@ -234,7 +261,7 @@
             <div class="post-header">
               <div class="post-avatar">${avatarHtml}</div>
               <div>
-                <div class="post-name">${esc(displayName)}</div>
+                <div class="post-name">${memberName ? escUser(memberName) : esc(displayName)}</div>
                 ${metaParts ? `<div class="post-meta">${esc(metaParts)}</div>` : ''}
               </div>
             </div>

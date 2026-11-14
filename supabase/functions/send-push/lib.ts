@@ -1,6 +1,6 @@
 // send-push — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
-import { fill } from "../_shared/lang.ts";
+import { fill, SOMEONE } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { PUSH_STRINGS, PUSH_TYPES } from "./strings.ts";
 import type { PushType } from "./strings.ts";
@@ -12,12 +12,14 @@ export function isValidRecord(
   return !!record && !!record.user_id && !!record.type;
 }
 
-// Resolve a display name for the actor, falling back to "Someone".
+// Resolve a display name for the actor, falling back to "Someone" in the
+// recipient's language.
 export function resolveActorName(
   actor: { display_name?: string | null; username?: string | null } | null | undefined,
+  lang: Lang = "en",
 ): string {
-  if (!actor) return "Someone";
-  return actor.display_name || actor.username || "Someone";
+  if (!actor) return SOMEONE[lang];
+  return actor.display_name || actor.username || SOMEONE[lang];
 }
 
 // Notification type → human-readable push message.

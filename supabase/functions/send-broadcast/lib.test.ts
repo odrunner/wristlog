@@ -27,6 +27,8 @@ import {
   LANG_TIMEZONES,
   langsToTranslate,
   countByLang,
+  factInLang,
+  indexFactPool,
   corsOrigin,
   shouldTripBreaker,
   shuffled,
@@ -916,6 +918,43 @@ Deno.test("langsToTranslate — every language the audience uses, never English"
 Deno.test("countByLang — rows with no language are English", () => {
   assertEquals(countByLang([{ lang: "es" }, { lang: null }, {}, { lang: "es" }, { lang: "de" }]), { es: 2, en: 2, de: 1 });
   assertEquals(countByLang([]), {});
+});
+
+// ── the fun fact in a translated broadcast ──
+const EN_FACT = "It was the first automatic chronograph to reach the wrist, in 1969.";
+const factPool = indexFactPool([
+  { model_key: "zenith|el primero", fact: EN_FACT, translations: { es: " Fue el primer cronógrafo automático en llegar a la muñeca, en 1969. ", it: "", de: 7 } },
+  { model_key: "zenith|el primero", fact: "A second fact about the same watch, long enough.", translations: { es: "Otro dato." } },
+  { model_key: "seiko|skx007", fact: "No translations yet for this one.", translations: {} },
+]);
+
+Deno.test("factInLang — the recipient's language when the job has made it, trimmed", () => {
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "es"), "Fue el primer cronógrafo automático en llegar a la muñeca, en 1969.");
+  // matched by the English text, so the model's other fact is never picked up
+  assertEquals(factInLang(factPool, "zenith|el primero", "A second fact about the same watch, long enough.", "es"), "Otro dato.");
+});
+
+Deno.test("factInLang — English is returned untouched, byte for byte", () => {
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "en"), EN_FACT);
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, null), EN_FACT);
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, undefined), EN_FACT);
+});
+
+Deno.test("factInLang — anything missing or malformed means the English fact", () => {
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "it"), EN_FACT);        // blank
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "de"), EN_FACT);        // not a string
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "fr"), EN_FACT);        // not made yet
+  assertEquals(factInLang(factPool, "zenith|el primero", EN_FACT, "toString"), EN_FACT);  // not a language
+  assertEquals(factInLang(factPool, "seiko|skx007", "No translations yet for this one.", "es"), "No translations yet for this one.");
+  assertEquals(factInLang(factPool, "omega|speedmaster", EN_FACT, "es"), EN_FACT);        // model not in the pool
+  assertEquals(factInLang(factPool, undefined, EN_FACT, "es"), EN_FACT);                  // the curated fallback fact has no key
+  assertEquals(factInLang(new Map(), "zenith|el primero", EN_FACT, "es"), EN_FACT);       // the pool read failed
+  assertEquals(factInLang(indexFactPool(null), "zenith|el primero", EN_FACT, "es"), EN_FACT);
+});
+
+Deno.test("indexFactPool — skips rows it cannot key", () => {
+  assertEquals(indexFactPool([{ model_key: "", fact: "x", translations: {} }, { model_key: "a|b", fact: "", translations: {} }]).size, 0);
+  assertEquals(indexFactPool(undefined).size, 0);
 });
 
 Deno.test("withUnsubFooter — footer follows the row's language; English unchanged", () => {

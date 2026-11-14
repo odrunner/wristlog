@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=db9f5fe1', it: 'i18n/it.js?v=6d712245', fr: 'i18n/fr.js?v=3af669b8', tr: 'i18n/tr.js?v=4f5471ff', de: 'i18n/de.js?v=6871ea95', pt: 'i18n/pt.js?v=b9137854' };
+      var FILES = { es: 'i18n/es.js?v=d1028d54', it: 'i18n/it.js?v=52aa8bc7', fr: 'i18n/fr.js?v=048f6812', tr: 'i18n/tr.js?v=802f1f95', de: 'i18n/de.js?v=151f8310', pt: 'i18n/pt.js?v=072cd4ab' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -6384,6 +6384,18 @@ function tx(s, vars) {
 // nothing. Skipped: the sign-in screen (not to be modified), the admin portal, and
 // the older release notes (data-i18n-skip). A run of text with bare inline tags ("Tap <b>Add</b>")
 // is one entry keyed by its innerHTML, so the sentence is translated whole.
+// Text a member wrote (a watch, strap or club name, a caption, a message) is theirs and is
+// never translated, even when it spells one of our labels ("Steel", "Date"). escUser() writes
+// it between <!--u--> and <!--/u-->, which the walker steps over; i18nMine() remembers it for
+// the places a marker cannot go (attributes, a name inside a sentence).
+function i18nMine(s) {
+  if (window.WR_I18N && typeof s === 'string' && s.length < 80) {
+    var k = s.replace(/\s+/g, ' ').trim();
+    if (k) (i18nMine.set || (i18nMine.set = new Set())).add(k);
+  }
+  return s;
+}
+function i18nIsMine(k) { return !!(i18nMine.set && i18nMine.set.has(k)); }
 function i18nWalk(root, lookup) {
   var SKIP = '#auth-screen,#page-admin,#admin-user-modal,#adm-exp-info-modal,[data-i18n-skip]';
   var SKIP_TAG = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|TEXTAREA|svg|CANVAS)$/;
@@ -6408,7 +6420,7 @@ function i18nWalk(root, lookup) {
     if (SKIP_TAG.test(el.tagName) || el.matches(SKIP)) return;
     for (var i = 0; i < ATTRS.length; i++) {
       var a = el.getAttribute(ATTRS[i]);
-      if (a && (done.get(el) || {})[ATTRS[i]] !== a) {
+      if (a && (done.get(el) || {})[ATTRS[i]] !== a && !i18nIsMine(norm(a))) {
         var ra = lookup(norm(a));
         if (ra) { var rec = done.get(el) || {}; rec[ATTRS[i]] = ra; done.set(el, rec); el.setAttribute(ATTRS[i], ra); }
       }
@@ -6420,6 +6432,7 @@ function i18nWalk(root, lookup) {
       if (c.nodeType === 1) walk(c);
       else if (c.nodeType === 3) {
         var k = norm(c.nodeValue); if (!k || done.get(c) === c.nodeValue) continue;
+        var pv = c.previousSibling; if (pv && pv.nodeType === 8 && pv.nodeValue === 'u') continue;
         var r = lookup(k); if (!r) continue;
         // An <option> without value="" submits its text: pin the English before changing it.
         if (el.tagName === 'OPTION' && !el.hasAttribute('value')) el.setAttribute('value', k);
@@ -6442,9 +6455,9 @@ function i18nLookup(k) {
   var arrow = /^(.*\S)\s*([↕↓↑▾▴→])$/.exec(k);
   if (arrow) { var ra = i18nLookup(arrow[1]); if (ra) return ra + ' ' + arrow[2]; }
   // "2h ago · work": the pieces around a middle dot are labels in their own right.
-  if (k.indexOf('·') > 0) {
+  if (k.indexOf('·') >= 0) {
     var hit = false, joined = k.replace(/[^·]+/g, function (seg) {
-      var p = seg.trim(), r = p && i18nLookup(p);
+      var p = seg.trim(), r = p && !i18nIsMine(p) && i18nLookup(p);
       if (!r) return seg;
       hit = true; return seg.replace(p, r);
     });
@@ -6461,7 +6474,7 @@ function i18nLookup(k) {
       var at = pats[i].order.indexOf(+n);
       if (at < 0) return x;
       var c = m[at + 1].trim();
-      var r = /[A-Za-z]{2}/.test(c) && c.length < 40 ? (i18nLookup(c) || c) : c;
+      var r = /[A-Za-z]{2}/.test(c) && c.length < 40 && !i18nIsMine(c) ? (i18nLookup(c) || c) : c;
       // Spanish, French, Italian and Portuguese write a weekday in lower case inside a
       // sentence ("los viernes"); the dictionary entry is capitalised for use on its own.
       if (off > 0 && r !== c && /^(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day$/.test(c) &&
@@ -6551,7 +6564,18 @@ function modelTr(m) {
   const t = m && m.translations && m.translations[i18nLang()];
   if (!t || i18nLang() === 'en') return m;
   const pick = k => (typeof t[k] === 'string' && t[k].trim()) || m[k];
-  return Object.assign({}, m, { description: pick('description'), history: pick('history') });
+  const out = Object.assign({}, m, { description: pick('description'), history: pick('history') });
+  // Spec values and reference notes (t.extras marks them done). Notes go by position, so they
+  // are used only while the list is the length it was when they were translated.
+  if (t.extras) {
+    if (t.specs && typeof t.specs === 'object' && m.specs) {
+      out.specs = Object.assign({}, m.specs);
+      for (const k of Object.keys(t.specs)) if (typeof t.specs[k] === 'string' && t.specs[k].trim() && m.specs[k]) out.specs[k] = t.specs[k];
+    }
+    if (Array.isArray(t.ref_notes) && Array.isArray(m.refs_by_era) && t.ref_notes.length === m.refs_by_era.length)
+      out.refs_by_era = m.refs_by_era.map((r, i) => (r && r.note && typeof t.ref_notes[i] === 'string' && t.ref_notes[i].trim()) ? Object.assign({}, r, { note: t.ref_notes[i] }) : r);
+  }
+  return out;
 }
 // feed_page() returns facts in English only (kept small for the first load).
 // Another language swaps its translations in before the feed is built; any
@@ -6599,7 +6623,7 @@ if (window.WR_I18N) {
       if (!host || host.closest(_i18nSkip)) continue;
       if (m.type === 'attributes') {
         var v = host.getAttribute(m.attributeName), rec = i18nWalk.done.get(host) || {};
-        if (!v || rec[m.attributeName] === v) continue;
+        if (!v || rec[m.attributeName] === v || i18nIsMine(v.replace(/\s+/g, ' ').trim())) continue;
         var r = i18nLookup(v.replace(/\s+/g, ' ').trim());
         if (r) { rec[m.attributeName] = r; i18nWalk.done.set(host, rec); host.setAttribute(m.attributeName, r); }
       } else if (m.type === 'characterData') {
@@ -8541,7 +8565,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.05.22';
+const APP_VERSION = '14.09.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8844,6 +8868,19 @@ function campaignGroupOf(subj, activeKeys) {
 
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// For text a member wrote, in element content only (never inside an attribute, a <textarea>
+// or an <option>): the translator leaves it alone. English readers get plain escHtml().
+function escUser(s) {
+  const h = escHtml(i18nMine(s));
+  return h && window.WR_I18N ? '<!--u-->' + h + '<!--/u-->' : h;
+}
+// The same for an element filled through textContent.
+function setUserText(el, s) {
+  if (!el) return;
+  el.textContent = '';
+  if (s && window.WR_I18N) el.append(document.createComment('u'), i18nMine(String(s)));
+  else el.textContent = s || '';
 }
 function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
@@ -9480,7 +9517,7 @@ async function loadMoreProfilePosts(userId, isOwn) {
 
 function renderPrivateProfileHTML(profile, privacy, userId) {
   const heroInitials = profileInitials(profile);
-  const name  = escHtml(profile.display_name || profile.username || '—');
+  const name  = escUser(profile.display_name || profile.username || '—');
   const badge = officialBadgeHtml(profile);
   const uname = profile.username ? '@' + escHtml(profile.username) : '';
   const msg   = privacy === 'private'
@@ -9505,7 +9542,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const name     = escHtml(profile.display_name || profile.username || '—');
   const badge    = officialBadgeHtml(profile);
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
-  const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
+  const bio      = profile.bio ? `<div class="profile-bio-text">${escUser(profile.bio)}</div>` : '';
 
   // Avatar — show pic if available, monogram otherwise; own profile gets camera overlay
   const avatarInner = profile.avatar_url
@@ -9778,8 +9815,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-func="${escHtml((w.functions||[]).join(', '))}"`;
       return `<div class="showcase-card${isOwn ? ' priv-own col-watch-card' + tintCls : ''}"${isOwn ? ` data-watch-id="${escHtml(w.id)}" data-priv="${priv||'inh'}"` : ''} ${clickAttr}>
         ${thumb}
-        <div class="showcase-brand">${escHtml(w.brand || '')}</div>
-        <div class="showcase-name">${escHtml(w.name || '')}</div>
+        <div class="showcase-brand">${escUser(w.brand || '')}</div>
+        <div class="showcase-name">${escUser(w.name || '')}</div>
         ${privLabel}
       </div>`;
     }).join('');
@@ -9847,8 +9884,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'followers' ? ' wl-fri' : wp === 'friends' ? ' wl-frd' : wp === 'private' ? ' wl-priv' : '') : '';
         return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
-          <div class="showcase-brand">${escHtml(w.brand||'')}</div>
-          <div class="showcase-name">${escHtml(w.name||'')}</div>
+          <div class="showcase-brand">${escUser(w.brand||'')}</div>
+          <div class="showcase-name">${escUser(w.name||'')}</div>
           ${privLabel}
         </div>`;
       }).join('');
@@ -10279,7 +10316,7 @@ function renderBlockedUsersList() {
     if (!data || !data.length) { el.innerHTML = '<div class="note">No blocked users.</div>'; return; }
     el.innerHTML = data.map(p => `
       <div class="row-between u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdb-1px-solid-border">
-        <span class="u-fs-base">${escHtml(p.display_name || p.username || 'User')}</span>
+        <span class="u-fs-base">${escUser(p.display_name || p.username) || 'User'}</span>
         <button class="btn btn-ghost btn-xs" onclick="unblockUser('${p.id}')">Unblock</button>
       </div>`).join('');
   }).catch(e => { el.innerHTML = '<div class="note">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
@@ -10866,7 +10903,7 @@ async function renderClubDetail(clubId) {
       <button data-uid="${escAttr(m.id)}" data-cid="${escAttr(clubId)}" data-name="${escAttr(m.display_name || m.username || '')}" onclick="event.stopPropagation();showMemberMenu(this.dataset.uid, this.dataset.cid, this.dataset.name, this)"
         class="btn-plain" style="font-size:var(--fs-base);padding:0 var(--space-1);">\u{22EF}</button>` : '';
     return `<div class="club-member-chip" onclick="viewUserProfile('${m.id}')">
-      ${avatarHtml}<span>${escHtml(m.display_name || m.username || 'User')}${ownerBadge}</span>${ownerMenu}
+      ${avatarHtml}<span>${escUser(m.display_name || m.username) || 'User'}${ownerBadge}</span>${ownerMenu}
     </div>`;
   }).join('');
 
@@ -10915,9 +10952,9 @@ async function renderClubDetail(clubId) {
   el.innerHTML = `
     <div class="club-detail-header">
       <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img ${thumbSrcAttrs(club.image_url)} alt="${escAttr(club.name || '')}" onerror="this.style.display='none'">` : clubInitials}</div>
-      <div class="u-fs-2xl u-fw-bold">${escHtml(club.name)}</div>
+      <div class="u-fs-2xl u-fw-bold">${escUser(club.name)}</div>
       <div class="note">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
-      ${club.description ? `<div class="text-secondary u-maxw-85 u-mt-1">${escHtml(club.description)}</div>` : ''}
+      ${club.description ? `<div class="text-secondary u-maxw-85 u-mt-1">${escUser(club.description)}</div>` : ''}
       <div class="u-mt-2">${joinBtnHtml}</div>
       ${isOwner ? `<div class="row u-mt-2">
         <button class="btn btn-ghost btn-xs" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
@@ -10941,7 +10978,7 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.id = 'member-menu-popup';
   menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3);z-index:var(--z-menu);min-width:var(--size-45);box-shadow:var(--shadow-4)';
   menu.innerHTML = `
-    <div class="text-secondary u-mb-2-5 u-pb-2 u-bdb-1px-solid-border">${escHtml(displayName)}</div>
+    <div class="text-secondary u-mb-2-5 u-pb-2 u-bdb-1px-solid-border">${escUser(displayName)}</div>
     <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="promoteToOwner(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" class="text-default btn-plain u-w-100pct u-ta-left u-pt-1-5 u-pr-1 u-pb-1-5 u-pl-1 u-d-block">\u{1F451} Promote to owner</button>
     <button data-uid="${escAttr(userId)}" data-cid="${escAttr(clubId)}" onclick="removeMember(this.dataset.uid,this.dataset.cid);document.getElementById('member-menu-popup').remove()" class="text-alert btn-plain u-w-100pct u-ta-left u-pt-1-5 u-pr-1 u-pb-1-5 u-pl-1 u-d-block">Remove member</button>
     <button onclick="document.getElementById('member-menu-popup').remove()" class="btn-plain u-w-100pct u-ta-left u-pt-1-5 u-pr-1 u-pb-1-5 u-pl-1 u-fs-base u-d-block">Cancel</button>`;
@@ -11125,7 +11162,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
   });
   if (btn) { btn.outerHTML = `<button class="btn btn-ghost btn-xs btn-ghost-danger" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
     onclick="rescindClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Rescind</button>`; }
-  toast(`Invite sent to ${escHtml(inviteeName)}`);
+  toast(`Invite sent to ${escHtml(i18nMine(inviteeName))}`);
   renderPendingInvites(clubId);
 }
 
@@ -11142,7 +11179,7 @@ async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
     btn.outerHTML = `<button class="btn btn-primary btn-xs" data-uid="${escAttr(inviteeId)}" data-name="${escAttr(inviteeName)}" data-cid="${escAttr(clubId)}"
       onclick="sendClubInvite(this.dataset.uid,this.dataset.name,this.dataset.cid,this)">Invite</button>`;
   }
-  toast(`Invite to ${escHtml(inviteeName)} rescinded`);
+  toast(`Invite to ${escHtml(i18nMine(inviteeName))} rescinded`);
   renderPendingInvites(clubId);
 }
 
@@ -11232,7 +11269,7 @@ async function renderClubsPage() {
         return `<div class="club-card" onclick="openClubDetail('${c.id}')">
           <div class="club-card-avatar">${c.image_url ? `<img ${thumbSrcAttrs(c.image_url)} alt="${escAttr(c.name || '')}" data-init="${escAttr(initStr)}" onerror="this.replaceWith(document.createTextNode(this.dataset.init))">` : escHtml(initStr)}</div>
           <div>
-            <div class="club-card-name">${escHtml(c.name)}</div>
+            <div class="club-card-name">${escUser(c.name)}</div>
             <div class="club-card-meta">${c.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public'}${c.role === 'owner' ? ' · owner' : ''} · ${count} member${count !== 1 ? 's' : ''}</div>
           </div>
         </div>`;
@@ -11281,7 +11318,7 @@ async function searchClubs(query) {
     return `<div class="club-card" onclick="openClubDetail('${c.id}')">
       <div class="club-card-avatar">${initStr}</div>
       <div class="grow-clip">
-        <div class="club-card-name">${escHtml(c.name)}</div>
+        <div class="club-card-name">${escUser(c.name)}</div>
         <div class="club-card-meta">${count} member${count !== 1 ? 's' : ''}${c.description ? ' · ' + escHtml(c.description.slice(0, 40)) + (c.description.length > 40 ? '\u2026' : '') : ''}</div>
       </div>
       ${actionBtn}
@@ -11300,7 +11337,7 @@ function renderClubChips(containerId) {
   if (!myClubs.length) { el.closest('.tl-field, .form-group') && (el.closest('.tl-field, .form-group').style.display = 'none'); return; }
   el.innerHTML = [
     `<div class="chip selected" data-club-id="none" onclick="selClubChip('${containerId}','none')">None</div>`,
-    ...myClubs.map(c => `<div class="chip" data-club-id="${c.id}" onclick="selClubChip('${containerId}','${c.id}')">${escHtml(c.name)}</div>`)
+    ...myClubs.map(c => `<div class="chip" data-club-id="${c.id}" onclick="selClubChip('${containerId}','${c.id}')">${escUser(c.name)}</div>`)
   ].join('');
   el.closest('.tl-field, .form-group') && (el.closest('.tl-field, .form-group').style.display = '');
 }
@@ -11933,7 +11970,7 @@ function renderNotificationPanel() {
     return;
   }
   el.innerHTML = userNotifs.map(n => {
-    const nm   = escHtml(n.type === 'share_comment' ? (n.shareComment?.name || 'Someone') : (n.actor?.display_name || n.actor?.username || 'Someone'));
+    const nm   = escHtml(i18nMine(n.type === 'share_comment' ? n.shareComment?.name : (n.actor?.display_name || n.actor?.username)) || 'Someone');
     const time = formatFeedDate(n.created_at || '');
     const frAccepted = n._accepted || myFollowers.has(n.actor_id);
     const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : frAccepted ? `Follow request from ${nm} accepted` : `${nm} wants to follow you`)
@@ -11945,10 +11982,10 @@ function renderNotificationPanel() {
                : n.type === 'comment_like'   ? `${nm} liked your comment`
                : n.type === 'share_comment'  ? (n.shareComment?.kind === 'collection' ? `${nm} commented on your shared collection link` : `${nm} commented on your shared wishlist link`)
                : n.type === 'mention'        ? `${nm} mentioned you`
-               : n.type === 'club_join_request'  ? (n.club?.name ? `${nm} wants to join ${escHtml(n.club.name)}` : `${nm} wants to join your club`)
-               : n.type === 'club_join_accepted' ? (n.club?.name ? `${nm} approved your request to join ${escHtml(n.club.name)}` : `${nm} approved your request to join a club`)
-               : n.type === 'club_invite'        ? (n.club?.name ? `${nm} invited you to join ${escHtml(n.club.name)}` : `${nm} invited you to join a club`)
-               : n.type === 'club_promoted'        ? (n.club?.name ? `${nm} made you an owner of ${escHtml(n.club.name)}` : `${nm} made you an owner of a club`)
+               : n.type === 'club_join_request'  ? (n.club?.name ? `${nm} wants to join ${escHtml(i18nMine(n.club.name))}` : `${nm} wants to join your club`)
+               : n.type === 'club_join_accepted' ? (n.club?.name ? `${nm} approved your request to join ${escHtml(i18nMine(n.club.name))}` : `${nm} approved your request to join a club`)
+               : n.type === 'club_invite'        ? (n.club?.name ? `${nm} invited you to join ${escHtml(i18nMine(n.club.name))}` : `${nm} invited you to join a club`)
+               : n.type === 'club_promoted'        ? (n.club?.name ? `${nm} made you an owner of ${escHtml(i18nMine(n.club.name))}` : `${nm} made you an owner of a club`)
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends`
                : n.type === 'system'               ? (n.ref_id ? `Your requested brand "${escHtml(n.ref_id)}" has been added to WRotate!` : 'System notification')
@@ -14739,8 +14776,8 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
     slides.push(`<div class="promo-recap-slide">
       <div class="promo-recap-slide-lbl">Most worn</div>
       ${recapThumb(hero.w, 'promo-recap-thumb--hero')}
-      <div class="promo-recap-hero-name">${escHtml(hero.w.name || '')}</div>
-      <div class="promo-recap-hero-sub">${escHtml(hero.w.brand || '')}${hero.w.brand ? ' · ' : ''}${plural(hero.count, 'wear')}</div>
+      <div class="promo-recap-hero-name">${escUser(hero.w.name || '')}</div>
+      <div class="promo-recap-hero-sub">${escUser(hero.w.brand || '')}${hero.w.brand ? ' · ' : ''}${plural(hero.count, 'wear')}</div>
     </div>`);
   }
 
@@ -14754,7 +14791,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
         <div class="promo-recap-podium-item">
           <div class="promo-recap-rank">${i + 1}</div>
           ${recapThumb(t.w, 'promo-recap-thumb--podium')}
-          <div class="promo-recap-podium-name">${escHtml(t.w.name || '')}</div>
+          <div class="promo-recap-podium-name">${escUser(t.w.name || '')}</div>
           <div class="promo-recap-podium-count">${plural(t.count, 'wear')}</div>
         </div>`).join('')}</div>
     </div>`);
@@ -14796,7 +14833,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
     slides.push(`<div class="promo-recap-slide">
       <div class="promo-recap-slide-lbl">Your top post</div>
       ${art}
-      <div class="promo-recap-hero-name">${escHtml((w && w.name) || '')}</div>
+      <div class="promo-recap-hero-name">${escUser((w && w.name) || '')}</div>
       <div class="promo-recap-hero-sub">${plural(recap.topPost.likes, 'like')}</div>
     </div>`);
   }
@@ -14809,8 +14846,8 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
       <div class="promo-recap-podium">${arrivals.map((w) => `
         <div class="promo-recap-podium-item">
           ${recapThumb(w, 'promo-recap-thumb--podium')}
-          <div class="promo-recap-podium-name">${escHtml(w.name || '')}</div>
-          <div class="promo-recap-podium-count">${escHtml(w.brand || '')}</div>
+          <div class="promo-recap-podium-name">${escUser(w.name || '')}</div>
+          <div class="promo-recap-podium-count">${escUser(w.brand || '')}</div>
         </div>`).join('')}</div>
       <div class="promo-recap-hero-sub">joined the rotation</div>
     </div>`);
@@ -14842,12 +14879,12 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
           <div class="promo-recap-podium">
             <div class="promo-recap-podium-item">
               ${recapThumb(from, 'promo-recap-thumb--podium')}
-              <div class="promo-recap-podium-name">${escHtml(from.name || '')}</div>
+              <div class="promo-recap-podium-name">${escUser(from.name || '')}</div>
               <div class="promo-recap-podium-count">first</div>
             </div>
             <div class="promo-recap-podium-item">
               ${recapThumb(to, 'promo-recap-thumb--podium')}
-              <div class="promo-recap-podium-name">${escHtml(to.name || '')}</div>
+              <div class="promo-recap-podium-name">${escUser(to.name || '')}</div>
               <div class="promo-recap-podium-count">then</div>
             </div>
           </div>
@@ -14865,7 +14902,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
         slides.push(`<div class="promo-recap-slide">
           <div class="promo-recap-slide-lbl">${escHtml(lbl)}</div>
           ${recapThumb(pw, 'promo-recap-thumb--hero')}
-          <div class="promo-recap-hero-name">${escHtml(pw.name || '')}</div>
+          <div class="promo-recap-hero-name">${escUser(pw.name || '')}</div>
           <div class="promo-recap-hero-sub">${escHtml(sub)}</div>
         </div>`);
       }
@@ -16112,7 +16149,7 @@ function renderFeedCard(item) {
     heroHtml = '';
   } else if (!editingCaption && item.notes) {
     // Text-only standalone post — notes are the hero
-    heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
+    heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escUser(item.notes)}</p></div>`;
   }
 
   // Caption / edit area
@@ -16129,7 +16166,7 @@ function renderFeedCard(item) {
       </div>`;
   } else if (item.notes && (item.photo_url || w)) {
     // Caption below actions only for photo posts and wear logs (text posts show notes in hero)
-    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.username || p?.display_name || 'User')}${officialBadgeHtml(p)}</span>${escHtml(item.notes)}</div>`;
+    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escUser(p?.username || p?.display_name) || 'User'}${officialBadgeHtml(p)}</span>${escUser(item.notes)}</div>`;
   }
 
   // Watch chip — only for wear logs that also have a photo (compact wear shows it in the header)
@@ -16146,7 +16183,7 @@ function renderFeedCard(item) {
            data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
-           data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
+           data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escUser((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
   // Fun-fact footnote — wear posts only, and only when a fact was frozen onto
@@ -16162,7 +16199,7 @@ function renderFeedCard(item) {
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
   const clubBadge = clubForBadge
-    ? `<div class="club-badge" onclick="event.stopPropagation();openClubDetail('${item.club_id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> ${escHtml(clubForBadge.name)}</div>`
+    ? `<div class="club-badge" onclick="event.stopPropagation();openClubDetail('${item.club_id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> ${escUser(clubForBadge.name)}</div>`
     : '';
 
   const allComments = feedComments[item.id] || [];
@@ -16202,7 +16239,7 @@ function renderFeedCard(item) {
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
         <div class="comment-content">
           <div class="comment-body">
-            <span class="comment-username">${escHtml(c.profile?.username || c.profile?.display_name || 'User')}${officialBadgeHtml(c.profile)}</span>
+            <span class="comment-username">${escUser(c.profile?.username || c.profile?.display_name) || 'User'}${officialBadgeHtml(c.profile)}</span>
             <span class="comment-time">${formatCommentTime(c.created_at)}</span>
             ${renderCommentBody(c.body)}
           </div>
@@ -16238,7 +16275,7 @@ function renderFeedCard(item) {
   // textContent); displayName is HTML for the card header. Handler attributes
   // must only ever receive values through data- attributes (audit S3/SEC-8).
   const rawName = p?.username || p?.display_name || 'User';
-  const displayName = escHtml(rawName) + officialBadgeHtml(p);
+  const displayName = escUser(rawName) + officialBadgeHtml(p);
   let headerBody;
   if (compactWear) {
     const wThumb = w.image
@@ -16263,7 +16300,7 @@ function renderFeedCard(item) {
            data-watch-bg="${escHtml(w.background||'')}"
            data-watch-func="${escHtml((w.functions||[]).join(', '))}">
         ${wThumb}
-        <span class="feed-wearing-watch-name">${escHtml(wLabel)}</span>
+        <span class="feed-wearing-watch-name">${escUser(wLabel)}</span>
       </div>
       <div class="feed-meta">${metaStr}</div>`;
   } else {
@@ -17034,7 +17071,7 @@ function renderEpWatchDisplay() {
       : `<div class="row-center u-w-8 u-h-8 u-r-sm u-shrink-0 u-fs-2xs u-fw-bold" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     display.innerHTML = `<div class="watch-suggestion u-mt-1">
       ${thumb}
-      <div class="grow-clip"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
+      <div class="grow-clip"><strong>${escUser(w.brand)} ${escUser(w.name)}</strong></div>
       <button class="sug-no u-fs-xs" onclick="toggleEpWatchPicker()">Change</button>
       <button class="sug-no u-fs-xs" onclick="removeEpWatch()">Remove</button>
     </div>`;
@@ -17082,7 +17119,7 @@ function renderEpDetails(effectiveWatch) {
     if (card) card.style.display = '';
     document.getElementById('ep-strap-chips').innerHTML = straps.map(s => `
       <div class="chip${epStrapId === s.id ? ' selected' : ''}" onclick="selectEpStrap('${s.id}')">
-        ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+        ${escUser(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
       </div>`).join('');
   }
 }
@@ -17123,7 +17160,7 @@ function toggleEpWatchPicker() {
       return `<div class="watch-option watch-option-compact${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')">
         ${thumb}
         <div class="grow-clip">
-          <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+          <div class="watch-info-name">${escUser(w.brand)} ${escUser(w.name)}</div>
         </div>
         ${isSel ? '<span class="u-c-gold-text u-fs-sm u-fw-semibold">Selected</span>' : ''}
       </div>`;
@@ -17717,7 +17754,7 @@ function renderNpWatchDisplay() {
       : `<div class="row-center u-w-8 u-h-8 u-r-sm u-shrink-0 u-fs-2xs u-fw-bold" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
     el.innerHTML = `<div class="watch-suggestion u-bg-mix-success-8 u-bdc-mix-success-25">
       ${thumb}
-      <div class="u-flex-1 u-minw-0 u-fs-base"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
+      <div class="u-flex-1 u-minw-0 u-fs-base"><strong>${escUser(w.brand)} ${escUser(w.name)}</strong> recognized</div>
       <button class="sug-no u-fs-xs" onclick="toggleNpWatchPicker()">Change</button>
     </div><div id="np-watch-picker" style="display:none;"></div>`;
   } else {
@@ -17771,7 +17808,7 @@ function renderNpDetails() {
     if (card) card.style.display = '';
     document.getElementById('np-strap-chips').innerHTML = straps.map(s => `
       <div class="chip${npStrapId === s.id ? ' selected' : ''}" onclick="selectNpStrap('${s.id}')">
-        ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+        ${escUser(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
       </div>`).join('');
   }
 }
@@ -17816,7 +17853,7 @@ function toggleNpWatchPicker() {
       return `<div class="watch-option watch-option-compact${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')">
         ${thumb}
         <div class="grow-clip">
-          <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+          <div class="watch-info-name">${escUser(w.brand)} ${escUser(w.name)}</div>
         </div>
         ${isSel ? '<span class="u-c-gold-text u-fs-sm u-fw-semibold">Selected</span>' : ''}
       </div>`;
@@ -18341,7 +18378,7 @@ function renderMentionAc(inputEl) {
   if (!_mentionResults.length) { closeMentionAc(); return; }
   ac.innerHTML = _mentionResults.map((p, i) => {
     const initials = ((p.display_name || p.username || '?')[0]).toUpperCase();
-    const name     = escHtml(p.display_name || p.username || '');
+    const name     = escUser(p.display_name || p.username || '');
     const user     = escHtml(p.username || '');
     return `<div class="mention-ac-item" role="option" onmousedown="selectMentionByIdx(${i})">
       <div class="mention-ac-avatar">${initials}</div>
@@ -18460,7 +18497,7 @@ function renderCommentBody(body) {
   if (!body) return '';
   // Escape HTML first, then replace @username tokens with clickable links
   return escHtml(body).replace(/@([\w.]+)/g, (match, username) =>
-    `<span class="mention-link" data-u="${escAttr(username)}" onclick="viewUserByUsername(this.dataset.u)">@${escHtml(username)}</span>`
+    `<span class="mention-link" data-u="${escAttr(username)}" onclick="viewUserByUsername(this.dataset.u)">@${escUser(username)}</span>`
   );
 }
 
@@ -18646,7 +18683,7 @@ function watchResultHtml(m) {
         ? `<img loading="lazy" ${thumbSrcAttrs(m.image)} alt="" class="u-w-9 u-h-9 u-r-round u-of-cover u-shrink-0" onerror="this.style.display='none'">`
         : `<div class="feed-user-avatar u-bg-watch-default u-c-black">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
       <div class="u-flex-1 u-minw-0">
-        <div class="user-card-name">${escHtml(label)}</div>
+        <div class="user-card-name">${escUser(label)}</div>
         <div class="user-card-username">Owned by ${Number(m.owners) || 0} member${Number(m.owners) === 1 ? '' : 's'}</div>
       </div>
     </div>`;
@@ -18724,7 +18761,7 @@ function userCardHtml(u, { removable = false, sub = null } = {}) {
     <div class="user-card" data-uid="${u.id}">
       <div class="feed-user-avatar u-cur-pointer" onclick="viewUserProfile('${u.id}')">${profileInitials(u)}</div>
       <div class="u-flex-1 u-minw-0 u-cur-pointer" onclick="viewUserProfile('${u.id}')">
-        <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
+        <div class="user-card-name">${escUser(u.display_name || u.username || '—')}</div>
         <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
         ${sub ? `<div class="user-card-reason">${escHtml(sub)}</div>` : ''}
       </div>
@@ -18796,7 +18833,7 @@ function followSuggestTileHtml(s) {
   const restricted = followNeedsRequest(s.profile_privacy);
   return `<div class="follow-sugg-tile" data-uid="${id}">
     <div class="feed-user-avatar" onclick="viewUserProfile(this.parentNode.dataset.uid)">${profileInitials(s)}</div>
-    <div class="follow-sugg-name" onclick="viewUserProfile(this.parentNode.dataset.uid)" title="${name}">${name}</div>
+    <div class="follow-sugg-name" onclick="viewUserProfile(this.parentNode.dataset.uid)" title="${name}">${escUser(s.display_name || s.username || '—')}</div>
     <div class="follow-sugg-reason">${escHtml(followSuggestReason(s))}</div>
     <button class="follow-btn follow" onclick="followSuggestAct(this)">${restricted ? 'Request' : 'Follow'}</button>
   </div>`;
@@ -19095,8 +19132,8 @@ function renderRecSettingsBody() {
     return `<div class="toggle-row u-gap-2-5">
       ${thumb}
       <div class="grow-clip">
-        <div class="u-fs-base u-fw-semibold u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escHtml(w.name)}</div>
-        <div class="caption">${escHtml(w.brand)}</div>
+        <div class="u-fs-base u-fw-semibold u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escUser(w.name)}</div>
+        <div class="caption">${escUser(w.brand)}</div>
       </div>
       <label class="toggle-switch">
         <input type="checkbox" ${included ? 'checked' : ''} onchange="toggleRecExclude('${w.id}')">
@@ -19370,7 +19407,8 @@ const fmtMonYear = d => {
   const dt = new Date(d + 'T12:00:00');
   return dt.toLocaleDateString(I18N_LOCALE, { month:'short', year:'numeric' });
 };
-const fmtMoney = n => n ? '$' + Number(n).toLocaleString() : '—';
+// Prices are in US dollars everywhere; the digit grouping follows the chosen language.
+const fmtMoney = n => n ? '$' + Number(n).toLocaleString(I18N_DATE_LOCALE) : '—';
 const initials = (b, n) => ((b[0]||'') + (n[0]||'')).toUpperCase();
 
 // Price input: format with thousand separators while preserving decimals
@@ -19410,14 +19448,17 @@ function _confirmOk()     { document.getElementById('confirm-modal').classList.a
 function _confirmCancel() { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; } }
 
 // "Could not save — <what the server said>": the label in front of the dash or colon
-// is ours and is translated; the tail is the server's own message, shown as it came.
+// is ours and is translated; so is the tail when it is one of the server sentences
+// listed in i18n/extra.keys.json.
 function toastText(msg) {
   const s = String(msg), out = tx(s);
   if (out !== s || !window.WR_I18N) return out;
   const m = /^(.*?\S)(\s[—–]\s|:\s)([\s\S]+)$/.exec(s);
-  if (!m) return s;
-  const label = tx(m[1]);
-  return label === m[1] ? s : label + m[2] + m[3];
+  if (!m) return i18nLookup(s) || s;
+  // The tail is translated too when it is one of the sentences we know the server sends
+  // (a daily limit, a reserved username); anything else is shown as it came.
+  const label = tx(m[1]), tail = i18nLookup(m[3].trim()) || m[3];
+  return label === m[1] && tail === m[3] ? (i18nLookup(s) || s) : label + m[2] + tail;
 }
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
@@ -19536,7 +19577,7 @@ function showNextAnniversary() {
   const plural = years !== 1 ? 's' : '';
   document.getElementById('anniversary-modal-title').textContent = `${years} Year${plural} Together`;
   const textEl = document.getElementById('anniversary-text');
-  textEl.innerHTML = `Your <strong class="u-c-text">${escHtml(w.brand)} ${escHtml(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
+  textEl.innerHTML = `Your <strong class="u-c-text">${escUser(w.brand)} ${escUser(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
   document.getElementById('anniversary-modal').classList.remove('hidden');
   notePromoModalShown();
 }
@@ -20422,7 +20463,7 @@ async function loadAdminModels() {
     <table class="u-w-100pct u-bc-collapse">
     <tr class="u-c-muted u-ta-left"><th>Model</th><th>Slug</th><th>Own</th><th>W</th><th></th></tr>` +
     rows.slice(0, 200).map(m => `<tr class="u-bdt-0p5px-solid-border">
-      <td>${escHtml(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span class="text-muted">(auto)</span>' : ''}</td>
+      <td>${escUser(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span class="text-muted">(auto)</span>' : ''}</td>
       <td class="text-muted">${escHtml(m.slug)}</td>
       <td>${m.owners}</td><td>${m.watches}</td>
       <td class="u-ws-nowrap">${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}
@@ -20662,7 +20703,7 @@ function adminExpInfo(key) {
   const sections = experimentInfoSections(x, _expMetricLabels)
     .concat([{ h: 'Where it stands', body: standing }]);
   document.getElementById('adm-exp-info-body').innerHTML = sections.map(s =>
-    `<div class="stack-3"><div class="text-caption-xs u-tt-uppercase u-ls-tight">${escHtml(s.h)}</div><div class="text-body">${escHtml(s.body)}</div></div>`).join('');
+    `<div class="stack-3"><div class="text-caption-xs u-tt-uppercase u-ls-tight">${escHtml(s.h)}</div><div class="text-body">${escUser(s.body)}</div></div>`).join('');
   document.getElementById('adm-exp-info-modal').classList.remove('hidden');
 }
 function closeAdminExpInfo() {
@@ -20731,7 +20772,7 @@ async function loadAdminFeatured() {
     return `<div class="row-between u-gap-2-5 u-pt-2-5 u-pr-0 u-pb-2-5 u-pl-0 u-bdb-1px-solid-border">
       <div class="u-minw-0">
         <div class="u-fs-base">${badge}</div>
-        <div class="text-secondary u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escHtml(who)}: ${escHtml(txt)}</div>
+        <div class="text-secondary u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escUser(who)}: ${escUser(txt)}</div>
       </div>
       <button type="button" class="btn btn-sm" onclick="unfeatureAdmin('${r.id}')">Remove</button>
     </div>`;
@@ -20835,7 +20876,7 @@ function renderReportCard(r) {
         <span class="u-fs-sm u-fw-semibold u-tt-uppercase" style="${statusCls};">${escHtml(r.status)}</span>
       </div>
       <div class="text-meta u-mb-1">
-        ${escHtml(r.content_type)} by <strong>${escHtml(reportedName)}</strong> · reported by ${escHtml(reporterName)} · ${date}
+        ${escHtml(r.content_type)} by <strong>${escUser(reportedName)}</strong> · reported by ${escHtml(i18nMine(reporterName))} · ${date}
       </div>
       ${r.details ? `<div class="u-fs-sm u-c-text u-mb-1">"${escHtml(r.details)}"</div>` : ''}
       ${contentPreview}
@@ -21286,7 +21327,7 @@ async function loadAdminStats() {
         return `<tr>
           <td class="u-pt-1-5 u-pr-1 u-pb-1-5 u-pl-1 u-bdb-1px-solid-border u-maxw-0"><div class="row-tight u-minw-0">
             <div class="u-cur-pointer u-shrink-0" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
-            <div class="u-minw-0 u-cur-pointer" style="overflow:hidden;" onclick="openAdminUserDetail('${u.id}')"><div class="u-fw-semibold u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escHtml(u.name)}</div><div class="text-caption-xs u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">@${escHtml(u.username)} · ${u.joined}</div></div>
+            <div class="u-minw-0 u-cur-pointer" style="overflow:hidden;" onclick="openAdminUserDetail('${u.id}')"><div class="u-fw-semibold u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escUser(u.name)}</div><div class="text-caption-xs u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">@${escUser(u.username)} · ${u.joined}</div></div>
           </div></td>
           ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:var(--space-1-5) var(--space-1);text-align:center;font-size:var(--fs-sm);border-bottom:1px solid var(--border);width:var(--size-8);${isNew ? 'color:var(--success-text);font-weight:var(--fw-bold);' : ''}">${cell}</td>`; }).join('')}
         </tr>`;
@@ -21487,7 +21528,7 @@ async function openAdminUserDetail(userId) {
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const isNewWatch = w => w.created_at && new Date(w.created_at).getTime() >= dayAgo;
     const watchListHtml = watches.length > 0
-      ? `<div class="u-mt-2">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? 'var(--status-good)' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:var(--space-0-5) 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
+      ? `<div class="u-mt-2">${watches.map(w => `<div style="font-size:var(--fs-sm);color:${isNewWatch(w) ? 'var(--status-good)' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:var(--fw-semibold);' : ''}padding:var(--space-0-5) 0;border-bottom:1px solid var(--border);">${escUser(w.brand)} — ${escUser(w.name)}</div>`).join('')}</div>`
       : '<div class="text-meta u-pt-1 u-pr-0 u-pb-1 u-pl-0">No watches</div>';
 
     document.getElementById('admin-user-modal-title').textContent = name;
@@ -21496,8 +21537,8 @@ async function openAdminUserDetail(userId) {
       <div class="u-items-center u-gap-3 u-mb-4 u-d-flex">
         ${initHTML}
         <div>
-          <div class="u-fw-bold u-fs-body">${escHtml(name)}</div>
-          <div class="caption">@${escHtml(p.username || '—')}</div>
+          <div class="u-fw-bold u-fs-body">${escUser(name)}</div>
+          <div class="caption">@${escUser(p.username || '—')}</div>
           <div class="caption-xs">${escHtml(p.profile_privacy || 'public')} profile · ${escHtml(p.collection_visibility || 'public')} collection</div>
           ${p.is_suspended ? '<div class="u-fs-xs u-c-danger-text u-fw-semibold">SUSPENDED</div>' : ''}
         </div>
@@ -21982,11 +22023,11 @@ function renderDmInbox(state) {
   const incoming = st.requestsIn.map(r => {
     const who = dmWho(r.profile);
     const body = r.first
-      ? (r.first.body ? escHtml(r.first.body) : (r.first.shared_log_id ? 'Shared a post' : 'Message unavailable'))
+      ? (r.first.body ? escUser(r.first.body) : (r.first.shared_log_id ? 'Shared a post' : 'Message unavailable'))
       : 'Message unavailable';
     return `<div class="panel stack-2 u-mb-2">
       <div class="row-between">
-        <span class="u-fw-bold u-cur-pointer" role="button" tabindex="0" data-user="${escAttr((r.profile && r.profile.id) || '')}" onclick="if(this.dataset.user)viewUserProfile(this.dataset.user)" title="View profile">${escHtml(who)}</span>
+        <span class="u-fw-bold u-cur-pointer" role="button" tabindex="0" data-user="${escAttr((r.profile && r.profile.id) || '')}" onclick="if(this.dataset.user)viewUserProfile(this.dataset.user)" title="View profile">${escUser(who)}</span>
         <span class="text-meta">${escHtml(_shortAgo(Date.parse(r.created_at)))}</span>
       </div>
       <div class="text-meta">${body}</div>
@@ -22000,7 +22041,7 @@ function renderDmInbox(state) {
   // U6: the waiting thread exists — the row opens it (composer shows
   // "Waiting for X to accept"), and carries its age like incoming rows do.
   const outgoing = st.requestsOut.map(r => `<div class="panel row-between u-mb-2 u-cur-pointer" role="button" tabindex="0" title="View request" data-id="${escAttr(r.id)}" onclick="openDmThread(this.dataset.id)">
-      <span class="u-fw-bold">${escHtml(dmWho(r.profile))}</span>
+      <span class="u-fw-bold">${escUser(dmWho(r.profile))}</span>
       <span class="text-meta">Request sent &#183; ${escHtml(_shortAgo(Date.parse(r.created_at)))}</span>
     </div>`);
   reqEl.innerHTML = (incoming.length || outgoing.length)
@@ -22013,10 +22054,10 @@ function renderDmInbox(state) {
       <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(c.profile)}</div>
       <div class="grow-clip">
         <div class="row-between">
-          <span class="u-fw-bold">${escHtml(dmWho(c.profile))}</span>
+          <span class="u-fw-bold">${escUser(dmWho(c.profile))}</span>
           <span class="text-meta">${unread ? '<span class="text-gold">&#9679;</span> ' : ''}${escHtml(_shortAgo(Date.parse(c.last_message_at)))}</span>
         </div>
-        <div class="text-meta">${escHtml(dmPreview(c.last, myId))}</div>
+        <div class="text-meta">${escUser(dmPreview(c.last, myId))}</div>
       </div>
     </div>`;
   }).join('');
@@ -22256,7 +22297,7 @@ function renderDmThreadHead() {
       onclick="if(this.dataset.user)viewUserProfile(this.dataset.user)"
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(this.dataset.user)viewUserProfile(this.dataset.user)}">
     <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(t.profile)}</div>
-    <span class="u-fw-bold">${escHtml(dmWho(t.profile))}</span></div>`;
+    <span class="u-fw-bold">${escUser(dmWho(t.profile))}</span></div>`;
 }
 
 function renderDmComposer() {
@@ -22265,7 +22306,7 @@ function renderDmComposer() {
   if (!t || !el) return;
   const myId = currentUser && currentUser.id;
   if (t.status === 'pending' && t.requesterId === myId) {
-    el.innerHTML = `<div class="note u-ta-center">Waiting for ${escHtml(dmWho(t.profile))} to accept</div>`;
+    el.innerHTML = `<div class="note u-ta-center">Waiting for ${escHtml(i18nMine(dmWho(t.profile)))} to accept</div>`;
     return;
   }
   if (t.status === 'declined' && t.requesterId === myId) {
@@ -22366,8 +22407,8 @@ function dmSharedCardHtml(log, w) {
   return `<div class="panel dm-card row u-cur-pointer" data-log="${escAttr(log.id)}" onclick="scrollToFeedPost(this.dataset.log)">
       ${thumb}
       <div class="grow-clip">
-        <div class="u-fw-bold">${escHtml(title || 'Shared post')}</div>
-        ${excerpt ? `<div class="caption">${escHtml(excerpt)}</div>` : ''}
+        <div class="u-fw-bold">${escUser(title) || 'Shared post'}</div>
+        ${excerpt ? `<div class="caption">${escUser(excerpt)}</div>` : ''}
       </div>
     </div>`;
 }
@@ -22412,7 +22453,7 @@ function dmLoadSharedCard(logId) {
 
 function dmMessageHtml(m, pending) {
   const id = escAttr(m.id);
-  const text = m.body ? `<div class="u-ws-pre-wrap">${escHtml(m.body)}</div>` : '';
+  const text = m.body ? `<div class="u-ws-pre-wrap">${escUser(m.body)}</div>` : '';
   const cached = m.sharedLogId ? _dmLogCards.get(m.sharedLogId) : null;
   const shared = m.sharedLogId
     ? `<div class="dm-shared${m.body ? ' u-mt-1-5' : ''}" data-log="${escAttr(m.sharedLogId)}">${cached || dmSharedPlaceholder('Loading post…')}</div>`
@@ -22576,8 +22617,8 @@ function renderDmNewList() {
   const row = p => `<div class="notif-item u-cur-pointer" role="button" tabindex="0" data-user="${escAttr(p.id)}" onclick="dmNewMessagePick(this.dataset.user)">
       <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(p)}</div>
       <div class="grow-clip">
-        <div class="u-fw-bold">${escHtml(dmWho(p))}</div>
-        ${p.username ? `<div class="text-meta">@${escHtml(p.username)}</div>` : ''}
+        <div class="u-fw-bold">${escUser(dmWho(p))}</div>
+        ${p.username ? `<div class="text-meta">@${escUser(p.username)}</div>` : ''}
       </div>
     </div>`;
   let html = '';
@@ -22635,7 +22676,7 @@ async function openDmSendTo(logId) {
   const { convs, people } = dmSendTargets();
   const row = t => `<div class="notif-item u-cur-pointer" role="button" tabindex="0" data-user="${escAttr(t.userId)}" data-conv="${escAttr(t.convId)}" onclick="dmSendToPick(this)">
       <div class="feed-user-avatar u-w-9 u-h-9 u-fs-sm u-shrink-0">${profileInitials(t.profile)}</div>
-      <div class="grow-clip u-fw-bold">${escHtml(dmWho(t.profile))}</div>
+      <div class="grow-clip u-fw-bold">${escUser(dmWho(t.profile))}</div>
     </div>`;
   let html = '';
   if (convs.length) html += `<div class="eyebrow u-mb-2">Conversations</div>${convs.map(row).join('')}`;
@@ -23331,7 +23372,7 @@ async function loadExploreBrands() {
   const el = document.getElementById('explore-brands');
   if (!data || !el) return;
   el.innerHTML = `<button class="chip${_exploreBrand === null ? ' selected' : ''}" data-brand="" onclick="exploreSelectBrand(null)">All</button>` +
-    data.map(b => `<button class="chip${_exploreBrand === b.brand ? ' selected' : ''}" data-brand="${escAttr(b.brand)}" onclick="exploreSelectBrand(this.dataset.brand)" style="white-space:nowrap;">${escHtml(b.brand)}</button>`).join('');
+    data.map(b => `<button class="chip${_exploreBrand === b.brand ? ' selected' : ''}" data-brand="${escAttr(b.brand)}" onclick="exploreSelectBrand(this.dataset.brand)" style="white-space:nowrap;">${escUser(b.brand)}</button>`).join('');
 }
 
 function exploreSelectBrand(brand) {
@@ -23364,7 +23405,7 @@ async function loadExploreModels(reset) {
         ${m.image ? '' : `<div class="avatar u-w-12 u-h-12 u-fs-body u-bg-watch-default u-c-black">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
         <div class="grow-clip">
           <div class="watch-card-name">${escHtml(m.name)}</div>
-          <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
+          <div class="watch-card-brand">${escUser(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
         </div>
       </div>
     </div>`).join('');
@@ -23525,9 +23566,9 @@ function updateOfficialPreview() {
   const imgSrc = hasFile ? previewImg.src : (imageUrl || '');
   const heroHtml = imgSrc
     ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="img-cover"></div>`
-    : (caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(caption)}</p></div>` : '');
+    : (caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escUser(caption)}</p></div>` : '');
   const captionHtml = (imgSrc && caption)
-    ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(caption)}</div>`
+    ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escUser(caption)}</div>`
     : '';
   const todayFmt = new Date().toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
 
@@ -23606,7 +23647,7 @@ function renderOfficialDrafts() {
       <div class="draft-card-header">
         ${thumbHtml}
         <div class="draft-meta">
-          <div class="draft-caption">${escHtml(d.caption || '(no caption)')}</div>
+          <div class="draft-caption">${escUser(d.caption) || '(no caption)'}</div>
           <div class="draft-info">${statusBadge} · ${formatCommentTime(d.created_at)}</div>
           ${sourceLink}
         </div>
@@ -23624,9 +23665,9 @@ function previewOfficialDraft(draftId) {
   const imgSrc = draft.photo_stored_url || draft.image_url;
   const heroHtml = imgSrc
     ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" class="img-cover"></div>`
-    : (draft.caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(draft.caption)}</p></div>` : '');
+    : (draft.caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escUser(draft.caption)}</p></div>` : '');
   const captionHtml = (imgSrc && draft.caption)
-    ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escHtml(draft.caption)}</div>`
+    ? `<div class="u-pt-1-5 u-pr-4 u-pb-3 u-pl-4 u-fs-md u-lh-body">${escUser(draft.caption)}</div>`
     : '';
   const todayFmt = new Date().toLocaleDateString(I18N_LOCALE, { month: 'short', day: 'numeric' });
 
@@ -24625,7 +24666,7 @@ function renderWatchSelector() {
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
         <div class="grow-clip">
-          <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+          <div class="watch-info-name">${escUser(w.brand)} ${escUser(w.name)}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}${pct != null ? ` · ${pct}% all-time` : ''}</div>
         </div>
         ${isWorn ? `<span class="watch-worn-badge">worn today</span>` : ''}
@@ -24647,8 +24688,8 @@ function openTrackModal(id) {
   thumbEl.innerHTML = w.image
     ? `<img ${thumbSrcAttrs(w.image)} alt="" class="u-w-12 u-h-12 u-of-cover">`
     : `<div class="row-center u-w-12 u-h-12 u-fw-heavy u-fs-md u-r-" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand,w.name)}</div>`;
-  document.getElementById('tl-watch-brand').textContent = w.brand || '';
-  document.getElementById('tl-watch-name').textContent  = w.name  || '';
+  setUserText(document.getElementById('tl-watch-brand'), w.brand);
+  setUserText(document.getElementById('tl-watch-name'), w.name);
 
   // Reset fields
   document.getElementById('track-date').value  = todayStr();
@@ -24722,7 +24763,7 @@ function renderTrackHistory() {
       <td class="u-ws-nowrap">${fmtDate(log.date)}</td>
       <td>
         <div class="row">
-          ${thumb}<span>${escHtml(w.brand)} ${escHtml(w.name)}</span>
+          ${thumb}<span>${escUser(w.brand)} ${escUser(w.name)}</span>
         </div>
       </td>
       <td class="u-ws-nowrap">
@@ -25493,7 +25534,7 @@ async function loadCampaigns() {
     return `
     <div class="u-bg-surface2 u-r- u-pt-3-5 u-pr-3-5 u-pb-3-5 u-pl-3-5 u-mb-3">
       <div class="row-between u-mb-2">
-        <div class="u-fs-md u-fw-semibold">${escHtml(c.name)}</div>
+        <div class="u-fs-md u-fw-semibold">${escUser(c.name)}</div>
         <div class="row">
           <span class="u-fs-sm u-fw-semibold" style="color:${statusColor};">${statusLabel}</span>
           <button class="btn btn-md btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})">${toggleIcon} ${toggleLabel}</button>
@@ -25831,8 +25872,8 @@ function showSnapMatchPicker(matches, file) {
     return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
       ${thumb}
       <div class="grow-clip">
-        <div class="u-fw-semibold u-fs-md">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-        ${w.ref ? `<div class="caption">Ref. ${escHtml(w.ref)}</div>` : ''}
+        <div class="u-fw-semibold u-fs-md">${escUser(w.brand)} ${escUser(w.name)}</div>
+        ${w.ref ? `<div class="caption">Ref. ${escHtml(i18nMine(w.ref))}</div>` : ''}
         <div class="text-caption u-mt-0-5">${matchLabel}</div>
       </div>
       <span class="pi-card-conf ${m.confidence}">${m.confidence}</span>
@@ -25910,7 +25951,7 @@ function openEditLog(id) {
 function renderEditLogStrapChips(straps) {
   document.getElementById('edit-log-strap-chips').innerHTML = straps.map(s =>
     `<div class="chip${editLogStrapId === s.id ? ' selected' : ''}" onclick="selEditLogStrap('${s.id}')">
-      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+      ${escUser(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
     </div>`
   ).join('');
 }
@@ -26129,7 +26170,7 @@ function renderGamePair() {
     const img = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" class="game-card-img" onerror="this.style.display='none'">`
       : `<div class="avatar u-w-16 u-h-16 u-fs-body" style="background:${escHtml(DEFAULT_WATCH_COLOR)};color:${initialsTextColor(DEFAULT_WATCH_COLOR)};">${initials(w.brand, w.name)}</div>`;
-    el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
+    el.innerHTML = `${img}<div class="game-card-brand">${escUser(w.brand)}</div><div class="game-card-name">${escUser(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
   });
@@ -26207,8 +26248,8 @@ function showGameResults() {
       <span class="game-rank-num">${rank}</span>
       ${img}
       <div class="grow-clip">
-        <div class="game-result-watch">${escHtml(w.name)}</div>
-        <div class="game-result-brand">${escHtml(w.brand)} · ${elo} pts</div>
+        <div class="game-result-watch">${escUser(w.name)}</div>
+        <div class="game-result-brand">${escUser(w.brand)} · ${elo} pts</div>
       </div>
     </div>`;
   }).join('');
@@ -26413,7 +26454,7 @@ async function openUpdatePrices() {
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" class="u-bdb-1px-solid-border">
-        <td class="u-pt-2 u-pr-1 u-pb-2 u-pl-1 u-va-top" style="overflow:hidden;"><div class="u-fw-semibold u-fs-sm u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escHtml(w.brand)}</div><div class="text-meta u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div class="text-caption-xs u-op-dim">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
+        <td class="u-pt-2 u-pr-1 u-pb-2 u-pl-1 u-va-top" style="overflow:hidden;"><div class="u-fw-semibold u-fs-sm u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escUser(w.brand)}</div><div class="text-meta u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escUser(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div class="text-caption-xs u-op-dim">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
         <td class="u-pt-2 u-pr-1 u-pb-2 u-pl-1 u-ta-right u-va-top u-ws-nowrap">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
         <td id="upr-val-${w.id}" class="u-pt-2 u-pr-1 u-pb-2 u-pl-1 u-ta-right u-va-top u-c-muted u-ws-nowrap">...</td>
         <td id="upr-chk-${w.id}" class="u-pt-2 u-pr-1 u-pb-2 u-pl-1 u-ta-center u-va-top"></td>
@@ -26721,7 +26762,7 @@ function renderCollection(force) {
       return `<div class="wl-tile" data-id="${w.id}">
         ${tileBox}
         <div class="wl-tile-imglink" onclick="${tileClick}">${imgInner}</div>
-        <div class="wl-tile-name" onclick="${tileClick}">${escHtml(w.name)}</div>
+        <div class="wl-tile-name" onclick="${tileClick}">${escUser(w.name)}</div>
       </div>`;
     }).join('');
   } else {
@@ -26794,8 +26835,8 @@ function renderCollection(force) {
         <div class="watch-card-top">
           ${noImgAvatar}
           <div class="grow-clip">
-            <div class="watch-card-name u-cur-pointer" onclick="${cardTap}">${escHtml(w.name)}</div>
-            <div class="watch-card-brand u-cur-pointer" onclick="${cardTap}">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
+            <div class="watch-card-name u-cur-pointer" onclick="${cardTap}">${escUser(w.name)}</div>
+            <div class="watch-card-brand u-cur-pointer" onclick="${cardTap}">${escUser(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w, wLogs)}
             ${enhChipHTML(w)}
           </div>
@@ -26894,8 +26935,8 @@ function renderCollectionList(visible, today) {
     }
     return `<tr class="u-cur-pointer" onclick="openEditWatch('${w.id}')">
       <td><div class="u-items-center u-gap-2-5 u-d-flex">${thumb}<div>
-        <div class="u-fw-semibold u-fs-base">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-        ${w.ref ? `<div class="caption-xs">${escHtml(w.ref)}</div>` : ''}
+        <div class="u-fw-semibold u-fs-base">${escUser(w.brand)} ${escUser(w.name)}</div>
+        ${w.ref ? `<div class="caption-xs">${escUser(w.ref)}</div>` : ''}
       </div></div></td>
       <td class="u-ta-right u-fw-semibold">${wears}</td>
       <td class="u-ta-right">${lastWornCell}</td>
@@ -27227,8 +27268,8 @@ function recRailHTML(surface) {
     const tap = surface === 'wishlist' ? ` onclick="recToggleHighlight('${p.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"` : '';
     const full = ((w.brand || '') + ' ' + (w.name || '')).trim();
     return `<div class="panel rec-card${hl}"${tap} title="${escAttr(p.why || full)}" aria-label="${escAttr(full)}">
-      <div class="rec-card-top"><div class="rec-card-thumb">${img}${badge}</div><div class="grow u-minw-0"><div class="rec-card-name">${escHtml(name)}</div>${price ? `<div class="rec-card-price">${price}</div>` : ''}</div></div>
-      ${p.oneLiner || p.why ? `<div class="rec-card-line">${escHtml(p.oneLiner || p.why)}</div>` : ''}
+      <div class="rec-card-top"><div class="rec-card-thumb">${img}${badge}</div><div class="grow u-minw-0"><div class="rec-card-name">${escUser(name)}</div>${price ? `<div class="rec-card-price">${price}</div>` : ''}</div></div>
+      ${p.oneLiner || p.why ? `<div class="rec-card-line">${escUser(p.oneLiner || p.why)}</div>` : ''}
       ${btn}</div>`;
   }).join('');
   if (!cards) return '';
@@ -27323,7 +27364,7 @@ function updateStrapsSummary() {
   const onWrist = straps.find(s => s.onWrist);
   const count = straps.length;
   if (onWrist) {
-    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span class="u-c-gold-deep">on wrist</span>`;
+    sum.innerHTML = `${count} · ${escHtml(i18nMine(onWrist.name))} · <span class="u-c-gold-deep">on wrist</span>`;
   } else {
     sum.textContent = String(count);
   }
@@ -27403,15 +27444,15 @@ function renderStorySection() {
   let html = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3">';
   if (desc) {
     html += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Description</div>`;
-    html += `<div class="badge-body">${escHtml(desc)}</div>`;
+    html += `<div class="badge-body">${escUser(desc)}</div>`;
   }
   if (bg) {
     html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Background &amp; History</div>`;
-    html += `<div class="badge-body">${escHtml(bg)}</div>`;
+    html += `<div class="badge-body">${escUser(bg)}</div>`;
   }
   if (fns) {
     html += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Functions</div>`;
-    html += `<div class="badge-body">${escHtml(fns)}</div>`;
+    html += `<div class="badge-body">${escUser(fns)}</div>`;
   }
   html += `<div class="u-mt-2-5"><button type="button" onclick="enhanceSingleWatch()" class="u-bg-transparent u-c-gold-deep u-bd-0p5px-solid-badge-border u-fs-xs u-fw-medium u-ff-inherit u-pt-1-5 u-pr-3 u-pb-1-5 u-pl-3 u-r-sm u-cur-pointer">★ Re-enhance</button></div>`;
   html += '</div>';
@@ -27564,8 +27605,8 @@ function renderStrapList() {
     }
     return `
       <div class="strap-row${s.isOn ? ' strap-on' : ''}">
-        <span class="strap-name clickable" onclick="editStrap(${i})"><span>${escHtml(s.name)}</span></span>
-        ${s.material ? `<span class="strap-mat">${escHtml(s.material)}</span>` : ''}
+        <span class="strap-name clickable" onclick="editStrap(${i})"><span>${escUser(s.name)}</span></span>
+        ${s.material ? `<span class="strap-mat">${escUser(s.material)}</span>` : ''}
         <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit" aria-label="Edit strap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
         <button type="button" class="strap-del-btn" onclick="removeStrap(${i})" title="Remove" aria-label="Remove strap">✕</button>
@@ -27710,7 +27751,7 @@ function renderStrapSelector() {
   el.style.display = '';
   document.getElementById('strap-chips').innerHTML = straps.map(s => `
     <div class="chip${selStrapId === s.id ? ' selected' : ''}" onclick="selStrap('${s.id}')">
-      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+      ${escUser(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
     </div>`).join('');
 }
 function selStrap(id) {
@@ -28100,7 +28141,7 @@ function watchCardTagsHTML(w, wLogs) {
   (w.tags || []).forEach(tag => tags.push({ text: tag, cls: 'card-tag-watch-type' }));
   // Current strap on wrist
   const currentStrap = (w.straps || []).find(s => s.isOn);
-  if (currentStrap) tags.push({ text: escHtml(currentStrap.name), cls: 'card-tag-strap' });
+  if (currentStrap) tags.push({ text: escUser(currentStrap.name), cls: 'card-tag-strap' });
 
   return `<div class="card-tags">${tags.map(t => {
     const raw  = typeof t === 'string' ? t : t.text;
@@ -28779,7 +28820,7 @@ function renderDowReport(fl) {
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
         <div class="dow-watch-thumb">${thumb}</div>
-        ${w ? `<div class="dow-watch-name">${escHtml(w.name)}</div><div class="dow-watch-count">${cnt}× of ${total}</div>`
+        ${w ? `<div class="dow-watch-name">${escUser(w.name)}</div><div class="dow-watch-count">${cnt}× of ${total}</div>`
             : `<div class="dow-watch-count u-mt-0-5">—</div>`}
       </div>`;
     }).join('')}</div>
@@ -29074,10 +29115,10 @@ function recCardHTML(rec) {
   if (tagReason) tags.push({ text: tagReason, cls: '' });
   let explain;
   if (anniversaryScore) {
-    explain = `Happy anniversary! The ${escHtml(w.name)} joined your collection ${anniversaryYears} year${anniversaryYears !== 1 ? 's' : ''} ago today. Give it a celebratory wear!`;
+    explain = `Happy anniversary! The ${escHtml(i18nMine(w.name))} joined your collection ${anniversaryYears} year${anniversaryYears !== 1 ? 's' : ''} ago today. Give it a celebratory wear!`;
   } else {
-    explain = daysSince === 999 ? `${escHtml(w.name)} has never been logged — today could be its first wear.`
-      : daysSince >= 14 ? `The ${escHtml(w.name)} has been sitting for ${daysSince} days — it's time.`
+    explain = daysSince === 999 ? `${escHtml(i18nMine(w.name))} has never been logged — today could be its first wear.`
+      : daysSince >= 14 ? `The ${escHtml(i18nMine(w.name))} has been sitting for ${daysSince} days — it's time.`
       : `Last worn ${daysSince} day${daysSince!==1?'s':''} ago.`;
     if (dowCount >= 2) explain += ` Tends to come out on ${DOW_NAMES[todayDOW]}s.`;
     if (weekendReason) explain += ` ${weekendReason}.`;
@@ -29093,8 +29134,8 @@ function recCardHTML(rec) {
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
-        <div class="rec-watch-name">${escHtml(w.name)}</div>
-        <div class="rec-watch-brand">${escHtml(w.brand)}${w.ref?' · '+escHtml(w.ref):''}</div>
+        <div class="rec-watch-name">${escUser(w.name)}</div>
+        <div class="rec-watch-brand">${escUser(w.brand)}${w.ref?' · '+escHtml(w.ref):''}</div>
         <div class="rec-tags">${tags.map(t=>`<span class="rec-tag ${t.cls}">${t.text}</span>`).join('')}</div>
         <div class="rec-explanation">${explain}</div>
         <div class="row u-mt-2-5 u-fw--wrap">
@@ -29123,7 +29164,7 @@ function renderNeglectedStrip() {
     <button data-wid="${escAttr(w.id)}" onclick="openTrackModal(this.dataset.wid); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
       class="row-tight u-flex-0-0-auto u-maxw-55 u-pt-1-5 u-pr-2-5 u-pb-1-5 u-pl-1-5 u-bd-1px-solid-border u-bg-surface u-r-pill u-cur-pointer u-ff-inherit u-c-text u-minh-9">
       <span class="u-w-6 u-h-6 u-r-round u-shrink-0 u-d-inline-block" style="background:${escAttr(DEFAULT_WATCH_COLOR)};overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" class="img-cover">` : ''}</span>
-      <span class="u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
+      <span class="u-fs-sm u-ws-nowrap u-to-ellipsis" style="overflow:hidden;">${escUser([w.brand, w.name].filter(Boolean).join(' '))}</span>
       <span class="text-caption u-ws-nowrap">${neverWorn ? 'never' : days + 'd'}</span>
     </button>`).join('');
   wrap.style.display = '';
@@ -29230,7 +29271,7 @@ function renderWearLeaderboard(fl) {
       <span class="text-meta u-minw-8 u-fw-bold u-shrink-0">#${r.rank}</span>
       ${thumb}
       <div class="grow-clip">
-        <div class="u-fs-base u-fw-semibold u-lh-snug">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+        <div class="u-fs-base u-fw-semibold u-lh-snug">${escUser(w.brand)} ${escUser(w.name)}</div>
         <div class="text-meta u-mt-0-5">${r.wears} wear${r.wears !== 1 ? 's' : ''} · ${share}</div>
       </div>
     </div>`;
@@ -29510,7 +29551,7 @@ function renderChCollectionValue() {
           grid: { color: gridC },
         },
         y: {
-          ticks: { color: tickC, callback: v => '$' + v.toLocaleString() },
+          ticks: { color: tickC, callback: v => '$' + v.toLocaleString(I18N_DATE_LOCALE) },
           grid: { color: gridC },
           beginAtZero: true,
         }
@@ -29607,7 +29648,7 @@ function renderCollectionReport(fl) {
     const lastCls  = lastDays == null ? '' : lastDays <= 14 ? 'u-c-success' : lastDays <= 45 ? 'u-c-expiring' : 'u-c-danger';
     const lastCell = lastDays == null ? na : lastDays === 0 ? 'Today' : lastDays + 'd ago';
     return `<tr class="rank-tr">
-      <td class="rank-td">${escHtml(w.brand)} ${escHtml(w.name)}${w.ref ? ` <span class="u-c-muted u-fs-aside-sm">(${escHtml(w.ref)})</span>` : ''}</td>
+      <td class="rank-td">${escUser(w.brand)} ${escUser(w.name)}${w.ref ? ` <span class="u-c-muted u-fs-aside-sm">(${escUser(w.ref)})</span>` : ''}</td>
       <td class="rank-td u-ta-right u-c-muted u-ws-nowrap">${fmtMonYear(pdate) || na}</td>
       <td class="rank-td u-ta-right">${cnt}</td>
       <td class="rank-td u-ta-right u-ws-nowrap ${lastCls}">${lastCell}</td>
@@ -30628,7 +30669,7 @@ function renderEditReceiptsList(w) {
     return `<div class="receipt-item">
       <div class="receipt-icon">${icon}</div>
       <div class="receipt-info">
-        <div class="receipt-name">${escHtml(r.name)}</div>
+        <div class="receipt-name">${escUser(r.name)}</div>
         ${date ? `<div class="receipt-date">${date}</div>` : ''}
       </div>
       <div class="receipt-actions">
@@ -30746,14 +30787,14 @@ function filterBrands(query) {
   const items = matches.map((b, i) =>
     // data-brand, not an inlined JS string: "Beda'a" would terminate the
     // literal and throw a SyntaxError, making the brand unselectable.
-    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectBrand(this.dataset.brand)">${escHtml(b)}</div>`
+    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectBrand(this.dataset.brand)">${escUser(b)}</div>`
   ).join('');
 
   // "Request brand" row when no exact match
   const exactMatch = brands.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
     ? `<div class="brand-ac-request" data-brand="${escAttr(query.trim())}" onmousedown="requestBrand(this.dataset.brand)">
-         "${escHtml(query.trim())}" not listed — request it
+         "${escHtml(i18nMine(query.trim()))}" not listed — request it
        </div>`
     : '';
 
@@ -30861,7 +30902,7 @@ function af2RenderRow(watch, idx) {
   let contentHtml = '';
   const modelName = escHtml(watch.model || 'Unknown');
   const brand = escHtml(watch.brand || 'Unknown');
-  const ref = watch.reference ? `<div class="af2-ref">Ref. ${escHtml(watch.reference)}</div>` : '';
+  const ref = watch.reference ? `<div class="af2-ref">Ref. ${escHtml(i18nMine(watch.reference))}</div>` : '';
   const specParts = [watch.caseDiameter, watch.caseMaterial, watch.movementType].filter(Boolean);
   const specLine = specParts.length ? `<div class="af2-specs">${escHtml(specParts.join(' · '))}</div>` : '';
   const yearLine = watch.yearRange ? `<div class="af2-specs">${escHtml(tx('Years: {range}', { range: watch.yearRange }))}</div>` : '';
@@ -30908,13 +30949,13 @@ function af2RenderRow(watch, idx) {
       if (watch._af2PriceFailed) {
         priceLine = `<div class="af2-status af2-status-green">Enhanced</div>`;
       } else if (watch._af2Price) {
-        const priceStr = '$' + Number(watch._af2Price).toLocaleString();
+        const priceStr = fmtMoney(watch._af2Price);
         if (watch.price && watch._af2Price) {
           const delta = watch._af2Price - watch.price;
           const pct = ((delta / watch.price) * 100).toFixed(0);
           const sign = delta >= 0 ? '+' : '';
           const cls = delta >= 0 ? 'af2-status-green' : 'af2-status-muted';
-          priceLine = `<div class="af2-status ${cls}">${priceStr} · ${sign}$${Math.abs(delta).toLocaleString()} (${sign}${pct}%)</div>`;
+          priceLine = `<div class="af2-status ${cls}">${priceStr} · ${sign}$${Math.abs(delta).toLocaleString(I18N_DATE_LOCALE)} (${sign}${pct}%)</div>`;
         } else {
           priceLine = `<div class="af2-status af2-status-green">${priceStr}</div>`;
         }
@@ -31599,7 +31640,7 @@ function af2Edit(idx) {
     // data-brand + escAttr, not an inlined JS string: escHtml does not escape
     // apostrophes, so a brand like "Beda'a" terminated the literal and threw.
     // Same fix already applied to the collection and wishlist pickers.
-    acList.innerHTML = matches.map(b => `<div class="u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-fs-sm u-cur-pointer u-bdb-1px-solid-border" data-brand="${escAttr(b)}" onmousedown="af2PickBrand(${idx}, this.dataset.brand)">${escHtml(b)}</div>`).join('');
+    acList.innerHTML = matches.map(b => `<div class="u-pt-1-5 u-pr-2 u-pb-1-5 u-pl-2 u-fs-sm u-cur-pointer u-bdb-1px-solid-border" data-brand="${escAttr(b)}" onmousedown="af2PickBrand(${idx}, this.dataset.brand)">${escUser(b)}</div>`).join('');
     acList.style.display = '';
   };
   brandInput.addEventListener('input', updateAC);
@@ -32004,7 +32045,7 @@ function maybeShowEnhanceNudge(watch, surface) {
   const sfc = escAttr(surface || '');
   slot.innerHTML = `<div id="enhance-nudge-card" class="enhance-nudge-card">
     <div class="enh-nudge-copy">
-      <div class="enh-nudge-title"><b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
+      <div class="enh-nudge-title"><b>${escUser(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
       <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
     </div>
     <div class="row-tight">
@@ -32053,8 +32094,8 @@ async function enhanceAllWatches(scopedIds) {
     return `<div class="pi-card" id="enh-card-${i}">
       <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
       <div class="pi-card-info">
-        <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
-        <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
+        <div class="pi-card-name">${escUser(w.name) || 'Unknown'}</div>
+        <div class="pi-card-brand">${escUser(w.brand) || 'Unknown'}</div>
         <div class="text-meta enh-status u-mt-1">Waiting…</div>
       </div>
       <div class="pi-card-actions"></div>
@@ -32649,8 +32690,8 @@ function shareThreadHtml(kind, token) {
   return `<div class="share-thread" data-token="${escAttr(token)}">${comments.map(c => `
     <div class="row-start u-pt-1-5 u-pr-0 u-pb-1-5 u-pl-0 u-bdt-1px-dashed-border">
       <div class="grow-clip">
-        <div class="caption"><strong class="u-c-text">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
-        <div class="u-fs-base u-ws-pre-wrap u-wb-break-word">${escHtml(c.body)}</div>
+        <div class="caption"><strong class="u-c-text">${escUser(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
+        <div class="u-fs-base u-ws-pre-wrap u-wb-break-word">${escUser(c.body)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}',this.dataset.deleteComment)">Delete</button>
     </div>`).join('')}</div>`;
@@ -32910,8 +32951,8 @@ function wlCardHtml(w, draggable) {
     ${handle}
     ${thumb}
     <div class="wl-info u-cur-pointer" onclick="${infoClick}">
-      <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
-      <div class="wl-brand">${escHtml(w.brand)}</div>
+      <div class="wl-name"><span class="inline-val"><span>${escUser(w.name)}</span></span></div>
+      <div class="wl-brand">${escUser(w.brand)}</div>
       ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
     </div>
   </div>`;
@@ -33072,7 +33113,7 @@ function _renderWishlistBody(force) {
         ${box}
         ${handle}
         ${imgLink}
-        <div class="wl-tile-name" onclick="${tileClick}">${escHtml(w.name)}</div>
+        <div class="wl-tile-name" onclick="${tileClick}">${escUser(w.name)}</div>
         ${urlLine}
       </div>`;
     }).join('');
@@ -33096,7 +33137,7 @@ function _renderWishlistBody(force) {
         <div class="wl-folder-header" data-folder-key="${escAttr(f.key)}" onclick="toggleWishlistFolder(this.dataset.folderKey)" role="button" tabindex="0" aria-expanded="${open}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
           ${_wlSelect ? `<input type="checkbox" class="wl-select-box wl-folder-select${folderSelectionState(_wlSelect, f.items) === 'some' ? ' partial' : ''}" ${folderSelectionState(_wlSelect, f.items) === 'all' ? 'checked' : ''} data-folder-key="${escAttr(f.key)}" onclick="event.stopPropagation();toggleWlFolderSelect(this.dataset.folderKey)" aria-label="Select all ${escAttr(f.brand)}">` : ''}
           <span class="wl-folder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-          <span class="wl-folder-name">${escHtml(f.brand)}</span>
+          <span class="wl-folder-name">${escUser(f.brand)}</span>
           <span class="wl-folder-count">${f.items.length}</span>
           <!-- Price summary: a folder row showed no price while the loose
                single-item cards beside it did, so the two couldn't be compared
@@ -33405,7 +33446,7 @@ function previewWatch(w) {
   }
 
   const refSpan = w.ref
-    ? `<span class="text-meta u-fw-semibold">${escHtml(w.ref)}</span>`
+    ? `<span class="text-meta u-fw-semibold">${escUser(w.ref)}</span>`
     : '';
   const urlBtn = w.url
     ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" title="Visit official page"
@@ -33430,15 +33471,15 @@ function previewWatch(w) {
     cardHtml = '<div class="u-bg-badge-bg u-r-btn u-pt-2-5 u-pr-3 u-pb-2-5 u-pl-3 u-bd-0p5px-solid-badge-border">';
     if (desc) {
       cardHtml += `<div class="u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Description</div>`;
-      cardHtml += `<div class="badge-body">${escHtml(desc)}</div>`;
+      cardHtml += `<div class="badge-body">${escUser(desc)}</div>`;
     }
     if (bg) {
       cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Background &amp; History</div>`;
-      cardHtml += `<div class="badge-body">${escHtml(bg)}</div>`;
+      cardHtml += `<div class="badge-body">${escUser(bg)}</div>`;
     }
     if (fns) {
       cardHtml += `<div class="u-mt-2-5 u-fs-2xs u-fw-medium u-tt-uppercase u-ls-eyebrow u-c-gold-deep u-mb-1">Functions</div>`;
-      cardHtml += `<div class="badge-body">${escHtml(fns)}</div>`;
+      cardHtml += `<div class="badge-body">${escUser(fns)}</div>`;
     }
     cardHtml += '</div>';
   }
@@ -33797,12 +33838,12 @@ function filterWlBrands(query) {
   if (!matches.length && !q) { list.classList.add('hidden'); return; }
   const items = matches.map(b =>
     // data-brand, not an inlined JS string — see brandAC() above.
-    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectWlBrand(this.dataset.brand)">${escHtml(b)}</div>`
+    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectWlBrand(this.dataset.brand)">${escUser(b)}</div>`
   ).join('');
   const exactMatch = brands.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
     ? `<div class="brand-ac-request" data-brand="${escAttr(query.trim())}" onmousedown="requestBrand(this.dataset.brand)">
-         "${escHtml(query.trim())}" not listed — request it
+         "${escHtml(i18nMine(query.trim()))}" not listed — request it
        </div>`
     : '';
   list.innerHTML = items + requestRow;
@@ -35779,7 +35820,7 @@ async function loadTgHistory() {
     const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
     const ampStr = r.amplitude ? tx('Amp: {n}°', { n: r.amplitude }) : '';
-    const noteStr = r.notes ? `<div class="text-caption u-mt-0-5 u-fst-italic">${escHtml(r.notes)}</div>` : '';
+    const noteStr = r.notes ? `<div class="text-caption u-mt-0-5 u-fst-italic">${escUser(r.notes)}</div>` : '';
     const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? 'var(--status-good)' : Math.abs(r.rate) <= 15 ? 'var(--status-warn)' : 'var(--danger)') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
     const isoDate = d.toISOString().slice(0, 10);

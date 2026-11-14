@@ -25,6 +25,24 @@
       } catch(e) {}
     })();
   </script>
+  <!-- Languages (docs/i18n.md). English runs none of this: no request, no work. A member who
+       chose another language in the app (wr_lang, same origin) gets that dictionary plus the
+       shared runtime /i18n/page.js; both are generated, and their ?v= hashes stamped here,
+       by scripts/i18n.mjs. -->
+  <script>
+    (function () {
+      try {
+        var FILES = { es: 'i18n/es.js?v=d1028d54', it: 'i18n/it.js?v=52aa8bc7', fr: 'i18n/fr.js?v=048f6812', tr: 'i18n/tr.js?v=802f1f95', de: 'i18n/de.js?v=151f8310', pt: 'i18n/pt.js?v=072cd4ab' };
+        var RUNTIME = 'i18n/page.js?v=96e7201d';
+        var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
+        if (m) localStorage.setItem('wr_lang', m[1]);
+        var lang = localStorage.getItem('wr_lang');
+        if (!lang || !FILES[lang]) return;
+        document.documentElement.lang = lang;
+        document.write('<script src=/' + FILES[lang] + '><\/script><script src=/' + RUNTIME + '><\/script>');
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="/design-system.css?v=e096b945">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -249,6 +267,14 @@
       return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Languages (docs/i18n.md). I18N is the chosen language, or null for English, when nothing
+    // below does anything. Text a member wrote is never translated, even when it spells one of
+    // our labels: escUser() writes it between the markers the translator steps over, mine()
+    // registers it for the places a marker cannot go (an attribute, a name inside a sentence).
+    const I18N = window.WR_I18N ? window.WR_I18N.lang : null;
+    function mine(s) { return I18N && s ? i18nMine(String(s)) : s; }
+    function escUser(s) { const h = escHtml(mine(s)); return I18N && h ? '<!--u-->' + h + '<!--/u-->' : h; }
+
     function initials(name) {
       return (name || '').trim().split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?';
     }
@@ -258,7 +284,7 @@
         const fb = escHtml(initials(profile.display_name || profile.username));
         return `<img ${thumbSrcAttrs(profile.avatar_url, escHtml)} alt="" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
       }
-      return escHtml(initials(profile.display_name || profile.username));
+      return escUser(initials(profile.display_name || profile.username));
     }
 
     function renderError(msg) {
@@ -272,26 +298,27 @@
     }
 
     function renderPrivate(profile) {
-      const name = escHtml(profile.display_name || profile.username || 'This user');
+      const member = profile.display_name || profile.username;
+      const name = member ? escUser(member) : escHtml('This user');
       document.title = `${profile.display_name || profile.username} — WRotate`;
       document.getElementById('main-content').innerHTML = `
         <div class="profile-hero">
-          <div class="avatar">${renderAvatar(profile)}</div>
+          <div class="avatar" data-i18n-skip>${renderAvatar(profile)}</div>
           <div class="display-name">${name}${profile.is_official ? '<span class="official-badge">Official</span>' : ''}</div>
-          ${profile.username ? `<div class="username-lbl">@${escHtml(profile.username)}</div>` : ''}
+          ${profile.username ? `<div class="username-lbl" data-i18n-skip>@${escHtml(profile.username)}</div>` : ''}
         </div>
         <div class="private-wrap">
           <div class="state-title">Private profile</div>
-          <div class="state-sub">This collection is private. Follow ${name} on WRotate to see their watches.</div>
+          <div class="state-sub">This collection is private. Follow ${escHtml(mine(member) || 'This user')} on WRotate to see their watches.</div>
           <br>
           <a href="https://wrotate.com/" class="btn-cta u-mt-2">Join WRotate</a>
         </div>`;
     }
 
     function renderProfile(profile, watches, wearCounts) {
-      const name = escHtml(profile.display_name || profile.username || '');
+      const name = escUser(profile.display_name || profile.username || '');
       const uname = profile.username ? `@${escHtml(profile.username)}` : '';
-      const bio = profile.bio ? `<div class="bio-text">${escHtml(profile.bio)}</div>` : '';
+      const bio = profile.bio ? `<div class="bio-text">${escUser(profile.bio)}</div>` : '';
       const badge = profile.is_official ? '<span class="official-badge">Official</span>' : '';
 
       // Update page title + OG
@@ -313,7 +340,7 @@
         if (c > mostWears) { mostWears = c; mostWorn = w; }
       }
       const mostWornHtml = mostWorn
-        ? `<div class="stat-val" title="${escHtml(mostWorn.brand ? mostWorn.brand + ' ' + mostWorn.name : mostWorn.name)}">${escHtml(mostWorn.brand ? mostWorn.brand + ' ' + (mostWorn.name || '') : (mostWorn.name || '—'))}</div>`
+        ? `<div class="stat-val" title="${escHtml(mine(mostWorn.brand ? mostWorn.brand + ' ' + mostWorn.name : mostWorn.name))}">${escUser(mostWorn.brand ? mostWorn.brand + ' ' + (mostWorn.name || '') : (mostWorn.name || '—'))}</div>`
         : `<div class="stat-val">—</div>`;
 
       // Watch grid
@@ -323,14 +350,14 @@
         gridHtml = sorted.map(w => {
           const imgHtml = w.image
             ? `<img class="watch-card-img" ${thumbSrcAttrs(w.image, escHtml)} alt="" loading="lazy">`
-            : `<div class="watch-card-placeholder">${escHtml(initials((w.brand || '') + ' ' + (w.name || '')))}</div>`;
+            : `<div class="watch-card-placeholder">${escUser(initials((w.brand || '') + ' ' + (w.name || '')))}</div>`;
           const wears = wearCounts[w.id] || 0;
           return `
             <div class="watch-card">
               ${imgHtml}
               <div class="watch-card-body">
-                ${w.brand ? `<div class="watch-card-brand">${escHtml(w.brand)}</div>` : ''}
-                <div class="watch-card-name">${escHtml(w.name || '—')}</div>
+                ${w.brand ? `<div class="watch-card-brand">${escUser(w.brand)}</div>` : ''}
+                <div class="watch-card-name">${escUser(w.name || '—')}</div>
                 <div class="watch-card-wears">${wears} wear${wears !== 1 ? 's' : ''}</div>
               </div>
             </div>`;
@@ -346,9 +373,9 @@
 
       document.getElementById('main-content').innerHTML = `
         <div class="profile-hero">
-          <div class="avatar">${renderAvatar(profile)}</div>
+          <div class="avatar" data-i18n-skip>${renderAvatar(profile)}</div>
           <div class="display-name">${name}${badge}</div>
-          ${uname ? `<div class="username-lbl">${uname}</div>` : ''}
+          ${uname ? `<div class="username-lbl" data-i18n-skip>${uname}</div>` : ''}
           ${bio}
         </div>
 
@@ -394,7 +421,7 @@
         return;
       }
       if (!profile) {
-        renderError(`No user found with username "${username}".`);
+        renderError(`No user found with username "${mine(username)}".`);
         return;
       }
 

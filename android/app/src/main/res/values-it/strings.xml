@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_logwear">Registra utilizzo</string>
+    <string name="shortcut_measure">Misura</string>
+    <string name="shortcut_post">Nuovo post</string>
+    <string name="notification_channel_name">Notifiche</string>
+    <string name="photo_chooser_title">Aggiungi una foto</string>
+    <string name="offline_title">Nessuna connessione</string>
+    <string name="offline_message">Controlla la connessione a internet e riprova.</string>
+    <string name="offline_retry">Riprova</string>
+</resources>

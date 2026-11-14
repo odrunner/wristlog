@@ -5,17 +5,16 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
-  avatarInnerHtml,
-  buildCollectionOg,
+  type CollectionPageData,
+  collectionStatePage,
   computeWearCounts,
-  esc,
   generateOgSvg,
-  htmlPage,
-  initials,
   isCollectionViewable,
+  renderCollectionPage,
   sortByWears,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pageLang, VARY_LANG } from "../_shared/lang.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -87,75 +86,25 @@ serve(async (req) => {
   }
 
   // --- HTML page mode ---
+  // The reader's language: ?lang=, else the browser's; a preview fetcher gets
+  // English. Every HTML answer says so in Vary, since the 200 is cacheable.
+  // (The SVG above is always English: only preview fetchers ask for it.)
+  const lang = pageLang(url.searchParams.get("lang"), req.headers.get("accept-language"), req.headers.get("user-agent"));
+  const HTML_HEADERS = { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Vary": VARY_LANG };
+
   if (!username) {
-    const html = htmlPage(
-      "WRotate", "The watch collection tracker for enthusiasts.",
-      `${supabaseUrl}/functions/v1/share-collection?img=1&u=`,
-      "https://wrotate.com/",
-      `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No user specified</div>
-       <div class="state-sub">Visit WRotate to explore watch collections.</div>
-       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">Open WRotate</a></div></div>`
-    );
-    return new Response(html, { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" } });
+    return new Response(collectionStatePage("missing", supabaseUrl, null, lang), { status: 400, headers: HTML_HEADERS });
   }
 
   const data = await fetchCollectionData(db, username);
 
   if (!data) {
-    const html = htmlPage(
-      "Private Collection — WRotate", "This collection is private or no longer available.",
-      `${supabaseUrl}/functions/v1/share-collection?img=1&u=${encodeURIComponent(username || "")}`,
-      "https://wrotate.com/",
-      `<div class="state-wrap"><div class="state-icon">🔒</div><div class="state-title">Collection not found</div>
-       <div class="state-sub">This collection may be private or no longer available.</div>
-       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">Open WRotate</a></div></div>`
-    );
-    return new Response(html, { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" } });
+    return new Response(collectionStatePage("notFound", supabaseUrl, username, lang), { status: 404, headers: HTML_HEADERS });
   }
 
-  const { profile, watches, sorted, wearCounts } = data;
-  const displayName = profile.display_name || profile.username || "Someone";
-  const { ogTitle, ogDescription } = buildCollectionOg(displayName, watches, sorted, wearCounts);
-  const ogImage = `${supabaseUrl}/functions/v1/share-collection?img=1&u=${encodeURIComponent(username)}`;
-  const canonicalUrl = `${supabaseUrl}/functions/v1/share-collection?u=${encodeURIComponent(username)}`;
-
-  const avatarInner = avatarInnerHtml(profile.avatar_url, displayName);
-
-  const officialBadge = profile.is_official
-    ? ' <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)" style="vertical-align:middle;"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 12c0 4.418 2.865 8.166 6.839 9.489.308.105.633.105.941.005L12 21.056l1.22.438a1.1 1.1 0 0 0 .941-.005C18.135 20.166 21 16.418 21 12c0-.69-.058-1.365-.17-2.022Z"/></svg>'
-    : "";
-
-  const bioHtml = profile.bio ? `<div class="col-bio">${esc(profile.bio)}</div>` : "";
-
-  const gridHtml = sorted.slice(0, 12).map((w: { id: string; brand?: string; name?: string; image?: string }) => {
-    const wears = wearCounts[w.id] || 0;
-    const imgHtml = w.image
-      ? `<img class="watch-card-img" src="${esc(w.image)}" alt="" loading="lazy">`
-      : `<div class="watch-card-ph">${esc(initials(w.brand || "", w.name || ""))}</div>`;
-    return `<a href="https://wrotate.com/" class="watch-card link-block">
-      ${imgHtml}
-      <div class="watch-card-body">
-        ${w.brand ? `<div class="watch-card-brand">${esc(w.brand)}</div>` : ""}
-        <div class="watch-card-name">${esc(w.name || "—")}</div>
-        <div class="watch-card-wears">${wears} wear${wears !== 1 ? "s" : ""}</div>
-      </div>
-    </a>`;
-  }).join("");
-
-  const bodyHtml = `
-    <a href="https://wrotate.com/" class="col-hero link-block">
-      <div class="col-avatar">${avatarInner}</div>
-      <div class="col-name">${esc(displayName)}${officialBadge}</div>
-      <div class="col-uname">@${esc(profile.username || "")}</div>
-      ${bioHtml}
-    </a>
-    ${watches.length > 0
-      ? `<div class="watch-grid">${gridHtml}</div>`
-      : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No public watches yet</div></div>`}`;
-
-  const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml);
+  const html = renderCollectionPage({ ...data, supabaseUrl, username } as unknown as CollectionPageData, lang);
   return new Response(html, {
     status: 200,
-    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" },
+    headers: { ...HTML_HEADERS, "Cache-Control": "public, max-age=300" },
   });
 });

@@ -31,6 +31,15 @@ Deno.test("resolveActorName — prefers display_name, then username, then Someon
   assertEquals(resolveActorName(undefined), "Someone");
 });
 
+Deno.test("resolveActorName — the fallback follows the recipient's language, a real name never changes", () => {
+  assertEquals(resolveActorName(null, "en"), "Someone");
+  assertEquals(resolveActorName(null, "es"), "Alguien");
+  assertEquals(resolveActorName({ display_name: "", username: null }, "fr"), "Quelqu'un");
+  assertEquals(resolveActorName(undefined, "de"), "Jemand");
+  assertEquals(resolveActorName({ display_name: "Eve", username: "e1" }, "tr"), "Eve");
+  assertEquals(buildMessage("like", resolveActorName(null, "de"), null, "de")?.body.includes("Jemand"), true);
+});
+
 Deno.test("resolveActorName — does NOT escape HTML (push is plain text)", () => {
   assertEquals(resolveActorName({ display_name: "<b>X</b>" }), "<b>X</b>");
 });

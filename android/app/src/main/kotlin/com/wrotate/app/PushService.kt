@@ -15,7 +15,11 @@ object PushChannels {
     fun ensure(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
-            NotificationChannel(DEFAULT, "Notifications", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(
+                DEFAULT,
+                context.getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ),
         )
     }
 }

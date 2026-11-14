@@ -172,6 +172,12 @@
 			knownRegions = (
 				en,
 				Base,
+				es,
+				it,
+				fr,
+				tr,
+				de,
+				pt,
 			);
 			mainGroup = 3AAC54AD2F54FAD200027F24;
 			minimizedProjectReferenceProxies = 1;
@@ -374,7 +380,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.10;
+				MARKETING_VERSION = 2.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -411,7 +417,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.10;
+				MARKETING_VERSION = 2.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -440,7 +446,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.10;
+				MARKETING_VERSION = 2.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -468,7 +474,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.10;
+				MARKETING_VERSION = 2.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

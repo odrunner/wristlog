@@ -216,3 +216,84 @@ Deno.test("isCrawlerUA separates link-preview bots from people", () => {
   assertEquals(isCrawlerUA("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"), false);
   assertEquals(isCrawlerUA("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"), false);
 });
+
+// ── Languages ────────────────────────────────────────────────────────────────
+// The golden files are the page exactly as it was served before it learned any
+// other language (captured from the pre-change function, 2026-11-14). English,
+// and every request with no usable language, must still produce them byte for
+// byte.
+const golden = (name: string) => Deno.readTextFileSync(new URL(`./golden/${name}.html`, import.meta.url));
+const API = "https://api.wrotate.com";
+const PROFILE = { id: "u1", username: "alice", display_name: "Alice <B> & Co", bio: 'Collector of "things"', avatar_url: null, is_official: true };
+import { recapStatePage, renderRecapPage } from "./lib.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+const RWATCHES = [
+  { id: "w1", brand: "Rolex", name: "Submariner", image: "https://x/sub.jpg" },
+  { id: "w2", brand: "Omega", name: "Speedmaster", image: null },
+  { id: "w3", brand: "", name: "", image: null },
+];
+const JULY: { watch_id: string; date: string; use_case: string | null }[] = [];
+for (let d = 1; d <= 9; d++) JULY.push({ watch_id: d % 3 === 0 ? "w2" : "w1", date: `2026-07-0${d}`, use_case: "casual" });
+JULY.push({ watch_id: "w3", date: "2026-07-20", use_case: null });
+const IDS = new Set(["w1", "w2", "w3"]);
+// deno-lint-ignore no-explicit-any
+const BY_ID: Record<string, any> = Object.fromEntries(RWATCHES.map((w) => [w.id, w]));
+const RECAP = { supabaseUrl: API, token: null, username: "alice", profile: PROFILE, recap: computeRecap(JULY, IDS, IDS, "2026-07"), watchById: BY_ID };
+const NO_WEARS = { ...RECAP, recap: computeRecap([], IDS, IDS, "2026-07") };
+
+Deno.test("share-recap — English pages are byte-identical to the pre-translation pages", () => {
+  assertEquals(renderRecapPage(RECAP), golden("recap"));
+  assertEquals(renderRecapPage(RECAP, "en"), golden("recap"));
+  assertEquals(renderRecapPage(NO_WEARS), golden("no-wears"));
+  assertEquals(recapStatePage("bad", API), golden("bad"));
+  assertEquals(recapStatePage("private", API), golden("private"));
+});
+
+Deno.test("share-recap — German page: German chrome and month, lang=de, the member's words untouched", () => {
+  const html = renderRecapPage(RECAP, "de");
+  assertStringIncludes(html, '<html lang="de">');
+  assertStringIncludes(html, "<title>Alice &lt;B&gt; &amp; Co · Juli 2026 — WRotate</title>");
+  assertStringIncludes(html, 'content="10× getragen · 3 Uhren · 10 Tage erfasst · Meistgetragen: Rolex Submariner"');
+  assertStringIncludes(html, '<div class="rc-eyebrow">Monatsrückblick</div>');
+  assertStringIncludes(html, '<div class="rc-month">Juli</div>');
+  assertStringIncludes(html, '<div class="rc-stat-lbl">Trageeinträge</div>');
+  assertStringIncludes(html, '<div class="rc-streak-lbl">Tage in Folge erfasst</div>');
+  assertStringIncludes(html, ">Erfasse deine eigene Rotation</a>");
+  assertStringIncludes(html, '<div class="rc-name">Submariner</div>');
+  for (const en of ["Month in review", "Most worn", "Track your own rotation", "days logged in a row", ">July<"]) {
+    assertEquals(html.includes(en), false, en);
+  }
+  assertEquals(html.split("\n").length, golden("recap").split("\n").length);
+});
+
+Deno.test("share-recap — German state pages", () => {
+  const none = renderRecapPage(NO_WEARS, "de");
+  assertStringIncludes(none, '<div class="state-title">Keine Trageeinträge in diesem Monat</div>');
+  assertStringIncludes(none, "Alice &lt;B&gt; &amp; Co hat im Juli 2026 nichts eingetragen.");
+  assertStringIncludes(recapStatePage("bad", API, "de"), "Hier gibt es nichts zu sehen");
+  const priv = recapStatePage("private", API, "de");
+  assertStringIncludes(priv, "<title>Privat — WRotate</title>");
+  assertStringIncludes(priv, "Diese Sammlung ist privat oder nicht mehr verfügbar.");
+});
+
+Deno.test("share-recap — every language renders with its own lang attribute and no leftover hole", () => {
+  for (const lang of LANGS) {
+    for (const html of [renderRecapPage(RECAP, lang), renderRecapPage(NO_WEARS, lang), recapStatePage("bad", API, lang), recapStatePage("private", API, lang)]) {
+      assertStringIncludes(html, `<html lang="${lang}">`);
+      assertEquals(/\{[a-z]\}|undefined/.test(html.replace(/<style>[\s\S]*?<\/style>/, "")), false, lang);
+    }
+  }
+});
+
+Deno.test("monthLabel — the locale's own month; English and the og:image unchanged", () => {
+  assertEquals(monthLabel("2026-07"), "July 2026");
+  assertEquals(monthLabel("2026-07", false), "July");
+  assertEquals(monthLabel("2026-07", true, "es"), "julio de 2026");
+  assertEquals(monthLabel("2026-07", false, "es"), "Julio", "alone it is a heading, so it gets a capital");
+  assertEquals(monthLabel("2026-03", true, "fr"), "mars 2026");
+  assertEquals(monthLabel("2026-12", false, "tr"), "Aralık");
+  assertEquals(monthLabel("2026-01", true, "pt"), "janeiro de 2026");
+  assertEquals(monthLabel("2026-13", true, "de"), " 2026", "a month that does not exist behaves as it does in English");
+  assertStringIncludes(generateRecapSvg("Ozgur", RECAP.recap, BY_ID), "MONTH IN REVIEW");
+});

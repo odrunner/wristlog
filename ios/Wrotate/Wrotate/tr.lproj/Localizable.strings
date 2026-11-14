@@ -1,0 +1,9 @@
+/* Home-screen quick actions (QuickActionManager.swift) */
+"Log Wear" = "Kullanım kaydet";
+"Measure" = "Ölç";
+"New Post" = "Yeni gönderi";
+
+/* Offline screen (ContentView.swift, OfflineView) */
+"No Connection" = "Bağlantı yok";
+"Check your internet connection and try again." = "İnternet bağlantını kontrol edip tekrar dene.";
+"Try Again" = "Tekrar dene";

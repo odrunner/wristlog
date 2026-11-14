@@ -1,6 +1,6 @@
 // send-email — pure logic extracted for testability (no Deno/IO/network).
 // index.ts imports these; lib.test.ts tests them. Behavior unchanged.
-import { aiNote, fill } from "../_shared/lang.ts";
+import { aiNote, fill, SOMEONE } from "../_shared/lang.ts";
 import type { Lang } from "../_shared/lang.ts";
 import { EMAIL_STRINGS } from "./strings.ts";
 
@@ -130,13 +130,14 @@ export function pickMentionText(
   return { text: winner.text, source: winner.source };
 }
 
-// Resolve a display name for the actor, falling back to "Someone".
-// HTML-escaped for safe embedding in the email.
+// Resolve a display name for the actor, falling back to "Someone" in the
+// recipient's language. HTML-escaped for safe embedding in the email.
 export function resolveActorName(
   actor: { display_name?: string | null; username?: string | null } | null | undefined,
+  lang: Lang = "en",
 ): string {
-  if (!actor) return "Someone";
-  return esc(actor.display_name || actor.username || "Someone");
+  if (!actor) return SOMEONE[lang];
+  return esc(actor.display_name || actor.username || SOMEONE[lang]);
 }
 
 // True if a notification type carries a quotable comment body that should be

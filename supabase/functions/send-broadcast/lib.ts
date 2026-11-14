@@ -509,6 +509,34 @@ export function countByLang(rows: { lang?: string | null }[]): Record<string, nu
   return out;
 }
 
+// ── The fun fact in a translated broadcast ──
+// fun_fact_vars() returns the English fact. A recipient whose email went out in
+// another language gets that fact's stored translation (watch_facts.translations,
+// made by the translate-facts job), the same way the drips do. The pool rows are
+// matched back by model and by the English text itself.
+export type FactPoolRow = { model_key: string; fact: string; translations?: unknown };
+const factPoolKey = (modelKey: string, fact: string) => `${modelKey}\u0000${fact}`;
+
+export function indexFactPool(rows: FactPoolRow[] | null | undefined): Map<string, unknown> {
+  const out = new Map<string, unknown>();
+  for (const r of rows || []) if (r && r.model_key && r.fact) out.set(factPoolKey(r.model_key, r.fact), r.translations);
+  return out;
+}
+
+// The fact in `lang` when there is one, otherwise the English exactly as given.
+export function factInLang(
+  pool: Map<string, unknown>,
+  modelKey: string | null | undefined,
+  english: string,
+  lang: string | null | undefined,
+): string {
+  if (!lang || lang === "en" || !modelKey) return english;
+  const t = pool.get(factPoolKey(modelKey, english));
+  if (!t || typeof t !== "object" || !Object.prototype.hasOwnProperty.call(t, lang)) return english;
+  const v = (t as Record<string, unknown>)[lang];
+  return typeof v === "string" && v.trim() ? v.trim() : english;
+}
+
 // Which page may call this function from a browser: the live site, or the local
 // dev server (localhost, a .local hostname or a private LAN address, port 3000).
 // Anything else is answered as if it were the live site, which the browser then

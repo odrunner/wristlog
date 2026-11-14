@@ -1,7 +1,8 @@
 // share-comments — the IO half (DB, email). Pure logic is in share-comments-lib.ts.
 // Both share pages call handleCommentPost for POST and loadComments for GET.
 import { sendEmail } from "./mailer.ts";
-import { pickLang } from "./lang.ts";
+import { pickLang, requestLang } from "./lang.ts";
+import { SHARE_STRINGS } from "./share-strings.ts";
 import { trackedConfigSet } from "./tracked.ts";
 import { hmacSign, unsubUrl } from "../send-wear-reminders/lib.ts";
 import {
@@ -62,17 +63,27 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
   resolveShare: (token: string) => Promise<ShareOwner | null>;
 }): Promise<Response> {
   const cors = opts.corsHeaders;
+  // The commenter's language, for the messages shown back under the form: the
+  // page's own `lang` (a translated page posts it; one opened with ?lang= also
+  // shows it in the Referer), otherwise the browser's. Never the owner's.
+  const reqUrl = new URL(req.url);
+  let pageLangParam = reqUrl.searchParams.get("lang");
+  if (!pageLangParam) {
+    try { pageLangParam = new URL(req.headers.get("referer") || "").searchParams.get("lang"); } catch (_e) { /* no usable referer */ }
+  }
+  const commentLang = requestLang(pageLangParam, req.headers.get("accept-language"));
+  const E = SHARE_STRINGS[commentLang].comments;
   let payload: { t?: string; name?: unknown; body?: unknown; hp?: unknown } = {};
-  try { payload = await req.json(); } catch (_e) { return json({ ok: false, error: "Bad request" }, 400, cors); }
-  const token = String(payload?.t || new URL(req.url).searchParams.get("t") || "");
-  if (!token) return json({ ok: false, error: "This link is no longer available" }, 404, cors);
+  try { payload = await req.json(); } catch (_e) { return json({ ok: false, error: E.bad }, 400, cors); }
+  const token = String(payload?.t || reqUrl.searchParams.get("t") || "");
+  if (!token) return json({ ok: false, error: E.gone }, 404, cors);
   const share = await opts.resolveShare(token);
-  if (!share) return json({ ok: false, error: "This link is no longer available" }, 404, cors);
+  if (!share) return json({ ok: false, error: E.gone }, 404, cors);
   // Bots that fill the hidden field get a convincing "ok" and nothing is stored.
   if (isHoneypotTripped(payload.hp)) {
     return json({ ok: true, comment: { id: "0", name: "", body: "", created_at: new Date().toISOString() } }, 200, cors);
   }
-  const v = validateComment(payload);
+  const v = validateComment(payload, commentLang);
   if (!v.ok) return json({ ok: false, error: v.reason }, 400, cors);
 
   const now = Date.now();
@@ -80,7 +91,7 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
   const keys = rateKeys(token, ipHash);
   if (await checkAndBump(db, share.user_id, keys.ip, IP_LIMIT, IP_WINDOW_MS, now)
    || await checkAndBump(db, share.user_id, keys.token, TOKEN_LIMIT, TOKEN_WINDOW_MS, now)) {
-    return json({ ok: false, error: "Too many comments right now — please try again later" }, 429, cors);
+    return json({ ok: false, error: E.tooMany }, 429, cors);
   }
 
   const { data: inserted, error: insErr } = await db.from("share_comments")
@@ -88,7 +99,7 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
     .select("id, name, body, created_at").single();
   if (insErr || !inserted) {
     console.warn("[share-comments] insert failed:", insErr?.message);
-    return json({ ok: false, error: "Could not save your comment" }, 500, cors);
+    return json({ ok: false, error: E.saveFail }, 500, cors);
   }
 
   // Bell + push: the notifications INSERT webhook (send-push) does the rest.

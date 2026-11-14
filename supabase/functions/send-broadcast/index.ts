@@ -39,6 +39,8 @@ import {
   filterByLanguageTimezone,
   langsToTranslate,
   countByLang,
+  factInLang,
+  indexFactPool,
   corsOrigin,
   shouldTripBreaker,
   shuffled,
@@ -50,6 +52,7 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
+import type { FactPoolRow } from "./lib.ts";
 // Same personalization the onboarding drip uses, so a broadcast carrying the
 // same copy renders identically. {{watch}}/{{watchPhrase}}/{{fact}} are filled
 // per recipient from their own collection + the shared fact pool.
@@ -130,10 +133,13 @@ async function fetchAllRows<T>(
 // watch, no complete pool fact, or a free-text name that would embarrass in a
 // subject line ("Omega Fake Omega - Likely ETA 2824-2") get the curated
 // fallback — never a broken email, never a dropped recipient.
+// `keys`, when given, is filled with each recipient's model key (only for those
+// who got a real fact), so a translated send can look the fact up again.
 async function factVarsFor(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   uids: string[],
+  keys?: Map<string, string>,
 ): Promise<Map<string, Record<string, string>>> {
   const out = new Map<string, Record<string, string>>();
   if (!uids.length) return out;
@@ -142,13 +148,37 @@ async function factVarsFor(
     console.error("[send-broadcast] fun_fact_vars failed, using fallback for all:", error.message);
     return out;
   }
-  for (const r of (data ?? []) as Array<{ user_id: string; brand: string | null; name: string | null; fact: string | null }>) {
+  for (const r of (data ?? []) as Array<{ user_id: string; brand: string | null; name: string | null; model_key?: string | null; fact: string | null }>) {
     const label = r.brand && r.name ? watchLabel(r.brand.trim(), r.name.trim()) : "";
     if (r.fact && looksLikeRealWatchLabel(label)) {
       out.set(r.user_id, { watch: label, watchPhrase: watchPhrase(label), fact: r.fact });
+      if (keys && r.model_key) keys.set(r.user_id, r.model_key);
     }
   }
   return out;
+}
+
+// The stored translations of the facts these models have, for the recipients
+// whose email goes out in another language. Read only for a translated send; any
+// failure leaves the map short and those recipients get the English fact.
+async function factPoolFor(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  modelKeys: string[],
+): Promise<Map<string, unknown>> {
+  const keys = [...new Set(modelKeys)].filter(Boolean);
+  const rows: FactPoolRow[] = [];
+  try {
+    for (let i = 0; i < keys.length; i += 50) {
+      const { data, error } = await supabase
+        .from("watch_facts").select("model_key, fact, translations").in("model_key", keys.slice(i, i + 50));
+      if (error) { console.error("[send-broadcast] fact translations read failed, English facts:", error.message); break; }
+      rows.push(...((data ?? []) as FactPoolRow[]));
+    }
+  } catch (e) {
+    console.error("[send-broadcast] fact translations read failed, English facts:", (e as Error).message);
+  }
+  return indexFactPool(rows);
 }
 
 
@@ -230,10 +260,22 @@ serve(async (req) => {
         tSubject = loc.subject; tHtml = loc.html; tTranslated = true;
       }
       if (needsFactVars({ subject, body_html: safeHtml }) && adminUserId) {
-        const vars = await factVarsFor(supabase, [adminUserId]);
-        const v = vars.get(adminUserId) ?? { ...FALLBACK_FACT };
-        tSubject = personalizeSubject(subject, null, v);
-        tHtml = personalizeBody(safeHtml, null, v);
+        const keys = new Map<string, string>();
+        const vars = await factVarsFor(supabase, [adminUserId], keys);
+        let v = vars.get(adminUserId) ?? { ...FALLBACK_FACT };
+        // A translated test carries the watch phrase and the fact in that
+        // language too, as the queued rows do. (It used to fill the tokens into
+        // the English copy, which threw the translation away.)
+        if (tTranslated) {
+          const pool = await factPoolFor(supabase, [...keys.values()]);
+          v = {
+            ...v,
+            watchPhrase: watchPhraseIn(tLang, v.watch, v.watchPhrase !== FALLBACK_FACT.watchPhrase),
+            fact: factInLang(pool, keys.get(adminUserId), v.fact, tLang),
+          };
+        }
+        tSubject = personalizeSubject(tSubject, null, v);
+        tHtml = personalizeBody(tHtml, null, v);
       }
       // A test send must be byte-for-byte what a recipient gets, footer
       // included — this path skipped unsubFooter() and the List-Unsubscribe
@@ -449,7 +491,8 @@ serve(async (req) => {
       const toQueue = filteredRecipients.filter(r => !alreadyQueued.has(r.uid));
       // Rows are stored fully rendered, so the drain stays a dumb sender.
       const wantsFact = needsFactVars({ subject, body_html: safeHtml });
-      const vars = wantsFact ? await factVarsFor(supabase, toQueue.map(r => r.uid)) : new Map();
+      const factKeys = new Map<string, string>();
+      const vars = wantsFact ? await factVarsFor(supabase, toQueue.map(r => r.uid), factKeys) : new Map();
       // Written once in English, sent in each recipient's app language: one
       // translation per language the audience uses, made here so the queue
       // holds exactly what will be sent. `translate: false` opts a draft out
@@ -460,11 +503,22 @@ serve(async (req) => {
       const translations = wantLangs.length
         ? await translateMany({ subject, html: safeHtml }, wantLangs, { tag: "broadcast", timeoutMs: 90000 })
         : new Map<OtherLang, Fields>();
+      // The fact itself in the recipient's language, for rows that are going out
+      // translated: one read of the pool for those recipients' models only.
+      const factPool = (wantsFact && translations.size)
+        ? await factPoolFor(supabase, toQueue
+          .filter(r => r.lang !== "en" && translations.has(r.lang as OtherLang))
+          .map(r => factKeys.get(r.uid) ?? ""))
+        : new Map<string, unknown>();
       const baseRows = toQueue.map(r => {
         const loc = r.lang !== "en" ? translations.get(r.lang as OtherLang) : undefined;
         const base = wantsFact ? (vars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
         const v = (loc && wantsFact)
-          ? { ...base, watchPhrase: watchPhraseIn(r.lang, base.watch, base.watchPhrase !== FALLBACK_FACT.watchPhrase) }
+          ? {
+            ...base,
+            watchPhrase: watchPhraseIn(r.lang, base.watch, base.watchPhrase !== FALLBACK_FACT.watchPhrase),
+            fact: factInLang(factPool, factKeys.get(r.uid), base.fact, r.lang),
+          }
           : base;
         return {
           uid: r.uid,

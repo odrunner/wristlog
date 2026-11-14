@@ -13,18 +13,16 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
-  buildRecapOg,
   computeRecap,
-  esc,
   generateRecapSvg,
-  htmlPage,
-  initials,
   isCrawlerUA,
   isRecapViewable,
   isValidPeriod,
-  monthLabel,
+  recapStatePage,
+  renderRecapPage,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pageLang, VARY_LANG } from "../_shared/lang.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -102,25 +100,6 @@ async function fetchRecapData(
   return { profile, recap, watchById };
 }
 
-function emptyState(supabaseUrl: string, title: string, icon: string, heading: string, sub: string, status: number) {
-  const html = htmlPage(
-    title,
-    sub,
-    `${supabaseUrl}/functions/v1/share-recap?img=1`,
-    "https://wrotate.com/open",
-    `<div class="state-wrap">
-      <div class="state-icon">${icon}</div>
-      <div class="state-title">${esc(heading)}</div>
-      <div class="state-sub">${esc(sub)}</div>
-      <div class="cta-wrap"><a href="https://wrotate.com/open" class="btn-cta">Open WRotate</a></div>
-    </div>`,
-  );
-  return new Response(html, {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
-  });
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
@@ -174,71 +153,24 @@ serve(async (req) => {
   }
 
   // --- HTML page mode ---
+  // The reader's language: ?lang=, else the browser's; a preview fetcher gets
+  // English. Every HTML answer says so in Vary, since the 200 is cacheable.
+  // (The SVG above is always English: only preview fetchers ask for it.)
+  const lang = pageLang(url.searchParams.get("lang"), req.headers.get("accept-language"), req.headers.get("user-agent"));
+  const HTML_HEADERS = { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Vary": VARY_LANG };
+
   if (!ok) {
-    return emptyState(supabaseUrl, "WRotate", "⌚", "Nothing to show here",
-      "This link is missing a collector or a month.", 400);
+    return new Response(recapStatePage("bad", supabaseUrl, lang), { status: 400, headers: HTML_HEADERS });
   }
   if (!data) {
-    return emptyState(supabaseUrl, "Private — WRotate", "🔒", "Not available",
-      "This collection is private or no longer available.", 404);
+    return new Response(recapStatePage("private", supabaseUrl, lang), { status: 404, headers: HTML_HEADERS });
   }
 
-  const { profile, recap, watchById } = data;
-  const displayName = profile.display_name || profile.username || "Someone";
-
-  if (!recap.totalWears) {
-    return emptyState(supabaseUrl, `${displayName}'s ${monthLabel(recap.period)} — WRotate`, "⌚",
-      "No wears that month", `${displayName} didn't log any wears in ${monthLabel(recap.period)}.`, 200);
-  }
-
-  const topWatch = recap.top[0] ? watchById[recap.top[0].id] : null;
-  const topName = topWatch ? `${topWatch.brand || ""} ${topWatch.name || ""}`.trim() : null;
-  const { ogTitle, ogDescription } = buildRecapOg(displayName, recap, topName);
-
-  // The og:image URL has to be fetchable by a crawler with no session, so it
-  // repeats whichever credential the page itself was opened with — the token
-  // for a shared link, the username for a public one.
-  const q = token
-    ? `t=${encodeURIComponent(token)}`
-    : `u=${encodeURIComponent(username as string)}&m=${encodeURIComponent(recap.period)}`;
-  const ogImage = `${supabaseUrl}/functions/v1/share-recap?img=1&${q}`;
-  const canonicalUrl = `${supabaseUrl}/functions/v1/share-recap?${q}`;
-
-  const podium = recap.top.map((t) => {
-    const w = watchById[t.id] || {};
-    const art = w.image
-      ? `<img src="${esc(w.image)}" alt="" loading="lazy">`
-      : esc(initials(w.brand || "", w.name || ""));
-    return `<div class="rc-item">
-      <div class="rc-thumb">${art}</div>
-      <div class="rc-name">${esc(w.name || "—")}</div>
-      <div class="rc-count">${t.count} wear${t.count !== 1 ? "s" : ""}</div>
-    </div>`;
-  }).join("");
-
-  const streakHtml = recap.streak
-    ? `<div class="rc-streak">
-         <div class="rc-streak-val">${recap.streak.days}</div>
-         <div class="rc-streak-lbl">days logged in a row</div>
-       </div>`
-    : "";
-
-  const bodyHtml = `
-    <div class="rc-eyebrow">Month in review</div>
-    <div class="rc-month">${esc(monthLabel(recap.period, false))}</div>
-    <div class="rc-who">${esc(displayName)} · ${esc(recap.period.slice(0, 4))}</div>
-    <div class="rc-stats">
-      <div class="rc-stat"><div class="rc-stat-val">${recap.totalWears}</div><div class="rc-stat-lbl">Wears</div></div>
-      <div class="rc-stat"><div class="rc-stat-val">${recap.uniqueCount}</div><div class="rc-stat-lbl">Watches</div></div>
-      <div class="rc-stat"><div class="rc-stat-val">${recap.wearDays}</div><div class="rc-stat-lbl">Days</div></div>
-    </div>
-    ${podium ? `<div class="rc-sect">Most worn</div><div class="rc-podium">${podium}</div>` : ""}
-    ${streakHtml}
-    <div class="cta-wrap"><a href="https://wrotate.com/open" class="btn-cta">Track your own rotation</a></div>`;
-
-  const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml);
+  const html = renderRecapPage({ ...data, supabaseUrl, token, username }, lang);
+  // A month with no wears is a page of its own and, as before, is not cached.
+  if (!data.recap.totalWears) return new Response(html, { status: 200, headers: HTML_HEADERS });
   return new Response(html, {
     status: 200,
-    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" },
+    headers: { ...HTML_HEADERS, "Cache-Control": "public, max-age=300" },
   });
 });

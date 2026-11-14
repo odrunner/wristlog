@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import {
   applyUnsubscribe,
+  errorPage,
   successPage,
   hmacSign,
   renderPage,
@@ -14,12 +15,15 @@ import {
   verifyHmacAny,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
-import { pickLang } from "../_shared/lang.ts";
+import { pickLang, requestLang } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
 
-function htmlPage(title: string, body: string): Response {
-  return new Response(renderPage(title, body), {
+// `byRequest` marks a page whose language came from the request's headers
+// rather than a profile, so a cache must not hand it to the next reader.
+function htmlPage(page: { title: string; body: string }, lang: Lang, byRequest = false): Response {
+  return new Response(renderPage(page.title, page.body, lang), {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: { "Content-Type": "text/html; charset=utf-8", ...(byRequest ? { "Vary": "Accept-Language" } : {}) },
   });
 }
 
@@ -28,9 +32,12 @@ serve(async (req) => {
   const uid = url.searchParams.get("uid");
   const cat = url.searchParams.get("cat");
   const sig = url.searchParams.get("sig");
+  // Until we know whose link this is, the page follows the request: ?lang=,
+  // else the browser's Accept-Language, else English.
+  const reqLang = requestLang(url.searchParams.get("lang"), req.headers.get("accept-language"));
 
   if (!uid || !cat || !sig) {
-    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link appears to be incomplete. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
+    return htmlPage(errorPage(reqLang, "incomplete"), reqLang, true);
   }
 
   // Verification keys (UNSUBSCRIBE_HMAC_SECRET; see unsubscribeKeys). keys[0]
@@ -39,7 +46,7 @@ serve(async (req) => {
   const hmacKey = keys[0] ?? "";
   const valid = await verifyHmacAny(uid, cat, sig, keys);
   if (!valid) {
-    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link has expired or is invalid. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
+    return htmlPage(errorPage(reqLang, "expired"), reqLang, true);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -54,8 +61,10 @@ serve(async (req) => {
     .single();
 
   if (profileErr || !profile) {
-    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't find your account. Open WRotate to manage your preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
+    return htmlPage(errorPage(reqLang, "noAccount"), reqLang, true);
   }
+  // From here on: the language the member chose in the app.
+  const lang = pickLang(profile.language);
 
   const prefs = applyUnsubscribe(profile.email_prefs || {}, cat);
 
@@ -66,7 +75,7 @@ serve(async (req) => {
 
   if (updateErr) {
     console.error("[email-unsubscribe] Update error:", updateErr);
-    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't update your preferences. Try again or open WRotate to manage them manually.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
+    return htmlPage(errorPage(lang, "noUpdate"), lang);
   }
 
   // Log the unsubscribe so the admin portal can trend day-over-day (best-effort).
@@ -85,7 +94,5 @@ serve(async (req) => {
     : null;
 
   console.log(`[email-unsubscribe] ${uid} unsubscribed from ${cat}`);
-  // In the language the member chose in the app.
-  const page = successPage(pickLang(profile.language), cat, allHref);
-  return htmlPage(page.title, page.body);
+  return htmlPage(successPage(lang, cat, allHref), lang);
 });

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
-import { scriptStrings, templateStrings, runtimeSource, stamp, builtSource, hashOf, liveDict, languages, translatable, EXTRA_SOURCES } from '../scripts/i18n.mjs';
+import { scriptStrings, templateStrings, runtimeSource, stamp, builtSource, hashOf, liveDict, languages, translatable, EXTRA_SOURCES, PAGES, PAGE_RUNTIME, pageRuntimeSource, inlineScripts } from '../scripts/i18n.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(join(root, 'index.html'), 'utf8');
@@ -139,6 +139,87 @@ describe('i18n: extraction', () => {
   });
   it('stamps the hash into the loader URL only', () => {
     expect(stamp("{ es: 'i18n/es.js?v=00000000' } // i18n/es.json", 'es', 'abcd1234')).toBe("{ es: 'i18n/es.js?v=abcd1234' } // i18n/es.json");
+  });
+});
+
+// A shared post, a public profile and the stub behind every email button: same dictionary,
+// the app's own runtime as a generated file, and nothing at all for an English visitor.
+describe('i18n: the pages outside the app', () => {
+  const pages = Object.fromEntries(PAGES.map((p) => [p, readFileSync(join(root, p), 'utf8')]));
+  const runtime = readFileSync(join(root, PAGE_RUNTIME), 'utf8');
+  it('cover the post, the profile and the email landing stub', () => {
+    expect(PAGES).toEqual(['p/index.html', 'profile/index.html', 'open.html']);
+  });
+  for (const p of PAGES) {
+    it(`${p}: requests nothing unless a supported language was chosen`, () => {
+      const loader = /var FILES = \{[^}]*\};[\s\S]*?document\.write\([^\n]*\n/.exec(pages[p])[0];
+      const run = (stored, search = '') => {
+        const writes = [], doc = { documentElement: {}, write: (x) => writes.push(x) };
+        new Function('localStorage', 'location', 'document', loader)(
+          { getItem: () => stored, setItem: (k, v) => { stored = v; } }, { search }, doc);
+        return { writes, lang: doc.documentElement.lang };
+      };
+      for (const none of [null, 'en', 'xx']) expect(run(none)).toEqual({ writes: [], lang: undefined });
+      const de = run('de');
+      expect(de.lang).toBe('de');
+      // Dictionary first, then the runtime that reads it: two blocking scripts, nothing else.
+      expect(de.writes).toHaveLength(1);
+      expect(de.writes[0]).toMatch(/^<script src=\/i18n\/de\.js\?v=[0-9a-f]{8}><\/script><script src=\/i18n\/page\.js\?v=[0-9a-f]{8}><\/script>$/);
+      expect(run(null, '?id=1&lang=it').lang).toBe('it');
+    });
+    it(`${p}: carries the current hash of every language file and of the runtime`, () => {
+      for (const lang of languages()) expect(pages[p]).toContain(`'i18n/${lang}.js?v=${hashOf(readFileSync(join(root, `i18n/${lang}.js`), 'utf8'))}'`);
+      expect(pages[p]).toContain(`'${PAGE_RUNTIME}?v=${hashOf(runtime)}'`);
+    });
+    it(`${p}: its labels are in the dictionary`, () => {
+      const keys = json('i18n/en.keys.json'), src = inlineScripts(pages[p]);
+      for (const k of [...scriptStrings(src), ...templateStrings(src)]) expect(keys, k).toContain(k);
+    });
+  }
+  it('the runtime file is the app\'s own, generated: never a second copy to maintain', () => {
+    expect(runtime).toBe(pageRuntimeSource(html));
+    expect(runtime).toContain(runtimeSource(html));
+    expect(runtime).toContain('new MutationObserver(');
+    // Stale after any change to the runtime in index.html, and --check says so.
+    expect(pageRuntimeSource(html.replace('function i18nIsMine(k)', 'function i18nIsMine(k) /* changed */'))).not.toBe(runtime);
+  });
+  it('the runtime does nothing, and touches nothing, without a dictionary', () => {
+    expect(() => new Function('window', 'document', 'MutationObserver', runtime)({}, undefined, undefined)).not.toThrow();
+  });
+  it('the static labels and the ones scripts draw are extracted', () => {
+    const keys = json('i18n/en.keys.json');
+    for (const k of ['Loading post…', 'Loading profile…', 'Open App', 'Redirecting to WRotate...', 'Open WRotate', 'Sign in to view this post',
+      'Private profile', 'Collection ({0})', '{0} wear', '{0} wears', 'This collection is private. Follow {0} on WRotate to see their watches.',
+      'No user found with username "{0}".', 'It may be private, or it may have been removed.']) expect(keys, k).toContain(k);
+  });
+  it('dates follow the chosen language and stay en-US in English', () => {
+    expect(pages['p/index.html']).toContain("toLocaleDateString(I18N || 'en-US'");
+    for (const p of PAGES) expect(pages[p].match(/toLocale\w+\('en-US'/g)).toBeNull();
+  });
+  // What a member wrote goes through escUser() (or mine() inside an attribute or a sentence),
+  // never through the plain escape that leaves it open to the translator.
+  it('text a member wrote is never handed to the translator', () => {
+    const mineFields = /\$\{esc(?:Html)?\((?!mine\()[^`)]*?\b(?:caption|trimmedWatch|memberName|member|profile\.bio|profile\.display_name|w\.brand|w\.name|mostWorn\.\w+|log\.notes)\b/g;
+    const hits = (p) => (inlineScripts(pages[p]).match(mineFields) || []);
+    expect(hits('p/index.html')).toEqual([]);
+    expect(hits('profile/index.html')).toEqual([]);
+    // The helpers are plain escapes for an English visitor: no marker, no call into a runtime that is not there.
+    for (const [p, esc] of [['p/index.html', 'esc'], ['profile/index.html', 'escHtml']]) {
+      const src = inlineScripts(pages[p]);
+      const helpers = /const I18N = [\s\S]*?\n    function escUser[^\n]*\n/.exec(src)[0];
+      const make = (WR_I18N, seen) => new Function('window', 'i18nMine', esc, helpers + '; return { escUser, mine, I18N };')(
+        { WR_I18N }, (x) => { seen.push(x); return x; }, (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+      const en = make(undefined, []);
+      expect([en.I18N, en.escUser('Steel & <Co>'), en.escUser(''), en.escUser(null), en.mine('Steel')]).toEqual([null, 'Steel &amp; &lt;Co>', '', '', 'Steel']);
+      const seen = [], de = make({ lang: 'de' }, seen);
+      expect(de.escUser('Steel & <Co>')).toBe('<!--u-->Steel &amp; &lt;Co><!--/u-->');
+      expect(de.escUser('')).toBe('');
+      expect(de.mine('Leather')).toBe('Leather');
+      expect(seen).toEqual(['Steel & <Co>', 'Leather']);
+    }
+    // The avatar and the @username hold nothing but the member's own letters.
+    expect(pages['profile/index.html'].match(/<div class="avatar" data-i18n-skip>/g)).toHaveLength(2);
+    expect(pages['profile/index.html'].match(/<div class="username-lbl" data-i18n-skip>/g)).toHaveLength(2);
   });
 });
 

@@ -113,8 +113,11 @@ serve(async (req) => {
 
     const recipientEmail = authUser.user.email;
 
+    // In the language the recipient chose in the app; English when none is recorded.
+    const lang = pickLang(profile.language);
+
     // Look up actor's display name
-    let actorName = "Someone";
+    let actorName = resolveActorName(null, lang);
     if (actor_id) {
       const { data: actor } = await supabase
         .from("profiles")
@@ -122,7 +125,7 @@ serve(async (req) => {
         .eq("id", actor_id)
         .single();
       if (actor) {
-        actorName = resolveActorName(actor);
+        actorName = resolveActorName(actor, lang);
       }
     }
 
@@ -158,8 +161,6 @@ serve(async (req) => {
     }
 
     // Build email content
-    // In the language the recipient chose in the app; English when none is recorded.
-    const lang = pickLang(profile.language);
     const content = buildEmailContent(type, actorName, commentBody, mentionSource, lang);
     if (!content) {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });

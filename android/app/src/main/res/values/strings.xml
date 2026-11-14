@@ -3,4 +3,9 @@
     <string name="shortcut_logwear">Log Wear</string>
     <string name="shortcut_measure">Measure</string>
     <string name="shortcut_post">New Post</string>
+    <string name="notification_channel_name">Notifications</string>
+    <string name="photo_chooser_title">Add a photo</string>
+    <string name="offline_title">No Connection</string>
+    <string name="offline_message">Check your internet connection and try again.</string>
+    <string name="offline_retry">Try Again</string>
 </resources>

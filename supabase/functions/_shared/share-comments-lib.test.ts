@@ -131,3 +131,62 @@ Deno.test("buildCommentEmail: every language has both kinds, escapes content, le
   assertEquals(buildCommentEmail("collection", { name: "a", body: "b" }, null, "https://u"),
     buildCommentEmail("collection", { name: "a", body: "b" }, null, "https://u", "en"));
 });
+
+// ---- languages: the comment box follows the page, not the link's owner ----
+import { jsStr } from "./share-comments-lib.ts";
+
+Deno.test("relativeTime in another language; English unchanged", () => {
+  const now = Date.parse("2026-08-22T12:00:00Z");
+  assertEquals(relativeTime("2026-08-22T11:59:40Z", now, "fr"), "à l'instant");
+  assertEquals(relativeTime("2026-08-22T11:55:00Z", now, "de"), "vor 5 Min.");
+  assertEquals(relativeTime("2026-08-22T09:00:00Z", now, "tr"), "3 sa önce");
+  assertEquals(relativeTime("2026-08-20T12:00:00Z", now, "it"), "2 g fa");
+  assertEquals(relativeTime("2026-07-01T12:00:00Z", now, "de"), "1. Juli 2026", "an old comment gets the locale's date");
+  assertEquals(relativeTime("2026-07-01T12:00:00Z", now, "en"), "2026-07-01");
+  assertEquals(relativeTime("garbage", now, "es"), "");
+});
+
+Deno.test("validateComment gives its reason in the commenter's language", () => {
+  assertEquals(validateComment({ name: "", body: "x" }, "de"), { ok: false, reason: "Bitte gib deinen Namen an" });
+  assertEquals(validateComment({ name: "A", body: " " }, "es"), { ok: false, reason: "Escribe un comentario" });
+  assertEquals(validateComment({ name: "a".repeat(41), body: "x" }, "fr"), { ok: false, reason: "Le nom est trop long (40 caractères maximum)" });
+  assertEquals(validateComment({ name: "A", body: "x".repeat(501) }, "pt"), { ok: false, reason: "O comentário é demasiado longo (máximo de 500 caracteres)" });
+  assertEquals(validateComment({ name: " Sarah ", body: "Hi" }, "tr"), { ok: true, name: "Sarah", body: "Hi" });
+});
+
+Deno.test("jsStr writes a safe single-quoted literal", () => {
+  assertEquals(jsStr("just now"), "'just now'");
+  assertEquals(jsStr("à l'instant"), "'à l\\'instant'");
+  assertEquals(jsStr("a\\b</script>\n"), "'a\\\\b<\\/script>\\n'");
+});
+
+Deno.test("commentsSectionHtml in German: form, thread and the script's own strings", () => {
+  const now = Date.parse("2026-08-22T12:00:00Z");
+  const html = commentsSectionHtml("wishlist", "tok", [{ id: "1", name: "Sarah", body: "Nice <b>", created_at: "2026-08-22T11:00:00Z" }], now, "de");
+  assertStringIncludes(html, '<div class="sc-title">Kommentare (1)</div>');
+  assertStringIncludes(html, '<label for="sc-name">Dein Name</label>');
+  assertStringIncludes(html, 'placeholder="Schreib etwas zu diesen Uhren…"');
+  assertStringIncludes(html, "Sichtbar für alle, die diesen Link haben.");
+  assertStringIncludes(html, '<span class="sc-time">vor 1 Std.</span>');
+  assertStringIncludes(html, "|| 'Dein Kommentar konnte nicht gepostet werden. Bitte versuch es noch einmal.'; return;");
+  assertStringIncludes(html, "+ '&lang=de', {");
+  assertStringIncludes(html, "Nice &lt;b&gt;", "the comment itself is left as written");
+  assertStringIncludes(commentsSectionHtml("collection", "tok", [], now, "de"), "Noch keine Kommentare — schreib den ersten.");
+});
+
+Deno.test("commentsSectionHtml: English is untouched and posts no lang; every language's script parses", () => {
+  const now = Date.parse("2026-08-22T12:00:00Z");
+  const c = [{ id: "1", name: "S", body: "b", created_at: "2026-08-22T11:59:59Z" }];
+  assertEquals(commentsSectionHtml("wishlist", "tok", c, now, "en"), commentsSectionHtml("wishlist", "tok", c, now));
+  const en = commentsSectionHtml("wishlist", "tok", c, now);
+  assertEquals(en.includes("&lang="), false);
+  assertStringIncludes(en, "fetch(location.pathname + '?t=' + encodeURIComponent(payload.t), {");
+  assertStringIncludes(en, '<span class="sc-time">just now</span></div><div class="sc-body">\' + esc(c.body)');
+  for (const lang of LANGS) {
+    const html = commentsSectionHtml("wishlist", "tok", c, now, lang);
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html);
+    assert(script, lang);
+    new Function(script![1]);
+    assertEquals(/\{[a-z]\}|undefined/.test(html.replace(/<script>[\s\S]*?<\/script>/, "")), false, lang);
+  }
+});

@@ -228,3 +228,93 @@ Deno.test("linkDomain strips www and refuses an unsafe scheme", () => {
   assertEquals(linkDomain("javascript:alert(1)"), "");
   assertEquals(linkDomain(null), "");
 });
+
+// ── Languages ────────────────────────────────────────────────────────────────
+// The golden files are the page exactly as it was served before it learned any
+// other language (captured from the pre-change function, 2026-11-14). English,
+// and every request with no usable language, must still produce them byte for
+// byte.
+const golden = (name: string) => Deno.readTextFileSync(new URL(`./golden/${name}.html`, import.meta.url));
+const API = "https://api.wrotate.com";
+const PROFILE = { id: "u1", username: "alice", display_name: "Alice <B> & Co", bio: 'Collector of "things"', avatar_url: null, is_official: true };
+const WATCHES = [
+  { id: "w1", brand: "Rolex", name: "Submariner", ref: "124060", image: "https://x/sub.jpg", url: "https://www.chrono24.com/rolex/x" },
+  { id: "w2", brand: "Omega", name: "Speedmaster", ref: null, image: null, url: null },
+  { id: "w3", brand: "", name: "", ref: "", image: null, url: "javascript:alert(1)" },
+];
+const NOW = Date.parse("2026-11-14T12:00:00Z");
+const COMMENTS = [
+  { id: "c1", name: "Sarah", body: "Love the <Daytona>!", created_at: "2026-11-14T11:59:40Z" },
+  { id: "c2", name: "Bob", body: "Nice", created_at: "2026-11-14T11:15:00Z" },
+  { id: "c3", name: "Cy", body: "Old", created_at: "2026-11-14T02:00:00Z" },
+  { id: "c4", name: "Di", body: "Older", created_at: "2026-11-01T02:00:00Z" },
+  { id: "c5", name: "Ed", body: "Oldest", created_at: "2026-01-01T02:00:00Z" },
+];
+const LABEL = "For my <dealer>\nBudget 10k";
+import { renderSharePage, shareStatePage } from "./lib.ts";
+import { LANGS } from "../_shared/lang.ts";
+
+const SHARED = { supabaseUrl: API, token: "tok", profile: PROFILE, items: WATCHES, label: LABEL, comments: COMMENTS, nowMs: NOW };
+const EMPTIED = { supabaseUrl: API, token: "tok", profile: { ...PROFILE, display_name: null, username: null }, items: [], label: LABEL, comments: [], nowMs: NOW };
+
+Deno.test("share-wishlist — English pages are byte-identical to the pre-translation pages", () => {
+  assertEquals(renderSharePage("wishlist", SHARED), golden("wishlist"));
+  assertEquals(renderSharePage("wishlist", SHARED, "en"), golden("wishlist"));
+  assertEquals(renderSharePage("wishlist", EMPTIED), golden("wishlist-emptied"));
+  assertEquals(shareStatePage("wishlist", "missing", API), golden("missing"));
+  assertEquals(shareStatePage("wishlist", "dead", API), golden("dead"));
+});
+
+Deno.test("share-wishlist — German page: German chrome and comment form, lang=de, the member's words untouched", () => {
+  const html = renderSharePage("wishlist", SHARED, "de");
+  assertStringIncludes(html, '<html lang="de">');
+  assertStringIncludes(html, "<title>Wunschliste von Alice &lt;B&gt; &amp; Co — WRotate</title>");
+  assertStringIncludes(html, '<div class="col-name">Wunschliste von Alice &lt;B&gt; &amp; Co</div>');
+  assertStringIncludes(html, '<div class="col-uname">3 Uhren</div>');
+  assertStringIncludes(html, '<div class="sc-title">Kommentare (5)</div>');
+  assertStringIncludes(html, '<label for="sc-name">Dein Name</label>');
+  assertStringIncludes(html, '>Kommentar posten</button>');
+  assertStringIncludes(html, '<span class="sc-time">vor 45 Min.</span>');
+  assertStringIncludes(html, "Geteilt über WRotate · <a href=\"https://wrotate.com/open\">Starte deine eigene Wunschliste</a>");
+  // What the owner and the commenters wrote is left alone.
+  assertStringIncludes(html, '<div class="col-label">For my &lt;dealer&gt;\nBudget 10k</div>');
+  assertStringIncludes(html, '<div class="sc-body">Love the &lt;Daytona&gt;!</div>');
+  assertStringIncludes(html, '<div class="wl-card-ref">Ref. 124060</div>');
+  // The comment is posted back with the page's language, so the server's own
+  // error messages match the form.
+  assertStringIncludes(html, "encodeURIComponent(payload.t) + '&lang=de', {");
+  for (const en of ["Your name", "Post comment", "Visible to everyone", "Start your own wishlist", "just now", "Could not post"]) {
+    assertEquals(html.includes(en), false, en);
+  }
+  assertEquals(html.split("\n").length, golden("wishlist").split("\n").length);
+});
+
+Deno.test("share-wishlist — German state pages and the emptied list", () => {
+  const dead = shareStatePage("wishlist", "dead", API, "de");
+  assertStringIncludes(dead, "<title>Wunschlisten-Link — WRotate</title>");
+  assertStringIncludes(dead, '<div class="state-title">Dieser Wunschlisten-Link ist nicht mehr verfügbar</div>');
+  assertStringIncludes(shareStatePage("wishlist", "missing", API, "de"), "Keine Wunschliste angegeben");
+  const html = renderSharePage("wishlist", EMPTIED, "de");
+  assertStringIncludes(html, "Wunschliste von Jemand");
+  assertStringIncludes(html, "Auf dieser Liste ist nichts mehr");
+  assertStringIncludes(html, "Noch keine Kommentare — schreib den ersten.");
+});
+
+Deno.test("share-wishlist — every language renders with its own lang attribute, no leftover hole, a script that parses", () => {
+  for (const lang of LANGS) {
+    for (const html of [renderSharePage("wishlist", SHARED, lang), renderSharePage("wishlist", EMPTIED, lang), shareStatePage("wishlist", "missing", API, lang), shareStatePage("wishlist", "dead", API, lang)]) {
+      assertStringIncludes(html, `<html lang="${lang}">`);
+      assertEquals(/\{[a-z]\}|undefined/.test(html.replace(/<style>[\s\S]*?<\/style>/g, "").replace(/<script>[\s\S]*?<\/script>/g, "")), false, lang);
+      // French and Italian strings carry apostrophes into the inline script.
+      const script = /<script>([\s\S]*?)<\/script>/.exec(html);
+      if (script) new Function(script[1]);
+    }
+  }
+});
+
+Deno.test("buildWishlistOg — follows the language; the og:image SVG stays English", () => {
+  const og = buildWishlistOg("Ana", " regalo ", [W("1", "Rolex", "Daytona")], "es");
+  assertEquals(og.ogTitle, "Lista de deseos de Ana — WRotate");
+  assertEquals(og.ogDescription, "1 reloj · regalo · Rolex Daytona");
+  assertStringIncludes(generateWishlistOgSvg("Ozgur", []), "Ozgur's Wishlist");
+});

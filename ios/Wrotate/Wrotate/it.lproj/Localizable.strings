@@ -1,0 +1,9 @@
+/* Home-screen quick actions (QuickActionManager.swift) */
+"Log Wear" = "Registra utilizzo";
+"Measure" = "Misura";
+"New Post" = "Nuovo post";
+
+/* Offline screen (ContentView.swift, OfflineView) */
+"No Connection" = "Nessuna connessione";
+"Check your internet connection and try again." = "Controlla la connessione a internet e riprova.";
+"Try Again" = "Riprova";

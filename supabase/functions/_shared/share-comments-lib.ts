@@ -1,6 +1,7 @@
-import { aiNote, fill, SHELL_STRINGS } from "./lang.ts";
+import { aiNote, fill, LOCALES, num, SHELL_STRINGS } from "./lang.ts";
 import type { Lang } from "./lang.ts";
 import { SHARE_COMMENT_STRINGS } from "./share-comment-strings.ts";
+import { SHARE_STRINGS } from "./share-strings.ts";
 // share-comments — pure logic shared by share-wishlist and share-watches.
 // Comments are left by recipients of a share link (usually no account), so the
 // name is typed. The thread is PUBLIC to anyone holding the link. Everything that
@@ -45,14 +46,17 @@ export function cleanText(raw: unknown): string {
     .trim();
 }
 
-export function validateComment(input: { name?: unknown; body?: unknown } | null | undefined):
+// `lang` is the commenter's (the page they posted from), for the reason shown
+// back to them under the form.
+export function validateComment(input: { name?: unknown; body?: unknown } | null | undefined, lang: Lang = "en"):
   { ok: true; name: string; body: string } | { ok: false; reason: string } {
+  const S = SHARE_STRINGS[lang].comments;
   const name = cleanText(input?.name);
   const body = cleanText(input?.body);
-  if (!name) return { ok: false, reason: "Please add your name" };
-  if (name.length > NAME_MAX) return { ok: false, reason: `Name is too long (${NAME_MAX} characters max)` };
-  if (!body) return { ok: false, reason: "Please write a comment" };
-  if (body.length > BODY_MAX) return { ok: false, reason: `Comment is too long (${BODY_MAX} characters max)` };
+  if (!name) return { ok: false, reason: S.needName };
+  if (name.length > NAME_MAX) return { ok: false, reason: fill(S.nameLong, { n: String(NAME_MAX) }) };
+  if (!body) return { ok: false, reason: S.needBody };
+  if (body.length > BODY_MAX) return { ok: false, reason: fill(S.bodyLong, { n: String(BODY_MAX) }) };
   return { ok: true, name, body };
 }
 
@@ -100,28 +104,42 @@ export function isRateLimited(
   return !!row && row.window_start > windowStartIso && row.request_count >= limit;
 }
 
-export function relativeTime(iso: string, nowMs: number): string {
+export function relativeTime(iso: string, nowMs: number, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang].comments;
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "";
   const s = Math.max(0, Math.floor((nowMs - t) / 1000));
-  if (s < 60) return "just now";
+  if (s < 60) return S.now;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return fill(S.min, { n: num(lang, m) });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return fill(S.hour, { n: num(lang, h) });
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d} d ago`;
-  return iso.slice(0, 10);
+  if (d < 30) return fill(S.day, { n: num(lang, d) });
+  // English keeps the bare ISO day it always showed; the others get the same
+  // UTC day written their own way.
+  if (lang === "en") return iso.slice(0, 10);
+  return new Date(t).toLocaleDateString(LOCALES[lang], { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+// One of our strings as a single-quoted JS literal inside the page's inline
+// <script>. French and Italian text carries apostrophes ("à l'instant").
+export function jsStr(s: string): string {
+  return "'" + s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/<\//g, "<\\/").replace(/\r?\n/g, "\\n") + "'";
 }
 
 // The thread + form that both share pages append under the watch grid. Styles
 // are inlined here so neither page's <style> needs to know about comments.
 // The inline script POSTs JSON to the page's own path (same origin, no CORS)
 // and appends the returned comment; the poster's name is remembered locally.
-export function commentsSectionHtml(kind: ShareKind, token: string, comments: PublicComment[], nowMs: number): string {
+// `lang` is the page's language (pageLang). A translated page also sends it
+// back with the comment (`&lang=`), so the server's own error messages match.
+export function commentsSectionHtml(kind: ShareKind, token: string, comments: PublicComment[], nowMs: number, lang: Lang = "en"): string {
+  const S = SHARE_STRINGS[lang].comments;
+  const postLang = lang === "en" ? "" : ` + '&lang=${lang}'`;
   const items = (comments || []).map((c) => `
       <div class="sc-item">
-        <div class="sc-meta"><span class="sc-name">${esc(c.name)}</span> · <span class="sc-time">${esc(relativeTime(c.created_at, nowMs))}</span></div>
+        <div class="sc-meta"><span class="sc-name">${esc(c.name)}</span> · <span class="sc-time">${esc(relativeTime(c.created_at, nowMs, lang))}</span></div>
         <div class="sc-body">${esc(c.body)}</div>
       </div>`).join("");
   const n = (comments || []).length;
@@ -145,17 +163,17 @@ export function commentsSectionHtml(kind: ShareKind, token: string, comments: Pu
       .sc-err { font-size: .8rem; color: #c0392b; margin-top: .4rem; min-height: 1em; }
     </style>
     <section class="sc-wrap" id="sc-wrap" data-kind="${esc(kind)}" data-token="${esc(token)}">
-      <div class="sc-title">Comments${n ? ` (${n})` : ""}</div>
-      <div id="sc-list">${items || `<div class="sc-empty" id="sc-empty">No comments yet — be the first.</div>`}</div>
+      <div class="sc-title">${S.title}${n ? ` (${num(lang, n)})` : ""}</div>
+      <div id="sc-list">${items || `<div class="sc-empty" id="sc-empty">${S.empty}</div>`}</div>
       <form class="sc-form" id="sc-form" autocomplete="off">
-        <label for="sc-name">Your name</label>
-        <input id="sc-name" name="name" maxlength="${NAME_MAX}" placeholder="So they know who this is from" required>
-        <label for="sc-body">Comment</label>
-        <textarea id="sc-body" name="body" maxlength="${BODY_MAX}" placeholder="Say something about these watches…" required></textarea>
+        <label for="sc-name">${S.name}</label>
+        <input id="sc-name" name="name" maxlength="${NAME_MAX}" placeholder="${S.namePh}" required>
+        <label for="sc-body">${S.body}</label>
+        <textarea id="sc-body" name="body" maxlength="${BODY_MAX}" placeholder="${S.bodyPh}" required></textarea>
         <div class="sc-hp" aria-hidden="true"><label for="sc-hp">Website</label><input id="sc-hp" name="hp" tabindex="-1" autocomplete="off"></div>
-        <div class="sc-note">Visible to everyone who has this link.</div>
+        <div class="sc-note">${S.note}</div>
         <div class="sc-err" id="sc-err"></div>
-        <button type="submit" class="sc-btn" id="sc-submit">Post comment</button>
+        <button type="submit" class="sc-btn" id="sc-submit">${S.submit}</button>
       </form>
     </section>
     <script>
@@ -169,18 +187,18 @@ export function commentsSectionHtml(kind: ShareKind, token: string, comments: Pu
       form.addEventListener('submit', function (ev) {
         ev.preventDefault(); err.textContent = ''; btn.disabled = true;
         var payload = { t: wrap.getAttribute('data-token'), name: nameEl.value, body: bodyEl.value, hp: document.getElementById('sc-hp').value };
-        fetch(location.pathname + '?t=' + encodeURIComponent(payload.t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        fetch(location.pathname + '?t=' + encodeURIComponent(payload.t)${postLang}, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
           .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
           .then(function (res) {
             btn.disabled = false;
-            if (!res.j || !res.j.ok) { err.textContent = (res.j && res.j.error) || 'Could not post your comment. Please try again.'; return; }
+            if (!res.j || !res.j.ok) { err.textContent = (res.j && res.j.error) || ${jsStr(S.failed)}; return; }
             var c = res.j.comment; try { localStorage.setItem('wr_sc_name', c.name); } catch (e) {}
             var empty = document.getElementById('sc-empty'); if (empty) empty.remove();
             var div = document.createElement('div'); div.className = 'sc-item';
-            div.innerHTML = '<div class="sc-meta"><span class="sc-name">' + esc(c.name) + '</span> · <span class="sc-time">just now</span></div><div class="sc-body">' + esc(c.body) + '</div>';
+            div.innerHTML = '<div class="sc-meta"><span class="sc-name">' + esc(c.name) + '</span> · <span class="sc-time">${jsStr(S.now).slice(1, -1)}</span></div><div class="sc-body">' + esc(c.body) + '</div>';
             list.appendChild(div); bodyEl.value = '';
           })
-          .catch(function () { btn.disabled = false; err.textContent = 'Could not post your comment. Please try again.'; });
+          .catch(function () { btn.disabled = false; err.textContent = ${jsStr(S.failed)}; });
       });
     })();
     </script>`;

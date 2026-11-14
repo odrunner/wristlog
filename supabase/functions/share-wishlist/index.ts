@@ -14,19 +14,16 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 import { handleCommentPost, loadComments } from "../_shared/share-comments.ts";
-import { commentsSectionHtml } from "../_shared/share-comments-lib.ts";
 import {
-  avatarInnerHtml,
-  buildWishlistOg,
-  esc,
   generateWishlistOgSvg,
-  htmlPage,
   isShareUsable,
-  SHARE_SELECT,
+  renderSharePage,
+  shareStatePage,
   type ShareWatch,
-  wishlistCardsHtml,
+  SHARE_SELECT,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
+import { pageLang, VARY_LANG } from "../_shared/lang.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -84,18 +81,6 @@ async function bumpViews(db: any, token: string) {
   } catch (_e) { /* ignore */ }
 }
 
-function statePage(supabaseUrl: string, title: string, icon: string, heading: string, sub: string) {
-  return htmlPage(
-    title,
-    sub,
-    `${supabaseUrl}/functions/v1/share-wishlist?img=1`,
-    "https://wrotate.com/",
-    `<div class="state-wrap"><div class="state-icon">${icon}</div><div class="state-title">${esc(heading)}</div>
-     <div class="state-sub">${esc(sub)}</div>
-     <div><a href="https://wrotate.com/open" class="btn-cta">Open WRotate</a></div></div>`,
-  );
-}
-
 // Light resolver for the comment POST: the owning user + label of a LIVE share.
 // deno-lint-ignore no-explicit-any
 async function resolveShareOwner(db: any, token: string) {
@@ -136,11 +121,14 @@ serve(async (req) => {
     });
   }
 
+  // The reader's language: ?lang=, else the browser's; a preview fetcher gets
+  // English. Every HTML answer says so in Vary, since the 200 is cacheable.
+  // (The SVG above is always English: only preview fetchers ask for it.)
+  const lang = pageLang(url.searchParams.get("lang"), req.headers.get("accept-language"), req.headers.get("user-agent"));
+  const HTML_HEADERS = { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Vary": VARY_LANG };
+
   if (!token) {
-    return new Response(
-      statePage(supabaseUrl, "WRotate", "⌚", "No wishlist specified", "This link is incomplete. Visit WRotate to explore watch collections."),
-      { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" } },
-    );
+    return new Response(shareStatePage("wishlist", "missing", supabaseUrl, lang), { status: 400, headers: HTML_HEADERS });
   }
 
   // Comments depend only on the token, not on the share data — fetch both in
@@ -151,32 +139,10 @@ serve(async (req) => {
   ]);
 
   if (!data) {
-    return new Response(
-      statePage(supabaseUrl, "Wishlist link — WRotate", "🔒", "This wishlist link is no longer available", "The owner may have revoked it, or it never existed."),
-      { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" } },
-    );
+    return new Response(shareStatePage("wishlist", "dead", supabaseUrl, lang), { status: 404, headers: HTML_HEADERS });
   }
 
-  const { profile, items, label } = data;
-  const displayName = profile.display_name || profile.username || "Someone";
-  const { ogTitle, ogDescription } = buildWishlistOg(displayName, label, items);
-  const ogImage = `${supabaseUrl}/functions/v1/share-wishlist?img=1&t=${encodeURIComponent(token)}`;
-  const canonicalUrl = `${supabaseUrl}/functions/v1/share-wishlist?t=${encodeURIComponent(token)}`;
-
-  const n = items.length;
-  const body = `
-    <div class="col-hero">
-      <div class="col-avatar">${avatarInnerHtml(profile.avatar_url, displayName)}</div>
-      <div class="col-name">${esc(displayName)}'s wishlist</div>
-      <div class="col-uname">${n} watch${n !== 1 ? "es" : ""}</div>
-      ${label ? `<div class="col-label">${esc(label)}</div>` : ""}
-    </div>
-    ${n === 0
-      ? `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">Nothing left in this list</div>
-         <div class="state-sub">The watches on this link are no longer on the owner's wishlist.</div></div>`
-      : `<div class="wl-grid">${wishlistCardsHtml(items)}</div>`}
-    ${commentsSectionHtml("wishlist", token, comments, Date.now())}
-    <div class="foot">Shared from WRotate · <a href="https://wrotate.com/open">Start your own wishlist</a></div>`;
+  const html = renderSharePage("wishlist", { ...data, supabaseUrl, token, comments, nowMs: Date.now() }, lang);
 
   // The counter must outlive the response without delaying it: the runtime may
   // tear the isolate down the moment the body is flushed, dropping the update.
@@ -185,10 +151,10 @@ serve(async (req) => {
   const _bump = bumpViews(db, token);
   if (_rt && typeof _rt.waitUntil === "function") _rt.waitUntil(_bump);
 
-  return new Response(htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, body), {
+  return new Response(html, {
     // Same 60s window as the og:image above, and for the same reason: it is
     // exactly how long a revoked link (or a fresh comment) can lag behind.
     // Siblings without revocable tokens (share-collection/share-post) use 300.
-    headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=60" },
+    headers: { ...HTML_HEADERS, "Cache-Control": "public, max-age=60" },
   });
 });

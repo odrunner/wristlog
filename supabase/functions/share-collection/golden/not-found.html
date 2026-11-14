@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Collection — WRotate</title>
+  <meta property="og:site_name" content="WRotate">
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="Private Collection — WRotate">
+  <meta property="og:description" content="This collection is private or no longer available.">
+  <meta property="og:image" content="https://api.wrotate.com/functions/v1/share-collection?img=1&amp;u=bob">
+  <meta property="og:url" content="https://wrotate.com/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Private Collection — WRotate">
+  <meta name="twitter:description" content="This collection is private or no longer available.">
+  <meta name="twitter:image" content="https://api.wrotate.com/functions/v1/share-collection?img=1&amp;u=bob">
+  <link rel="icon" type="image/svg+xml" href="https://wrotate.com/icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
+      --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
+      --text: #16161e; --muted: #70708a; --radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
+        --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
+        --text: #e6e6f0; --muted: #7a7a95;
+      }
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
+    a { color: var(--gold); text-decoration: none; }
+    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
+    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
+    .topbar-logo:hover { color: var(--gold-lt); }
+    .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .col-hero { text-align: center; padding: 0 0 1.25rem; }
+    .col-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); overflow: hidden; margin: 0 auto .75rem; }
+    .col-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .col-name { font-size: 1.2rem; font-weight: 800; margin-bottom: .15rem; }
+    .col-uname { font-size: .82rem; color: var(--muted); margin-bottom: .4rem; }
+    .col-bio { font-size: .88rem; color: var(--muted); line-height: 1.5; max-width: 340px; margin: 0 auto; }
+    .watch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .watch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .watch-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+    .watch-card-ph { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); }
+    .watch-card-body { padding: .6rem .75rem; }
+    .watch-card-brand { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .watch-card-name { font-size: .85rem; font-weight: 700; margin: .1rem 0; }
+    .watch-card-wears { font-size: .72rem; color: var(--muted); }
+    .link-block { display: block; text-decoration: none; color: inherit; }
+    .state-wrap { text-align: center; padding: 3rem 1rem; }
+    .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+    .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
+    .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; }
+    .btn-cta { display: inline-block; background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .6rem 1.5rem; font-size: .92rem; font-weight: 600; text-decoration: none; font-family: inherit; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="https://wrotate.com/" class="topbar-logo"><img src="https://wrotate.com/icon.svg" alt=""> WRotate</a>
+  </header>
+  <main class="page-wrap">
+    <div class="state-wrap"><div class="state-icon">🔒</div><div class="state-title">Collection not found</div>
+       <div class="state-sub">This collection may be private or no longer available.</div>
+       <div><a href="https://wrotate.com/" class="btn-cta" style="margin-top:1rem">Open WRotate</a></div></div>
+  </main>
+</body>
+</html>

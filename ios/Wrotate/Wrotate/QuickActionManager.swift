@@ -9,19 +9,19 @@ class QuickActionManager {
         UIApplication.shared.shortcutItems = [
             UIApplicationShortcutItem(
                 type: "com.wrotate.logwear",
-                localizedTitle: "Log Wear",
+                localizedTitle: String(localized: "Log Wear"),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "clock.badge.checkmark")
             ),
             UIApplicationShortcutItem(
                 type: "com.wrotate.measure",
-                localizedTitle: "Measure",
+                localizedTitle: String(localized: "Measure"),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "waveform")
             ),
             UIApplicationShortcutItem(
                 type: "com.wrotate.post",
-                localizedTitle: "New Post",
+                localizedTitle: String(localized: "New Post"),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "plus.circle")
             ),

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_logwear">Kullanım kaydet</string>
+    <string name="shortcut_measure">Ölç</string>
+    <string name="shortcut_post">Yeni gönderi</string>
+    <string name="notification_channel_name">Bildirimler</string>
+    <string name="photo_chooser_title">Fotoğraf ekle</string>
+    <string name="offline_title">Bağlantı yok</string>
+    <string name="offline_message">İnternet bağlantını kontrol edip tekrar dene.</string>
+    <string name="offline_retry">Tekrar dene</string>
+</resources>

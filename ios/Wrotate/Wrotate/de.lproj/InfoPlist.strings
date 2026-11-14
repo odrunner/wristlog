@@ -1,0 +1,4 @@
+/* Permission prompts. English source: INFOPLIST_KEY_* in project.pbxproj */
+"NSCameraUsageDescription" = "WRotate benötigt Zugriff auf die Kamera, um deine Uhren zu fotografieren";
+"NSMicrophoneUsageDescription" = "WRotate nutzt das Mikrofon, um die Ganggenauigkeit deiner Uhr anhand ihres Tickens zu messen.";
+"NSPhotoLibraryUsageDescription" = "WRotate benötigt Zugriff auf deine Fotos, um Uhrenbilder hochzuladen";

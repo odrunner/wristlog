@@ -99,7 +99,7 @@ class ShareViewController: UIViewController {
             card.translatesAutoresizingMaskIntoConstraints = false
 
             let label = UILabel()
-            label.text = "✓ Sent to WRotate — open WRotate for next steps"
+            label.text = String(localized: "✓ Sent to WRotate — open WRotate for next steps")
             label.numberOfLines = 0
             label.textAlignment = .center
             label.textColor = .white

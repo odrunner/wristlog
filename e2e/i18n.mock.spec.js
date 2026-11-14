@@ -167,3 +167,36 @@ test.describe('language offer banner', () => {
     });
   });
 });
+
+test('Text a member wrote is never translated, even when it spells a label', async ({ page }) => {
+  await injectSession(page);
+  const mine = { ...SAMPLE_WATCHES[0], id: 'w-mine', brand: 'Steel', name: 'Leather' };
+  await mockSupabase(page, { watches: [mine, ...SAMPLE_WATCHES.slice(1)], logs: [] });
+  await page.goto('/?lang=fr');
+  await waitForAppBoot(page);
+  await navigateTo(page, 'collection');
+  const dict = await page.evaluate(() => window.WR_I18N.dict);
+  expect(dict['Steel']).toBeTruthy();
+  expect(dict['Leather']).toBeTruthy();
+  expect(dict['Steel']).not.toBe('Steel');
+  const text = await page.evaluate(() => document.getElementById('page-collection').innerText);
+  expect(text).toContain('Steel');
+  expect(text).toContain('Leather');
+  expect(text).not.toContain(dict['Steel']);
+  expect(text).not.toContain(dict['Leather']);
+  // The same word as one of our own labels is still translated, and a name inside a
+  // sentence or beside a label is left as written.
+  const out = await page.evaluate(() => {
+    const d = document.createElement('div');
+    d.innerHTML = '<p id="t-label">Steel</p><p id="t-mine">' + escUser('Steel') + '</p>'
+      + '<p id="t-mixed">' + escUser('Steel') + ' · 3 wears</p>';
+    document.body.appendChild(d);
+    return new Promise((r) => setTimeout(() => r({
+      label: d.querySelector('#t-label').textContent, mine: d.querySelector('#t-mine').textContent,
+      mixed: d.querySelector('#t-mixed').textContent, wears: i18nLookup('3 wears'),
+    }), 50));
+  });
+  expect(out.label).toBe(dict['Steel']);
+  expect(out.mine).toBe('Steel');
+  expect(out.mixed).toBe('Steel · ' + out.wears);
+});

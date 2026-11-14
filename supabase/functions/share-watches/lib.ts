@@ -11,10 +11,16 @@ export {
   generateWishlistOgSvg,
   htmlPage,
   isShareUsable,
+  renderSharePage,
+  type SharePageData,
+  shareStatePage,
   type ShareWatch,
   wishlistCardsHtml,
 } from "../share-wishlist/lib.ts";
 import type { ShareWatch } from "../share-wishlist/lib.ts";
+import { count, fill } from "../_shared/lang.ts";
+import type { Lang } from "../_shared/lang.ts";
+import { SHARE_STRINGS } from "../_shared/share-strings.ts";
 
 // The decisive privacy boundary of this feature: the columns the public page is
 // allowed to read out of `watches`. lib.test.ts asserts on it.
@@ -42,22 +48,25 @@ export function sortSharedWatches<T extends { purchase_date?: string | null; cre
   });
 }
 
-export function watchesHeading(displayName: string): string {
-  return `${displayName}'s watches`;
+// English by default: the og:image SVG passes this function as its title line
+// and stays English; the page passes the reader's language.
+export function watchesHeading(displayName: string, lang: Lang = "en"): string {
+  return fill(SHARE_STRINGS[lang].watchesPage.heading, { n: displayName });
 }
 
 export function buildWatchesOg(
   displayName: string,
   label: string | null | undefined,
   items: ShareWatch[],
+  lang: Lang = "en",
 ): { ogTitle: string; ogDescription: string } {
   const n = (items || []).length;
-  const ogTitle = `${watchesHeading(displayName)} — WRotate`;
+  const ogTitle = `${watchesHeading(displayName, lang)} — WRotate`;
   const names = (items || []).slice(0, 3)
     .map((w) => `${w.brand || ""} ${w.name || ""}`.trim())
     .filter(Boolean)
     .join(", ");
-  const parts = [`${n} watch${n !== 1 ? "es" : ""}`];
+  const parts = [count(lang, n, SHARE_STRINGS[lang].watches)];
   const trimmedLabel = (label || "").trim();
   if (trimmedLabel) parts.push(trimmedLabel);
   if (names) parts.push(names);

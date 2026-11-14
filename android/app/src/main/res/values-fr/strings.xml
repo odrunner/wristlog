@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_logwear">Enregistrer un port</string>
+    <string name="shortcut_measure">Mesurer</string>
+    <string name="shortcut_post">Nouvelle publication</string>
+    <string name="notification_channel_name">Notifications</string>
+    <string name="photo_chooser_title">Ajouter une photo</string>
+    <string name="offline_title">Pas de connexion</string>
+    <string name="offline_message">Vérifiez votre connexion Internet et réessayez.</string>
+    <string name="offline_retry">Réessayer</string>
+</resources>

@@ -1,7 +1,8 @@
 // Languages: collect the app's English strings, build each language file, check both.
 //
-//   node scripts/i18n.mjs extract    index.html + model-page.js -> i18n/en.keys.json (needs Playwright's chromium)
-//   node scripts/i18n.mjs build      i18n/<lang>.json -> i18n/<lang>.js, and stamp its ?v= hash in index.html
+//   node scripts/i18n.mjs extract    index.html + model-page.js + PAGES -> i18n/en.keys.json (needs Playwright's chromium)
+//   node scripts/i18n.mjs build      i18n/<lang>.json -> i18n/<lang>.js, index.html's runtime -> i18n/page.js,
+//                                    and stamp their ?v= hashes in index.html and PAGES
 //   node scripts/i18n.mjs status     per language: translated / missing / stale counts
 //   node scripts/i18n.mjs --check    exit 1 if a built file or its stamp is out of date (unit test runs this)
 //
@@ -121,22 +122,54 @@ export function runtimeSource(html) {
   return m[1];
 }
 
-async function markupStrings(html) {
+// The other published pages a member passes through (a shared post, a public profile, the
+// stub every email button lands on). They load the same dictionary, and the runtime as its
+// own generated file, i18n/page.js, only when a language was chosen.
+export const PAGES = ['p/index.html', 'profile/index.html', 'open.html'];
+export const PAGE_RUNTIME = 'i18n/page.js';
+
+// What index.html does right after its first walk: the MutationObserver that translates
+// whatever a script draws later. Taken from the page as written, like the runtime.
+export function observerSource(html) {
+  const m = /\nif \(window\.WR_I18N\) \{\n  i18nWalk\(document\.body, i18nLookup\);\n([\s\S]*?\n  \}\)\.observe\([^\n]*\);\n)\}\n/.exec(html);
+  if (!m) throw new Error('i18n: boot block (walk + MutationObserver) not found in index.html');
+  return m[1];
+}
+// i18n/page.js: index.html's runtime and observer, unchanged, for a page that is not the app.
+// It is loaded from <head>, so the observer starts before <body> exists and translates the
+// markup as the parser adds it (no English flash); the walk at DOMContentLoaded is the
+// safety net. tx(), i18nMine(), i18nWalk() and i18nLookup() are globals, as in the app.
+export function pageRuntimeSource(html) {
+  return '// Generated from index.html (i18n-runtime block + boot observer) by scripts/i18n.mjs. Do not edit.\n'
+    + runtimeSource(html)
+    + '(function () {\n  if (!window.WR_I18N) return;\n  i18nWalk.done = i18nWalk.done || new WeakMap();\n'
+    + observerSource(html)
+    + '  var all = function () { if (document.body) i18nWalk(document.body, i18nLookup); };\n'
+    + "  all();\n  document.addEventListener('DOMContentLoaded', all);\n})();\n";
+}
+// The scripts written into a page (not the ones it loads by src).
+export const inlineScripts = (html) => [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
+
+async function markupStrings(pages, runtime) {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   try {
     // JavaScript off: only the static markup exists, which is what the walker sees at boot.
     const page = await (await browser.newContext({ javaScriptEnabled: false })).newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
-    return await page.evaluate((runtime) => {
-      const walk = new Function(runtime + '; return i18nWalk;')();
-      const seen = [];
-      // wholeOnly: a sentence with inline tags is listed once, whole, not also in pieces.
-      const collect = (k) => { seen.push(k); };
-      collect.wholeOnly = true;
-      walk(document.body, collect);
-      return seen;
-    }, runtimeSource(html));
+    const seen = [];
+    for (const html of pages) {
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
+      seen.push(...await page.evaluate((runtime) => {
+        const walk = new Function(runtime + '; return i18nWalk;')();
+        const seen = [];
+        // wholeOnly: a sentence with inline tags is listed once, whole, not also in pieces.
+        const collect = (k) => { seen.push(k); };
+        collect.wholeOnly = true;
+        walk(document.body, collect);
+        return seen;
+      }, runtime));
+    }
+    return seen;
   } finally { await browser.close(); }
 }
 
@@ -150,14 +183,19 @@ function scriptOnly(script) {
 export const EXTRA_SOURCES = ['model-page.js'];
 
 export async function extract() {
-  const html = read('index.html');
-  const keys = new Set((await markupStrings(html)).filter(translatable));
+  const html = read('index.html'), pages = PAGES.map(read);
+  const keys = new Set((await markupStrings([html, ...pages], runtimeSource(html))).filter(translatable));
   const script = html.slice(html.indexOf('// i18n-runtime:end'));
   for (const s of scriptStrings(script)) keys.add(s);
   for (const s of templateStrings(scriptOnly(script))) keys.add(s);
   // The model page is drawn by its own file, inside the app (#page-model) as well as on /w/.
   for (const f of EXTRA_SOURCES) {
     const src = read(f);
+    for (const s of scriptStrings(src)) keys.add(s);
+    for (const s of templateStrings(src)) keys.add(s);
+  }
+  for (const p of pages) {
+    const src = inlineScripts(p);
     for (const s of scriptStrings(src)) keys.add(s);
     for (const s of templateStrings(src)) keys.add(s);
   }
@@ -198,15 +236,21 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(`i18n/en.keys.json: ${keys.length} strings`);
   } else if (cmd === 'build' || cmd === '--check') {
     const check = cmd === '--check'; let stale = 0;
-    let html = read('index.html');
-    for (const lang of languages()) {
-      const src = builtSource(lang, liveDict(lang));
-      let current = ''; try { current = read(`i18n/${lang}.js`); } catch {}
-      if (current !== src) { stale++; if (check) console.log(`stale: i18n/${lang}.js`); else writeFileSync(join(dir, `${lang}.js`), src); }
-      const stamped = stamp(html, lang, hashOf(src));
-      if (stamped !== html) { stale++; if (check) console.log(`stale: index.html stamp for ${lang}`); html = stamped; }
+    // Every generated file, then its hash into every page that loads it.
+    const built = languages().map((lang) => ({ name: lang, file: `i18n/${lang}.js`, src: builtSource(lang, liveDict(lang)), into: ['index.html', ...PAGES] }));
+    built.push({ name: 'page', file: PAGE_RUNTIME, src: pageRuntimeSource(read('index.html')), into: PAGES });
+    const htmls = Object.fromEntries(['index.html', ...PAGES].map((f) => [f, read(f)]));
+    for (const b of built) {
+      let current = ''; try { current = read(b.file); } catch {}
+      if (current !== b.src) { stale++; if (check) console.log(`stale: ${b.file}`); else writeFileSync(join(root, b.file), b.src); }
+      for (const f of b.into) {
+        const stamped = stamp(htmls[f], b.name, hashOf(b.src));
+        if (!stamped.includes(`${b.file}?v=${hashOf(b.src)}`)) throw new Error(`i18n: ${f} does not load ${b.file}`);
+        if (stamped !== htmls[f]) { stale++; if (check) console.log(`stale: ${f} stamp for ${b.file}`); htmls[f] = stamped; }
+      }
     }
-    if (!check && html !== read('index.html')) writeFileSync(join(root, 'index.html'), html);
+    // Re-read right before writing: only the stamps are ours, and only a changed file is written.
+    if (!check) for (const f in htmls) if (htmls[f] !== read(f)) writeFileSync(join(root, f), htmls[f]);
     console.log(stale ? (check ? 'out of date — run: node scripts/i18n.mjs build' : 'built') : 'up to date');
     if (check && stale) process.exit(1);
   } else if (cmd === 'status') {

@@ -181,6 +181,14 @@ Deno.test("resolveActorName — prefers display_name, then username, then Someon
   assertEquals(resolveActorName(undefined), "Someone");
 });
 
+Deno.test("resolveActorName — the fallback follows the recipient's language, a real name never changes", () => {
+  assertEquals(resolveActorName(null, "en"), "Someone");
+  assertEquals(resolveActorName(null, "it"), "Qualcuno");
+  assertEquals(resolveActorName({ display_name: "", username: "" }, "pt"), "Alguém");
+  assertEquals(resolveActorName(undefined, "fr"), "Quelqu'un");   // esc() leaves the apostrophe alone
+  assertEquals(resolveActorName({ display_name: "Dave", username: "d123" }, "tr"), "Dave");
+});
+
 Deno.test("resolveActorName — escapes HTML in the name", () => {
   assertEquals(resolveActorName({ display_name: "<b>X</b>" }), "&lt;b&gt;X&lt;/b&gt;");
 });
