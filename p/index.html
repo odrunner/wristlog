@@ -107,6 +107,8 @@
         const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
         const effectiveSource = utm_source || (externalRef ? null : 'direct');
         const dedupKey = 'wristlog_visit_' + (effectiveSource || '') + '_' + (params.get('utm_campaign') || '');
+        // Automated browsers (our own tests, link checkers) are not visits; same guard as the app's trackVisit().
+        if (navigator.webdriver) return;
         const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
         if (Date.now() - lastVisit < 1800000) return;
         localStorage.setItem(dedupKey, String(Date.now()));

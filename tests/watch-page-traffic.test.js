@@ -120,3 +120,17 @@ describe('admin_watch_page_traffic SQL is admin-locked', () => {
     expect(sql).toContain("NOTIFY pgrst, 'reload schema'");
   });
 });
+
+// ── 2026-11-14: the app's trackVisit() has skipped automated browsers since
+// August, but the three public pages kept logging them (62 HeadlessChrome rows
+// from September to November). Same guard on all three, before the insert.
+describe('public pages do not log visits from automated browsers', () => {
+  for (const page of ['p/index.html', 'profile/index.html', 'w/index.html']) {
+    it(`${page} bails on navigator.webdriver before inserting`, () => {
+      const src = readFileSync(join(root, page), 'utf8');
+      const guard = src.indexOf('if (navigator.webdriver) return;');
+      expect(guard).toBeGreaterThan(0);
+      expect(guard).toBeLessThan(src.indexOf(".from('page_visits').insert("));
+    });
+  }
+});
