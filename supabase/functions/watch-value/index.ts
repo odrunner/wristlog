@@ -16,6 +16,7 @@ import {
   isCacheFresh,
   roundEstimate,
   salvageJson,
+  shouldRetryWithoutRef,
   utcDayStartIso,
 } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
@@ -129,7 +130,7 @@ Deno.serve(async (req: Request) => {
     // fired them, so there was nothing to fix. Now they can.
     console.log(`[watch-value] user=${user.id} src=${source ?? "unknown"} Looking up: ${watchDesc}`);
 
-    const prompt = `What is the current market value (in USD) of this watch: ${watchDesc}?
+    const promptFor = (desc: string) => `What is the current market value (in USD) of this watch: ${desc}?
 
 Search for recent sold prices and current listings. Check Chrono24, WatchCharts, eBay sold listings, and dealer sites.
 
@@ -151,6 +152,7 @@ Rules:
 - If you cannot find reliable pricing, set confidence to "low" and explain in notes
 - retail_price_usd is the current MSRP if available, null otherwise
 - All prices in USD`;
+    const prompt = promptFor(watchDesc);
 
     // Primary: Gemini 2.5 Flash with grounded search — same engine strategy as
     // identify-watch, ~90% cheaper than Sonnet + web search at equivalent accuracy
@@ -169,86 +171,104 @@ Rules:
       // abort/network failure before the ~100x costlier Claude fallback: a hang
       // is a per-request fluke (2026-10-12: the 38 batch calls around two hung
       // ones all answered in 10-30s), and nobody is waiting on a single batch
-      // row. An HTTP error or a parse failure is never retried — both times
-      // those appeared they were real bugs, and the same request fails the
-      // same way. The retry log line must NOT say "Gemini exception/error" —
+      // row. An HTTP error or a parse failure is never retried as-is — both
+      // times those appeared they were real bugs, and the same request fails
+      // the same way (the no-sources pass below changes the request). The retry log line must NOT say "Gemini exception/error" —
       // cost-report.py counts those as failures, and a recovered stall isn't one.
       const attemptTimeouts = geminiAttemptTimeouts(source);
-      for (let attempt = 0; attempt < attemptTimeouts.length; attempt++) {
-        try {
-          const geminiAbort = new AbortController();
-          const geminiTimer = setTimeout(() => geminiAbort.abort(), attemptTimeouts[attempt]);
-          const geminiResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
-              signal: geminiAbort.signal,
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ google_search: {} }],
-                // The cap covers thinking + answer on 2.5 Flash. Measured live:
-                // answers run 651-1049 tokens, thinking 1596-2407. A heavy-thinking
-                // run (the 32-35s ones that failed to parse) can spend most of an
-                // 8192 budget before the JSON is finished, and a truncated object
-                // is unrecoverable at parse time — so give it headroom. Billing is
-                // per token generated, not per cap, so this costs nothing unused.
-                generationConfig: { temperature: 0.1, maxOutputTokens: 16384 },
-              }),
-            },
-          );
-          clearTimeout(geminiTimer);
-          if (geminiResponse.ok) {
-            const geminiResult = await geminiResponse.json();
-            const candidate = geminiResult.candidates?.[0];
-            const finishReason = candidate?.finishReason || "unknown";
-            const parts = candidate?.content?.parts ?? [];
-            const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text).join("");
-            try {
-              parsed = extractJson(text);
-            } catch (_e) {
-              parsed = null;
-            }
-            if (parsed && !parsed.estimated_value_usd) parsed = null;
-            // A MAX_TOKENS response still carries a complete estimate up front —
-            // both 2026-08-08 fallbacks did. Recover it rather than pay for a
-            // Claude re-run of a lookup Gemini had already answered.
-            // Require a usable mid: the UI keys off it entirely, so salvaging a
-            // range with only `low` would render "N/A" — worse than the Claude
-            // re-run this is replacing.
-            if (!parsed) {
-              const salvaged = salvageJson(text);
-              const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
-              if (est && roundEstimate(est.mid) !== null) {
-                salvaged!._salvaged = true;
-                parsed = salvaged;
+      //
+      // One more pass, only when Gemini searched, found zero sources and wrote
+      // nothing for a lookup that has a reference number: the same lookup with
+      // the reference dropped (see shouldRetryWithoutRef). An empty answer comes
+      // back in ~4s, so this costs a person ~15s where the Claude fallback costs
+      // ~30s and ~100x the money.
+      const noRefDesc = buildWatchDesc({ brand, model, year, condition });
+      const passes = [prompt];
+      for (let pass = 0; pass < passes.length && !parsed; pass++) {
+        for (let attempt = 0; attempt < attemptTimeouts.length; attempt++) {
+          try {
+            const geminiAbort = new AbortController();
+            const geminiTimer = setTimeout(() => geminiAbort.abort(), attemptTimeouts[attempt]);
+            const geminiResponse = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+                signal: geminiAbort.signal,
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: passes[pass] }] }],
+                  tools: [{ google_search: {} }],
+                  // The cap covers thinking + answer on 2.5 Flash. Measured live:
+                  // answers run 651-1049 tokens, thinking 1596-2407. A heavy-thinking
+                  // run (the 32-35s ones that failed to parse) can spend most of an
+                  // 8192 budget before the JSON is finished, and a truncated object
+                  // is unrecoverable at parse time — so give it headroom. Billing is
+                  // per token generated, not per cap, so this costs nothing unused.
+                  generationConfig: { temperature: 0.1, maxOutputTokens: 16384 },
+                }),
+              },
+            );
+            clearTimeout(geminiTimer);
+            if (geminiResponse.ok) {
+              const geminiResult = await geminiResponse.json();
+              const candidate = geminiResult.candidates?.[0];
+              const finishReason = candidate?.finishReason || "unknown";
+              const parts = candidate?.content?.parts ?? [];
+              const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text).join("");
+              try {
+                parsed = extractJson(text);
+              } catch (_e) {
+                parsed = null;
               }
-            }
-            console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} salvaged=${!!parsed?._salvaged} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
-            if (parsed) {
-              parsed._engine = "gemini";
+              if (parsed && !parsed.estimated_value_usd) parsed = null;
+              // A MAX_TOKENS response still carries a complete estimate up front —
+              // both 2026-08-08 fallbacks did. Recover it rather than pay for a
+              // Claude re-run of a lookup Gemini had already answered.
+              // Require a usable mid: the UI keys off it entirely, so salvaging a
+              // range with only `low` would render "N/A" — worse than the Claude
+              // re-run this is replacing.
+              if (!parsed) {
+                const salvaged = salvageJson(text);
+                const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
+                if (est && roundEstimate(est.mid) !== null) {
+                  salvaged!._salvaged = true;
+                  parsed = salvaged;
+                }
+              }
+              console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} salvaged=${!!parsed?._salvaged} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
+              if (parsed) {
+                parsed._engine = "gemini";
+                if (pass > 0) parsed._noRef = true;
+              } else {
+                // Separate DIAG line on purpose: cost-report.py counts the
+                // "parse failed" line, and this must not double that count.
+                if (text.length === 0) {
+                  console.log(`[watch-value] DIAG empty-answer ${describeEmptyAnswer(geminiResult)}`);
+                }
+                if (pass === 0 && shouldRetryWithoutRef(geminiResult, text, reference)) {
+                  // Must not say "Gemini parse failed/error/exception" — a
+                  // recovered lookup isn't a failure in the cost report.
+                  passes.push(promptFor(noRefDesc));
+                  console.log(`[watch-value] user=${user.id} Gemini found no sources, retrying without the reference: ${noRefDesc}`);
+                } else {
+                  const usage = geminiResult.usageMetadata ?? {};
+                  console.error(
+                    `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
+                  );
+                }
+              }
             } else {
-              const usage = geminiResult.usageMetadata ?? {};
-              console.error(
-                `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
-              );
-              // A separate line on purpose: cost-report.py counts the one above,
-              // and this must not double the failure count.
-              if (text.length === 0) {
-                console.log(`[watch-value] DIAG empty-answer ${describeEmptyAnswer(geminiResult)}`);
-              }
+              const errText = await geminiResponse.text();
+              console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
             }
-          } else {
-            const errText = await geminiResponse.text();
-            console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
+            break; // got an HTTP response — handled above, a retry can't help
+          } catch (geminiErr) {
+            if (attempt < attemptTimeouts.length - 1) {
+              console.log(`[watch-value] user=${user.id} Gemini stalled (attempt ${attempt + 1}/${attemptTimeouts.length}), retrying: ${(geminiErr as Error).message}`);
+              continue;
+            }
+            console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
           }
-          break; // got an HTTP response — handled above, a retry can't help
-        } catch (geminiErr) {
-          if (attempt < attemptTimeouts.length - 1) {
-            console.log(`[watch-value] user=${user.id} Gemini stalled (attempt ${attempt + 1}/${attemptTimeouts.length}), retrying: ${(geminiErr as Error).message}`);
-            continue;
-          }
-          console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
         }
       }
     }
@@ -310,7 +330,7 @@ Rules:
     parsed.query = { brand, model, reference, condition, year };
     parsed.looked_up_at = new Date().toISOString();
 
-    console.log(`[watch-value] user=${user.id} ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}${parsed._salvaged ? " salvaged=1" : ""}`);
+    console.log(`[watch-value] user=${user.id} ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}${parsed._salvaged ? " salvaged=1" : ""}${parsed._noRef ? " noref=1" : ""}`);
 
     // NOTE: no server-side save. Prices are only written by the client after the
     // user explicitly approves them (Save/Apply in the UI). watch_id is still

@@ -155,3 +155,18 @@ export function describeEmptyAnswer(result: unknown, max = 1500): string {
   });
   return out.length > max ? out.slice(0, max) + "…" : out;
 }
+
+// Should an empty Gemini answer be re-asked with the reference number dropped?
+// Only for the one shape we have evidence for: no text AND no web sources, on
+// a lookup that HAS a reference. The Tissot T120.407.22.041.00 lookup came back
+// empty 3 of 3 times — all six of Gemini's searches quoted the full reference
+// and none returned a source — while the same watch without the reference
+// answered 3 of 3 on Gemini (2026-11-14, $450-650 high, vs Claude's $400-700).
+// An empty answer that DID find sources is a different failure; leave it to
+// the Claude fallback rather than guess.
+export function shouldRetryWithoutRef(result: unknown, text: string, reference: string): boolean {
+  if (!reference.trim() || text.trim() !== "") return false;
+  const r = (result ?? {}) as { candidates?: { groundingMetadata?: { groundingChunks?: unknown } }[] };
+  const chunks = r.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  return !Array.isArray(chunks) || chunks.length === 0;
+}

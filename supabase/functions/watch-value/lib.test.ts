@@ -7,6 +7,7 @@ import {
   isCacheFresh,
   roundEstimate,
   salvageJson,
+  shouldRetryWithoutRef,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -277,4 +278,28 @@ Deno.test("describeEmptyAnswer — caps the length", () => {
   const out = describeEmptyAnswer({ promptFeedback: { x: "a".repeat(5000) } }, 100);
   assertEquals(out.length, 101);
   assertEquals(out.endsWith("…"), true);
+});
+
+// The 2026-11-14 Tissot shape: searched, zero sources, no text.
+const NO_SOURCES = { candidates: [{ finishReason: "STOP", content: { role: "model" }, groundingMetadata: { webSearchQueries: ["q"] } }] };
+
+Deno.test("shouldRetryWithoutRef — empty answer, no sources, has a reference → retry", () => {
+  assertEquals(shouldRetryWithoutRef(NO_SOURCES, "", "T120.407.22.041.00"), true);
+  assertEquals(shouldRetryWithoutRef({ candidates: [{ groundingMetadata: { groundingChunks: [] } }] }, "  ", "T120"), true);
+  assertEquals(shouldRetryWithoutRef({ candidates: [{}] }, "", "T120"), true);
+  assertEquals(shouldRetryWithoutRef(undefined, "", "T120"), true);
+});
+
+Deno.test("shouldRetryWithoutRef — no reference to drop → no retry", () => {
+  assertEquals(shouldRetryWithoutRef(NO_SOURCES, "", ""), false);
+  assertEquals(shouldRetryWithoutRef(NO_SOURCES, "", "   "), false);
+});
+
+Deno.test("shouldRetryWithoutRef — Gemini wrote text → no retry (parse/salvage problem, not a search miss)", () => {
+  assertEquals(shouldRetryWithoutRef(NO_SOURCES, "I could not find pricing.", "T120"), false);
+});
+
+Deno.test("shouldRetryWithoutRef — empty answer that DID find sources → no retry", () => {
+  const withSources = { candidates: [{ groundingMetadata: { groundingChunks: [{ web: { uri: "https://x" } }] } }] };
+  assertEquals(shouldRetryWithoutRef(withSources, "", "T120"), false);
 });
