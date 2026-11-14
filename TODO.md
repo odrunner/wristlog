@@ -15,7 +15,7 @@
 3. ~~24 stuck fun facts~~ FIXED 2026-11-14 (`b464441c`: a refused batch is asked again in halves) — 2,446 of 2,446 translated.
 4. **Share pages keep two emoji state icons** (watch, lock) because English output was held byte-identical. Replace with glyphs or SVG.
 5. **Still English:** `w/` public model page (`model_page` RPC returns English), `og:` tags and first `<title>` on `p/` and `profile/`, og:image SVG text, `404.html`, `privacy.html`, `terms.html`, `delete-account.html`, `manifest.json`, native bridge error messages, "present" inside model year ranges.
-6. **A translated broadcast has not been sent for real yet** — use "Send the test in" before queueing.
+6. ~~Translated broadcast test~~ DONE by the user (2026-11-13): readable but not a good translation, which is why translated emails carry the "translated by AI" note. Quality is the open point, see 7.
 7. **Native-speaker review** of all six languages, incl. French "fil" / Turkish "akış" and "Snap to Track"; then consider starting new users in their device language.
 
 *Design values, all still open (nothing from this audit was changed):*
