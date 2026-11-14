@@ -322,6 +322,9 @@
 .form-group { margin-bottom: var(--space-3-5); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3-5); }
 .field-error-msg { color: var(--danger-text); font-size: var(--fs-sm); margin-top: var(--space-1); animation: fieldErrorIn .25s ease; }
+/* Browsers give buttons their own control font (Arial in Chromium on macOS), not the page's.
+   One rule here so a button class that sets no family still reads in the app font. */
+button { font-family: inherit; }
 .btn {
       padding: var(--space-2-5) var(--space-4);
       border-radius: var(--radius-btn);

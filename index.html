@@ -158,7 +158,7 @@
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
-  <link rel="stylesheet" href="/design-system.css?v=e096b945">
+  <link rel="stylesheet" href="/design-system.css?v=b55de348">
   <!-- Languages. English (everyone today) runs none of this: no request, no work.
        A supported non-English choice loads its dictionary here, parser-blocking on
        purpose, so it is in memory before the boot script draws anything. The file
@@ -3368,7 +3368,7 @@
       <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
       <div class="u-gap-2 u-mt-2 u-fw--wrap u-d-flex">
         <button class="btn btn-md btn-primary u-minh-9" id="logagain-yes">Log it</button>
-        <button class="btn btn-md u-minh-9" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+        <button class="btn btn-md btn-ghost u-minh-9" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
@@ -8565,7 +8565,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.11.21';
+const APP_VERSION = '14.11.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9412,7 +9412,7 @@ async function loadAndRenderProfile(userId) {
     _pr = await withTimeout(Promise.all(_pp), 12000);
   } catch (e) {
     console.error('[WristLog] Profile load failed:', e);
-    el.innerHTML = '<div class="empty">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
+    el.innerHTML = '<div class="empty">Could not load profile. <button class="btn btn-sm btn-ghost" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
     return;
   }
 
@@ -20774,7 +20774,7 @@ async function loadAdminFeatured() {
         <div class="u-fs-base">${badge}</div>
         <div class="text-secondary u-to-ellipsis u-ws-nowrap" style="overflow:hidden;">${escUser(who)}: ${escUser(txt)}</div>
       </div>
-      <button type="button" class="btn btn-sm" onclick="unfeatureAdmin('${r.id}')">Remove</button>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="unfeatureAdmin('${r.id}')">Remove</button>
     </div>`;
   }).join('');
 }

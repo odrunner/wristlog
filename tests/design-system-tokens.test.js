@@ -358,6 +358,21 @@ describe('breakpoints', () => {
 });
 
 describe('index.html', () => {
+  // Browsers draw a <button> in their own control font and grey unless told otherwise. Until 2026-11-14
+  // nothing told them: 22 groups of buttons rendered in Arial, and three `.btn` buttons with no variant
+  // (.btn sets no background) showed the browser's grey in both themes.
+  it('gives every button the app font from one base rule', () => {
+    expect(css).toMatch(/^button \{ font-family: inherit; \}$/m);
+  });
+  it('gives every .btn button a look: a variant class or a background utility', () => {
+    const bare = [];
+    for (const m of indexHtml.matchAll(/<button[^>]*?class=(["'`])(.*?)\1/g)) {
+      const cls = m[2].split(/\s+/);
+      if (!cls.includes('btn') || m[2].includes('${')) continue;
+      if (!cls.some((c) => /^btn-(primary|ghost|danger|plain|icon)/.test(c) || c.startsWith('u-bg-'))) bare.push(m[2]);
+    }
+    expect(bare).toEqual([]);
+  });
   // A watch with no photo shows an initials square. Its colour is the design-system placeholder, never the
   // watch's saved colour: nobody picks that colour (no picker is on any screen), so painting it made the
   // placeholder something a token could not change. The saved value is data only (weather recommendation).
