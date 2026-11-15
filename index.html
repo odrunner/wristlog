@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=0c176e22', it: 'i18n/it.js?v=635e51bf', fr: 'i18n/fr.js?v=eaacda73', tr: 'i18n/tr.js?v=17af31b7', de: 'i18n/de.js?v=34eb2deb', pt: 'i18n/pt.js?v=83052c8b' };
+      var FILES = { es: 'i18n/es.js?v=1269069a', it: 'i18n/it.js?v=bf022b8f', fr: 'i18n/fr.js?v=9af9dae6', tr: 'i18n/tr.js?v=73c817ec', de: 'i18n/de.js?v=6c7617a7', pt: 'i18n/pt.js?v=d6207694' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -1537,7 +1537,8 @@
         transform: translateZ(0);
       }
       nav button {
-        flex: 1; flex-direction: column; align-items: center; justify-content: center;
+        /* min-width 0: a long translated label may spill a pixel or two, but never widens its tab */
+        flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center;
         padding: var(--space-2-5) var(--space-1) var(--space-2);
         font-size: var(--fs-2xs); letter-spacing: var(--ls-snug); gap: var(--space-1);
         border-bottom: none; border-top: 2.5px solid transparent;
@@ -3371,7 +3372,7 @@
         <button class="btn btn-md btn-ghost u-minh-9" id="logagain-other" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
       </div>
     </div>
-    <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
+    <button class="reminder-banner-close btn-plain-touch" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
   </div>
 
   <!-- ════ WARRANTY REMINDER BANNER ════ -->
@@ -3381,7 +3382,7 @@
       <div class="reminder-banner-title u-c-success-text">Warranty Expiring Soon</div>
       <div class="reminder-banner-sub" id="warranty-banner-sub"></div>
     </div>
-    <button class="reminder-banner-close" aria-label="Dismiss" onclick="dismissWarrantyBanner()" title="Dismiss">✕</button>
+    <button class="reminder-banner-close btn-plain-touch" aria-label="Dismiss" onclick="dismissWarrantyBanner()" title="Dismiss">✕</button>
   </div>
 
   <!-- ════ LANGUAGE OFFER ════ shown once, in the device's own language, when that
@@ -3391,7 +3392,7 @@
       <div class="reminder-banner-title" id="lang-banner-title"></div>
     </div>
     <button class="btn btn-primary btn-sm" id="lang-banner-go" onclick="acceptLangBanner()"></button>
-    <button class="reminder-banner-close" aria-label="Dismiss" onclick="dismissLangBanner()">✕</button>
+    <button class="reminder-banner-close btn-plain-touch" aria-label="Dismiss" onclick="dismissLangBanner()">✕</button>
   </div>
 
   <!-- ════ TRACK PAGE ════ -->
@@ -6521,14 +6522,16 @@ function i18nPatterns(d) {
 // The languages offered in Profile -> Language, each named in its own language. A new one
 // also needs its file in the loader's FILES (head) and i18n/<code>.json.
 const I18N_LANGS = [['en', 'English'], ['es', 'Español'], ['it', 'Italiano'], ['fr', 'Français'], ['tr', 'Türkçe'], ['de', 'Deutsch'], ['pt', 'Português']];
-// The one-time offer, written in the language it offers: [sentence, button].
+// The one-time offer, written in the language it offers: [sentence, button, what to say
+// when it is dismissed]. Dismissing is permanent, so the third line says where the
+// setting lives; it names the menu as the (still English) screen shows it.
 const I18N_OFFER = {
-  es: ['WRotate está disponible en español', 'Cambiar'],
-  it: ['WRotate è disponibile in italiano', 'Cambia'],
-  fr: ['WRotate est disponible en français', 'Changer'],
-  tr: ['WRotate artık Türkçe', 'Değiştir'],
-  de: ['WRotate gibt es auf Deutsch', 'Wechseln'],
-  pt: ['O WRotate está disponível em português', 'Mudar'],
+  es: ['WRotate está disponible en español', 'Cambiar', 'Puedes cambiar el idioma cuando quieras en Profile → Language.'],
+  it: ['WRotate è disponibile in italiano', 'Cambia', 'Puoi cambiare lingua quando vuoi in Profile → Language.'],
+  fr: ['WRotate est disponible en français', 'Changer', 'Vous pouvez changer de langue à tout moment dans Profile → Language.'],
+  tr: ['WRotate artık Türkçe', 'Değiştir', 'Dili istediğin zaman Profile → Language bölümünden değiştirebilirsin.'],
+  de: ['WRotate gibt es auf Deutsch', 'Wechseln', 'Du kannst die Sprache jederzeit unter Profile → Language ändern.'],
+  pt: ['O WRotate está disponível em português', 'Mudar', 'Podes mudar o idioma quando quiseres em Profile → Language.'],
 };
 // Pure: which language to offer, or null. Offered only while no choice is stored (picking
 // English in the profile, or dismissing, stores one) and the device's first language is
@@ -6547,8 +6550,10 @@ function showLangBanner() {
 }
 function acceptLangBanner() { setLanguage(langOffer(safeLS.get('wr_lang'), navigator.language)); }
 function dismissLangBanner() {
+  const code = langOffer(safeLS.get('wr_lang'), navigator.language);
   safeLS.set('wr_lang', 'en');
   document.getElementById('lang-banner').classList.add('hidden');
+  if (code) toast(I18N_OFFER[code][2]);
 }
 function i18nLang() { return window.WR_I18N ? window.WR_I18N.lang : 'en'; }
 // Fun facts are written in English, one per watch model, and translated in the
@@ -6603,9 +6608,11 @@ async function factTrById(id, english) {
 }
 // The dictionary is read once, before boot, so a change of language is a reload. The
 // address is rebuilt without ?lang=, which would otherwise win over the new choice.
+// Reloads only when the choice was really stored: a browser that refuses the write would
+// come back with no choice, and a profile language would then reload the page on every boot.
 function setLanguage(code) {
   if (code === i18nLang()) return;
-  safeLS.set('wr_lang', code);
+  if (!safeLS.set('wr_lang', code)) { toast('Could not save the language on this device', 'error'); return; }
   location.replace(location.pathname + location.hash);
 }
 // Dates follow the chosen language; English keeps the US format it always had.
@@ -8569,7 +8576,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.09.37';
+const APP_VERSION = '15.09.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9720,7 +9727,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group u-mb-0">
         <label class="u-fs-sm">Language</label>
         <div class="chips" id="pp-lang-chips" data-i18n-skip>
-          ${I18N_LANGS.map(([code, name]) => `<div class="chip${code === i18nLang() ? ' selected' : ''}" lang="${code}" onclick="setLanguage('${code}')">${name}</div>`).join('')}
+          ${I18N_LANGS.map(([code, name]) => `<button type="button" class="chip btn-plain-touch${code === i18nLang() ? ' selected' : ''}" aria-pressed="${code === i18nLang()}" lang="${code}" onclick="setLanguage('${code}')">${name}</button>`).join('')}
         </div>
         <div class="text-caption u-mt-1">Choose the language WRotate is shown in.</div>
       </div>
