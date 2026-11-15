@@ -91,6 +91,9 @@ test.describe('Accuracy overview (mocked)', () => {
     await page.click('#msr-history-hint');
     await expect(page.locator('#msr-hist-detail')).toBeVisible();
     await expect(page.locator('#msr-hist-watch-name')).toHaveText('Omega Speedmaster');
+    // Two readings that day (+2.1 newest, +3.8): the headline is the newest reading, the
+    // same number the overview row shows, not the day's median.
+    await expect(page.locator('#msr-hist-summary strong')).toHaveText('+2.1 s/d');
     await page.click('#page-msr-history .page-header button');
     await expect(page.locator('.acc-ov-row')).toHaveCount(3);
   });

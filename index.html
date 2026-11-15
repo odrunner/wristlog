@@ -8552,7 +8552,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.12.07';
+const APP_VERSION = '15.12.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -36283,7 +36283,8 @@ function renderMsrHistoryView() {
   const medians = days.map(d => d.median);
   const avg = medians.reduce((a, b) => a + b, 0) / medians.length;
   const nRead = days.reduce((a, d) => a + d.n, 0);
-  if (sum) sum.innerHTML = `<strong>${_fmtRateSigned(latest.median)}</strong> <span class="text-muted">latest (${_fmtDayLabel(latest.date)}) · avg ${_fmtRateSigned(avg)} over ${days.length} day${days.length === 1 ? '' : 's'}, ${nRead} reading${nRead === 1 ? '' : 's'}</span>`;
+  // Headline = the newest single reading (rows are newest-first), the number the overview row shows.
+  if (sum) sum.innerHTML = `<strong>${_fmtRateSigned(latest.rows[0].rate)}</strong> <span class="text-muted">latest (${_fmtDayLabel(latest.date)}) · avg ${_fmtRateSigned(avg)} over ${days.length} day${days.length === 1 ? '' : 's'}, ${nRead} reading${nRead === 1 ? '' : 's'}</span>`;
   if (chart) {
     chart.innerHTML = accuracyTrendSvg(days, { width: chart.clientWidth || 320, height: 180, pad: 12, labels: true });
     chart.querySelectorAll('.acc-dot').forEach(c => { c.addEventListener('click', (e) => { e.stopPropagation(); msrHistorySelectDay(c.dataset.day); }); if (c.dataset.day === _msrHistSelectedDay) c.classList.add('selected'); });
