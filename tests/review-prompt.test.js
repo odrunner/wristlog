@@ -121,7 +121,7 @@ describe('review prompt: measurement counter logic', () => {
 describe('review prompt: shouldShowReviewPrompt logic', () => {
   // Mirrors shouldShowReviewPrompt(source) from index.html
 
-  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, ratedCooldownDays, wearCount, msrCount, thresholds, firstGoodExperiment = false, msrRate = undefined }) {
+  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, ratedCooldownDays, wearCount, msrCount, thresholds = false, msrRate = undefined }) {
     if (!currentUser) return false;
     if (lastAction) {
       const daysSince = (Date.now() - lastAction) / (1000 * 60 * 60 * 24);
@@ -138,8 +138,8 @@ describe('review prompt: shouldShowReviewPrompt logic', () => {
       return wearCount >= thresholds.wears;
     }
     if (source === 'measurement') {
-      // Experiment review_first_good_msr: first good converged measurement
-      if (firstGoodExperiment && typeof msrRate === 'number' && Math.abs(msrRate) <= 15) {
+      // First good converged measurement asks straight away
+      if (typeof msrRate === 'number' && Math.abs(msrRate) <= 15) {
         return msrCount >= 1;
       }
       return msrCount >= thresholds.measurements;
@@ -208,35 +208,31 @@ describe('review prompt: shouldShowReviewPrompt logic', () => {
     expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 2 })).toBe(false);
   });
 
-  // ── review_first_good_msr experiment (2026-11-01) ──
-  it('treatment: triggers on the first good converged measurement', () => {
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: true, msrRate: 4.2 })).toBe(true);
+  // ── first good measurement (shipped via experiment review_first_good_msr, won 2026-11-14) ──
+  it('first good measurement: triggers on the first good converged measurement', () => {
+    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, msrRate: 4.2 })).toBe(true);
   });
 
-  it('treatment: negative rates count as good within the band', () => {
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: true, msrRate: -14.9 })).toBe(true);
+  it('first good measurement: negative rates count as good within the band', () => {
+    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, msrRate: -14.9 })).toBe(true);
   });
 
-  it('treatment: a bad rate (>15 s/day) falls back to the count gate', () => {
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: true, msrRate: 22 })).toBe(false);
+  it('first good measurement: a bad rate (>15 s/day) falls back to the count gate', () => {
+    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, msrRate: 22 })).toBe(false);
   });
 
-  it('treatment: a missing rate falls back to the count gate', () => {
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: true, msrRate: undefined })).toBe(false);
+  it('first good measurement: a missing rate falls back to the count gate', () => {
+    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, msrRate: undefined })).toBe(false);
   });
 
-  it('treatment: cooldowns still apply before the experiment branch', () => {
+  it('first good measurement: cooldowns still apply before the experiment branch', () => {
     const recentAction = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: true, msrRate: 2, lastAction: recentAction })).toBe(false);
+    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, msrRate: 2, lastAction: recentAction })).toBe(false);
   });
 
-  it('control: first good measurement does not trigger below the count gate', () => {
-    expect(shouldShowReviewPrompt('measurement', { ...defaults, msrCount: 1, firstGoodExperiment: false, msrRate: 2 })).toBe(false);
-  });
-
-  it('the real shouldShowReviewPrompt carries the experiment branch', () => {
+  it('the real shouldShowReviewPrompt asks on a good rate with no experiment gate', () => {
     const fn = html.slice(html.indexOf('function shouldShowReviewPrompt'), html.indexOf('function _logReviewEvent'));
-    expect(fn).toContain("experiment('review_first_good_msr')");
+    expect(fn).not.toContain('experiment(');
     expect(fn).toContain('Math.abs(msrRate) <= 15');
   });
 

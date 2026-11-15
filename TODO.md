@@ -5,7 +5,6 @@ Each open item is one action a single session can pick up. Order = priority. Det
 ## In Progress (running on their own — nothing to do unless they stall)
 - **Model spec + reference-note translation backfill** — started 2026-11-14, 6 models per 3-minute run, 367 total. Check: `SELECT count(*) FILTER (WHERE translations->'de'->>'extras' IS NOT NULL), count(*) FROM watch_models WHERE coalesce(history, description) IS NOT NULL;`
 - **Knob trial `tgknob_stabfresh_1`** — running since 2026-11-09, judged by the Sunday loop; `tgknob_bphdecisive_2` and `tgknob_phaselock_1` follow from the loop's queue.
-- **Experiments running:** `review_first_good_msr` (review prompt after a good measurement, since 11-02), `wn_badge` (11-08), `result_share` (11-09). The nightly judge decides; a `won`/`killed` one needs its branch removed.
 
 ## Waiting on you
 - **Upload Android 1.9 (vC9)** — bundle built 2026-11-14 with the translated shell strings: `android/app/build/outputs/bundle/release/app-release.aab`.

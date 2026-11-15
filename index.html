@@ -1672,7 +1672,7 @@
       font-family: inherit;
     }
     .help-btn:hover { box-shadow: var(--ring); color: var(--text); }
-    /* What's New unread dot (experiment wn_badge) */
+    /* What's New unread dot */
     .wn-dot { position: absolute; top: var(--space-0-5); right: var(--space-0-5); width: var(--size-2); height: var(--size-2); border-radius: var(--radius-round); background: var(--gold); }
     /* Same dot, inline after the Help page's What's New label, so the header dot has somewhere to lead */
     .wn-dot.wn-dot-inline { position: static; flex-shrink: 0; }
@@ -8569,7 +8569,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.09.13';
+const APP_VERSION = '15.09.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19526,13 +19526,13 @@ function openWhatsNew() {
   safeLS.set('wristlog_wn_seen', wnVersion());
   updateWnBadge();
   if (currentUser && !_isDemoMode) {
-    db.from('feature_events').insert({ user_id: currentUser.id, event: 'whats_new_opened', meta: { unseen, badge: experiment('wn_badge') } }).then(() => {});
+    db.from('feature_events').insert({ user_id: currentUser.id, event: 'whats_new_opened', meta: { unseen } }).then(() => {});
   }
 }
 function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
-// ── What's New unread dot (experiment wn_badge, usability P5 2026-11-08) ──
+// ── What's New unread dot (shipped via experiment wn_badge, won 2026-11-14) ──
 // The "version" is a hash of the modal's own text: adding or editing an entry
 // lights the dot with no release constant to remember to bump.
 function wnVersion() {
@@ -19543,7 +19543,7 @@ function wnVersion() {
   return h.toString(36);
 }
 function updateWnBadge() {
-  const show = !!currentUser && experiment('wn_badge') && safeLS.get('wristlog_wn_seen') !== wnVersion();
+  const show = !!currentUser && safeLS.get('wristlog_wn_seen') !== wnVersion();
   // Header ? dot + the matching dot on the Help page's What's New button.
   ['wn-dot', 'wn-dot-help'].forEach(id => {
     const dot = document.getElementById(id);
@@ -19638,9 +19638,9 @@ function shouldShowReviewPrompt(source, msrRate) {
   }
   if (source === 'measurement') {
     const msrCount = parseInt(safeLS.get('wristlog_msr_count') || '0');
-    // Experiment review_first_good_msr: ask on the FIRST good converged
-    // measurement (|rate| <= 15 s/day) instead of the fifth measurement.
-    if (experiment('review_first_good_msr') && typeof msrRate === 'number' && Math.abs(msrRate) <= 15) {
+    // Ask on the FIRST good converged measurement (|rate| <= 15 s/day); any
+    // other reading waits for the count gate. (Experiment review_first_good_msr, won 2026-11-14.)
+    if (typeof msrRate === 'number' && Math.abs(msrRate) <= 15) {
       return msrCount >= 1;
     }
     return msrCount >= th.measurements;
