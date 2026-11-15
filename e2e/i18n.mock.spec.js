@@ -136,6 +136,34 @@ test.describe('language follows the account', () => {
   });
 });
 
+test('Language picker: real buttons, the chosen one marked, operable from the keyboard', async ({ page }) => {
+  await boot(page, '/');
+  await page.evaluate(() => openProfileModal());
+  const chips = page.locator('#pp-lang-chips .chip');
+  await expect(chips).toHaveCount(7);
+  expect(await chips.evaluateAll((els) => els.every((e) => e.tagName === 'BUTTON' && e.type === 'button'))).toBe(true);
+  await expect(page.locator('#pp-lang-chips .chip[aria-pressed="true"]')).toHaveText('English');
+  await expect(page.locator('#pp-lang-chips .chip[aria-pressed="false"]')).toHaveCount(6);
+  await page.locator('#pp-lang-chips .chip', { hasText: 'Deutsch' }).focus();
+  await Promise.all([page.waitForEvent('load'), page.keyboard.press('Enter')]);
+  await waitForAppBoot(page);
+  expect(await page.evaluate(() => window.WR_I18N.lang)).toBe('de');
+});
+
+test('A browser that refuses to store the language does not reload (no boot loop)', async ({ page }) => {
+  await boot(page, '/');
+  let loads = 0; page.on('load', () => loads++);
+  await page.evaluate(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { if (k === 'wr_lang') throw new Error('QuotaExceededError'); return real.call(this, k, v); };
+    setLanguage('it');
+  });
+  await expect(page.locator('#toast')).toContainText('Could not save the language on this device');
+  await page.waitForTimeout(300);
+  expect(loads).toBe(0);
+  expect(await page.evaluate(() => window.WR_I18N)).toBeUndefined();
+});
+
 // The one-time offer: device language, never country. Shown only until a choice exists.
 test.describe('language offer banner', () => {
   test('an English device never sees it', async ({ page }) => {
@@ -160,6 +188,8 @@ test.describe('language offer banner', () => {
       await boot(page, '/');
       await page.locator('#lang-banner .reminder-banner-close').click();
       await expect(page.locator('#lang-banner')).toBeHidden();
+      // Dismissing is permanent, so it says (in Italian) where the setting lives.
+      await expect(page.locator('#toast')).toContainText('Puoi cambiare lingua quando vuoi in Profile → Language.');
       await page.goto('/');
       await waitForAppBoot(page);
       await expect(page.locator('#lang-banner')).toBeHidden();
@@ -199,4 +229,29 @@ test('Text a member wrote is never translated, even when it spells a label', asy
   expect(out.label).toBe(dict['Steel']);
   expect(out.mine).toBe('Steel');
   expect(out.mixed).toBe('Steel · ' + out.wears);
+});
+
+// The phone tab bar is an even grid: a label wider than its share pushes the
+// other tabs narrower and moves every thumb target (usability 2026-11-15).
+// Six tabs, as in the apps (the fake bridge shows Measure).
+test.describe('tab bar stays an even grid at 390px', () => {
+  for (const lang of ['es', 'it', 'fr', 'tr', 'de', 'pt']) {
+    test(lang, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 800 });
+      await page.addInitScript(() => {
+        window.webkit = { messageHandlers: { timegrapher: { postMessage: () => {} }, appAction: { postMessage: () => {} } } };
+      });
+      await boot(page, '/?lang=' + lang);
+      await page.waitForFunction((l) => window.WR_I18N && window.WR_I18N.lang === l, lang);
+      const m = await page.evaluate(() => ({
+        widths: [...document.querySelectorAll('nav button[data-page]')].filter((b) => b.offsetParent).map((b) => Math.round(b.getBoundingClientRect().width)),
+        labels: [...document.querySelectorAll('nav button[data-page] .nav-label')].filter((b) => b.offsetParent).map((b) => b.textContent),
+        scroll: document.documentElement.scrollWidth, view: window.innerWidth,
+      }));
+      console.log(lang, JSON.stringify(m));
+      expect(m.widths.length).toBe(6);
+      expect(Math.max(...m.widths) - Math.min(...m.widths), `${lang}: ${m.labels.join(' | ')} → ${m.widths.join(',')}`).toBeLessThanOrEqual(1);
+      expect(m.scroll).toBeLessThanOrEqual(m.view);
+    });
+  }
 });

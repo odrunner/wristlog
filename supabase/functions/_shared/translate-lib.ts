@@ -34,12 +34,12 @@ export const GLOSSARY: Record<OtherLang, Record<string, string>> = {
 // email names the button the reader will actually see. Copied from
 // i18n/<lang>.json; tests/email-app-labels.test.js fails when the two differ.
 export const APP_LABELS: Record<OtherLang, Record<string, string>> = {
-  es: { "Track": "Registro", "Feed": "Feed", "Collection": "Colección", "Measure": "Medir", "Watches": "Relojes", "Stats": "Estadísticas", "Post": "Publicar", "Check price": "Ver precio", "What-if": "¿Y si…?", "AI Picks": "Sugerencias de IA" },
+  es: { "Track": "Registro", "Feed": "Feed", "Collection": "Colección", "Measure": "Medir", "Watches": "Relojes", "Stats": "Stats", "Post": "Publicar", "Check price": "Ver precio", "What-if": "¿Y si…?", "AI Picks": "Sugerencias de IA" },
   it: { "Track": "Registro", "Feed": "Feed", "Collection": "Collezione", "Measure": "Misura", "Watches": "Orologi", "Stats": "Statistiche", "Post": "Pubblica", "Check price": "Controlla il prezzo", "What-if": "E se…?", "AI Picks": "Suggerimenti IA" },
   fr: { "Track": "Journal", "Feed": "Feed", "Collection": "Collection", "Measure": "Mesurer", "Watches": "Montres", "Stats": "Stats", "Post": "Publier", "Check price": "Vérifier le prix", "What-if": "Et si… ?", "AI Picks": "Suggestions IA" },
-  tr: { "Track": "Kayıt", "Feed": "Feed", "Collection": "Koleksiyon", "Measure": "Ölç", "Watches": "Saatler", "Stats": "İstatistikler", "Post": "Paylaş", "Check price": "Fiyata bak", "What-if": "Ya şöyle olsa?", "AI Picks": "Yapay zekâ önerileri" },
-  de: { "Track": "Tragen", "Feed": "Feed", "Collection": "Sammlung", "Measure": "Messen", "Watches": "Uhren", "Stats": "Statistiken", "Post": "Posten", "Check price": "Preis prüfen", "What-if": "Was wäre, wenn …?", "AI Picks": "KI-Vorschläge" },
-  pt: { "Track": "Registo", "Feed": "Feed", "Collection": "Coleção", "Measure": "Medir", "Watches": "Relógios", "Stats": "Estatísticas", "Post": "Publicar", "Check price": "Consultar preço", "What-if": "E se…?", "AI Picks": "Sugestões de IA" },
+  tr: { "Track": "Kayıt", "Feed": "Feed", "Collection": "Koleksiyon", "Measure": "Ölç", "Watches": "Saatler", "Stats": "İstatistik", "Post": "Paylaş", "Check price": "Fiyata bak", "What-if": "Ya şöyle olsa?", "AI Picks": "Yapay zekâ önerileri" },
+  de: { "Track": "Tragen", "Feed": "Feed", "Collection": "Sammlung", "Measure": "Messen", "Watches": "Uhren", "Stats": "Statistik", "Post": "Posten", "Check price": "Preis prüfen", "What-if": "Was wäre, wenn …?", "AI Picks": "KI-Vorschläge" },
+  pt: { "Track": "Registo", "Feed": "Feed", "Collection": "Coleção", "Measure": "Medir", "Watches": "Relógios", "Stats": "Stats", "Post": "Publicar", "Check price": "Consultar preço", "What-if": "E se…?", "AI Picks": "Sugestões de IA" },
 };
 
 export type Fields = Record<string, string>;
