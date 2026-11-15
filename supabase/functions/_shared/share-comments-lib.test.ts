@@ -40,12 +40,18 @@ Deno.test("resolveIp prefers x-forwarded-for's first hop, then cf-connecting-ip,
   assertEquals(resolveIp(h({})), "unknown");
 });
 
-Deno.test("hashIp is stable, hex, and null for unknown", async () => {
-  const a = await hashIp("1.2.3.4"), b = await hashIp("1.2.3.4");
+Deno.test("hashIp is keyed, stable, hex, and null for unknown or no key", async () => {
+  const a = await hashIp("1.2.3.4", "k1"), b = await hashIp("1.2.3.4", "k1");
   assertEquals(a, b);
   assert(/^[0-9a-f]{64}$/.test(a!));
-  assertEquals(await hashIp("unknown"), null);
-  assertEquals(await hashIp(""), null);
+  // The key decides the result: without it the hash cannot be recomputed.
+  assert(a !== await hashIp("1.2.3.4", "k2"));
+  assert(a !== await hashIp("1.2.3.5", "k1"));
+  assertEquals(await hashIp("unknown", "k1"), null);
+  assertEquals(await hashIp("", "k1"), null);
+  // No key: nothing is produced, never an unkeyed hash.
+  assertEquals(await hashIp("1.2.3.4", ""), null);
+  assertEquals(await hashIp("1.2.3.4", undefined), null);
 });
 
 Deno.test("rateKeys are namespaced per token and per ip hash", () => {

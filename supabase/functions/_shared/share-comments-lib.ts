@@ -72,13 +72,16 @@ export function resolveIp(headerGet: (name: string) => string | null): string {
     || "unknown";
 }
 
-// Stable salted hash, never the raw IP (same scheme as demo-login).
-const IP_HASH_SALT = "wrotate-share-comments-v1";
-export async function hashIp(ip: string): Promise<string | null> {
-  if (!ip || ip === "unknown") return null;
-  const data = new TextEncoder().encode(`${IP_HASH_SALT}:${ip}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+// A keyed fingerprint (HMAC-SHA256), never the raw IP. The key is the IP_HASH_KEY
+// secret: a fixed salt in a public repo let anyone turn the hash back into the
+// address (IPv4 is only 2^32 values). No key, no fingerprint: the caller then
+// falls back to the shared "unknown" bucket rather than an unkeyed hash.
+export async function hashIp(ip: string, key: string | null | undefined): Promise<string | null> {
+  if (!ip || ip === "unknown" || !key) return null;
+  const enc = new TextEncoder();
+  const k = await crypto.subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", k, enc.encode(ip));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // rate_limits rows are keyed (user_id, function_name); the handler uses the

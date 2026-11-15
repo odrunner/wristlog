@@ -32,6 +32,12 @@ describe('share pages carry the design system tokens', () => {
     expect(tokensFile).toBe(render(css));
     expect(declared.size).toBeGreaterThan(40);
   });
+  it('no token points at another token: the pages carry only the listed names', () => {
+    // --danger-text: var(--danger) left the dark error text with no colour (2026-11-15).
+    const values = [...tokensFile.matchAll(/`([^`]*)`/g)].map((m) => m[1]).filter((v) => !v.includes('${')).join(' ');
+    expect(values).toContain('--danger-text:');
+    expect(values).not.toMatch(/var\(/);
+  });
   for (const [file, tokenExport] of PAGES) {
     const src = read(`supabase/functions/${file}`);
     const style = styles(src);

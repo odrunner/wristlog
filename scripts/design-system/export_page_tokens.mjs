@@ -43,9 +43,19 @@ export function stylesheetTokens(src) {
 
 export function render(src) {
   const { light, dark } = stylesheetTokens(src);
+  // A token that only points at another (--danger-text: var(--danger)) is written as
+  // the value it points to: the pages carry just the listed names, so the pointer
+  // would lead nowhere there.
+  const resolve = (v, from) => {
+    for (let i = 0, m; i < 5 && (m = /^var\((--[a-z0-9-]+)\)$/.exec(v)); i++) {
+      if (!from[m[1]]) throw new Error(`design-system.css: ${v} points at nothing in its block`);
+      v = from[m[1]];
+    }
+    return v;
+  };
   const line = (names, from) => names.map((n) => {
     if (!from[n]) throw new Error(`design-system.css has no ${n}`);
-    return `${n}: ${from[n]};`;
+    return `${n}: ${resolve(from[n], from)};`;
   }).join(' ');
   return `// GENERATED from design-system.css by scripts/design-system/export_page_tokens.mjs. Do not edit.
 // The share pages and the unsubscribe page cannot load the stylesheet (another origin),

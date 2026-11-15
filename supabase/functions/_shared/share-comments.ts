@@ -87,7 +87,8 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
   if (!v.ok) return json({ ok: false, error: v.reason }, 400, cors);
 
   const now = Date.now();
-  const ipHash = await hashIp(resolveIp((n) => req.headers.get(n)));
+  // Used only for the hourly per-address limit below; it is not kept with the comment.
+  const ipHash = await hashIp(resolveIp((n) => req.headers.get(n)), Deno.env.get("IP_HASH_KEY"));
   const keys = rateKeys(token, ipHash);
   if (await checkAndBump(db, share.user_id, keys.ip, IP_LIMIT, IP_WINDOW_MS, now)
    || await checkAndBump(db, share.user_id, keys.token, TOKEN_LIMIT, TOKEN_WINDOW_MS, now)) {
@@ -95,7 +96,7 @@ export async function handleCommentPost(req: Request, db: any, kind: ShareKind, 
   }
 
   const { data: inserted, error: insErr } = await db.from("share_comments")
-    .insert({ kind, token, owner_id: share.user_id, name: v.name, body: v.body, ip_hash: ipHash })
+    .insert({ kind, token, owner_id: share.user_id, name: v.name, body: v.body })
     .select("id, name, body, created_at").single();
   if (insErr || !inserted) {
     console.warn("[share-comments] insert failed:", insErr?.message);
