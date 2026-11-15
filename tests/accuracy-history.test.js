@@ -1,7 +1,7 @@
 // Accuracy history: per-day grouping (median / min / max / n) and the SVG trend chart used
 // by the Measure-page hint card and the History sub-page.
 import { describe, it, expect } from 'vitest';
-import { groupReadingsByDay, filterDaysByRange, accuracyTrendSvg } from '../wrotate_test.js';
+import { groupReadingsByDay, filterDaysByRange, accuracyTrendSvg, accuracyStatus, summarizeWatchAccuracy, buildAccuracyOverview, accuracyStripSvg } from '../wrotate_test.js';
 
 const rows = [
   { id: 'a', rate: 4.0, created_at: '2026-08-10T09:00:00' },
@@ -72,5 +72,78 @@ describe('accuracyTrendSvg', () => {
   });
   it('escapes nothing user-controlled but stays valid on empty input', () => {
     expect(accuracyTrendSvg([], { width: 100, height: 50 })).toBe('');
+  });
+});
+
+// ── Collection overview (every watch on one screen) ───────────────────────────
+const NOW = new Date('2026-11-15T12:00:00');
+const R = (watch_id, rate, created_at) => ({ watch_id, rate, created_at });
+
+describe('accuracyStatus', () => {
+  it('bands at 5 and 15, either sign', () => {
+    expect([0, 5, -5, 5.1, -15, 15.1, -40].map(accuracyStatus)).toEqual(['good', 'good', 'good', 'warn', 'warn', 'bad', 'bad']);
+  });
+});
+
+describe('summarizeWatchAccuracy', () => {
+  const wr = [R('a', 2, '2026-11-10T09:00'), R('a', 4, '2026-11-10T10:00'), R('a', -6, '2026-11-01T09:00'), R('a', 20, '2026-05-01T09:00'), R('a', null, '2026-11-14T09:00')];
+  it('latest ignores range and invalid rates; inRange uses day medians', () => {
+    const s = summarizeWatchAccuracy(wr, '1M', NOW);
+    expect(s.latest).toEqual({ rate: 4, created_at: '2026-11-10T10:00' });
+    expect(s.inRange).toEqual({ n: 3, min: -6, max: 4, avg: -1.5 });
+    expect(summarizeWatchAccuracy(wr, 'ALL', NOW).inRange.n).toBe(4);
+  });
+  it('latest older than the range: latest kept, inRange null', () => {
+    const s = summarizeWatchAccuracy([R('a', 20, '2026-05-01T09:00')], '1M', NOW);
+    expect(s.latest.rate).toBe(20);
+    expect(s.inRange).toBeNull();
+  });
+  it('nothing usable', () => {
+    expect(summarizeWatchAccuracy([R('a', null, '2026-11-14T09:00')], '3M', NOW)).toEqual({ latest: null, inRange: null });
+    expect(summarizeWatchAccuracy(null, '3M', NOW)).toEqual({ latest: null, inRange: null });
+  });
+});
+
+describe('buildAccuracyOverview', () => {
+  const ws = [{ id: 'a', brand: 'Omega', name: 'Speedmaster' }, { id: 'b', brand: 'Seiko', name: 'SKX' }, { id: 'c', brand: 'Cartier', name: 'Tank' }, { id: 'd', brand: 'Atlas', name: '' }];
+  const rs = [R('a', 6, '2026-11-01T09:00'), R('b', -2, '2026-10-01T09:00'), R('gone', 1, '2026-11-12T09:00'), R('c', null, '2026-11-12T09:00')];
+  const ids = (sort) => buildAccuracyOverview(ws, rs, '3M', sort, NOW).map(w => w.id);
+  it('orders measured by sort, unmeasured last by name, unknown watches dropped', () => {
+    expect(ids('accurate')).toEqual(['b', 'a', 'd', 'c']);
+    expect(ids('recent')).toEqual(['a', 'b', 'd', 'c']);
+    expect(ids('name')).toEqual(['a', 'b', 'd', 'c']);
+    expect(ids('bogus')).toEqual(ids('accurate'));
+  });
+  it('labels and empties', () => {
+    expect(buildAccuracyOverview(ws, rs, '3M', 'name', NOW)[2].label).toBe('Atlas');
+    expect(buildAccuracyOverview(null, null, '3M', 'name', NOW)).toEqual([]);
+  });
+  it('ties break by label', () => {
+    const o = buildAccuracyOverview(ws, [R('a', 3, '2026-11-01T09:00'), R('b', -3, '2026-11-01T09:00')], '3M', 'accurate', NOW);
+    expect(o.slice(0, 2).map(w => w.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('accuracyStripSvg', () => {
+  const sum = (rate, inRange = null) => ({ latest: rate == null ? null : { rate, created_at: 'x' }, inRange });
+  it('bands and zero line always; nothing else when unmeasured', () => {
+    const s = accuracyStripSvg(sum(null));
+    expect(s).toContain('acc-band-15'); expect(s).toContain('acc-band-5'); expect(s).toContain('acc-zero');
+    expect(s).not.toContain('acc-strip-dot'); expect(s).not.toContain('acc-strip-bar');
+  });
+  it('dot coloured by status, bar only with inRange', () => {
+    const s = accuracyStripSvg(sum(2, { n: 2, min: -1, max: 3, avg: 1 }), { label: 'Omega' });
+    expect(s).toContain('acc-strip-dot acc-s-good'); expect(s).toContain('acc-strip-bar acc-s-good'); expect(s).toContain('aria-label="Omega"');
+    expect(accuracyStripSvg(sum(12))).toContain('acc-strip-dot acc-s-warn');
+    expect(accuracyStripSvg(sum(12))).not.toContain('acc-strip-bar');
+  });
+  it('beyond the scale: arrow on the right side, bar clamped inside the width', () => {
+    const hi = accuracyStripSvg(sum(38, { n: 2, min: 24, max: 41, avg: 33 }), { width: 300 });
+    const lo = accuracyStripSvg(sum(-45), { width: 300 });
+    expect(hi).toContain('acc-strip-arrow acc-s-bad'); expect(hi).not.toContain('acc-strip-dot');
+    const x2 = Number(hi.match(/acc-strip-bar[^>]*x2="([\d.]+)"/)[1]);
+    expect(x2).toBeLessThanOrEqual(294);
+    const xHi = Number(hi.match(/acc-strip-arrow[^>]*data-x="([\d.]+)"/)[1]), xLo = Number(lo.match(/acc-strip-arrow[^>]*data-x="([\d.]+)"/)[1]);
+    expect(xHi).toBeGreaterThan(150); expect(xLo).toBeLessThan(150);
   });
 });

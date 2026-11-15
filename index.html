@@ -8519,7 +8519,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.29';
+const APP_VERSION = '15.11.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15614,6 +15614,72 @@ function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, labels = 
     const latest = i === days.length - 1;
     s += `<circle class="acc-dot${latest ? ' acc-dot-latest' : ''}" data-day="${d.date}" cx="${cx}" cy="${y(d.median).toFixed(1)}" r="${latest ? 5 : 3.5}"/>`;
   });
+  return s + '</svg>';
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Accuracy overview (every watch on one screen): green within ±5 s/d, amber within ±15, red beyond.
+function accuracyStatus(rate) {
+  const a = Math.abs(Number(rate));
+  return a <= 5 ? 'good' : a <= 15 ? 'warn' : 'bad';
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// One watch's line in the overview. `latest` is the newest usable reading whatever the range;
+// `inRange` (count, spread, mean of the day medians — the per-watch page's own average) is
+// null when nothing falls in the range.
+function summarizeWatchAccuracy(rows, range, now = new Date()) {
+  const valid = (rows || []).filter(r => r.rate != null && Number.isFinite(Number(r.rate)));
+  if (!valid.length) return { latest: null, inRange: null };
+  const top = valid.reduce((a, b) => (new Date(b.created_at) > new Date(a.created_at) ? b : a));
+  const latest = { rate: Number(top.rate), created_at: top.created_at };
+  const days = filterDaysByRange(groupReadingsByDay(valid), range, now);
+  if (!days.length) return { latest, inRange: null };
+  return { latest, inRange: {
+    n: days.reduce((s, d) => s + d.n, 0),
+    min: Math.min(...days.map(d => d.min)),
+    max: Math.max(...days.map(d => d.max)),
+    avg: days.reduce((s, d) => s + d.median, 0) / days.length,
+  } };
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Every watch in the collection with its summary, measured ones first in the chosen order
+// ('accurate' | 'recent' | 'name'), never-measured ones last by name. Readings on a watch
+// that is no longer in the collection are dropped.
+function buildAccuracyOverview(watches, rows, range, sort, now = new Date()) {
+  const by = new Map();
+  (rows || []).forEach(r => { if (!by.has(r.watch_id)) by.set(r.watch_id, []); by.get(r.watch_id).push(r); });
+  const list = (watches || []).map(w => ({ id: w.id, label: `${w.brand || ''} ${w.name || ''}`.trim(), ...summarizeWatchAccuracy(by.get(w.id), range, now) }));
+  const byLabel = (a, b) => a.label.localeCompare(b.label);
+  const cmp = sort === 'recent' ? (a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at)
+    : sort === 'name' ? byLabel
+    : (a, b) => Math.abs(a.latest.rate) - Math.abs(b.latest.rate);
+  return [...list.filter(w => w.latest).sort((a, b) => cmp(a, b) || byLabel(a, b)), ...list.filter(w => !w.latest).sort(byLabel)];
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// The overview's strip: every watch on the same -limit..+limit s/d scale, so rows compare by
+// eye. Bands at ±5 / ±15, dot = latest reading, bar = spread in the range; a reading beyond
+// the scale is an arrow pinned to that edge. `label` must already be escaped. Pure string.
+function accuracyStripSvg(summary, { width = 300, height = 18, limit = 30, label = '' } = {}) {
+  const pad = 6, cy = height / 2;
+  const x = (v) => pad + (Math.max(-limit, Math.min(limit, v)) + limit) / (2 * limit) * (width - 2 * pad);
+  const f = (n) => n.toFixed(1);
+  let s = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label}" class="acc-strip">`;
+  s += `<rect class="acc-band-15" x="${f(x(-15))}" y="2" width="${f(x(15) - x(-15))}" height="${height - 4}"/>`;
+  s += `<rect class="acc-band-5" x="${f(x(-5))}" y="2" width="${f(x(5) - x(-5))}" height="${height - 4}"/>`;
+  s += `<line class="acc-zero" x1="${f(x(0))}" x2="${f(x(0))}" y1="1" y2="${height - 1}"/>`;
+  const latest = summary.latest;
+  if (!latest) return s + '</svg>';
+  const st = accuracyStatus(latest.rate);
+  if (summary.inRange) s += `<line class="acc-strip-bar acc-s-${st}" x1="${f(x(summary.inRange.min))}" x2="${f(x(summary.inRange.max))}" y1="${cy}" y2="${cy}"/>`;
+  if (Math.abs(latest.rate) > limit) {
+    const e = x(latest.rate), dir = latest.rate > 0 ? 1 : -1;
+    s += `<path class="acc-strip-arrow acc-s-${st}" data-x="${f(e)}" d="M${f(e - 5 * dir)} ${f(cy - 5)} L${f(e + 3 * dir)} ${f(cy)} L${f(e - 5 * dir)} ${f(cy + 5)} Z"/>`;
+  } else {
+    s += `<circle class="acc-strip-dot acc-s-${st}" cx="${f(x(latest.rate))}" cy="${cy}" r="4.5"/>`;
+  }
   return s + '</svg>';
 }
 
