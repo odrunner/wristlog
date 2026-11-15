@@ -33,10 +33,14 @@ Deno.test("honeypot: any non-empty value trips it", () => {
   assertEquals(isHoneypotTripped("http://spam"), true);
 });
 
-Deno.test("resolveIp prefers x-forwarded-for's first hop, then cf-connecting-ip, else unknown", () => {
+Deno.test("resolveIp trusts cf-connecting-ip, then the LAST x-forwarded-for hop, never the first", () => {
   const h = (m: Record<string, string>) => (n: string) => m[n] ?? null;
-  assertEquals(resolveIp(h({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" })), "1.2.3.4");
+  // A caller-supplied first hop is ignored whenever Cloudflare's header is there.
+  assertEquals(resolveIp(h({ "x-forwarded-for": "6.6.6.6, 5.6.7.8", "cf-connecting-ip": "5.6.7.8" })), "5.6.7.8");
   assertEquals(resolveIp(h({ "cf-connecting-ip": "9.9.9.9" })), "9.9.9.9");
+  // Without it, the appended (last) hop is the one a proxy wrote.
+  assertEquals(resolveIp(h({ "x-forwarded-for": "6.6.6.6, 5.6.7.8" })), "5.6.7.8");
+  assertEquals(resolveIp(h({ "x-forwarded-for": "1.2.3.4" })), "1.2.3.4");
   assertEquals(resolveIp(h({})), "unknown");
 });
 

@@ -66,9 +66,13 @@ export function isHoneypotTripped(hp: unknown): boolean {
   return typeof hp === "string" && hp.trim().length > 0;
 }
 
+// The caller's address as Cloudflare saw it. cf-connecting-ip cannot be set by
+// the caller (Cloudflare refuses a request that carries one); x-forwarded-for
+// can, and proxies APPEND the real address, so its FIRST entry is whatever the
+// caller typed (probed live 2026-11-15) and only its last entry is usable.
 export function resolveIp(headerGet: (name: string) => string | null): string {
-  return headerGet("x-forwarded-for")?.split(",")[0]?.trim()
-    || headerGet("cf-connecting-ip")
+  return headerGet("cf-connecting-ip")?.trim()
+    || headerGet("x-forwarded-for")?.split(",").pop()?.trim()
     || "unknown";
 }
 
