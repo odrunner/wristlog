@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=1269069a', it: 'i18n/it.js?v=bf022b8f', fr: 'i18n/fr.js?v=9af9dae6', tr: 'i18n/tr.js?v=73c817ec', de: 'i18n/de.js?v=6c7617a7', pt: 'i18n/pt.js?v=d6207694' };
+      var FILES = { es: 'i18n/es.js?v=d5f9b1bc', it: 'i18n/it.js?v=768c439d', fr: 'i18n/fr.js?v=e1a17511', tr: 'i18n/tr.js?v=49d12d23', de: 'i18n/de.js?v=c7e991ea', pt: 'i18n/pt.js?v=6b0f61a0' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -3268,6 +3268,34 @@
   </div>
 </div>
 
+<!-- What the result's numbers mean (experiment msr_results_help) -->
+<div id="msr-explain-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-explain-title">
+  <div class="modal u-maxw-95 u-pt-8 u-pr-7 u-pb-8 u-pl-7">
+    <div class="eyebrow stack-5">Your reading</div>
+    <div id="msr-explain-title" class="title-lg u-mb-5">What the numbers mean</div>
+    <div class="u-fd-column u-gap-4 u-mb-6 u-d-flex">
+      <div>
+        <div class="text-default u-fw-semibold u-mb-0-5">Rate (s/day)</div>
+        <div class="text-meta u-lh-body">How many seconds your watch gains (+) or loses (&minus;) in a day. Within &plusmn;5 is excellent for a mechanical watch and within &plusmn;15 is normal. Beyond that, a watchmaker can usually regulate it.</div>
+      </div>
+      <div>
+        <div class="text-default u-fw-semibold u-mb-0-5">Beat error (BE)</div>
+        <div class="text-meta u-lh-body">How uneven the tick and the tock are, in milliseconds. Under 1 ms is fine. A higher number means the watch could use adjusting.</div>
+      </div>
+      <div>
+        <div class="text-default u-fw-semibold u-mb-0-5">Amplitude (AMP)</div>
+        <div class="text-meta u-lh-body">How far the balance wheel swings, in degrees. Healthy watches typically read 220&ndash;300&deg;. It appears only when the signal is clean enough to trust.</div>
+      </div>
+      <div>
+        <div class="text-default u-fw-semibold u-mb-0-5">CONVERGED</div>
+        <div class="text-meta u-lh-body">The reading held steady long enough to trust. Measuring twice and comparing is the quickest way to be sure.</div>
+      </div>
+      <div class="text-meta u-lh-body">A phone microphone is a guide, not a lab instrument. The position of the watch and how fully it is wound both change the result.</div>
+    </div>
+    <button class="btn btn-ghost btn-block btn-ghost-gold" onclick="closeMsrExplain()">Got it</button>
+  </div>
+</div>
+
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal u-maxw-100">
     <div class="modal-title" id="followers-modal-title">Followers</div>
@@ -4915,6 +4943,9 @@
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
           <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm btn-ghost-gold" onclick="shareMsrFromComplete()" disabled>Share</button>
         </div>
+        <div class="msr-explain-link u-ta-center u-mt-2 hidden">
+          <button onclick="showMsrExplain()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">What do these numbers mean?</button>
+        </div>
         <div class="u-ta-center u-mt-2">
           <button onclick="discardMsrReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline">Discard</button>
         </div>
@@ -4931,6 +4962,9 @@
           <button id="msr-share-ext-btn" class="btn btn-ghost btn-sm btn-grow btn-ghost-gold">Share image</button>
         </div>
         <button class="btn btn-ghost btn-sm btn-block u-c-muted u-mt-1-5" onclick="dismissMsrShareCta()">Done</button>
+        <div class="msr-explain-link u-ta-center u-mt-2 hidden">
+          <button onclick="showMsrExplain()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">What do these numbers mean?</button>
+        </div>
         <div id="msr-cta-discard" class="u-ta-center u-mt-2" style="display:none;">
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
         </div>
@@ -8576,7 +8610,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.09.46';
+const APP_VERSION = '15.09.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -34444,6 +34478,7 @@ const _overlayCloseMap = {
   'streak-calendar-modal': closeStreakCalendar,
   'anniversary-modal':   dismissAnniversary,
   'msr-help-modal':      closeMsrHelp,
+  'msr-explain-modal':   closeMsrExplain,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
   'admin-user-modal':    closeAdminUserModal,
@@ -37373,6 +37408,19 @@ function closeMsrHelp() {
   document.getElementById('msr-help-modal').classList.add('hidden');
   safeLS.set('wristlog_msr_help_seen', '1');
 }
+// "What do these numbers mean?" under a finished result (experiment
+// msr_results_help): rate, BE, AMP and CONVERGED were shown bare.
+function syncMsrExplainLinks() {
+  const on = experiment('msr_results_help');
+  document.querySelectorAll('.msr-explain-link').forEach(el => el.classList.toggle('hidden', !on));
+}
+function showMsrExplain() {
+  document.getElementById('msr-explain-modal').classList.remove('hidden');
+  if (currentUser && !_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'msr_explain_opened' }).then(() => {});
+}
+function closeMsrExplain() {
+  document.getElementById('msr-explain-modal').classList.add('hidden');
+}
 function maybeShowMsrHelp() {
   if (!safeLS.get('wristlog_msr_help_seen')) {
     showMsrHelp();
@@ -37709,6 +37757,7 @@ function stopMsrListen(reason) {
   // Keep save section visible if we have data.
   if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
+    syncMsrExplainLinks();
     const sign = _msrLastRate >= 0 ? '+' : '';
     document.getElementById('msr-rate-input').value = sign + _msrLastRate.toFixed(1);
     if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
@@ -37903,6 +37952,7 @@ function showMsrShareCta(watchId, rate, opts = {}) {
   const cta = document.getElementById('msr-share-cta');
   if (!cta) { closeMeasureModal(); return; }
   if (saveSection) saveSection.style.display = 'none';
+  syncMsrExplainLinks();
   const discardRow = document.getElementById('msr-cta-discard');
   if (discardRow) discardRow.style.display = opts.kept ? '' : 'none';
   const savedWord = opts.kept ? 'Kept' : 'Saved';
