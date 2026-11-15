@@ -8565,7 +8565,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.11.37';
+const APP_VERSION = '15.07.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13795,7 +13795,10 @@ async function scrollToFeedPost(postId) {
         const { data: likesData } = await db.from('likes').select('log_id, user_id').eq('log_id', postId);
         feedLikes[postId] = { count: 0, liked: false };
         (likesData || []).forEach(l => { feedLikes[postId].count++; if (l.user_id === currentUser.id) feedLikes[postId].liked = true; });
-        feedItems.unshift(post);
+        // nav() above may have started a feed reload that finished during these
+        // awaits and already holds this post — inserting again drew it twice.
+        const loaded = feedItems.find(f => f.id === postId);
+        if (loaded) post = loaded; else feedItems.unshift(post);
       }
     }
     if (post) {

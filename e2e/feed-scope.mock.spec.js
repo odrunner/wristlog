@@ -165,6 +165,37 @@ test('jump-to-post resets a scoped view instead of injecting into it', async ({ 
   await expect(page.locator('#feedcard-oth-1')).toBeVisible();
 });
 
+test('jump-to-post shows the post once when the feed reload lands first', async ({ page }) => {
+  // The jump empties the list, starts a full reload AND fetches the post itself.
+  // Hold the jump's own fetch until the reload has drawn the card: the post must
+  // not be inserted a second time.
+  const logs = [log('own-1', FAKE_USER.id, '2025-03-15'), log('oth-1', OTHER, '2025-03-14')];
+  let release; const gate = new Promise(r => { release = r; });
+  await boot(page, {
+    logs, follows: [OTHER, FRIEND], friends: [FRIEND],
+    logsRoute: async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const url = decodeURIComponent(route.request().url());
+      const mId = url.match(/[?&]id=eq\.([\w-]+)/);
+      if (mId) { await gate; return route.fulfill(fulfill(logs.filter(l => l.id === mId[1]))); }
+      const mEq = url.match(/user_id=eq\.([\w-]+)/);
+      const mIn = url.match(/user_id=in\.\(([^)]*)\)/);
+      let rows = logs;
+      if (mEq) rows = rows.filter(l => l.user_id === mEq[1]);
+      else if (mIn) { const ids = mIn[1].split(','); rows = rows.filter(l => ids.includes(l.user_id)); }
+      return route.fulfill(fulfill(rows));
+    },
+  });
+  await pickScope(page, 'Close friends');
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(0);
+  await page.evaluate(() => { window.__jump = scrollToFeedPost('oth-1'); });
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(1); // drawn by the reload
+  release();
+  await page.evaluate(() => window.__jump);
+  await expect(page.locator('#feedcard-oth-1')).toHaveCount(1);
+  expect(await page.evaluate(() => feedItems.filter(f => f.id === 'oth-1').length)).toBe(1);
+});
+
 test('quiet following scope says no posts, not "not following anyone"', async ({ page }) => {
   await boot(page, {
     logs: [log('own-1', FAKE_USER.id, '2025-03-15')], // the followed user never posted
