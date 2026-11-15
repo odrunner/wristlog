@@ -121,7 +121,7 @@ describe('review prompt: measurement counter logic', () => {
 describe('review prompt: shouldShowReviewPrompt logic', () => {
   // Mirrors shouldShowReviewPrompt(source) from index.html
 
-  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, ratedCooldownDays, wearCount, msrCount, thresholds = false, msrRate = undefined }) {
+  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, ratedCooldownDays, wearCount, msrCount, thresholds, msrRate = undefined }) {
     if (!currentUser) return false;
     if (lastAction) {
       const daysSince = (Date.now() - lastAction) / (1000 * 60 * 60 * 24);
