@@ -187,24 +187,13 @@ function sliderRowTag(labelText) {
 }
 
 describe('Advanced Settings — Phase 1 trim', () => {
-  it('keeps Sensitivity visible', () => {
-    const tag = sliderRowTag('>Sensitivity ');
-    expect(tag).toBeTruthy();
-    expect(tag).not.toContain('display:none');
-  });
-
-  it('keeps Convergence Speed visible', () => {
-    const tag = sliderRowTag('>Convergence Speed ');
-    expect(tag).toBeTruthy();
-    expect(tag).not.toContain('display:none');
-  });
-
-  it('hides Noise Tolerance, Outlier Strictness, Max Duration, Recalibration Attempts', () => {
-    for (const label of ['>Noise Tolerance ', '>Outlier Strictness ', '>Max Duration ', '>Recalibration Attempts ']) {
-      const tag = sliderRowTag(label);
-      expect(tag, `${label} row should exist`).toBeTruthy();
-      expect(tag, `${label} row should be hidden`).toContain('display:none');
+  it('the Standard-engine sliders and presets are gone from the page (2026-11-15)', () => {
+    // The stored values (TG_PRESETS / tgLoadSettings) are still applied on every start;
+    // only the pre-2.1 UI that edited them was removed.
+    for (const label of ['>Sensitivity ', '>Convergence Speed ', '>Noise Tolerance ', '>Outlier Strictness ', '>Max Duration ', '>Recalibration Attempts ']) {
+      expect(html, label).not.toContain(label);
     }
+    expect(html).toContain('tgApplySettingsToInputs(_tgSettings.values)');
   });
 
   it('does not surface the after-failures preset suggestion tip', () => {

@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=16ec1bc6', it: 'i18n/it.js?v=f194c3a1', fr: 'i18n/fr.js?v=74661b6f', tr: 'i18n/tr.js?v=4bd41d34', de: 'i18n/de.js?v=7f5961a9', pt: 'i18n/pt.js?v=b46fcd8e' };
+      var FILES = { es: 'i18n/es.js?v=284e7ee2', it: 'i18n/it.js?v=61e314dc', fr: 'i18n/fr.js?v=a5c27a8b', tr: 'i18n/tr.js?v=497f31ca', de: 'i18n/de.js?v=a7df2f3a', pt: 'i18n/pt.js?v=35f82590' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -4985,7 +4985,7 @@
            pre-2.1 fallback); the removed selector is archived in
            docs/archive/standard-engine-selector-retired-2026-10-25.md. -->
       <!-- Pro V2 engine settings (Standard-only sections below remain solely as the pre-2.1 fallback UI) -->
-      <div id="msr-prov2-settings" class="u-mb-5" style="display:none;">
+      <div id="msr-prov2-settings" class="u-mb-5">
         <div class="text-meta u-fw-semibold u-mb-2 u-ls-tight">PRO V2 · PRECISION</div>
         <div id="msr-prov2-precision" class="u-cols-1fr-1fr-1fr u-gap-2 u-mb-5 u-d-grid">
           <button class="msr-preset-card" data-prec="quick" onclick="onProV2Precision('quick')">
@@ -5006,62 +5006,6 @@
           <div class="msr-slider-label">Lift angle <span class="msr-slider-val" id="msr-prov2-lift-val">52°</span></div>
           <div class="msr-slider-desc">Escapement lift angle — affects the amplitude reading only. 52° fits most modern movements; check your movement's spec if amplitude looks off.</div>
           <input type="range" id="msr-prov2-lift" min="40" max="60" step="1" value="52" oninput="onProV2Lift(this.value)">
-        </div>
-      </div>
-      <div id="msr-std-preset-section" class="stack-5">
-        <div class="text-meta u-fw-semibold u-mb-2 u-ls-tight">ENVIRONMENT PRESET</div>
-        <div id="msr-settings-presets" class="u-cols-1fr-1fr u-gap-2 u-d-grid">
-          <button class="msr-preset-card active" data-preset="default" onclick="tgSelectPreset('default')">
-            <div class="msr-preset-name">Default</div>
-            <div class="msr-preset-desc">Balanced for most situations</div>
-          </button>
-          <button class="msr-preset-card" data-preset="quiet" onclick="tgSelectPreset('quiet')">
-            <div class="msr-preset-name">Quiet Room</div>
-            <div class="msr-preset-desc">Tighter validation, faster lock</div>
-          </button>
-          <button class="msr-preset-card" data-preset="noisy" onclick="tgSelectPreset('noisy')">
-            <div class="msr-preset-name">Noisy Environment</div>
-            <div class="msr-preset-desc">More tolerant, extra retries</div>
-          </button>
-          <button class="msr-preset-card" data-preset="weak" onclick="tgSelectPreset('weak')">
-            <div class="msr-preset-name">Weak Signal</div>
-            <div class="msr-preset-desc">Max sensitivity, longer capture</div>
-          </button>
-        </div>
-      </div>
-      <div id="msr-std-tuning-section" class="stack-5">
-        <div class="text-meta u-fw-semibold u-mb-2 u-ls-tight">TUNING</div>
-        <div id="msr-settings-sliders" class="u-fd-column u-gap-3 u-d-flex">
-          <div class="msr-slider-row">
-            <div class="msr-slider-label">Sensitivity <span class="msr-slider-val" id="msr-adv-sensitivity-val">5</span></div>
-            <div class="msr-slider-desc">How easily ticks are detected</div>
-            <input type="range" id="msr-adv-sensitivity" min="1" max="10" value="5" oninput="tgSliderChanged()">
-          </div>
-          <div class="msr-slider-row" style="display:none;">
-            <div class="msr-slider-label">Noise Tolerance <span class="msr-slider-val" id="msr-adv-noiseTolerance-val">5</span></div>
-            <div class="msr-slider-desc">Resistance to background noise</div>
-            <input type="range" id="msr-adv-noiseTolerance" min="1" max="10" value="5" oninput="tgSliderChanged()">
-          </div>
-          <div class="msr-slider-row" style="display:none;">
-            <div class="msr-slider-label">Outlier Strictness <span class="msr-slider-val" id="msr-adv-outlierStrictness-val">5</span></div>
-            <div class="msr-slider-desc">How strict tick timing validation is</div>
-            <input type="range" id="msr-adv-outlierStrictness" min="1" max="10" value="5" oninput="tgSliderChanged()">
-          </div>
-          <div class="msr-slider-row">
-            <div class="msr-slider-label">Convergence Speed <span class="msr-slider-val" id="msr-adv-convergenceSpeed-val">5</span></div>
-            <div class="msr-slider-desc">How quickly rate locks in</div>
-            <input type="range" id="msr-adv-convergenceSpeed" min="1" max="10" value="5" oninput="tgSliderChanged()">
-          </div>
-          <div class="msr-slider-row" style="display:none;">
-            <div class="msr-slider-label">Max Duration <span class="msr-slider-val" id="msr-adv-maxDuration-val">45s</span></div>
-            <div class="msr-slider-desc">Auto-stop timer</div>
-            <input type="range" id="msr-adv-maxDuration" min="30" max="120" step="5" value="45" oninput="tgSliderChanged()">
-          </div>
-          <div class="msr-slider-row" style="display:none;">
-            <div class="msr-slider-label">Recalibration Attempts <span class="msr-slider-val" id="msr-adv-recalibrationAttempts-val">4</span></div>
-            <div class="msr-slider-desc">Retries if calibration misses ticks</div>
-            <input type="range" id="msr-adv-recalibrationAttempts" min="1" max="8" value="4" oninput="tgSliderChanged()">
-          </div>
         </div>
       </div>
       <button onclick="tgResetDefaults()" class="text-secondary u-w-100pct u-pt-2-5 u-pr-2-5 u-pb-2-5 u-pl-2-5 u-r-btn u-bd-1px-solid-border u-bg-surface u-cur-pointer">Restore Defaults</button>
@@ -8575,7 +8519,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.21';
+const APP_VERSION = '15.10.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -34800,11 +34744,9 @@ function _pzMode() { return safeLS.get('pz_mode') === 'measurement' ? 'measureme
 // docs/archive/standard-engine-selector-retired-2026-10-25.md.
 // (There is no web engine — both engines live in the native app, so no flag can
 // force Pro V2 outside a 2.1+ build. The tg_dev_knobs flag only shows the raw knob panel.)
-function _native21() { return _tgHasNative() && nativeAtLeast('2.1'); }
-function _proV2Available() { return _native21(); }
-function _tgAlgo() {
-  return _proV2Available() ? 'tg' : 'original';   // 'original' only where Pro V2 isn't in the binary
-}
+// Pro V2 is the only engine the page drives. The 'original' fallback for pre-2.1 binaries
+// (which had no Pro V2) went 2026-11-15: the field has been 100% on 2.5+ since October.
+function _tgAlgo() { return 'tg'; }
 function onPzTuneMode(v) { safeLS.set('pz_mode', v); }  // session mode — applies on next stop/start
 
 // Admin batch runner: leave the pickup coupled, auto-run many measurements (alternating
@@ -35991,31 +35933,19 @@ function openMsrSettings() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-msr-settings').classList.add('active');
   window.scrollTo(0, 0);
-  tgLoadSettingsToUI();
   _msrSettingsApplyEngine();
 }
 
-// Pro V2: show its own settings (precision + lift angle); the Standard-only sections show
-// only on pre-2.1 builds, the one place the Standard engine still runs (selector retired
-// 2026-10-25 — there is no in-session engine choice any more).
+// Fills the Pro V2 settings (precision + lift angle) from what is stored.
 function _msrSettingsApplyEngine() {
-  const isV2 = _tgAlgo() === 'tg';
-  const v2 = document.getElementById('msr-prov2-settings');
-  const stdA = document.getElementById('msr-std-preset-section');
-  const stdB = document.getElementById('msr-std-tuning-section');
-  if (v2) v2.style.display = isV2 ? '' : 'none';
-  if (stdA) stdA.style.display = isV2 ? 'none' : '';
-  if (stdB) stdB.style.display = isV2 ? 'none' : '';
-  if (isV2) {
-    const lift = _tgKnob('tg_lift', 52);
-    const liftEl = document.getElementById('msr-prov2-lift');
-    if (liftEl) liftEl.value = lift;
-    const liftVal = document.getElementById('msr-prov2-lift-val');
-    if (liftVal) liftVal.textContent = lift + '°';
-    const prec = safeLS.get('tg_precision') || 'balanced';
-    document.querySelectorAll('#msr-prov2-precision .msr-preset-card').forEach(c =>
-      c.classList.toggle('active', c.dataset.prec === prec));
-  }
+  const lift = _tgKnob('tg_lift', 52);
+  const liftEl = document.getElementById('msr-prov2-lift');
+  if (liftEl) liftEl.value = lift;
+  const liftVal = document.getElementById('msr-prov2-lift-val');
+  if (liftVal) liftVal.textContent = lift + '°';
+  const prec = safeLS.get('tg_precision') || 'balanced';
+  document.querySelectorAll('#msr-prov2-precision .msr-preset-card').forEach(c =>
+    c.classList.toggle('active', c.dataset.prec === prec));
 }
 
 // Pro V2 precision presets. tg_wallmin is the EARLIEST the engine may converge, and it is
@@ -36219,79 +36149,11 @@ async function discardHistoryReading(id) {
   renderMsrHistoryView();
 }
 
-function tgLoadSettingsToUI() {
-  const s = tgLoadSettings();
-  const v = s.values;
-  document.getElementById('msr-adv-sensitivity').value = v.sensitivity;
-  document.getElementById('msr-adv-noiseTolerance').value = v.noiseTolerance;
-  document.getElementById('msr-adv-outlierStrictness').value = v.outlierStrictness;
-  document.getElementById('msr-adv-convergenceSpeed').value = v.convergenceSpeed;
-  document.getElementById('msr-adv-maxDuration').value = v.maxDuration;
-  document.getElementById('msr-adv-recalibrationAttempts').value = v.recalibrationAttempts;
-  tgUpdateSliderLabels();
-  tgHighlightPreset(s.preset);
-}
-
-function tgUpdateSliderLabels() {
-  document.getElementById('msr-adv-sensitivity-val').textContent = document.getElementById('msr-adv-sensitivity').value;
-  document.getElementById('msr-adv-noiseTolerance-val').textContent = document.getElementById('msr-adv-noiseTolerance').value;
-  document.getElementById('msr-adv-outlierStrictness-val').textContent = document.getElementById('msr-adv-outlierStrictness').value;
-  document.getElementById('msr-adv-convergenceSpeed-val').textContent = document.getElementById('msr-adv-convergenceSpeed').value;
-  document.getElementById('msr-adv-maxDuration-val').textContent = document.getElementById('msr-adv-maxDuration').value + 's';
-  document.getElementById('msr-adv-recalibrationAttempts-val').textContent = document.getElementById('msr-adv-recalibrationAttempts').value;
-}
-
-function tgHighlightPreset(presetKey) {
-  document.querySelectorAll('.msr-preset-card').forEach(c => c.classList.remove('active'));
-  if (presetKey && presetKey !== 'custom') {
-    const card = document.querySelector('.msr-preset-card[data-preset="' + presetKey + '"]');
-    if (card) card.classList.add('active');
-  }
-}
-
-function tgGetCurrentValues() {
-  return {
-    sensitivity: Number(document.getElementById('msr-adv-sensitivity').value),
-    noiseTolerance: Number(document.getElementById('msr-adv-noiseTolerance').value),
-    outlierStrictness: Number(document.getElementById('msr-adv-outlierStrictness').value),
-    convergenceSpeed: Number(document.getElementById('msr-adv-convergenceSpeed').value),
-    maxDuration: Number(document.getElementById('msr-adv-maxDuration').value),
-    recalibrationAttempts: Number(document.getElementById('msr-adv-recalibrationAttempts').value)
-  };
-}
-
-function tgSelectPreset(key) {
-  const preset = TG_PRESETS[key];
-  if (!preset) return;
-  document.getElementById('msr-adv-sensitivity').value = preset.sensitivity;
-  document.getElementById('msr-adv-noiseTolerance').value = preset.noiseTolerance;
-  document.getElementById('msr-adv-outlierStrictness').value = preset.outlierStrictness;
-  document.getElementById('msr-adv-convergenceSpeed').value = preset.convergenceSpeed;
-  document.getElementById('msr-adv-maxDuration').value = preset.maxDuration;
-  document.getElementById('msr-adv-recalibrationAttempts').value = preset.recalibrationAttempts;
-  tgUpdateSliderLabels();
-  tgHighlightPreset(key);
-  tgSaveSettings(key, preset);
-}
-
-function tgSliderChanged() {
-  tgUpdateSliderLabels();
-  const values = tgGetCurrentValues();
-  let matchedPreset = 'custom';
-  for (const [key, preset] of Object.entries(TG_PRESETS)) {
-    if (preset.sensitivity === values.sensitivity && preset.noiseTolerance === values.noiseTolerance &&
-        preset.outlierStrictness === values.outlierStrictness && preset.convergenceSpeed === values.convergenceSpeed &&
-        preset.maxDuration === values.maxDuration && preset.recalibrationAttempts === values.recalibrationAttempts) {
-      matchedPreset = key;
-      break;
-    }
-  }
-  tgHighlightPreset(matchedPreset);
-  tgSaveSettings(matchedPreset, values);
-}
-
+// The sliders and environment presets this used to drive were Standard-engine UI and
+// are gone; stored values from that era still reach the shared tick detector, so the
+// button keeps doing the one thing it did for Pro V2 users: put them back to default.
 function tgResetDefaults() {
-  tgSelectPreset('default');
+  tgSaveSettings('default', { ...TG_PRESETS.default });
 }
 
 const TG_PRESET_LABELS = { quiet: 'Quiet Room', noisy: 'Noisy Env', weak: 'Weak Signal', custom: 'Custom' };

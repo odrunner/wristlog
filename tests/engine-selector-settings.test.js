@@ -5,9 +5,9 @@ import { describe, it, expect } from 'vitest';
 
 // The Standard engine selector was RETIRED 2026-10-25 (it had moved from the Measure page
 // to Advanced Settings on 2026-08-23 as the first step). These guard the retirement: no
-// selector markup or choice plumbing may come back, while the Standard-only settings
-// sections stay in place as the fallback UI for pre-2.1 binaries, which have no Pro V2.
-// Engine semantics (_tgAlgo build fallback) live in tests/tg-engine-default.test.js.
+// selector markup or choice plumbing may come back. The Standard-only settings sections
+// and the pre-2.1 'original' fallback went on 2026-11-15 (field 100% on 2.5+).
+// Engine semantics live in tests/tg-engine-default.test.js.
 // The removed code is archived in docs/archive/standard-engine-selector-retired-2026-10-25.md.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,17 +28,26 @@ describe('the Standard engine selector is retired', () => {
     }
   });
 
-  it('_tgAlgo is build-only: Pro V2 everywhere it exists', () => {
-    const body = fnBody('_tgAlgo');
-    expect(body).toContain("_proV2Available() ? 'tg' : 'original'");
+  it('_tgAlgo is Pro V2, with no build fallback', () => {
+    expect(html).toContain("function _tgAlgo() { return 'tg'; }");
+    expect(html).not.toContain('_proV2Available');
   });
 
-  it('the settings page still swaps sections for pre-2.1 builds', () => {
-    expect(fnBody('openMsrSettings')).toContain('_msrSettingsApplyEngine()');
-    const apply = fnBody('_msrSettingsApplyEngine');
-    for (const id of ['msr-prov2-settings', 'msr-std-preset-section', 'msr-std-tuning-section']) {
-      expect(apply).toContain(id);
+  it('the Standard-only settings sections and their handlers are gone', () => {
+    for (const marker of ['msr-std-preset-section', 'msr-std-tuning-section', 'msr-adv-', 'tgSelectPreset(', 'tgSliderChanged(',
+                          'function tgLoadSettingsToUI(']) {
+      expect(html).not.toContain(marker);
     }
+  });
+
+  it('the settings page shows the Pro V2 settings without a script un-hiding them', () => {
+    expect(fnBody('openMsrSettings')).toContain('_msrSettingsApplyEngine()');
+    expect(html).toMatch(/<div id="msr-prov2-settings" class="[^"]*">/);
+    expect(fnBody('_msrSettingsApplyEngine')).toContain('msr-prov2-precision');
+  });
+
+  it('Restore Defaults still resets the stored tuning the tick detector reads', () => {
+    expect(fnBody('tgResetDefaults')).toContain("tgSaveSettings('default', { ...TG_PRESETS.default })");
   });
 
   it('help and news no longer offer the Standard engine', () => {

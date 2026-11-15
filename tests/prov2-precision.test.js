@@ -164,9 +164,8 @@ describe('engine choice is retired (Pro V2 only)', () => {
     expect(fnBody('initTgSourceSelector')).toContain("safeLS.remove('tg_algo_sel')");
   });
 
-  it('falls back to Standard only when the build has no Pro V2', () => {
-    const body = fnBody('_tgAlgo');
-    expect(body).toContain("_proV2Available() ? 'tg' : 'original'");
+  it('there is no Standard fallback any more', () => {
+    expect(html).toContain("function _tgAlgo() { return 'tg'; }");
   });
 });
 
