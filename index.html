@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=284e7ee2', it: 'i18n/it.js?v=61e314dc', fr: 'i18n/fr.js?v=a5c27a8b', tr: 'i18n/tr.js?v=497f31ca', de: 'i18n/de.js?v=a7df2f3a', pt: 'i18n/pt.js?v=35f82590' };
+      var FILES = { es: 'i18n/es.js?v=a7a9bbca', it: 'i18n/it.js?v=4101c580', fr: 'i18n/fr.js?v=cc13ed0f', tr: 'i18n/tr.js?v=ec2d7bdc', de: 'i18n/de.js?v=90b32c93', pt: 'i18n/pt.js?v=5d0f825d' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2838,6 +2838,10 @@
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Accuracy Overview</div>
+        <div class="body-muted">See how your whole collection is running on one screen. Tap the trend icon on the Measure page: every watch shows its latest reading and a strip on the same &plusmn;30 s/d scale, sortable by most accurate, most recent or name. Tap a watch for its full history.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">WRotate in Your Language</div>
         <div class="body-muted">The app now speaks <strong>Spanish, Italian, French, Turkish, German and Portuguese</strong> as well as English. Open your profile and pick one under <strong>Language</strong> &#8212; menus, buttons, dates and the Help guide switch over, and so do the emails, notifications and fun facts we send you. Your choice follows your account to every device. Spot a translation that reads wrong? Tell us through Send Feedback.</div>
       </div>
@@ -4146,7 +4150,8 @@
             <div class="help-step-num">9</div>
             <div class="help-step-body">
               <div class="help-step-title">Accuracy history and trend</div>
-              <div class="help-step-desc">Under the chart on the Measure screen, an <strong>Accuracy history</strong> card shows the selected watch&#8217;s latest reading and a small trend line. Tap it &#8212; or the trend icon next to the gear in the header &#8212; for the full history: one dot per day (that day&#8217;s median, with a bar for the spread when you measured more than once), green and amber bands at &plusmn;5 and &plusmn;15 s/d, 1M / 3M / 1Y / All ranges, and a per-day list &#8212; tap a day to see each reading and discard any you don&#8217;t want.</div>
+              <div class="help-step-desc">Under the chart on the Measure screen, an <strong>Accuracy history</strong> card shows the selected watch&#8217;s latest reading and a small trend line. Tap it for the full history: one dot per day (that day&#8217;s median, with a bar for the spread when you measured more than once), green and amber bands at &plusmn;5 and &plusmn;15 s/d, 1M / 3M / 1Y / All ranges, and a per-day list &#8212; tap a day to see each reading and discard any you don&#8217;t want.</div>
+              <div class="help-step-desc">The trend icon next to the gear in the header shows every watch on one screen: each with its latest reading and a strip on the same &plusmn;30 s/d scale, so they compare at a glance. Sort by most accurate, most recent or name, and tap a watch to open its history.</div>
             </div>
           </div>
           <div class="row-start help-tip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="u-shrink-0 u-mt-0-5"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -8547,7 +8552,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.12.03';
+const APP_VERSION = '15.12.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
