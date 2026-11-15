@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=1269069a', it: 'i18n/it.js?v=bf022b8f', fr: 'i18n/fr.js?v=9af9dae6', tr: 'i18n/tr.js?v=73c817ec', de: 'i18n/de.js?v=6c7617a7', pt: 'i18n/pt.js?v=d6207694' };
+      var FILES = { es: 'i18n/es.js?v=16ec1bc6', it: 'i18n/it.js?v=f194c3a1', fr: 'i18n/fr.js?v=74661b6f', tr: 'i18n/tr.js?v=4bd41d34', de: 'i18n/de.js?v=7f5961a9', pt: 'i18n/pt.js?v=b46fcd8e' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -4853,7 +4853,6 @@
           <div id="msr-progress-fill" class="u-h-100pct u-w-0pct u-r-0-0-btn-btn u-tr-width-dur-xslow-ease-out-background-dur-slow u-bg-mix-tg-ink-50"></div>
         </div>
       </div>
-      <div id="msr-mic-warning" role="alert" class="u-fs-sm u-c-danger-text u-mb-2 u-lh-snug" style="display:none;"></div>
       <!-- Live status container (hidden, used by JS to toggle visibility) -->
       <div id="msr-live-status" style="display:none;"></div>
       <!-- Hidden tuning inputs (used by remote tuning) -->
@@ -8576,7 +8575,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.12';
+const APP_VERSION = '15.10.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21960,7 +21959,6 @@ function dmHandleBlock(userId) {
 
 function dmActivatePage() {
   if (document.getElementById('page-messages').classList.contains('active')) return;
-  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   // Messages has no tab of its own, so no button gets .active — but the old
@@ -23275,7 +23273,6 @@ function nav(btn) {
   // Back-from-profile must restore it.)
   if (page !== 'feed' && (feedUserFilter || feedModelFilter)) { feedUserFilter = null; feedModelFilter = null; feedItems = []; feedLoadedAt = 0; }
   // Stop active microphone/audio when navigating away from measure or watch detail
-  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
@@ -23357,7 +23354,6 @@ function collSeg(page) {
   if (page === 'collection') { nav(document.querySelector('nav button[data-page="collection"]')); return; }
   _openBootGate();
   if (feedUserFilter || feedModelFilter) { feedUserFilter = null; feedModelFilter = null; feedItems = []; feedLoadedAt = 0; }
-  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
@@ -23431,7 +23427,6 @@ async function loadExploreModels(reset) {
 
 function showClubsPage() {
   if (demoGuard()) return;
-  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -28053,7 +28048,6 @@ function openEditWatch(id) {
 function closeWatchModal() {
   const _wmR = document.getElementById('wm-also-owned');
   if (_wmR) _wmR.style.display = 'none';
-  if (_tgListening) stopTgListen();
   clearInlineEdits();
   if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
   wPendingImage = null; wPendingFile = null;
@@ -35108,13 +35102,11 @@ function handleSharedImage(base64) {
 }
 let _tgWatchId = null;
 let _tgEditingId = null;
-let _tgListening = false;
 let _tgFromListening = false; // true if rate was auto-filled from mic measurement
 
 function initTgSection(watchId) {
   _tgWatchId = watchId;
   _tgEditingId = null;
-  _tgListening = false;
   _tgFromListening = false;
   // Demo mode: hide manual entry form, only show sign-up CTA in history area
   const secBody = document.getElementById('sec-accuracy');
@@ -35127,33 +35119,7 @@ function initTgSection(watchId) {
   document.getElementById('tg-amplitude-input').value = '';
   document.getElementById('tg-notes-input').value = '';
   document.getElementById('tg-bph-select').value = '28800';
-  const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
-  const _tls = document.getElementById('tg-live-status'); if (_tls) _tls.style.display = 'none';
-  const _tmw = document.getElementById('tg-mic-warning'); if (_tmw) _tmw.style.display = 'none';
   loadTgHistory();
-}
-
-// Web Audio API fallback for mic listening
-let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null;
-
-function stopTgListen() {
-  _tgListening = false;
-  if (_tgHasNative()) {
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
-  }
-  if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
-  if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
-  if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
-  // Auto-fill rate if we got a result
-  const rateEl = document.getElementById('tg-live-rate');
-  if (rateEl.textContent !== '—') {
-    document.getElementById('tg-rate-input').value = rateEl.textContent;
-    const beEl = document.getElementById('tg-live-be');
-    if (beEl.textContent !== '—') document.getElementById('tg-be-input').value = beEl.textContent;
-    _tgFromListening = true;
-    toast('Measurement complete — review and save below');
-  }
 }
 
 // Remote tuning: poll Supabase for parameter changes
@@ -35752,15 +35718,6 @@ window._tgNativeCallback = function(data) {
       // is always an echo. Letting it through kills new sessions started
       // between the JS stop and the async native echo arriving.
       console.log('[TG JS] Ignoring native stopped event (JS controls stop)');
-    } else {
-      _tgListening = false;
-      const _tgBtn = document.getElementById('tg-listen-btn');
-      if (_tgBtn) _tgBtn.textContent = tx('Start Listening');
-      if (data.rate != null) {
-        const _tgRateIn = document.getElementById('tg-rate-input'); if (_tgRateIn) _tgRateIn.value = data.rate.toFixed(1);
-        const _tgBeIn = document.getElementById('tg-be-input'); if (_tgBeIn && data.beatError != null) _tgBeIn.value = data.beatError.toFixed(2);
-        _tgFromListening = true;
-      }
     }
   } else if (data.event === 'error') {
     if (isMsr) {
@@ -35770,10 +35727,6 @@ window._tgNativeCallback = function(data) {
       const _errBtnStop = document.getElementById('msr-btn-stop'); if (_errBtnStop) _errBtnStop.style.display = 'none';
       const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = tx('Measure');
       const _errListenBtn = document.getElementById('msr-listen-btn'); if (_errListenBtn) { _errListenBtn.style.borderColor = 'color-mix(in srgb, var(--tg-ink) 30%, transparent)'; _errListenBtn.style.color = 'var(--tg-ink)'; _errListenBtn.style.background = 'var(--tg-bg)'; }
-    } else {
-      _tgListening = false;
-      const _tgBtn2 = document.getElementById('tg-listen-btn');
-      if (_tgBtn2) _tgBtn2.textContent = tx('Start Listening');
     }
     toast(data.message || 'Microphone error', 'error');
   }
@@ -37116,7 +37069,6 @@ function openMeasureInline() {
   listenBtn.style.background = 'var(--tg-bg)'; listenBtn.style.color = 'var(--tg-ink)'; listenBtn.style.borderColor = 'color-mix(in srgb, var(--tg-ink) 30%, transparent)';
   _msrPhase = '';
   document.getElementById('msr-live-status').style.display = 'none';
-  document.getElementById('msr-mic-warning').style.display = 'none';
   document.getElementById('msr-save-section').style.display = 'none';
   const shareCtaInit = document.getElementById('msr-share-cta');
   if (shareCtaInit) shareCtaInit.style.display = 'none';
@@ -37406,7 +37358,6 @@ function toggleMsrListen() {
   markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
   _msrKeptReading = null;   // new session — the next converged reading is a new history row
   try {
-  // Use native bridge if available
   if (_tgHasNative()) {
     const bphVal = parseInt(document.getElementById('msr-bph-select').value);
     const bph = isNaN(bphVal) ? 0 : bphVal; // 0 = auto detect
@@ -37427,15 +37378,11 @@ function toggleMsrListen() {
     if (saveBtn) saveBtn.disabled = true;
     const _completeShareBtn = document.getElementById('msr-complete-share-btn');
     if (_completeShareBtn) _completeShareBtn.disabled = true;
-    if (_tgHasNative()) {
-      const _tgSettings = tgLoadSettings();
-      if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
-      tgApplySettingsToInputs(_tgSettings.values);
-      _msrActiveSettings = _tgSettings;
-      hideTroubleshootTips();
-    } else {
-      _msrActiveSettings = null;
-    }
+    const _tgSettings = tgLoadSettings();
+    if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
+    tgApplySettingsToInputs(_tgSettings.values);
+    _msrActiveSettings = _tgSettings;
+    hideTroubleshootTips();
     _q2ApplyOverrides();
     setTimeout(() => sendMsrTuning(), 200);
     setTimeout(() => sendPiezoTuning(), 200);
@@ -37459,60 +37406,8 @@ function toggleMsrListen() {
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     return;
   }
-  // Web Audio fallback
-  const warn = document.getElementById('msr-mic-warning');
-  warn.style.display = 'none';
-  if (!navigator.mediaDevices?.getUserMedia) {
-    warn.textContent = tx('Microphone not available in this browser.');
-    warn.style.display = 'block';
-    return;
-  }
-  (async () => {
-    try {
-      _tgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
-    } catch (e) {
-      warn.textContent = e.name === 'NotAllowedError' ? tx('Microphone permission denied.') : tx('Could not access microphone') + ': ' + e.message;
-      warn.style.display = 'block';
-      return;
-    }
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      _tgAudioCtx = new AC();
-      if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
-      const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
-      const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
-      _tgScriptNode = scriptNode;
-      _msrListening = true;
-      _msrTarget = 'measure';
-      _msrListenStart = Date.now();
-      _startMsrBadge();
-      const lb = document.getElementById('msr-listen-btn');
-      const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
-      const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
-      const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = tx('Stop');
-      lb.style.background = 'var(--tg-error-bg)'; lb.style.color = 'var(--danger)'; lb.style.borderColor = 'color-mix(in srgb, var(--danger) 40%, transparent)';
-      document.getElementById('msr-live-status').style.display = '';
-      warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
-      warn.style.color = 'var(--status-warn)';
-      warn.style.display = 'block';
-
-      const bph = parseInt(document.getElementById('msr-bph-select').value) || 28800;
-      const expectedInterval = 3600000 / bph;
-      let ticks = 0;
-      scriptNode.onaudioprocess = function(e) {
-        if (!_msrListening) return;
-        const buf = e.inputBuffer.getChannelData(0);
-        let mx = 0;
-        for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > mx) mx = a; }
-        ticks++;
-      };
-      source.connect(scriptNode);
-      scriptNode.connect(_tgAudioCtx.destination);
-    } catch (e) {
-      warn.textContent = tx('Audio error') + ': ' + e.message;
-      warn.style.display = 'block';
-    }
-  })();
+  // No native engine (a plain browser): nothing to do. Measuring lives in the apps;
+  // the Web Audio fallback that used to sit here never produced a reading.
   } catch (ex) { console.error('[TG JS] toggleMsrListen error:', ex); }
 }
 
@@ -37620,9 +37515,6 @@ function stopMsrListen(reason) {
     });
     _msrActiveSettings = null;
   }
-  if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
-  if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
-  if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
   const wasConverged = _msrPhase === 'converged';
   // Result uncertainty (± s/day), computed below; hoisted so the share-popup
   // trigger can gate on it. Defaults high so an uncomputed value never qualifies.
