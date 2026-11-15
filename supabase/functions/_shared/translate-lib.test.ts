@@ -73,6 +73,9 @@ Deno.test("buildTranslatePrompt — names the language, the glossary and carries
   }
   assertEquals(buildTranslatePrompt(SRC, "fr").includes("French, formal (vous)"), true);
   assertEquals(buildTranslatePrompt(SRC, "de").includes("Zeitwaage"), true);
+  // Tabs and buttons are named the way the screen shows them.
+  assertEquals(buildTranslatePrompt(SRC, "tr").includes("Track = Kayıt"), true);
+  assertEquals(buildTranslatePrompt(SRC, "de").includes("Track = Tragen"), true);
 });
 
 Deno.test("validateTranslation — an image's alt text may be translated, its src may not", () => {

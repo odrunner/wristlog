@@ -30,10 +30,23 @@ export const GLOSSARY: Record<OtherLang, Record<string, string>> = {
   pt: { timegrapher: "cronocomparador", "a wear / to log a wear": "um uso / registar um uso", streak: "sequência", wishlist: "lista de desejos", collection: "coleção", "close friends": "amigos próximos", strap: "bracelete", "shared links": "links partilhados" },
 };
 
+// What the app's tabs and buttons are called on screen, so "tap Track" in an
+// email names the button the reader will actually see. Copied from
+// i18n/<lang>.json; tests/email-app-labels.test.js fails when the two differ.
+export const APP_LABELS: Record<OtherLang, Record<string, string>> = {
+  es: { "Track": "Registro", "Feed": "Feed", "Collection": "Colección", "Measure": "Medir", "Watches": "Relojes", "Stats": "Estadísticas", "Post": "Publicar", "Check price": "Ver precio", "What-if": "¿Y si…?", "AI Picks": "Sugerencias de IA" },
+  it: { "Track": "Registro", "Feed": "Feed", "Collection": "Collezione", "Measure": "Misura", "Watches": "Orologi", "Stats": "Statistiche", "Post": "Pubblica", "Check price": "Controlla il prezzo", "What-if": "E se…?", "AI Picks": "Suggerimenti IA" },
+  fr: { "Track": "Journal", "Feed": "Feed", "Collection": "Collection", "Measure": "Mesurer", "Watches": "Montres", "Stats": "Stats", "Post": "Publier", "Check price": "Vérifier le prix", "What-if": "Et si… ?", "AI Picks": "Suggestions IA" },
+  tr: { "Track": "Kayıt", "Feed": "Feed", "Collection": "Koleksiyon", "Measure": "Ölç", "Watches": "Saatler", "Stats": "İstatistikler", "Post": "Paylaş", "Check price": "Fiyata bak", "What-if": "Ya şöyle olsa?", "AI Picks": "Yapay zekâ önerileri" },
+  de: { "Track": "Tragen", "Feed": "Feed", "Collection": "Sammlung", "Measure": "Messen", "Watches": "Uhren", "Stats": "Statistiken", "Post": "Posten", "Check price": "Preis prüfen", "What-if": "Was wäre, wenn …?", "AI Picks": "KI-Vorschläge" },
+  pt: { "Track": "Registo", "Feed": "Feed", "Collection": "Coleção", "Measure": "Medir", "Watches": "Relógios", "Stats": "Estatísticas", "Post": "Publicar", "Check price": "Consultar preço", "What-if": "E se…?", "AI Picks": "Sugestões de IA" },
+};
+
 export type Fields = Record<string, string>;
 
 export function buildTranslatePrompt(fields: Fields, lang: OtherLang): string {
   const glossary = Object.entries(GLOSSARY[lang]).map(([en, tr]) => `- ${en} = ${tr}`).join("\n");
+  const labels = Object.entries(APP_LABELS[lang]).map(([en, tr]) => `${en} = ${tr}`).join(", ");
   return `You translate text for WRotate, an app for mechanical-watch collectors, from English into ${LANG_BRIEF[lang]}.
 
 Translate every value of the JSON object below and return a JSON object with exactly the same keys.
@@ -46,6 +59,7 @@ Rules:
 - No emoji. Do not add notes, explanations or anything that is not in the English.
 - Use these words for the app's features:
 ${glossary}
+- When the English names one of the app's tabs or buttons as something to tap or open, write the label exactly as the app shows it: ${labels}. Use these only for the tab or button itself, not for the same word in ordinary speech.
 
 JSON to translate:
 ${JSON.stringify(fields)}`;

@@ -1,17 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, navigateTo, SAMPLE_WATCHES } from './helpers.js';
 
-// Experiment `result_share` (growth #9, 2026-11-08): the post-measurement CTA
-// gains an EXTERNAL "Share image" button (system share sheet, card image +
-// wrotate.com link) next to the feed post. In treatment the feed button is
-// renamed "Post to feed" so the two shares can't be confused; control is the
-// unchanged two-button row.
+// The post-measurement CTA has an EXTERNAL "Share image" button (system share
+// sheet, card image + wrotate.com link) next to "Post to feed". Shipped to
+// everyone via experiment `result_share` (won 2026-11-14); no flag any more.
 
-async function boot(page, variant) {
+async function boot(page) {
   await mockSupabase(page, { watches: [SAMPLE_WATCHES[0]] });
   await page.route('**/rest/v1/rpc/get_experiments*', r => r.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify(variant ? [{ key: 'result_share', variant }] : []),
+    body: '[]',
   }));
   await injectSession(page);
   // Fake native bridge so the Measure tab is visible (web hides it).
@@ -30,15 +28,15 @@ async function boot(page, variant) {
   await page.evaluate((wid) => showMsrShareCta(wid, 4.2), SAMPLE_WATCHES[0].id);
 }
 
-test.describe('Result external share (result_share, mocked)', () => {
-  test('treatment: Share image appears and the feed button is renamed', async ({ page }) => {
-    await boot(page, 'treatment');
+test.describe('Result external share (mocked)', () => {
+  test('Share image sits beside Post to feed, with no experiment assigned', async ({ page }) => {
+    await boot(page);
     await expect(page.locator('#msr-share-ext-btn')).toBeVisible();
     await expect(page.locator('#msr-share-btn')).toHaveText('Post to feed');
   });
 
-  test('treatment: tapping Share image logs the result_share feature event', async ({ page }) => {
-    await boot(page, 'treatment');
+  test('tapping Share image logs the result_share feature event', async ({ page }) => {
+    await boot(page);
     const logged = page.waitForRequest(r => r.url().includes('/rest/v1/feature_events') && r.method() === 'POST'
       && r.postData()?.includes('result_share'));
     // No scatter data in this mocked flow → the text-share path runs; stub the
@@ -48,15 +46,15 @@ test.describe('Result external share (result_share, mocked)', () => {
     await logged;
   });
 
-  test('control: no external button, feed button keeps its name', async ({ page }) => {
-    await boot(page, 'control');
-    await expect(page.locator('#msr-share-ext-btn')).toBeHidden();
-    await expect(page.locator('#msr-share-btn')).toHaveText('Share result');
-  });
-
-  test('unknown key (experiment deleted): CTA is the classic two-button row', async ({ page }) => {
-    await boot(page, null);
-    await expect(page.locator('#msr-share-ext-btn')).toBeHidden();
-    await expect(page.locator('#msr-share-btn')).toHaveText('Share result');
-  });
+  for (const lang of ['fr', 'es', 'it', 'pt', 'de', 'tr']) {
+    test(`the buttons stay on one line each at 375px in ${lang}`, async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.addInitScript((l) => localStorage.setItem('wr_lang', l), lang);
+      await boot(page);
+      const heights = await page.locator('#msr-share-cta .btn').evaluateAll(els =>
+        els.filter(e => e.offsetParent).map(e => Math.round(e.getBoundingClientRect().height)));
+      expect(heights.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(heights).size).toBe(1); // a wrapped label makes its button taller
+    });
+  }
 });

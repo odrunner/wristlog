@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=d1028d54', it: 'i18n/it.js?v=52aa8bc7', fr: 'i18n/fr.js?v=048f6812', tr: 'i18n/tr.js?v=802f1f95', de: 'i18n/de.js?v=151f8310', pt: 'i18n/pt.js?v=072cd4ab' };
+      var FILES = { es: 'i18n/es.js?v=0c176e22', it: 'i18n/it.js?v=635e51bf', fr: 'i18n/fr.js?v=eaacda73', tr: 'i18n/tr.js?v=17af31b7', de: 'i18n/de.js?v=34eb2deb', pt: 'i18n/pt.js?v=83052c8b' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -4924,11 +4924,12 @@
       <div id="msr-share-cta" style="display:none;">
         <div id="msr-cta-title" class="text-default u-fw-semibold u-mb-2 u-ta-center">Saved &mdash; log your wear?</div>
         <button id="msr-log-wear-btn" class="btn btn-primary btn-sm btn-block stack-1-5">Log you're wearing it</button>
+        <!-- Done sits on its own row: three labels in one row wrapped in the longer languages. -->
         <div class="u-gap-1-5 u-d-flex">
-          <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Share result</button>
-          <button id="msr-share-ext-btn" class="btn btn-ghost btn-sm btn-grow btn-ghost-gold" style="display:none;">Share image</button>
-          <button class="btn btn-ghost btn-sm btn-grow u-c-muted" onclick="dismissMsrShareCta()">Done</button>
+          <button id="msr-share-btn" class="btn btn-ghost btn-sm btn-grow">Post to feed</button>
+          <button id="msr-share-ext-btn" class="btn btn-ghost btn-sm btn-grow btn-ghost-gold">Share image</button>
         </div>
+        <button class="btn btn-ghost btn-sm btn-block u-c-muted u-mt-1-5" onclick="dismissMsrShareCta()">Done</button>
         <div id="msr-cta-discard" class="u-ta-center u-mt-2" style="display:none;">
           <button onclick="discardKeptReading()" class="btn-plain u-fs-sm u-ff-inherit u-td-underline u-minh-8">Discard this reading</button>
         </div>
@@ -6374,9 +6375,12 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 // scripts/i18n.mjs evaluates the block between the
 // two markers to collect the page's strings, so it must stay self-contained.
 // i18n-runtime:start
-function tx(s, vars) {
+function tx(s, vars, ctx) {
   var d = window.WR_I18N && window.WR_I18N.dict;
-  var out = (d && Object.prototype.hasOwnProperty.call(d, s)) ? d[s] : s;
+  // ctx: one English word doing two jobs ("Following" the button vs the list title).
+  // A language that needs two words adds "Following@btn"; without it the plain entry is used.
+  var k = (ctx && d && Object.prototype.hasOwnProperty.call(d, s + '@' + ctx)) ? s + '@' + ctx : s;
+  var out = (d && Object.prototype.hasOwnProperty.call(d, k)) ? d[k] : s;
   if (vars) out = out.replace(/\{(\w+)\}/g, function (m, k) { return k in vars ? vars[k] : m; });
   return out;
 }
@@ -8565,7 +8569,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.42';
+const APP_VERSION = '15.08.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11589,14 +11593,14 @@ async function followUser(userId, btn) {
       actor_id: currentUser.id, is_read: false,
     }).then(({ error }) => { if (error) console.error('[WristLog] follow notif:', error.message); })
       .catch(e => console.error('[WristLog] follow notif network error:', e));
-    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following', null, 'btn'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
     toast('Following! Their logs will appear in your feed.');
     renderDiscoverUsers();
     renderFollowingList();
     loadFeed();
   } else if (error.code === '23505') {
     following.add(userId);
-    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following', null, 'btn'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
     renderDiscoverUsers();
   } else { toast('Could not follow — please try again', 'error'); }
   } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
@@ -11617,7 +11621,7 @@ async function sendFollowRequest(userId, btn) {
       following.add(userId);
       pendingRequests.delete(userId);
       await db.from('follow_requests').delete().eq('requester_id', currentUser.id).eq('target_id', userId);
-      if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
+      if (btn) { btn.className = 'follow-btn following'; btn.textContent = tx('Following', null, 'btn'); btn.onclick = function() { confirmUnfollow(userId, this); }; }
       renderDiscoverUsers();
       return;
     }
@@ -11792,7 +11796,7 @@ function confirmUnfollow(userId, btn) {
     setTimeout(() => {
       if (btn.dataset.confirming) {
         delete btn.dataset.confirming;
-        btn.textContent = tx('Following');
+        btn.textContent = tx('Following', null, 'btn');
         btn.style.borderColor = '';
         btn.style.color = '';
       }
@@ -11833,7 +11837,7 @@ async function unfriendFromCard(userId, btn) {
   // Revert button to "Following" in-place (still following each other)
   if (btn && btn.isConnected) {
     btn.className = 'follow-btn following';
-    btn.textContent = tx('Following');
+    btn.textContent = tx('Following', null, 'btn');
     btn.style.borderColor = '';
     btn.style.color = '';
     btn.onclick = function() { confirmUnfollow(userId, this); };
@@ -11878,7 +11882,7 @@ async function unfollowUser(userId, btn) {
     // Reset button on failure
     if (btn && btn.isConnected) {
       btn.className = 'follow-btn following';
-      btn.textContent = tx('Following');
+      btn.textContent = tx('Following', null, 'btn');
       btn.style.borderColor = '';
       btn.style.color = '';
       btn.dataset.confirming = '';
@@ -18753,7 +18757,7 @@ function friendActionBtn(u) {
   const isPending = pendingRequests.has(u.id);
   const restricted = followNeedsRequest(u.profile_privacy);
   if (isFrd)     return `<button class="follow-btn friends-pill" onclick="confirmUnfriend('${u.id}',this)">Close Friends</button>`;
-  if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
+  if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">${tx('Following', null, 'btn')}</button>`;
   if (isPending) return `<button class="follow-btn requested" onclick="confirmCancelRequest('${u.id}',this)">Requested</button>`;
   const action = restricted ? `sendFollowRequest('${u.id}',this)` : `followUser('${u.id}',this)`;
   return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
@@ -37897,16 +37901,10 @@ function showMsrShareCta(watchId, rate, opts = {}) {
   const savedWord = opts.kept ? 'Kept' : 'Saved';
   const btn = document.getElementById('msr-share-btn');
   if (btn) btn.onclick = () => shareMsrToFeed(watchId, Number(rate));
-  // Experiment result_share: an EXTERNAL share next to the feed post — the
-  // feed button recruits members to engage, this one recruits outsiders.
-  // In treatment the feed button is renamed so two "share"s can't be confused.
+  // An EXTERNAL share next to the feed post — the feed button recruits members
+  // to engage, this one recruits outsiders (shipped via experiment result_share).
   const extBtn = document.getElementById('msr-share-ext-btn');
-  if (extBtn) {
-    const ext = experiment('result_share');
-    extBtn.style.display = ext ? '' : 'none';
-    extBtn.onclick = () => shareMsrExternal(watchId, Number(rate));
-    if (btn) btn.textContent = ext ? 'Post to feed' : 'Share result';
-  }
+  if (extBtn) extBtn.onclick = () => shareMsrExternal(watchId, Number(rate));
   // Primary CTA: log a wear (the core action) — the watch is literally in hand.
   // Skip it if this watch already has a wear logged today, so repeat-measurers
   // aren't nagged twice; fall back to the share-only framing.
@@ -38059,7 +38057,7 @@ function shareMsrToFeed(watchId, rate, opts) {
   }
 }
 
-// External share of the result card (experiment result_share): the same
+// External share of the result card (shipped via experiment result_share): the same
 // renderMsrShareCard image, out through the system share sheet with a
 // wrotate.com link — the acquisition loop the feed post can't provide.
 // Keeps the CTA open (the user may still post to feed after). Fallbacks:

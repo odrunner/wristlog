@@ -45,6 +45,30 @@ describe('i18n: translation lookup', () => {
   it('falls back to English for a missing entry', () => expect(t('Brand new label')).toBe('Brand new label'));
   it('leaves an unknown placeholder visible', () => expect(t('{n} watches', {})).toBe('{n} relojes'));
   it('never resolves an inherited property', () => expect(makeT({})('constructor')).toBe('constructor'));
+  it('a context picks its own entry: the follow button is not the list title', () => {
+    const c = makeT({ 'Following': 'Takip edilenler', 'Following@btn': 'Takip ediliyor' });
+    expect(c('Following')).toBe('Takip edilenler');
+    expect(c('Following', null, 'btn')).toBe('Takip ediliyor');
+  });
+  it('a context with no entry of its own uses the plain one, then English', () => {
+    expect(makeT({ 'Following': 'Siguiendo' })('Following', null, 'btn')).toBe('Siguiendo');
+    expect(makeT({})('Following', null, 'btn')).toBe('Following');
+    expect(makeT(null)('Following', null, 'btn')).toBe('Following');
+  });
+  it('the follow button never reads as the list of people followed', () => {
+    for (const lang of ['tr', 'it', 'fr']) {
+      const d = json(`i18n/${lang}.json`);
+      expect(d['Following@btn'], lang).toBeTruthy();
+      expect(d['Following@btn'], lang).not.toBe(d['Following']);
+      // Help tells the member which button to tap; it must be this word.
+      const help = Object.entries(d).find(([k]) => k.startsWith('To unfollow, go to their profile'))[1];
+      expect(help, lang).toContain(`<strong>${d['Following@btn']}</strong>`);
+    }
+  });
+  it('every follow button in the page asks for the button wording', () => {
+    expect(html).not.toMatch(/btn\.textContent = tx\('Following'\);/);
+    expect(html).not.toMatch(/confirmUnfollow\([^)]*\)">Following</);
+  });
 });
 
 describe('i18n: a weekday inside a sentence', () => {

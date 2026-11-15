@@ -1,7 +1,10 @@
 // Generated from index.html (i18n-runtime block + boot observer) by scripts/i18n.mjs. Do not edit.
-function tx(s, vars) {
+function tx(s, vars, ctx) {
   var d = window.WR_I18N && window.WR_I18N.dict;
-  var out = (d && Object.prototype.hasOwnProperty.call(d, s)) ? d[s] : s;
+  // ctx: one English word doing two jobs ("Following" the button vs the list title).
+  // A language that needs two words adds "Following@btn"; without it the plain entry is used.
+  var k = (ctx && d && Object.prototype.hasOwnProperty.call(d, s + '@' + ctx)) ? s + '@' + ctx : s;
+  var out = (d && Object.prototype.hasOwnProperty.call(d, k)) ? d[k] : s;
   if (vars) out = out.replace(/\{(\w+)\}/g, function (m, k) { return k in vars ? vars[k] : m; });
   return out;
 }
