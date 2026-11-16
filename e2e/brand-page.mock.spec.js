@@ -104,3 +104,58 @@ test('a brand without a page still opens Explore filtered to it', async ({ page 
   await expect(page.locator('#page-explore')).toHaveClass(/active/);
   await expect(page.locator('#page-brand')).not.toHaveClass(/active/);
 });
+
+// ── The Watches page's brand card: chip selected, or the search names a brand ──
+const CARDS = [
+  { brand: 'Tudor', slug: 'tudor', founded: '1926', models: 12, owners: 40, image: null },
+  { brand: 'Timex', slug: 'timex', founded: '1854', models: 3, owners: 9, image: null },
+];
+async function openWatches(page) {
+  await mockSupabase(page, {});
+  await page.route('**/rest/v1/rpc/model_brands*', route => route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ brand: 'Tudor' }, { brand: 'Swatch' }]) }));
+  await page.route('**/rest/v1/rpc/browse_watch_models*', route => route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ id: MODEL_ID, brand: 'Tudor', name: 'Pelagos', slug: 'tudor-pelagos', owners: 3, image: null }]) }));
+  await page.route('**/rest/v1/rpc/brand_cards*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CARDS) }));
+  await page.route('**/rest/v1/rpc/brand_page*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BRAND) }));
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await page.evaluate(() => nav(document.querySelector('nav button[data-page="explore"]')));
+  await expect(page.locator('#explore-brands .chip')).toHaveCount(3);
+}
+
+test('Watches: a brand chip shows its card; the card opens the brand page and Back returns', async ({ page }) => {
+  await openWatches(page);
+  const card = page.locator('#explore-brand-card .brand-card');
+  await expect(card).toHaveCount(0);                       // All: no card
+  await page.locator('#explore-brands .chip', { hasText: 'Swatch' }).click();
+  await expect(card).toHaveCount(0);                       // a brand without a page: no card
+  await page.locator('#explore-brands .chip', { hasText: 'Tudor' }).click();
+  await expect(card).toContainText('Since 1926');
+  await expect(card).toContainText('12 models on WRotate · 40 members own one');
+  await card.click();
+  const bp = page.locator('#page-brand');
+  await expect(bp).toHaveClass(/active/);
+  await expect(bp.locator('h1.mp-title')).toHaveText('Tudor');
+  await bp.getByText('‹ Back').click();
+  await expect(page.locator('#page-explore')).toHaveClass(/active/);
+  await expect(card).toHaveCount(1);                       // still on the Tudor filter
+});
+
+test('Watches: the search shows the card for the brand it names', async ({ page }) => {
+  await openWatches(page);
+  const card = page.locator('#explore-brand-card .brand-card');
+  const search = page.locator('#explore-search');
+  await search.fill('tu');
+  await page.waitForTimeout(450);
+  await expect(card).toHaveCount(0);                       // under three letters
+  await search.fill('tud');
+  await expect(card).toContainText('Tudor');
+  await search.fill('tudor pelagos');
+  await expect(card).toContainText('Tudor');
+  await search.fill('tim');
+  await expect(card).toContainText('Timex');
+  await search.fill('pelagos');
+  await expect(card).toHaveCount(0);
+});

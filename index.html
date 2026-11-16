@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=615afcf2', it: 'i18n/it.js?v=82d223d0', fr: 'i18n/fr.js?v=f5339a70', tr: 'i18n/tr.js?v=6cbfafc0', de: 'i18n/de.js?v=8e0fc29c', pt: 'i18n/pt.js?v=3c292d41' };
+      var FILES = { es: 'i18n/es.js?v=88bb58e9', it: 'i18n/it.js?v=36dc7edd', fr: 'i18n/fr.js?v=973297b4', tr: 'i18n/tr.js?v=5d641c77', de: 'i18n/de.js?v=1d8e2b4f', pt: 'i18n/pt.js?v=13ec0810' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -807,6 +807,15 @@
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--space-4); }
 
     .page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
+    /* Watches page: the brand card above the grid (chip selected, or the search names a brand) */
+    .brand-card { display: flex; gap: var(--space-3); width: 100%; margin-bottom: var(--space-3); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-family: inherit; text-align: left; color: var(--text); cursor: pointer; }
+    .brand-card:hover { border-color: var(--gold); }
+    .brand-card-img { flex: none; width: var(--size-24); height: var(--size-24); border-radius: var(--radius-sm); object-fit: cover; background: var(--surface2); }
+    .brand-card-txt { display: flex; flex-direction: column; gap: var(--space-0-5); min-width: 0; }
+    .brand-card-eyebrow { font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--gold-text); }
+    .brand-card-name { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .brand-card-meta { font-size: var(--fs-sm); color: var(--muted); }
+    .brand-card-go { margin-top: auto; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--gold-text); }
     .admin-tab-models table { font-size:var(--fs-base); }
     .admin-tab-models th { font-weight:var(--fw-semibold); font-size:var(--fs-xs); letter-spacing:var(--ls-tight); text-transform:uppercase; color:var(--muted); padding:var(--space-1-5) var(--space-1-5) var(--space-1-5) 0; }
     .admin-tab-models td { padding:var(--space-2) var(--space-1-5) var(--space-2) 0; vertical-align:middle; }
@@ -2839,7 +2848,7 @@
       </div>
       <div class="stack-3">
         <div class="item-title">Brand Pages</div>
-        <div class="body-muted">Brands now have a page of their own: the brand&#8217;s story, every model members own, how members&#8217; watches from that brand actually run, and their wrist shots. On any model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it.</div>
+        <div class="body-muted">Brands now have a page of their own: the brand&#8217;s story, every model members own, how members&#8217; watches from that brand actually run, and their wrist shots. In <strong>Watches</strong>, pick a brand or search its name and tap the card that appears above the models.</div>
       </div>
       <div class="stack-3">
         <div class="item-title">Accuracy Overview</div>
@@ -3539,6 +3548,7 @@
     <div class="form-group stack-3">
       <input type="text" id="explore-search" aria-label="Search models" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
     </div>
+    <div id="explore-brand-card"></div>
     <div id="explore-grid" class="watches-grid"></div>
     <div id="explore-more-wrap" class="u-ta-center u-mt-4" style="display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
@@ -4419,7 +4429,7 @@
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Brand pages</div>
-              <div class="help-step-desc">Many brands have a page of their own, with the brand&#8217;s story, the models members own, how members&#8217; watches from that brand run, and their wrist shots. On a model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it. Tap any model to go to its page.</div>
+              <div class="help-step-desc">Many brands have a page of their own, with the brand&#8217;s story, the models members own, how members&#8217; watches from that brand run, and their wrist shots. In <strong>Watches</strong>, pick a brand or search its name and tap the card that appears above the models. Tap any model on the brand page to go to its page.</div>
             </div>
           </div>
           <div class="help-tip">The database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
@@ -8567,7 +8577,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.18.28';
+const APP_VERSION = '15.18.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23439,7 +23449,51 @@ function _collSegSync(page) {
   });
 }
 
+// Brand card (2026-11-15): brands with a page of their own (brand_cards RPC, read
+// once). The card shows above the grid when that brand's chip is selected or the
+// search names the brand, and opens the brand page.
+let _brandCards = null;
+async function loadBrandCards() {
+  const { data } = await db.rpc('brand_cards');
+  _brandCards = Array.isArray(data) ? data : [];
+  renderExploreBrandCard();
+}
+// The brand a search points at: its name starts with what was typed (3+ letters),
+// or the search starts with its whole name ("rolex sub"). Most-owned brand wins a tie.
+function brandCardFor(cards, brand, q) {
+  if (!cards || !cards.length) return null;
+  if (brand) return cards.find(c => c.brand === brand) || null;
+  const t = String(q || '').trim().toLowerCase();
+  if (t.length < 3) return null;
+  const hits = cards.filter(c => { const n = c.brand.toLowerCase(); return n.startsWith(t) || t === n || t.startsWith(n + ' '); });
+  return hits.sort((a, b) => (b.owners || 0) - (a.owners || 0))[0] || null;
+}
+function renderExploreBrandCard() {
+  const el = document.getElementById('explore-brand-card');
+  if (!el) return;
+  const c = brandCardFor(_brandCards, _exploreBrand, _exploreQ);
+  if (!c) { el.innerHTML = ''; return; }
+  const meta = [Number(c.models) === 1 ? tx('1 model on WRotate') : tx('{n} models on WRotate', { n: c.models }),
+    c.owners ? (Number(c.owners) === 1 ? tx('1 member owns one') : tx('{n} members own one', { n: c.owners })) : ''].filter(Boolean).join(' · ');
+  el.innerHTML = `<button type="button" class="brand-card" data-slug="${escAttr(c.slug)}" onclick="openBrandCard(this.dataset.slug)">
+      ${c.image ? `<img class="brand-card-img" ${thumbSrcAttrs(c.image)} alt="">` : ''}
+      <span class="brand-card-txt">
+        ${c.founded ? `<span class="brand-card-eyebrow">${tx('Since {year}', { year: escHtml(c.founded) })}</span>` : ''}
+        <span class="brand-card-name" data-i18n-skip>${escUser(c.brand)}</span>
+        <span class="brand-card-meta">${escHtml(meta)}</span>
+        <span class="brand-card-go">History, accuracy and photos ›</span>
+      </span>
+    </button>`;
+}
+async function openBrandCard(slug) {
+  let page = null;
+  try { const { data } = await db.rpc('brand_page', { p_slug: slug }); page = data; } catch (e) {}
+  if (page && page.brand) { if (window.posthog) posthog.capture('brand_card_open', { brand: slug, via: _exploreBrand ? 'chip' : 'search' }); openBrandPage(page); }
+  else toast('Could not open the brand page', 'error');
+}
+
 async function loadExploreBrands() {
+  if (!_brandCards) loadBrandCards();
   const { data } = await db.rpc('model_brands');
   const el = document.getElementById('explore-brands');
   if (!data || !el) return;
@@ -23463,7 +23517,7 @@ function exploreSearchInput() {
 }
 
 async function loadExploreModels(reset) {
-  if (reset) _exploreOffset = 0;
+  if (reset) { _exploreOffset = 0; renderExploreBrandCard(); }
   const grid = document.getElementById('explore-grid');
   if (reset) grid.innerHTML = '<div class="empty u-col-1-1">Loading…</div>';
   const { data, error } = await db.rpc('browse_watch_models', {
