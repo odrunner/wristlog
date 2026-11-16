@@ -7,6 +7,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
+  buildBrandPrompt,
   buildClaudeFallbackPrompt,
   buildCollectionPrompt,
   buildEnhancePrompt,
@@ -139,7 +140,7 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection: rawCollection, mode, watchInfo, commit, modelInfo, modelId, lang } = await req.json();
+    const { image, collection: rawCollection, mode, watchInfo, commit, modelInfo, modelId, brandId: rawBrandId, lang } = await req.json();
     // Bound what reaches the prompt (audit SEC-23-18): the owned-watch list is
     // trimmed, anything else oversized is refused.
     const collection = sanitizeCollection(rawCollection);
@@ -276,6 +277,66 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "model_temporary", message: "Enrichment is temporarily unavailable. Please try again in a moment." }), {
         status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
+    }
+
+    // ── BRAND MODE (ops secret only): the write-up for a brand page, stored on
+    // brand_pages. Run by scripts/enrich-brands.py with {mode:'brand', brandId}.
+    // Same Gemini + Google Search call as model mode.
+    if (mode === "brand") {
+      const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+        status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+      const brandId = typeof rawBrandId === "string" ? rawBrandId : "";
+      if (!viaOpsSecret || !brandId) { await logAttempt(null, "brand_forbidden"); return json({ error: "forbidden" }, 403); }
+      if (!GEMINI_API_KEY) { await logAttempt(null, "brand_no_gemini_key"); return json({ error: "Enrichment not available" }, 503); }
+      const { data: brow } = await supabase.from("brand_pages").select("id, brand").eq("id", brandId).maybeSingle();
+      if (!brow) return json({ error: "unknown brand" }, 404);
+      const { data: lines } = await supabase.from("watch_models").select("name")
+        .eq("brand", brow.brand).is("merged_into", null).eq("is_auto", false).order("name").limit(30);
+      const prompt = buildBrandPrompt({ brand: brow.brand, models: ((lines ?? []) as any[]).map((r) => r.name) });
+      let lastErr = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const ac = new AbortController();
+          const timer = setTimeout(() => ac.abort(), 60000);
+          const r = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
+            { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY }, signal: ac.signal,
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ google_search: {} }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+              }) });
+          clearTimeout(timer);
+          if (!r.ok) {
+            lastErr = `gemini_${r.status}`;
+            if (r.status === 429) await new Promise((res) => setTimeout(res, 2000 * (attempt + 1)));
+            continue;
+          }
+          const j = await r.json();
+          const cand = j.candidates?.[0];
+          const finish = cand?.finishReason || "unknown";
+          if (finish === "RECITATION" || finish === "SAFETY") { lastErr = `blocked_${finish}`; continue; }
+          const text = (cand?.content?.parts ?? []).filter((p: any) => p.text).map((p: any) => p.text).join("");
+          const raw = extractJson(text);
+          const parsed = raw ? stripCitations(raw) : null;
+          const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+          if (!parsed || !str(parsed.history)) { lastErr = `parse_fail(${finish})`; continue; }
+          const founded = str(parsed.founded);
+          const upd = {
+            description: str(parsed.description), history: str(parsed.history),
+            founded: founded && /^\d{4}$/.test(founded) ? founded : null,
+            country: str(parsed.country), enriched_at: new Date().toISOString(),
+          };
+          const { error: uErr } = await supabase.from("brand_pages").update(upd).eq("id", brandId);
+          if (uErr) console.error("[identify-watch] brand store failed:", uErr.message);
+          const u = j.usageMetadata ?? {};
+          await logAttempt(1, null);
+          return json({ ...upd, _stored: !uErr,
+            _usage: { input: u.promptTokenCount ?? null, output: u.candidatesTokenCount ?? null, thinking: u.thoughtsTokenCount ?? null } });
+        } catch (e: any) { lastErr = `exception:${e.message}`; }
+      }
+      await logAttempt(null, `brand_failed:${lastErr.slice(0, 200)}`);
+      return json({ error: "brand_temporary" }, 502);
     }
 
     // ── ENHANCE MODE: enrich watch data with specs, history, dimensions ──

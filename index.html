@@ -79,7 +79,7 @@
        is in the filename, so upgrading it means renaming here, in SITE_FILES,
        in sw.js PRECACHE and in tests/page-weight.test.js -->
   <script src="/supabase-js-2.98.0.min.js"></script>
-  <script src="/model-page.js?v=90d875b2"></script>
+  <script src="/model-page.js?v=c0a1ebf2"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Safe storage accessor. Reading localStorage THROWS rather than returning null
        in several real configurations: Safari with "Block all cookies", some corporate
@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=a7a9bbca', it: 'i18n/it.js?v=4101c580', fr: 'i18n/fr.js?v=cc13ed0f', tr: 'i18n/tr.js?v=ec2d7bdc', de: 'i18n/de.js?v=90b32c93', pt: 'i18n/pt.js?v=5d0f825d' };
+      var FILES = { es: 'i18n/es.js?v=896bbebc', it: 'i18n/it.js?v=ad3473b9', fr: 'i18n/fr.js?v=71634bdb', tr: 'i18n/tr.js?v=973dfbc6', de: 'i18n/de.js?v=d46484bc', pt: 'i18n/pt.js?v=9a4a76d1' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -2838,6 +2838,10 @@
         <span class="eyebrow eyebrow-muted">November 2026</span>
       </div>
       <div class="stack-3">
+        <div class="item-title">Brand Pages</div>
+        <div class="body-muted">Brands now have a page of their own: the brand&#8217;s story, every model members own, how members&#8217; watches from that brand actually run, and their wrist shots. On any model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it.</div>
+      </div>
+      <div class="stack-3">
         <div class="item-title">Accuracy Overview</div>
         <div class="body-muted">See how your whole collection is running on one screen. Tap the trend icon on the Measure page: every watch shows its latest reading and a strip on the same &plusmn;30 s/d scale, sortable by most accurate, most recent or name. Tap a watch for its full history.</div>
       </div>
@@ -3524,6 +3528,10 @@
     <div id="model-page-content">
       <div class="empty">Loading…</div>
     </div>
+  </div>
+
+  <div id="page-brand" class="page page-model">
+    <div id="brand-page-content"></div>
   </div>
 
   <div id="page-explore" class="page">
@@ -4405,6 +4413,13 @@
             <div class="help-step-body">
               <div class="help-step-title">Model pages</div>
               <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members&#8217; wrists</strong>, tap a photo to open that post &#8212; or tap the photo count to filter the feed to every public post featuring that model.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Brand pages</div>
+              <div class="help-step-desc">Thirty brands have a page of their own, with the brand&#8217;s story, the models members own, how members&#8217; watches from that brand run, and their wrist shots. On a model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it. Tap any model to go to its page.</div>
             </div>
           </div>
           <div class="help-tip">The database is still growing, so some models may be missing or incomplete. They&#8217;re added as members add watches to their collections.</div>
@@ -8552,7 +8567,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.18.00';
+const APP_VERSION = '15.18.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27919,6 +27934,8 @@ function goBackFromModel() {
     showExplorePage();
   } else if (prev === 'page-wishlist') {
     collSeg('wishlist');
+  } else if (prev === 'page-brand' && _bpCtx) {
+    showBrandPageAgain();
   } else {
     const btn = document.querySelector(`nav button[data-page="${prev.replace('page-', '')}"]`);
     if (btn) nav(btn); else goHome();
@@ -27969,11 +27986,90 @@ function renderModelPage() {
   });
 }
 
-function mpBrandExplore(brand) {
+// The model page's all-models link: the brand page when the brand has one, else Explore filtered to it.
+async function mpBrandExplore(brand) {
+  let page = null;
+  try { const { data } = await db.rpc('brand_page', { p_brand: brand }); page = data; } catch (e) {}
+  if (page && page.brand) { openBrandPage(page); return; }
   showExplorePage();
   document.getElementById('explore-search').value = '';
   _exploreQ = '';
   exploreSelectBrand(brand);
+}
+
+// ── Brand page (2026-11-15): brand_page() RPC, drawn by WRModelPage.renderBrand
+// (model-page.js, shared with the public /b/<slug>/ pages). Story translations are
+// brand_pages.translations, same shape and job as the model pages'.
+let brandPagePrev = 'page-collection', brandPagePrevScrollY = 0;
+let brandPagePrevModel = null, brandPagePrevModelPrev = null, brandPagePrevModelPrevY = 0;
+let _bpCtx = null;
+function brandTr(b) {
+  const t = b && b.translations && b.translations[i18nLang()];
+  if (!t || i18nLang() === 'en') return b;
+  const pick = k => (typeof t[k] === 'string' && t[k].trim()) || b[k];
+  return Object.assign({}, b, { description: pick('description'), history: pick('history') });
+}
+function openBrandPage(data) {
+  document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
+  const active = document.querySelector('.page.active');
+  if (active && active.id !== 'page-brand') {
+    brandPagePrev = active.id;
+    brandPagePrevScrollY = window.scrollY || 0;
+    // From a model page: remember where that page itself goes back to, so
+    // brand → back → model → back does not loop between the two.
+    brandPagePrevModel = active.id === 'page-model' ? modelPageId : null;
+    brandPagePrevModelPrev = modelPagePrev;
+    brandPagePrevModelPrevY = modelPagePrevScrollY;
+  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-brand').classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  window.scrollTo(0, 0);
+  _bpCtx = { b: brandTr(data.brand), d: data };
+  renderBrandPageApp();
+  if (window.posthog) posthog.capture('brand_page_viewed', { brand: data.brand.slug, surface: 'app' });
+  if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'brand_page_viewed', meta: { brand: data.brand.slug } }).then(() => {});
+}
+function renderBrandPageApp() {
+  if (!_bpCtx) return;
+  WRModelPage.renderBrand(document.getElementById('brand-page-content'), { ..._bpCtx, publicMode: false }, {
+    back: goBackFromBrand, share: shareBrandPage,
+    openModel: id => openModelPage(id),
+    openPost: id => scrollToFeedPost(id),
+    track: (ev, props) => { if (window.posthog) posthog.capture(ev, props); },
+  });
+}
+// Back to the brand page from a model opened on it: the page is still drawn.
+function showBrandPageAgain() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-brand').classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+}
+function goBackFromBrand() {
+  const prev = brandPagePrev, restoreY = brandPagePrevScrollY;
+  brandPagePrevScrollY = 0;
+  if (prev === 'page-model' && brandPagePrevModel) {
+    const mp = brandPagePrevModelPrev, my = brandPagePrevModelPrevY;
+    openModelPage(brandPagePrevModel);
+    modelPagePrev = mp; modelPagePrevScrollY = my;
+    return;
+  }
+  if (prev === 'page-profile' && profilePageUserId) viewUserProfile(profilePageUserId);
+  else if (prev === 'page-explore') showExplorePage();
+  else if (prev === 'page-wishlist') collSeg('wishlist');
+  else {
+    const btn = document.querySelector(`nav button[data-page="${prev.replace('page-', '')}"]`);
+    if (btn) nav(btn); else goHome();
+  }
+  requestAnimationFrame(() => window.scrollTo(0, restoreY));
+}
+async function shareBrandPage() {
+  if (!_bpCtx) return;
+  const b = _bpCtx.b;
+  const url = 'https://wrotate.com/b/' + encodeURIComponent(b.slug || '') + '/';
+  const title = tx('{watch} on WRotate', { watch: b.brand });
+  if (navigator.share) { try { await navigator.share({ title, url }); } catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); } }
+  else { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch (e) { toast(url); } }
 }
 
 async function shareModelPage() {

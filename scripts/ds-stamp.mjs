@@ -23,13 +23,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const MODEL_SNAPSHOTS = readdirSync(join(root, 'w'), { withFileTypes: true })
   .filter(d => d.isDirectory() && d.name !== 'all' && existsSync(join(root, 'w', d.name, 'index.html')))
   .map(d => `w/${d.name}/index.html`);
-export const STAMPED = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'w/all/index.html', 'privacy.html', 'terms.html', 'open.html', 'delete-account.html', '404.html', 'sw.js', ...MODEL_SNAPSHOTS];
+// Generated brand pages (same generator): every b/<slug>/index.html.
+export const BRAND_SNAPSHOTS = !existsSync(join(root, 'b')) ? [] : readdirSync(join(root, 'b'), { withFileTypes: true })
+  .filter(d => d.isDirectory() && existsSync(join(root, 'b', d.name, 'index.html')))
+  .map(d => `b/${d.name}/index.html`);
+export const STAMPED = ['index.html', 'p/index.html', 'profile/index.html', 'w/index.html', 'w/all/index.html', 'privacy.html', 'terms.html', 'open.html', 'delete-account.html', '404.html', 'sw.js', ...MODEL_SNAPSHOTS, ...BRAND_SNAPSHOTS];
 export const dsHash = () => createHash('sha256').update(readFileSync(join(root, 'design-system.css'))).digest('hex').slice(0, 8);
 // Only real URLs: a quote before the path keeps prose like "live in /design-system.css." untouched.
 const URL_RE = /(["'])\/design-system\.css(?:\?v=[0-9a-f]*)?\1/g;
 export const stamp = (src, hash) => src.replace(URL_RE, (_, q) => `${q}/design-system.css?v=${hash}${q}`);
 
-export const MP_STAMPED = ['index.html', 'w/index.html', 'sw.js', ...MODEL_SNAPSHOTS];
+export const MP_STAMPED = ['index.html', 'w/index.html', 'sw.js', ...MODEL_SNAPSHOTS, ...BRAND_SNAPSHOTS];
 export const mpHash = () => createHash('sha256').update(readFileSync(join(root, 'model-page.js'))).digest('hex').slice(0, 8);
 const MP_RE = /(["'])\/model-page\.js(?:\?v=[0-9a-f]*)?\1/g;
 export const stampMp = (src, hash) => src.replace(MP_RE, (_, q) => `${q}/model-page.js?v=${hash}${q}`);

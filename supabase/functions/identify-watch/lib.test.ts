@@ -1,6 +1,7 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import {
   BRAND_CUES,
+  buildBrandPrompt,
   buildClaudeFallbackPrompt,
   buildCollectionPrompt,
   buildEnhancePrompt,
@@ -283,4 +284,22 @@ Deno.test("buildModelPrompt names sibling lines to exclude, and says nothing whe
   assertStringIncludes(withSibs, "leave out their references, calibres and history entirely");
   const none = buildModelPrompt({ brand: "Rolex", name: "Submariner" });
   assertEquals(none.includes("Separate lines with their own pages"), false);
+});
+
+// ── buildBrandPrompt (brand page) ──
+Deno.test("normalizeMode — accepts brand", () => {
+  assertEquals(normalizeMode("brand"), "brand");
+});
+
+Deno.test("buildBrandPrompt — names the brand, lists member lines, asks for the four fields", () => {
+  const p = buildBrandPrompt({ brand: "Tudor", models: ["Black Bay", "Pelagos"] });
+  assertStringIncludes(p, "Brand: Tudor");
+  assertStringIncludes(p, "Model lines our members own: Black Bay; Pelagos\n");
+  for (const k of ['"description"', '"history"', '"founded"', '"country"']) assertStringIncludes(p, k);
+});
+
+Deno.test("buildBrandPrompt — omits the model-lines line when there are none", () => {
+  const p = buildBrandPrompt({ brand: "Baltic", models: [] });
+  assertEquals(p.includes("Model lines our members own"), false);
+  assertStringIncludes(p, "Brand: Baltic");
 });

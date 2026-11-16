@@ -13,6 +13,9 @@
 //      description, canonical and og tags. Client-side JS then re-renders
 //      from the embedded data (interactivity) and refreshes from the live
 //      RPCs. /w/?m=<slug> keeps working and canonicalizes to /w/<slug>/.
+//   4. b/<slug>/index.html — a prerendered brand page per brand_pages row
+//      with a history (added 2026-11-15; written by scripts/enrich-brands.py),
+//      drawn by the same model-page.js (renderBrand) from brand_page().
 //      PRIVACY: baked snapshots carry NO member content — owners' names,
 //      avatars and wrist-shot photos are stripped from the committed HTML
 //      and only appear after the live refresh. A public git repo must not
@@ -55,6 +58,14 @@ if (rows.length < 50) {
   throw new Error(`only ${rows.length} model rows came back — refusing to shrink the sitemap (expected 100+)`);
 }
 
+const BRAND_SQL = `SELECT slug, brand, COALESCE(enriched_at, created_at)::date AS lastmod
+  FROM brand_pages WHERE history IS NOT NULL ORDER BY slug`;
+const rawB = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '--read-only', BRAND_SQL], {
+  cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
+});
+const brandRows = (JSON.parse(rawB.slice(rawB.indexOf('{'))).rows || []).filter(r => /^[a-z0-9-]+$/.test(r.slug || '') && r.brand);
+const brandSlug = new Map(brandRows.map(r => [r.brand, r.slug]));
+
 // ── sitemap.xml ──
 const url = (loc, changefreq, priority, lastmod) =>
   `  <url>\n    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
@@ -67,6 +78,7 @@ const xml = [
   url('https://wrotate.com/privacy.html', 'yearly', '0.3'),
   url('https://wrotate.com/terms.html', 'yearly', '0.3'),
   url('https://wrotate.com/w/all/', 'weekly', '0.7'),
+  ...brandRows.map(r => url(`https://wrotate.com/b/${r.slug}/`, 'monthly', '0.6', r.lastmod)),
   ...bySlug.map(r => url(`https://wrotate.com/w/${r.slug}/`, 'monthly', '0.6', r.lastmod)),
   '</urlset>',
   '',
@@ -81,7 +93,7 @@ for (const r of rows) {
   brands.get(r.brand).push(r);
 }
 const sections = [...brands.entries()].map(([brand, models]) => `    <section>
-      <h2>${esc(brand)}</h2>
+      <h2>${brandSlug.has(brand) ? `<a href="/b/${brandSlug.get(brand)}/">${esc(brand)}</a>` : esc(brand)}</h2>
       <ul>
 ${models.map(m => `        <li><a href="/w/${m.slug}/">${esc(m.name)}</a></li>`).join('\n')}
       </ul>
@@ -120,6 +132,7 @@ const hub = `<!DOCTYPE html>
     header p { color: var(--muted); font-size: var(--fs-md); margin-top: var(--space-2); }
     section { margin-top: var(--space-8); }
     h2 { font-size: var(--fs-xl); font-weight: var(--fw-semibold); line-height: var(--lh-tight); margin-bottom: var(--space-3); }
+    h2 a { font-size: inherit; color: var(--text); }
     ul { list-style: none; }
     li { margin-top: var(--space-2); }
     a { color: var(--gold-lt); text-decoration: none; font-size: var(--fs-md); }
@@ -238,7 +251,7 @@ function pageScript(slug) {
         if (error || !data || !data.model) return;
         const m = data.model;
         const { data: st } = await db.rpc('model_stats', { p_model_id: m.id });
-        ctx = { m: m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], loggedIn: false, publicMode: true };
+        ctx = { m: m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], loggedIn: false, publicMode: true, brandSlug: ctx.brandSlug };
         render();
       } catch (e) {}
     })();
@@ -328,12 +341,153 @@ for (const r of bySlug) {
     st: { ...st, mine: [], photos: [], shots: [], visible: [] },
     facts: data.teasers || [],
     loggedIn: false, publicMode: true,
+    brandSlug: brandSlug.get(m.brand) || null,
   };
   if (!/^[a-z0-9-]+$/.test(m.slug || '')) { skipped++; continue; }
   mkdirSync(join(root, 'w', m.slug), { recursive: true });
   writeFileSync(join(root, 'w', m.slug, 'index.html'), snapshotHtml(m.slug, ctx));
   written.add(m.slug);
   built++;
+}
+
+// ── b/<slug>/index.html — prerendered brand pages ──
+function brandMetaDescription(b, d) {
+  const n = (d.models || []).length, acc = d.accuracy;
+  const bits = [`${n} model${n === 1 ? '' : 's'}`];
+  if (acc && acc.med != null) bits.push(`a median of ${MP.fmtRate(acc.med)} across ${acc.n_members} members' timegrapher measurements`);
+  let out = `${b.brand} watches: the brand's history, ${bits.join(' and ')} on WRotate.`;
+  if (b.description) out += ` ${String(b.description).trim()}`;
+  if (out.length > 300) out = out.slice(0, 299).replace(/\s+\S*$/, '') + '…';
+  return out;
+}
+
+function brandPageScript(slug) {
+  return `
+    const SLUG = ${JSON.stringify(slug)};
+    const db = supabase.createClient(${JSON.stringify(API)}, ${JSON.stringify(KEY)}, { auth: { persistSession: false } });
+    (function() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const utm_source = params.get('utm_source');
+        const ref = document.referrer || null;
+        const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
+        const effectiveSource = utm_source || (externalRef ? null : 'direct');
+        const dedupKey = 'wristlog_visit_b_' + SLUG + '_' + (effectiveSource || '') + '_' + (params.get('utm_campaign') || '');
+        if (navigator.webdriver) return;
+        const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
+        if (Date.now() - lastVisit < 1800000) return;
+        localStorage.setItem(dedupKey, String(Date.now()));
+        db.from('page_visits').insert({
+          utm_source: effectiveSource, utm_medium: params.get('utm_medium'), utm_campaign: params.get('utm_campaign'),
+          utm_content: params.get('utm_content'), utm_term: params.get('utm_term'),
+          referrer: externalRef, path: '/b/' + SLUG + '/',
+          user_agent: navigator.userAgent || null, user_id: null,
+        }).then(() => {}).catch(() => {});
+      } catch(e) {}
+    })();
+
+    const el = document.getElementById('brand-page-content');
+    let ctx = JSON.parse(document.getElementById('bp-data').textContent);
+    const handlers = {
+      async share() {
+        const url = location.href, title = ctx.b.brand + ' on WRotate';
+        if (navigator.share) { try { await navigator.share({ title: title, url: url }); } catch (e) {} }
+        else { try { await navigator.clipboard.writeText(url); } catch (e) {} }
+      },
+      openPost(id) { if (id) location.href = '/p/?id=' + encodeURIComponent(id); },
+      openApp() { location.href = 'https://wrotate.com/?utm_source=brand_page&utm_medium=funnel&utm_campaign=' + encodeURIComponent(SLUG); },
+      track(ev, props) { if (window.posthog) posthog.capture(ev, Object.assign({}, props, { surface: 'public' })); },
+    };
+    function render() { WRModelPage.renderBrand(el, ctx, handlers); }
+    render();
+    if (window.posthog) posthog.capture('brand_page_viewed', { brand: SLUG, surface: 'public' });
+
+    (async function refresh() {
+      try {
+        const { data, error } = await db.rpc('brand_page', { p_slug: SLUG });
+        if (error || !data || !data.brand) return;
+        const b = Object.assign({}, data.brand); delete b.translations;
+        ctx = { b: b, d: data, publicMode: true };
+        render();
+      } catch (e) {}
+    })();
+  `;
+}
+
+function brandSnapshotHtml(slug, ctx) {
+  const b = ctx.b;
+  const title = `${esc(b.brand)} watches — history, models &amp; real-world accuracy | WRotate`;
+  const desc = brandMetaDescription(b, ctx.d);
+  const canon = `https://wrotate.com/b/${slug}/`;
+  const shim = { innerHTML: '', addEventListener: () => {}, querySelector: () => null };
+  MP.renderBrand(shim, ctx, {});
+  const json = JSON.stringify(ctx).replace(/</g, '\\u003c');
+  const img = (ctx.d.hero && ctx.d.hero.image) || 'https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG';
+  return `<!DOCTYPE html>
+<!-- ${GEN_MARK} — do not hand-edit; re-run it instead. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  ${CSP[0]}
+  <title>${title}</title>
+  <meta name="description" content="${esc(desc)}">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="canonical" href="${canon}">
+  <meta property="og:site_name" content="WRotate">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${canon}">
+  <meta property="og:title" content="${esc(`${b.brand} — WRotate`)}">
+  <meta property="og:description" content="${esc(desc)}">
+  <meta property="og:image" content="${esc(img)}">
+  ${THEME_SCRIPT}
+  <link rel="stylesheet" href="/design-system.css?v=${dsHash()}">
+  ${POSTHOG[0]}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-sans); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    #page { max-width: var(--size-120); margin: 0 auto; min-height: 100vh; background: var(--bg); }
+    #site-footer { padding: var(--space-8) var(--space-5); text-align: center; font-size: var(--fs-sm); }
+    #site-footer a { color: var(--muted); }
+  </style>
+  <style id="wr-model-page-css">${MP.css}</style>
+</head>
+<body>
+  <div id="page">
+    <div id="brand-page-content">${shim.innerHTML}</div>
+    <footer id="site-footer"><a href="/w/all/">Browse all watch models</a> · <a href="https://wrotate.com">WRotate</a></footer>
+  </div>
+  <script id="bp-data" type="application/json">${json}</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js" integrity="sha384-NRo2jhGGHu91p1IOcVC3UWI5Vnd+xGXfD/8N7Hr9+aGTK0d/Pl0i+kUZsB/zIlrK" crossorigin="anonymous"></script>
+  <script src="/model-page.js?v=${mpHash()}"></script>
+  <script>${brandPageScript(slug)}</script>
+</body>
+</html>
+`;
+}
+
+let brandsBuilt = 0;
+const brandWritten = new Set();
+mkdirSync(join(root, 'b'), { recursive: true });
+for (const r of brandRows) {
+  let data;
+  try { data = await rpc('brand_page', { p_slug: r.slug }); }
+  catch (e) { throw new Error(`brand_page(${r.slug}) failed — aborting: ${e.message}`); }
+  if (!data || !data.brand) continue;
+  const b = { ...data.brand };
+  delete b.translations;   // the public page is English
+  // Strip member content from what gets committed: wrist shots load live only.
+  const ctx = { b, d: { ...data, brand: undefined, shots: [], shots_total: 0 }, publicMode: true };
+  mkdirSync(join(root, 'b', r.slug), { recursive: true });
+  writeFileSync(join(root, 'b', r.slug, 'index.html'), brandSnapshotHtml(r.slug, ctx));
+  brandWritten.add(r.slug);
+  brandsBuilt++;
+}
+for (const d of readdirSync(join(root, 'b'), { withFileTypes: true })) {
+  if (!d.isDirectory() || brandWritten.has(d.name)) continue;
+  const p = join(root, 'b', d.name, 'index.html');
+  if (existsSync(p) && readFileSync(p, 'utf8').includes(GEN_MARK)) rmSync(join(root, 'b', d.name), { recursive: true });
 }
 
 // Remove snapshots for models that dropped out (merged, un-enriched) — only
@@ -349,4 +503,5 @@ for (const d of readdirSync(join(root, 'w'), { withFileTypes: true })) {
   }
 }
 
-console.log(`sitemap.xml written: 5 static pages + ${rows.length} model pages · w/all/index.html written (${brands.size} brands) · ${built} snapshots built${skipped ? `, ${skipped} skipped (no longer resolve)` : ''}${removed ? `, ${removed} stale removed` : ''}`);
+console.log(`brand pages: ${brandsBuilt} built`);
+console.log(`sitemap.xml written: 5 static pages + ${brandRows.length} brand pages + ${rows.length} model pages · w/all/index.html written (${brands.size} brands) · ${built} snapshots built${skipped ? `, ${skipped} skipped (no longer resolve)` : ''}${removed ? `, ${removed} stale removed` : ''}`);

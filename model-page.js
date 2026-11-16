@@ -275,10 +275,13 @@ function renderModelPage(el, ctx, h) {
       <div class="mp-specs">${specRows.map(([l, v]) => `<div class="mp-spec"><div class="l">${l}</div><div class="v">${escHtml(v)}</div></div>`).join('')}</div>
     </section>` : '';
 
-  // ── More from brand ──
+  // ── More from brand ── (public: a real link to the brand page when it has one)
   const rel = (st.related || []).slice(0, 4);
+  const brandLink = publicMode
+    ? (ctx.brandSlug ? `<a class="mp-link" href="/b/${escAttr(ctx.brandSlug)}/">All ${escHtml(m.brand)} watches</a>` : '')
+    : `<button type="button" class="mp-link" data-mp="brand" data-brand="${escAttr(m.brand)}">All ${st.brand_models || rel.length + 1} models</button>`;
   const more = rel.length ? `<section class="mp-sec" id="mp-more">
-      <div class="mp-sec-hrow"><h2 class="mp-sec-h">More from ${escHtml(m.brand)}</h2>${publicMode ? '' : `<button type="button" class="mp-link" data-mp="brand" data-brand="${escAttr(m.brand)}">All ${st.brand_models || rel.length + 1} models</button>`}</div>
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">More from ${escHtml(m.brand)}</h2>${brandLink}</div>
       <div class="mp-rel">${rel.map(r => `<button type="button" class="mp-rel-card" data-mp="model" data-id="${escAttr(r.id)}" data-slug="${escAttr(r.slug || '')}"><span class="mp-rel-name">${escHtml(r.name)}</span><span class="mp-sub">${plural(r.owners, 'member')}</span></button>`).join('')}</div>
     </section>` : '';
 
@@ -375,6 +378,137 @@ function renderModelPage(el, ctx, h) {
   });
 }
 
+// ── Brand page (2026-11-15) ── the app's #page-brand and the public /b/<slug>/.
+//   WRModelPage.renderBrand(el, ctx, h)
+//   ctx: { b (brand_page().brand, translated by the host), d (the rest of brand_page()), publicMode }
+//   h:   { back, share, openModel(id, slug), openPost(id), openApp, track(event, props) }
+// One scroll: hero → description → how members' watches run → story → models
+// with a photo → the other models → wrist shots.
+const BP_MORE = 8;   // models without a photo shown before the show-all link
+function renderBrandPage(el, ctx, h) {
+  const b = ctx.b || {}, d = ctx.d || {};
+  const publicMode = !!ctx.publicMode;
+  const key = b.id || b.slug;
+  if (el._bpFor !== key) { el._bpFor = key; el._bpHistOpen = false; el._bpAll = false; }
+  const models = d.models || [];
+  const pics = models.filter(m => m.hero_image), plain = models.filter(m => !m.hero_image);
+  const owners = Number(d.owners) || 0;
+  const hero = d.hero || {};
+
+  const caption = [models.length === 1 ? tx('1 model on WRotate') : tx('{n} models on WRotate', { n: models.length }),
+    owners ? (owners === 1 ? tx('1 member owns one') : tx('{n} members own one', { n: owners })) : ''].filter(Boolean);
+  const heroHtml = `<div class="u-h-45 u-bg-surface2" style="position:relative;overflow:hidden;">
+    ${hero.image ? `<img ${imgSrcAttrs(hero.image, 960, 360)} alt="" fetchpriority="high" class="u-w-100pct u-h-100pct u-of-cover" style="position:absolute;inset:0;">` : ''}
+    <div class="u-bg-linear-gradient-to-right-color-mix-in-srgb-black-90pct-transparent-0pct-color-mix-in-srgb-black-35pct-transparent-55pct-color-mix-in-srgb-black-10pct-transparent-100pct" style="position:absolute;inset:0;pointer-events:none;"></div>
+    <div class="u-justify-space-between u-fs-sm u-c-mix-white-85 u-d-flex" style="position:absolute;top:var(--size-3-5);left:var(--size-4);right:var(--size-4);">
+      <span class="u-d-flex u-gap-2">${publicMode ? '' : '<span role="button" tabindex="0" class="u-cur-pointer" data-bp="back">‹ Back</span>'}</span>
+      <span role="button" tabindex="0" class="u-cur-pointer" data-bp="share">Share</span>
+    </div>
+    <div style="position:absolute;left:var(--size-4);bottom:var(--size-3-5);right:var(--size-4);pointer-events:none;">
+      ${b.founded ? `<div class="u-fs-2xs u-fw-semibold u-ls-wide u-tt-uppercase u-c-gold-lt">${tx('Since {year}', { year: escHtml(b.founded) })}</div>` : ''}
+      <h1 class="mp-title">${escHtml(b.brand)}</h1>
+      <div class="u-fs-xs u-c-mix-white-70">${escHtml(caption.join(' · '))}</div>
+    </div>
+  </div>${hero.image && hero.credit ? `<div class="u-fs-3xs u-c-muted u-ta-right u-pt-1 u-pr-2-5 u-pb-0 u-pl-2-5 u-bg-bg">${escHtml(hero.credit)}</div>` : ''}`;
+
+  const desc = b.description ? `<p class="mp-desc">${escHtml(b.description)}</p>` : '';
+
+  // How members' watches of this brand run (brand_page: >= 3 measuring members)
+  const acc = d.accuracy;
+  let accHtml = '';
+  if (acc) {
+    const s = rateStrip(acc.members, null, acc.med);
+    const within = (acc.members || []).filter(v => Math.abs(Number(v)) <= 5).length;
+    const lv = { n: acc.n_members, name: escHtml(b.brand), med: rateNum(acc.med) };
+    accHtml = `<section class="mp-yours" id="bp-acc">
+      <div class="mp-eyebrow">${tx('How members’ {brand} watches run', { brand: escHtml(b.brand) })}</div>
+      <div class="mp-rate"><span class="mp-rate-v">${rateNum(acc.med)}</span><span class="mp-rate-u">s/day median</span></div>
+      <div class="mp-note">${escHtml([tx('{n} members measured theirs', { n: acc.n_members }), tx('{k} of {n} within ±5 s/d', { k: within, n: acc.n_members })].join(' · '))}</div>
+      ${s ? stripHtml(s) : ''}
+      <div class="mp-legend"><div class="mp-legend-row"><span class="mp-key-dot"></span><span>${tx('{n} members’ {name} · median <b>{med}</b> s/d', lv)}</span></div></div>
+      <div class="mp-note">${tx('Each dot is one member’s typical reading.')}</div>
+    </section>`;
+  }
+
+  const storyText = String(b.history || '').trim();
+  const story = storyText ? `<section class="mp-sec" id="bp-story">
+      <h2 class="mp-sec-h mp-sec-gap">The story</h2>
+      <div id="bp-history" class="mp-history bp-history${el._bpHistOpen ? ' open' : ''}">${escHtml(storyText)}</div>
+      <button type="button" id="bp-history-toggle" data-bp="history" class="mp-link hidden">${el._bpHistOpen ? 'Less' : 'Read the full history'}</button>
+    </section>` : '';
+
+  // Public: real links (crawlable), to the static snapshot when the model has one.
+  const modelTag = (m, cls, inner) => publicMode
+    ? `<a class="${cls}" href="${m.has_page ? `/w/${encodeURIComponent(m.slug)}/` : `/w/?m=${encodeURIComponent(m.slug)}`}">${inner}</a>`
+    : `<button type="button" class="${cls}" data-bp="model" data-id="${escAttr(m.id)}" data-slug="${escAttr(m.slug || '')}">${inner}</button>`;
+  const modelSub = m => [m.owners ? plural(m.owners, 'member') : '', m.med != null ? fmtRate(m.med) : ''].filter(Boolean).join(' · ');
+  const picsHtml = pics.length ? `<section class="mp-sec" id="bp-models">
+      <h2 class="mp-sec-h mp-sec-gap">Models</h2>
+      <div class="bp-grid">${pics.map(m => modelTag(m, 'bp-card',
+        `<span class="bp-card-img"><img ${imgSrcAttrs(m.hero_image, 360, 270)} alt="" loading="lazy"></span>
+         <span class="bp-card-txt"><span class="mp-rel-name">${escHtml(m.name)}</span>${modelSub(m) ? `<span class="mp-sub">${escHtml(modelSub(m))}</span>` : ''}</span>`)).join('')}</div>
+    </section>` : '';
+  const shown = el._bpAll ? plain : plain.slice(0, BP_MORE);
+  const plainHtml = plain.length ? `<section class="mp-sec" id="bp-more">
+      <h2 class="mp-sec-h mp-sec-gap">${pics.length ? 'More models' : 'Models'}</h2>
+      <div class="mp-rel">${shown.map(m => modelTag(m, 'mp-rel-card',
+        `<span class="mp-rel-name">${escHtml(m.name)}</span>${modelSub(m) ? `<span class="mp-sub">${escHtml(modelSub(m))}</span>` : ''}`)).join('')}</div>
+      ${plain.length > shown.length ? `<button type="button" class="mp-link bp-all" data-bp="all">${tx('Show all {n}', { n: plain.length })}</button>` : ''}
+    </section>` : '';
+
+  const shots = (d.shots || []).slice(0, 9);
+  const shotsHtml = shots.length ? `<section class="mp-sec" id="bp-shots">
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><span class="mp-sub">${plural(d.shots_total || shots.length, 'photo')}</span></div>
+      <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-bp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
+    </section>` : '';
+
+  const actions = publicMode ? `<div class="mp-actions"><button class="mp-act mp-act-primary" data-bp="app">Track yours on WRotate</button></div>` : '<div class="bp-end"></div>';
+
+  el.innerHTML = heroHtml + desc + accHtml + story + picsHtml + plainHtml + shotsHtml + actions;
+  if (!el._bpBound) {
+    el._bpBound = true;
+    const act = (e, t) => {
+      const H = el._bpHandlers, dd = t.dataset, c = el._bpCtx, slug = (c.b || {}).slug;
+      switch (dd.bp) {
+        case 'back': H.back && H.back(); break;
+        case 'share': H.share && H.share(); break;
+        case 'history': {
+          const hist = el.querySelector('#bp-history');
+          if (!hist) break;
+          el._bpHistOpen = !el._bpHistOpen;
+          hist.classList.toggle('open', el._bpHistOpen);
+          t.textContent = el._bpHistOpen ? 'Less' : 'Read the full history';
+          if (el._bpHistOpen && H.track) H.track('brand_history_expand', { brand: slug });
+          break;
+        }
+        case 'all': el._bpAll = true; renderBrandPage(el, c, H); break;
+        case 'model': if (H.track) H.track('brand_model_open', { brand: slug, model: dd.slug }); H.openModel && H.openModel(dd.id, dd.slug); break;
+        case 'post': if (H.track) H.track('brand_shot_open', { brand: slug }); H.openPost && H.openPost(dd.id); break;
+        case 'app': if (H.track) H.track('brand_app_cta', { brand: slug }); H.openApp && H.openApp(); break;
+      }
+    };
+    el.addEventListener('click', e => {
+      const t = e.target.closest('[data-bp]');
+      if (!t || !el.contains(t) || !el._bpHandlers) return;
+      act(e, t);
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('button, a')) return;
+      const t = e.target.closest('[role="button"][data-bp]');
+      if (!t || !el.contains(t) || !el._bpHandlers) return;
+      e.preventDefault();
+      act(e, t);
+    });
+  }
+  el._bpHandlers = h || {};
+  el._bpCtx = ctx;
+  requestAnimationFrame(() => {
+    const hist = el.querySelector('#bp-history'), tg = el.querySelector('#bp-history-toggle');
+    if (hist && tg) tg.classList.toggle('hidden', !(el._bpHistOpen || hist.scrollHeight > hist.clientHeight + 1));
+  });
+}
+
 
   const CSS = `
     /* Reference (model) page — one scroll, 390px column (cut-down 2026-09-26) */
@@ -461,6 +595,18 @@ function renderModelPage(el, ctx, h) {
     .mp-act-primary { font-weight:var(--fw-semibold); color:var(--black); background:var(--gold); border:0; }
     .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
     .mp-act-ghost:disabled { color:var(--muted); }
+    /* brand page */
+    #page-brand { max-width: var(--size-120); margin: 0 auto; padding: 0 0 var(--space-2); }
+    .bp-history { white-space: pre-line; -webkit-line-clamp: 6; }
+    .bp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+    .bp-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-family: inherit; text-align: left; text-decoration: none; color: inherit; cursor: pointer; }
+    .bp-card:hover { border-color: var(--gold); }
+    .bp-card-img { display: block; aspect-ratio: 4 / 3; background: var(--surface2); }
+    .bp-card-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .bp-card-txt { display: flex; flex-direction: column; gap: var(--space-0-5); padding: var(--space-2-5) var(--space-3); }
+    a.mp-rel-card { text-decoration: none; color: inherit; }
+    .bp-all { margin-top: var(--space-2); }
+    .bp-end { height: var(--space-8); }
   `;
   function injectStyles() {
     if (document.getElementById('wr-model-page-css')) return;
@@ -469,6 +615,7 @@ function renderModelPage(el, ctx, h) {
   }
   window.WRModelPage = {
     render(el, ctx, h) { injectStyles(); return renderModelPage(el, ctx, h); },
+    renderBrand(el, ctx, h) { injectStyles(); return renderBrandPage(el, ctx, h); },
     fmtRate, featuredFactIndex, rateStrip, agoText,
     css: CSS,   // scripts/gen-sitemap.mjs inlines it into the static /w/<slug>/ snapshots
   };

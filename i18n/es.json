@@ -2785,5 +2785,18 @@
  "Sort": "Ordenar",
  "Try again": "Reintentar",
  "See how your whole collection is running on one screen. Tap the trend icon on the Measure page: every watch shows its latest reading and a strip on the same ±30 s/d scale, sortable by most accurate, most recent or name. Tap a watch for its full history.": "Mira cómo funciona toda tu colección en una sola pantalla. Toca el icono de tendencia en la página Medir: cada reloj muestra su última lectura y una franja en la misma escala de ±30 s/d, y puedes ordenarlos por más precisos, más recientes o nombre. Toca un reloj para ver su historial completo.",
- "The trend icon next to the gear in the header shows every watch on one screen: each with its latest reading and a strip on the same ±30 s/d scale, so they compare at a glance. Sort by most accurate, most recent or name, and tap a watch to open its history.": "El icono de tendencia junto al engranaje del encabezado muestra todos los relojes en una sola pantalla: cada uno con su última lectura y una franja en la misma escala de ±30 s/d, para compararlos de un vistazo. Ordénalos por más precisos, más recientes o nombre, y toca un reloj para abrir su historial."
+ "The trend icon next to the gear in the header shows every watch on one screen: each with its latest reading and a strip on the same ±30 s/d scale, so they compare at a glance. Sort by most accurate, most recent or name, and tap a watch to open its history.": "El icono de tendencia junto al engranaje del encabezado muestra todos los relojes en una sola pantalla: cada uno con su última lectura y una franja en la misma escala de ±30 s/d, para compararlos de un vistazo. Ordénalos por más precisos, más recientes o nombre, y toca un reloj para abrir su historial.",
+ "{n} models on WRotate": "{n} modelos en WRotate",
+ "1 model on WRotate": "1 modelo en WRotate",
+ "All {0} watches": "Todos los relojes {0}",
+ "How members’ {brand} watches run": "Cómo marchan los {brand} de los miembros",
+ "Models": "Modelos",
+ "More models": "Más modelos",
+ "Open the Accuracy overview": "Abrir el resumen de precisión",
+ "Show all {n}": "Ver los {n}",
+ "Since {year}": "Desde {year}",
+ "Brand pages": "Páginas de marca",
+ "Brand Pages": "Páginas de marca",
+ "Brands now have a page of their own: the brand’s story, every model members own, how members’ watches from that brand actually run, and their wrist shots. On any model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it.": "Las marcas ya tienen su propia página: la historia de la marca, todos los modelos que tienen los miembros, cómo marchan de verdad los relojes de esa marca de los miembros y sus fotos en la muñeca. En cualquier página de modelo, toca <strong>Todos los modelos</strong> junto a <strong>Más de la marca</strong> para abrirla.",
+ "Thirty brands have a page of their own, with the brand’s story, the models members own, how members’ watches from that brand run, and their wrist shots. On a model page, tap <strong>All models</strong> next to <strong>More from the brand</strong> to open it. Tap any model to go to its page.": "Treinta marcas tienen su propia página, con la historia de la marca, los modelos que tienen los miembros, cómo marchan los relojes de esa marca de los miembros y sus fotos en la muñeca. En una página de modelo, toca <strong>Todos los modelos</strong> junto a <strong>Más de la marca</strong> para abrirla. Toca cualquier modelo para ir a su página."
 }

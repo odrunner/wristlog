@@ -23,11 +23,12 @@ export function stripCitations<T>(v: T): T {
 }
 
 // Normalize the request `mode` to one of the supported modes for logging.
-export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" | "model" {
+export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" | "model" | "brand" {
   return mode === "detect" ? "detect"
     : mode === "enhance" ? "enhance"
     : mode === "facts" ? "facts"
     : mode === "model" ? "model"
+    : mode === "brand" ? "brand"
     : "identify";
 }
 
@@ -154,6 +155,35 @@ Rules:
 - calibers_by_era: 2-8 entries, oldest first.
 - If separate lines are listed above, leave out their references, calibres and history entirely, even where a source groups them with this family; a member reference that belongs to one of them is a filing mistake, not part of this family.
 - Only state facts you can verify; if a year or caliber is uncertain, say "c." or omit the entry rather than guess.
+- Do not repeat the brand name at the start of every sentence. Do not mention prices.`;
+}
+
+// ── Brand mode: the write-up for a brand page (/b/<slug>/). Grounded on the
+// model families members own, so the history names lines the page lists.
+export interface BrandInfo {
+  brand?: string;
+  models?: string[];
+}
+
+export function buildBrandPrompt(info: BrandInfo): string {
+  const models = (info.models ?? []).filter(Boolean).slice(0, 30);
+  return `Write the reference page for a watch BRAND: its whole story, from its founding to today.
+Brand: ${info.brand}
+${models.length ? `Model lines our members own: ${models.join("; ")}\n` : ""}
+Search the brand's official website first, then reputable histories (Hodinkee, Fratello, WatchTime, Monochrome, the brand's Wikipedia article for dates).
+
+Return a JSON object:
+{
+  "description": "1-2 sentences: who the brand is and what it is known for",
+  "history": "6-9 sentences in 2 or 3 short paragraphs separated by a blank line: founding and founders, key turning points and innovations, the lines that defined it, where it stands today. Plain language, no marketing tone.",
+  "founded": "the founding year only, e.g. 1905",
+  "country": "the country it is based in today, in English, e.g. Switzerland"
+}
+
+Rules:
+- Where they fit the story, mention the model lines listed above by name; do not invent lines.
+- If this is a collaboration or sub-brand rather than a standalone company, say so plainly and tell the story of the collaboration.
+- Only state facts you can verify; if a date is uncertain, say "c." or leave it out rather than guess.
 - Do not repeat the brand name at the start of every sentence. Do not mention prices.`;
 }
 

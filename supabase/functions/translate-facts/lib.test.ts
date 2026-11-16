@@ -183,3 +183,13 @@ Deno.test("halves — a refused batch is cut in two, keys kept; a single fact is
   if (JSON.stringify(parts) !== JSON.stringify([{ f0: "a", f1: "b" }, { f2: "c" }])) throw new Error(JSON.stringify(parts));
   if (halves({ f4: "x" }).length !== 1 || halves({}).length !== 1) throw new Error("single");
 });
+
+// Brand pages reuse the model helpers: a row with no specs and no references.
+Deno.test("brand row — asks only for the story and is done once the story comes back", () => {
+  const row: ModelRow = { id: "b1", description: "A Swiss maker.", history: "Founded in 1905.", translations: null, translate_attempts: 0 };
+  assertEquals(modelBatchFields([row], "es"), { m0_description: "A Swiss maker.", m0_history: "Founded in 1905." });
+  const answers = new Map([["es", { m0_description: "Un fabricante suizo.", m0_history: "Fundada en 1905." }]]) as Map<OtherLang, Fields>;
+  const [out] = mergeModelAnswers([row], answers);
+  assertEquals(out.translations.es, { description: "Un fabricante suizo.", history: "Fundada en 1905.", specs: {}, ref_notes: [], extras: 1 });
+  assertEquals(modelMissingLangs({ ...row, translations: out.translations }).includes("es"), false);
+});
