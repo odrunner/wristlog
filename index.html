@@ -8602,7 +8602,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.20.03';
+const APP_VERSION = '15.20.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26709,7 +26709,24 @@ async function openUpdatePrices() {
   const _uprLogComplete = () => {
     if (_uprCompleteLogged) return;
     _uprCompleteLogged = true;
-    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0 }).then(() => {});
+    // Why rows failed, in the row itself. Three runs on 2026-11-16 lost 24
+    // answers the server had sent and the logs could not say how the phone
+    // saw it: the failure message was thrown away. Null when nothing failed.
+    const why = _uprFails.length ? JSON.stringify({ v: APP_VERSION, f: _uprFails }).slice(0, 4000) : null;
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0, error: why }).then(() => {});
+  };
+  // One entry per failed ask: i = row, a = attempt (1 first, 2 retry, 0 = the
+  // answer arrived but showing it threw), t = ms since the run started,
+  // e = the error, vis/on = was the page visible and did the phone think it
+  // was online. A retry that worked adds { a: 2, ok: 1 }.
+  const _uprFails = [];
+  const _uprNote = (w, a, err, extra) => {
+    if (_uprFails.length >= 40) return;
+    _uprFails.push({
+      i: eligible.indexOf(w), a, t: Date.now() - _uprT0,
+      ...(err ? { e: String((err && err.name ? err.name + ': ' : '') + (err && err.message || err)).slice(0, 80) } : {}),
+      vis: document.visibilityState === 'hidden' ? 0 : 1, on: navigator.onLine ? 1 : 0, ...extra,
+    });
   };
   status.innerHTML = `<span class="row-inline"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
@@ -26748,8 +26765,12 @@ async function openUpdatePrices() {
     // retried — the server is still working and would start over.
     return askValue(payload)
     .catch(err => {
+      _uprNote(w, 1, err);
       if (err && err.message === 'Query timed out') throw err;
-      return whenVisible().then(() => askValue({ ...payload, retry: true }));
+      return whenVisible().then(() => askValue({ ...payload, retry: true })).then(
+        data => { _uprNote(w, 2, null, { ok: 1, rp: data && data.replayed ? 1 : 0 }); return data; },
+        err2 => { _uprNote(w, 2, err2); err2._uprNoted = true; throw err2; }
+      );
     })
     .then(data => {
       done++;
@@ -26793,7 +26814,10 @@ async function openUpdatePrices() {
         _uprLogComplete();
       }
     })
-    .catch(() => {
+    .catch(err => {
+      // Already noted when the ask itself failed; anything else threw while
+      // the answer was being shown.
+      if (!(err && (err._uprNoted || err.message === 'Query timed out'))) _uprNote(w, 0, err);
       done++;
       status.innerHTML = done < eligible.length
         ? `<span class="row-inline"><span class="spinner u-w-3-5 u-h-3-5 u-bd-2px-solid-border u-bdtc-gold u-r-round u-anim-spin-p6s-linear-infinite u-d-inline-block"></span> Found ${done} of ${eligible.length}...</span>`

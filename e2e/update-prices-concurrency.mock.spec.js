@@ -65,6 +65,12 @@ test.describe('Update Prices concurrency (mocked)', () => {
     const few = manyWatches.slice(0, 4);
     const seen = {};
     const retryFlags = [];
+    const completes = [];
+    page.on('request', (req) => {
+      if (req.method() !== 'POST' || !req.url().includes('/rest/v1/valuation_events')) return;
+      const b = req.postDataJSON();
+      if (b && b.action === 'complete') completes.push(b);
+    });
 
     await mockSupabase(page, { watches: few, logs: [] });
     await injectSession(page);
@@ -89,6 +95,12 @@ test.describe('Update Prices concurrency (mocked)', () => {
       .toContainText(`Done — ${few.length} prices found`, { timeout: 30_000 });
     await expect(page.locator('#update-prices-rows')).not.toContainText('Error');
     expect(retryFlags, 'every second ask is flagged as a retry').toEqual(few.map(() => true));
+
+    // A recovered row is still recorded: first ask failed, retry worked.
+    await expect.poll(() => completes.length).toBe(1);
+    const why = JSON.parse(completes[0].error);
+    expect(why.f.filter((x) => x.a === 1 && x.e).length).toBe(few.length);
+    expect(why.f.filter((x) => x.a === 2 && x.ok === 1).length).toBe(few.length);
   });
 
   test('a lookup that fails twice still ends as Error, asked no more than twice', async ({ page }) => {
@@ -98,6 +110,14 @@ test.describe('Update Prices concurrency (mocked)', () => {
     await mockSupabase(page, { watches: few, logs: [] });
     await injectSession(page);
     await page.route('**/functions/v1/watch-value', (route) => { asks++; return route.abort('connectionreset'); });
+    // The run's own record must say why each row failed (2026-11-16: three
+    // failed runs, and nothing recorded what the phone had seen).
+    const completes = [];
+    page.on('request', (req) => {
+      if (req.method() !== 'POST' || !req.url().includes('/rest/v1/valuation_events')) return;
+      const b = req.postDataJSON();
+      if (b && b.action === 'complete') completes.push(b);
+    });
 
     await page.goto('/');
     await waitForAppBoot(page);
@@ -106,5 +126,15 @@ test.describe('Update Prices concurrency (mocked)', () => {
     await expect(page.locator('#update-prices-status')).toContainText('Done', { timeout: 30_000 });
     await expect(page.locator('#update-prices-rows .text-danger')).toHaveCount(few.length);
     expect(asks).toBe(few.length * 2);
+
+    await expect.poll(() => completes.length).toBe(1);
+    const why = JSON.parse(completes[0].error);
+    expect(why.v, 'names the page version that ran').toBeTruthy();
+    expect(why.f.map((x) => `${x.i}:${x.a}`).sort()).toEqual(['0:1', '0:2', '1:1', '1:2']);
+    for (const x of why.f) {
+      expect(x.e, 'carries the browser error text').toMatch(/\S/);
+      expect(x.vis).toBe(1);
+      expect(typeof x.t).toBe('number');
+    }
   });
 });
