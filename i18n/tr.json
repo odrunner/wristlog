@@ -2802,5 +2802,7 @@
  "Includes posts shared with you. Others see only what they’re allowed to.": "Sizinle paylaşılan gönderileri içerir. Diğerleri yalnızca izinli olduklarını görür.",
  "Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members’ wrists</strong>, tap a photo to open that post, tap the title to see those posts in the feed, or tap the photo count to browse every photo.": "Her modelin kendi sayfası var: fotoğraflar, tarihçe ve ilginç bilgiler, teknik özellikler ve WRotate'te kimlerde olduğu. Koleksiyonundaki bir saatten <strong>Bu modeli gör</strong>'e dokunarak doğrudan oraya git. <strong>Üyelerin bileğinde</strong> altında, o gönderiyi açmak için bir fotoğrafa, bu gönderileri akışta görmek için başlığa veya tüm fotoğraflara göz atmak için fotoğraf sayısına dokunun.",
  "Could not load photos": "Fotoğraflar yüklenemedi",
- "Open photo": "Fotoğrafı aç"
+ "Open photo": "Fotoğrafı aç",
+ "First, your profile": "Önce profilin",
+ "This is about you, not your watch. Your name and username are how other members find you. You can change them later.": "Bu seninle ilgili, saatinle değil. Adın ve kullanıcı adın, diğer üyelerin seni bulmasını sağlar. Bunları sonra değiştirebilirsin."
 }

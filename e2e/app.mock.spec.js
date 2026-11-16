@@ -1885,7 +1885,7 @@ test.describe('Username prompt modal (mocked)', () => {
     await expect(page.locator('#up-username')).toBeAttached();
   });
 
-  test('username prompt modal shows "Set up your profile" title', async ({ page }) => {
+  test('username prompt modal shows "First, your profile" title', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
@@ -1896,7 +1896,9 @@ test.describe('Username prompt modal (mocked)', () => {
       document.getElementById('username-prompt-modal').classList.remove('hidden');
     });
 
-    await expect(page.locator('#username-prompt-title')).toContainText('Set up your profile');
+    await expect(page.locator('#username-prompt-title')).toContainText('First, your profile');
+    await expect(page.locator('#username-prompt-modal')).toContainText('not your watch');
+    await expect(page.locator('label[for="up-display-name"]')).toHaveText('Your name');
     await expect(page.locator('#up-display-name')).toBeVisible();
     await expect(page.locator('#up-username')).toBeVisible();
     await expect(page.locator('#up-save-btn')).toBeVisible();
@@ -1914,6 +1916,30 @@ test.describe('Username prompt modal (mocked)', () => {
 
     await page.locator('#up-display-name').fill('Alice Watches');
     await expect(page.locator('#up-display-name')).toHaveValue('Alice Watches');
+  });
+
+  test('the name box starts with the sign-in name, or the name already chosen', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Sign-up left the email prefix as the display name: use the provider's name.
+    await page.evaluate(() => {
+      myProfile.username_set = false;
+      myProfile.display_name = (currentUser.email || '').split('@')[0];
+      requireUsername(() => {});
+    });
+    await expect(page.locator('#username-prompt-modal')).toBeVisible();
+    await expect(page.locator('#up-display-name')).toHaveValue('Test User');
+    await expect(page.locator('#up-username')).toHaveValue('');
+
+    // A name the member picked themselves wins over the provider's.
+    await page.evaluate(() => {
+      myProfile.display_name = 'Picked Name';
+      requireUsername(() => {});
+    });
+    await expect(page.locator('#up-display-name')).toHaveValue('Picked Name');
   });
 
   test('cancel button closes the modal', async ({ page }) => {

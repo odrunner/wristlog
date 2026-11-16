@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=7e79c41a', it: 'i18n/it.js?v=a5d69321', fr: 'i18n/fr.js?v=27204237', tr: 'i18n/tr.js?v=b81e345f', de: 'i18n/de.js?v=7484ad11', pt: 'i18n/pt.js?v=b3be2cf2' };
+      var FILES = { es: 'i18n/es.js?v=ab88a500', it: 'i18n/it.js?v=69b3b66e', fr: 'i18n/fr.js?v=84682f3e', tr: 'i18n/tr.js?v=ef9f0a41', de: 'i18n/de.js?v=b24bbee2', pt: 'i18n/pt.js?v=ca38716b' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -6191,10 +6191,10 @@
 <div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
   <div class="modal u-maxw-95">
     <div class="u-ta-center u-mb-3"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-    <div class="modal-title u-ta-center u-fs-xl" id="username-prompt-title">Set up your profile</div>
-    <p class="text-body-lg u-ta-center u-mt-1-5 u-mr-0 u-mb-4 u-ml-0">Add your name and pick a username so others can find you. You can always change these later.</p>
+    <div class="modal-title u-ta-center u-fs-xl" id="username-prompt-title">First, your profile</div>
+    <p class="text-body-lg u-ta-center u-mt-1-5 u-mr-0 u-mb-4 u-ml-0">This is about you, not your watch. Your name and username are how other members find you. You can change them later.</p>
     <div class="form-group stack-3">
-      <label for="up-display-name" class="u-fs-base u-mb-1 u-d-block">Display Name</label>
+      <label for="up-display-name" class="u-fs-base u-mb-1 u-d-block">Your name</label>
       <input type="text" id="up-display-name" placeholder="Your name" maxlength="50" class="u-w-100pct u-pt-2 u-pr-3 u-pb-2 u-pl-3 u-bd-1px-solid-border u-r-btn u-fs-body">
     </div>
     <div class="form-group stack-1">
@@ -8602,7 +8602,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.20.30';
+const APP_VERSION = '16.07.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9212,9 +9212,23 @@ function _enableUsernameBtn(statusElId) {
 
 let _usernamePromptCallback = null;
 
+// What the "Your name" box of the username prompt starts with: the name the
+// member already chose, else the one Google/Apple gave at sign-in. A display
+// name equal to the email prefix was put there by sign-up, not by the member.
+// An empty box got watch names typed into it (audit 2026-11-16).
+function usernamePromptName() {
+  const meta = (currentUser && currentUser.user_metadata) || {};
+  const auto = ((currentUser && currentUser.email) || '').split('@')[0];
+  const cur = ((myProfile && myProfile.display_name) || '').trim();
+  if (cur && cur !== auto) return cur.slice(0, 50);
+  return String(meta.full_name || meta.name
+    || [meta.given_name, meta.family_name].filter(Boolean).join(' ') || '').trim().slice(0, 50);
+}
+
 function requireUsername(callback) {
   if (myProfile && myProfile.username_set) { callback(); return; }
   _usernamePromptCallback = callback;
+  document.getElementById('up-display-name').value = usernamePromptName();
   const input = document.getElementById('up-username');
   const status = document.getElementById('up-username-status');
   input.value = '';
