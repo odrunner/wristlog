@@ -98,6 +98,21 @@ test.describe('Accuracy overview (mocked)', () => {
     await expect(page.locator('.acc-ov-row')).toHaveCount(3);
   });
 
+  test('a feed promo with the open_accuracy action lands on the overview', async ({ page }) => {
+    await boot(page);
+    await navigateTo(page, 'feed');
+    await page.evaluate(() => {
+      window.logPromoEvent = () => {};
+      _promoSlots = [{ id: 'acc-promo', kind: 'authored', heading: 'Accuracy', body: '', images: [],
+        cta_label: 'See my watches', cta_action: 'open_accuracy' }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(_promoSlots[0]));
+    });
+    await page.click('[data-promo-cta]');
+    await expect(page.locator('#page-msr-history')).toBeVisible();
+    await expect(page.locator('#msr-hist-overview')).toBeVisible();
+    await expect(page.locator('.acc-ov-row')).toHaveCount(3);
+  });
+
   test('a failed load says so instead of calling every watch unmeasured', async ({ page }) => {
     await boot(page, { failAll: true });
     await page.click('#msr-history-btn');

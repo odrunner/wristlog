@@ -3635,6 +3635,7 @@ export const PROMO_AUDIENCES = {
   never_logged:    (c)   => (c.wearCount || 0) === 0,
   no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
   never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
+  has_measured:    (c)   => !!c.isIos && (c.measureCount || 0) > 0,
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,

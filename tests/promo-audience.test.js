@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { PROMO_AUDIENCES, promoAudienceMatches } from '../wrotate_test.js';
 
-// A fully-engaged user: every audience below should reject them except `all`.
+// A fully-engaged user: every gap audience below should reject them. `all` and
+// the positive audiences (POSITIVE: they target something the member HAS done)
+// are the exceptions.
+const POSITIVE = new Set(['all', 'has_measured']);
 const FULL = {
   watchCount: 5, wearCount: 40, wishlistCount: 3, followingCount: 9,
   measureCount: 7, clubCount: 2, rankedEver: true, daysSinceSignup: 90, isIos: true,
@@ -19,9 +22,9 @@ describe('promoAudienceMatches', () => {
     expect(promoAudienceMatches(undefined, FULL)).toBe(false);
   });
 
-  it('rejects a fully-engaged user for every targeted audience', () => {
+  it('rejects a fully-engaged user for every gap audience', () => {
     for (const key of Object.keys(PROMO_AUDIENCES)) {
-      if (key === 'all') continue;
+      if (POSITIVE.has(key)) continue;
       expect(promoAudienceMatches(key, FULL), `${key} should not match a fully-engaged user`).toBe(false);
     }
   });
@@ -38,6 +41,13 @@ describe('promoAudienceMatches', () => {
   it('never_measured only targets iOS — Measure is hidden on web, so the CTA would be dead', () => {
     expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, isIos: true })).toBe(true);
     expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, isIos: false })).toBe(false);
+  });
+
+  it('has_measured targets iOS members with a reading', () => {
+    expect(promoAudienceMatches('has_measured', FULL)).toBe(true);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 1, isIos: true })).toBe(true);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 0, isIos: true })).toBe(false);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 4, isIos: false })).toBe(false);
   });
 
   it('no_clubs targets people in no club', () => {

@@ -8552,7 +8552,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.12.13';
+const APP_VERSION = '15.17.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13989,6 +13989,8 @@ const PROMO_AUDIENCES = {
   no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
   // iOS-only: #nav-measure-btn is hidden on web, so this CTA would go nowhere.
   never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
+  // iOS-only for the same reason: Accuracy History's back button lands on Measure.
+  has_measured:    (c)   => !!c.isIos && (c.measureCount || 0) > 0,
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,
@@ -14476,6 +14478,8 @@ const PROMO_ACTIONS = {
   // mode. enterCollectionSim() no-ops when signed out, but promos only render
   // for signed-in users anyway.
   open_whatif:        () => { nav(document.querySelector('nav button[data-page="collection"]')); enterCollectionSim(); },
+  // Accuracy History opens on the every-watch overview when no watch is picked.
+  open_accuracy:      () => openMsrHistory('promo'),
 };
 
 // Returns a callable for a slot's cta_action, or null. Null means "render no
@@ -25066,7 +25070,7 @@ function fillCampaignBody(text) {
 // appears in the admin UI automatically and the two can never drift.
 const PROMO_AUDIENCE_LABELS = {
   all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
-  never_measured: 'Never measured (iOS only)', no_clubs: 'In no club',
+  never_measured: 'Never measured (iOS only)', has_measured: 'Has measured a watch (iOS only)', no_clubs: 'In no club',
   follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
   internal_only: 'Internal accounts only (testing)',
 };
@@ -25074,7 +25078,7 @@ const PROMO_ACTION_LABELS = {
   '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
   open_track: 'Open Track', open_stats: 'Open Stats', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
   open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
-  open_whatif: 'Open the What-if simulator',
+  open_whatif: 'Open the What-if simulator', open_accuracy: 'Open the Accuracy overview',
   'url:': 'Custom URL (https only)',
   'feedback:': 'Open feedback form',
 };
