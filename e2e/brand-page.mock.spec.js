@@ -32,7 +32,7 @@ const BRAND = {
     ...PLAIN,
   ],
   shots: [{ id: 'log-1', url: 'https://example.com/w1.jpg' }, { id: 'log-2', url: 'https://example.com/w2.jpg' }],
-  shots_total: 25,
+  shots_total: 25, shots_shared: 1,
 };
 
 async function openModel(page, brandPayload) {
@@ -84,6 +84,7 @@ test('All N models opens the brand page; models open and Back walks the way back
   // wrist shots
   await expect(bp.locator('#bp-shots .mp-shot')).toHaveCount(2);
   await expect(bp.locator('#bp-shots')).toContainText('25 photos');
+  await expect(bp.locator('#bp-shots')).toContainText('Includes posts shared with you');
   // no public CTA inside the app
   await expect(bp.locator('.mp-actions')).toHaveCount(0);
 

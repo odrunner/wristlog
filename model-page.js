@@ -226,6 +226,7 @@ function renderModelPage(el, ctx, h) {
   const shotsHtml = shots.length ? `<section class="mp-sec" id="mp-shots">
       <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><button type="button" class="mp-link" data-mp="shots-all">${plural(st.shots_total || shots.length, 'photo')}</button></div>
       <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-mp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
+      ${!publicMode && Number(st.shots_shared) > 0 ? '<div class="mp-note">Includes posts shared with you. Others see only what they’re allowed to.</div>' : ''}
     </section>` : '';
 
   // ── Owners you can follow (model_owners: names only where privacy allows) ──
@@ -460,6 +461,7 @@ function renderBrandPage(el, ctx, h) {
   const shotsHtml = shots.length ? `<section class="mp-sec" id="bp-shots">
       <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><span class="mp-sub">${plural(d.shots_total || shots.length, 'photo')}</span></div>
       <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-bp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
+      ${!publicMode && Number(d.shots_shared) > 0 ? '<div class="mp-note">Includes posts shared with you. Others see only what they’re allowed to.</div>' : ''}
     </section>` : '';
 
   const actions = publicMode ? `<div class="mp-actions"><button class="mp-act mp-act-primary" data-bp="app">Track yours on WRotate</button></div>` : '<div class="bp-end"></div>';

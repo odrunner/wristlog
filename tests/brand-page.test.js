@@ -44,6 +44,12 @@ describe('brand page renderer', () => {
     expect(html).toContain('data-bp="back"');
     expect(html).not.toContain('data-bp="app"');
   });
+  it('says when the wrist shots include posts shared with the viewer, never on the public page', () => {
+    const d = { ...CTX.d, shots: [{ id: 'l1', url: 'https://example.com/s.jpg' }], shots_total: 4, shots_shared: 3 };
+    expect(render({ ...CTX, d, publicMode: false })).toContain('Includes posts shared with you');
+    expect(render({ ...CTX, d, publicMode: true })).not.toContain('Includes posts shared with you');
+    expect(render({ ...CTX, d: { ...d, shots_shared: 0 }, publicMode: false })).not.toContain('Includes posts shared with you');
+  });
   it('escapes the brand name and hides the accuracy card without data', () => {
     const html = render({ ...CTX, d: { ...CTX.d, accuracy: null }, publicMode: true });
     expect(html).toContain('Tudor &lt;b&gt;');
