@@ -290,6 +290,8 @@
     }
 
     function renderError(msg) {
+      // A "not found" page answered 200 is a soft 404 to Google: keep it out of the index.
+      document.querySelector('meta[name="robots"]')?.setAttribute('content', 'noindex, follow');
       document.getElementById('main-content').innerHTML = `
         <div class="state-wrap">
           <div class="state-title">Profile not found</div>

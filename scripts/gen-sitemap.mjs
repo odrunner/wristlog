@@ -66,7 +66,6 @@ const xml = [
   url('https://wrotate.com/', 'weekly', '1.0'),
   url('https://wrotate.com/privacy.html', 'yearly', '0.3'),
   url('https://wrotate.com/terms.html', 'yearly', '0.3'),
-  url('https://wrotate.com/profile/', 'daily', '0.7'),
   url('https://wrotate.com/w/all/', 'weekly', '0.7'),
   ...bySlug.map(r => url(`https://wrotate.com/w/${r.slug}/`, 'monthly', '0.6', r.lastmod)),
   '</urlset>',

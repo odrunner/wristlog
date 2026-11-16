@@ -86,7 +86,9 @@
 
     let ctx = null;
     const el = document.getElementById('model-page-content');
-    function show(id) { for (const x of ['loading', 'notfound']) document.getElementById(x).style.display = x === id ? '' : 'none'; }
+    function show(id) { for (const x of ['loading', 'notfound']) document.getElementById(x).style.display = x === id ? '' : 'none';
+      // "Not found" with a 200 is a soft 404 to Google: keep it out of the index.
+      if (id === 'notfound') document.querySelector('meta[name="robots"]')?.setAttribute('content', 'noindex, follow'); }
     function render() { WRModelPage.render(el, ctx, handlers); }
     const handlers = {
       back() { if (history.length > 1) history.back(); else location.href = 'https://wrotate.com'; },

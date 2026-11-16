@@ -50,9 +50,17 @@ describe('model hub crawl graph (w/all/)', () => {
 });
 
 describe('sitemap', () => {
-  it('keeps the four static pages', () => {
-    for (const loc of ['https://wrotate.com/</loc>', '/privacy.html</loc>', '/terms.html</loc>', '/profile/</loc>']) {
+  it('keeps the three static pages', () => {
+    for (const loc of ['https://wrotate.com/</loc>', '/privacy.html</loc>', '/terms.html</loc>']) {
       expect(sitemap).toContain(loc);
+    }
+  });
+  it('leaves out bare /profile/ (no ?u= renders "Profile not found" with a 200: a soft 404)', () => {
+    expect(sitemap).not.toContain('/profile/</loc>');
+  });
+  it('marks the "not found" states of the profile and model pages noindex', () => {
+    for (const f of ['profile/index.html', 'w/index.html']) {
+      expect(readFileSync(join(root, f), 'utf8')).toMatch(/meta\[name="robots"\]'\)\?\.setAttribute\('content', 'noindex, follow'\)/);
     }
   });
   it('lists a meaningful set of model pages with safe slugs', () => {
