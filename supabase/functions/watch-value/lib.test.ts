@@ -5,6 +5,8 @@ import {
   extractJson,
   geminiAttemptTimeouts,
   isCacheFresh,
+  pickReplay,
+  queryKey,
   roundEstimate,
   salvageJson,
   shouldRetryWithoutRef,
@@ -302,4 +304,45 @@ Deno.test("shouldRetryWithoutRef — Gemini wrote text → no retry (parse/salva
 Deno.test("shouldRetryWithoutRef — empty answer that DID find sources → no retry", () => {
   const withSources = { candidates: [{ groundingMetadata: { groundingChunks: [{ web: { uri: "https://x" } }] } }] };
   assertEquals(shouldRetryWithoutRef(withSources, "", "T120"), false);
+});
+
+// A retried lookup replays the answer that was computed and never delivered
+// (2026-11-16: 8 of 10 batch answers lost when the page left the foreground).
+const RQ = { brand: "Omega", model: "Seamaster 42", reference: "210.30.42.20.04.001", condition: "good", year: "" };
+const RR = { estimated_value_usd: { low: 4200, mid: 4850, high: 5500 }, confidence: "high" };
+const T0 = Date.parse("2026-11-16T03:25:44Z");
+const rowAt = (ms: number, over: Record<string, unknown> = {}) => ({
+  query: RQ, result: RR, created_at: new Date(ms).toISOString(), ...over,
+});
+
+Deno.test("pickReplay — same question moments ago is replayed", () => {
+  assertEquals(pickReplay(rowAt(T0), RQ, T0 + 27_000), RR);
+});
+
+Deno.test("pickReplay — undefined and empty fields are the same question", () => {
+  assertEquals(pickReplay(rowAt(T0), { brand: "Omega", model: "Seamaster 42", reference: "210.30.42.20.04.001", condition: "good" }, T0 + 1000), RR);
+  assertEquals(queryKey({ brand: "A" }), queryKey({ brand: "A", model: "", reference: "", condition: "", year: "" }));
+});
+
+Deno.test("pickReplay — an old row, a future row or no row runs a real lookup", () => {
+  assertEquals(pickReplay(rowAt(T0), RQ, T0 + 15 * 60 * 1000), null);
+  assertEquals(pickReplay(rowAt(T0), RQ, T0 - 1), null);
+  assertEquals(pickReplay(null, RQ, T0), null);
+  assertEquals(pickReplay(undefined, RQ, T0), null);
+  assertEquals(pickReplay(rowAt(T0, { created_at: null }), RQ, T0), null);
+  assertEquals(pickReplay(rowAt(T0, { created_at: "not a date" }), RQ, T0), null);
+});
+
+Deno.test("pickReplay — a changed question is never answered from the old one", () => {
+  assertEquals(pickReplay(rowAt(T0), { ...RQ, reference: "210.30.42.20.03.001" }, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0), { ...RQ, condition: "new" }, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0), { ...RQ, year: 2021 }, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0, { query: null }), RQ, T0 + 1000), null);
+});
+
+Deno.test("pickReplay — a stored answer without a usable mid is not replayed", () => {
+  assertEquals(pickReplay(rowAt(T0, { result: { estimated_value_usd: { low: 1 } } }), RQ, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0, { result: {} }), RQ, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0, { result: "x" }), RQ, T0 + 1000), null);
+  assertEquals(pickReplay(rowAt(T0, { result: null }), RQ, T0 + 1000), null);
 });

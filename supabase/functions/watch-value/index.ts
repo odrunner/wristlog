@@ -14,6 +14,7 @@ import {
   extractJson,
   geminiAttemptTimeouts,
   isCacheFresh,
+  pickReplay,
   roundEstimate,
   salvageJson,
   shouldRetryWithoutRef,
@@ -98,6 +99,26 @@ Deno.serve(async (req: Request) => {
             headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
           });
         }
+      }
+    }
+
+    // A retried lookup (the client's connection dropped) gets the answer we
+    // already computed, if it is the same question from the last 15 minutes.
+    // Before the rate limit on purpose: the first ask was counted and paid for.
+    if (watch_id && body.retry === true) {
+      const { data: recent } = await supabase
+        .from("watch_value_recent")
+        .select("query, result, created_at")
+        .eq("user_id", user.id)
+        .eq("watch_id", watch_id)
+        .maybeSingle();
+      const replay = pickReplay(recent, { brand, model, reference, condition, year }, Date.now());
+      if (replay) {
+        console.log(`[watch-value] user=${user.id} src=${source ?? "unknown"} Replaying recent answer for watch ${watch_id}`);
+        return new Response(JSON.stringify({ ...replay, replayed: true }), {
+          status: 200,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -335,6 +356,24 @@ Rules:
     // NOTE: no server-side save. Prices are only written by the client after the
     // user explicitly approves them (Save/Apply in the UI). watch_id is still
     // accepted — it's used above for the 7-day cache read.
+    //
+    // The answer itself is kept briefly so a retry after a dropped connection
+    // can be replayed (see pickReplay). Failing to keep it must never fail the
+    // lookup the caller is waiting on.
+    if (watch_id) {
+      try {
+        const { error: keepErr } = await supabase.from("watch_value_recent").upsert({
+          user_id: user.id,
+          watch_id,
+          query: parsed.query,
+          result: parsed,
+          created_at: parsed.looked_up_at,
+        });
+        if (keepErr) console.log(`[watch-value] could not keep recent answer: ${keepErr.message}`);
+      } catch (keepEx) {
+        console.log(`[watch-value] could not keep recent answer: ${(keepEx as Error).message}`);
+      }
+    }
 
     return new Response(JSON.stringify(parsed), {
       status: 200,

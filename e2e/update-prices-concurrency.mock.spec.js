@@ -55,4 +55,56 @@ test.describe('Update Prices concurrency (mocked)', () => {
     // Guard the other direction: a serial loop would be correct but far slower.
     expect(peak, 'still runs in parallel, not one at a time').toBeGreaterThan(1);
   });
+
+  // Regression (2026-11-16 03:25 UTC): a 10-watch run showed "Error" on 8 rows
+  // although the server had priced all 10. The page left the foreground for
+  // ~30s mid-run and iOS dropped the answers in flight. A dropped connection
+  // now re-asks once, flagged `retry` so the server replays the answer it
+  // already has instead of paying for the lookup again.
+  test('a dropped connection is re-asked once and the row still gets its price', async ({ page }) => {
+    const few = manyWatches.slice(0, 4);
+    const seen = {};
+    const retryFlags = [];
+
+    await mockSupabase(page, { watches: few, logs: [] });
+    await injectSession(page);
+
+    await page.route('**/functions/v1/watch-value', async (route) => {
+      const body = route.request().postDataJSON();
+      seen[body.watch_id] = (seen[body.watch_id] || 0) + 1;
+      if (seen[body.watch_id] === 1) return route.abort('connectionreset');
+      retryFlags.push(body.retry);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ estimated_value_usd: { low: 100, mid: 200, high: 300 }, confidence: 'high' }),
+      });
+    });
+
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.evaluate(() => { openUpdatePrices(); });
+
+    await expect(page.locator('#update-prices-status'))
+      .toContainText(`Done — ${few.length} prices found`, { timeout: 30_000 });
+    await expect(page.locator('#update-prices-rows')).not.toContainText('Error');
+    expect(retryFlags, 'every second ask is flagged as a retry').toEqual(few.map(() => true));
+  });
+
+  test('a lookup that fails twice still ends as Error, asked no more than twice', async ({ page }) => {
+    const few = manyWatches.slice(0, 2);
+    let asks = 0;
+
+    await mockSupabase(page, { watches: few, logs: [] });
+    await injectSession(page);
+    await page.route('**/functions/v1/watch-value', (route) => { asks++; return route.abort('connectionreset'); });
+
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.evaluate(() => { openUpdatePrices(); });
+
+    await expect(page.locator('#update-prices-status')).toContainText('Done', { timeout: 30_000 });
+    await expect(page.locator('#update-prices-rows .text-danger')).toHaveCount(few.length);
+    expect(asks).toBe(few.length * 2);
+  });
 });

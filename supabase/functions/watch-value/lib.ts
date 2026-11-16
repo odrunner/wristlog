@@ -170,3 +170,34 @@ export function shouldRetryWithoutRef(result: unknown, text: string, reference: 
   const chunks = r.candidates?.[0]?.groundingMetadata?.groundingChunks;
   return !Array.isArray(chunks) || chunks.length === 0;
 }
+
+// The fields that make two lookups "the same question". Order is fixed so the
+// stored copy and a retry's copy compare equal as strings.
+export function queryKey(
+  q: { brand?: string; model?: string; reference?: string; condition?: string; year?: string | number },
+): string {
+  return JSON.stringify([q.brand ?? "", q.model ?? "", q.reference ?? "", q.condition ?? "", String(q.year ?? "")]);
+}
+
+// The answer to replay for a retried lookup, or null to run it again.
+//
+// A client re-asks (`retry: true`) only after its connection dropped, and the
+// usual reason is that the answer was computed and never arrived (2026-11-16:
+// 8 of 10 batch answers lost when the page left the foreground). Replaying is
+// only right for the same question asked moments ago: an edited reference or
+// an old row must run a real lookup.
+export function pickReplay(
+  row: { query?: unknown; result?: unknown; created_at?: string | null } | null | undefined,
+  query: Parameters<typeof queryKey>[0],
+  nowMs: number,
+  maxAgeMs = 15 * 60 * 1000,
+): Record<string, unknown> | null {
+  if (!row || !row.created_at || !row.result || typeof row.result !== "object") return null;
+  const ageMs = nowMs - new Date(row.created_at).getTime();
+  if (!(ageMs >= 0 && ageMs < maxAgeMs)) return null;
+  if (!row.query || typeof row.query !== "object") return null;
+  if (queryKey(row.query as Parameters<typeof queryKey>[0]) !== queryKey(query)) return null;
+  const est = (row.result as Record<string, unknown>).estimated_value_usd as Record<string, unknown> | undefined;
+  if (!est || typeof est.mid !== "number") return null;
+  return row.result as Record<string, unknown>;
+}

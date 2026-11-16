@@ -8577,7 +8577,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.18.50';
+const APP_VERSION = '15.19.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26615,17 +26615,35 @@ async function openUpdatePrices() {
   // search and cost most of that day's spend. We were rate-limiting ourselves.
   // Ten concurrent measured clean twice (12-26s end to end); eight leaves room.
   const UPDATE_PRICES_CONCURRENCY = 8;
+  const askValue = (payload) => authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }, 60000).then(r => {
+    if (r.status === 429) { _uprRateLimited = true; }
+    return r.json();
+  });
+  const whenVisible = () => document.visibilityState !== 'hidden' ? Promise.resolve() : new Promise(res => {
+    const onShow = () => {
+      if (document.visibilityState === 'hidden') return;
+      document.removeEventListener('visibilitychange', onShow);
+      res();
+    };
+    document.addEventListener('visibilitychange', onShow);
+  });
   const lookupOne = (w) => {
     const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'update-prices', watch_id: w.id };
     if (w.ref) payload.reference = w.ref;
-    return authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }, 60000)
-    .then(r => {
-      if (r.status === 429) { _uprRateLimited = true; }
-      return r.json();
+    // A dropped connection gets one more ask. On 2026-11-16 a 10-watch run
+    // showed "Error" on 8 rows the server had priced: the page left the
+    // foreground for ~30s and iOS dropped every answer in flight. `retry`
+    // tells the server to replay the answer it kept, so the second ask is
+    // neither billed nor counted against the daily limit. A timeout is not
+    // retried — the server is still working and would start over.
+    return askValue(payload)
+    .catch(err => {
+      if (err && err.message === 'Query timed out') throw err;
+      return whenVisible().then(() => askValue({ ...payload, retry: true }));
     })
     .then(data => {
       done++;
