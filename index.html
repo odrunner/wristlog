@@ -79,7 +79,7 @@
        is in the filename, so upgrading it means renaming here, in SITE_FILES,
        in sw.js PRECACHE and in tests/page-weight.test.js -->
   <script src="/supabase-js-2.98.0.min.js"></script>
-  <script src="/model-page.js?v=dc7ce58a"></script>
+  <script src="/model-page.js?v=8b2d4991"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Safe storage accessor. Reading localStorage THROWS rather than returning null
        in several real configurations: Safari with "Block all cookies", some corporate
@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=88d0dc2f', it: 'i18n/it.js?v=ca88af2f', fr: 'i18n/fr.js?v=a253386a', tr: 'i18n/tr.js?v=0c6b0f94', de: 'i18n/de.js?v=df69a0ca', pt: 'i18n/pt.js?v=6df4fe26' };
+      var FILES = { es: 'i18n/es.js?v=7e79c41a', it: 'i18n/it.js?v=a5d69321', fr: 'i18n/fr.js?v=27204237', tr: 'i18n/tr.js?v=b81e345f', de: 'i18n/de.js?v=7484ad11', pt: 'i18n/pt.js?v=b3be2cf2' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -807,6 +807,15 @@
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--space-4); }
 
     .page-model { max-width: var(--size-120); margin: 0 auto; padding: 0; }
+    /* Wrist-shot gallery (#page-shots): 3-across grid that keeps loading, and one photo full width */
+    .shots-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+    .shots-back { flex: none; min-height: var(--size-11); padding: 0 var(--space-1); background: none; border: 0; font-family: inherit; font-size: var(--fs-base); font-weight: var(--fw-semibold); color: var(--gold-text); cursor: pointer; }
+    .shots-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shots-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-0-5); }
+    .shots-cell { display: block; aspect-ratio: 1; padding: 0; border: 0; overflow: hidden; background: var(--surface2); cursor: pointer; }
+    .shots-cell img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .shots-sentinel { height: var(--size-11); }
+    .shots-full-img { display: block; width: 100%; height: auto; background: var(--surface2); }
     /* Watches page: the brand card above the grid (chip selected, or the search names a brand) */
     .brand-card { display: flex; gap: var(--space-3); width: 100%; margin-bottom: var(--space-3); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-family: inherit; text-align: left; color: var(--text); cursor: pointer; }
     .brand-card:hover { border-color: var(--gold); }
@@ -3543,6 +3552,22 @@
     <div id="brand-page-content"></div>
   </div>
 
+  <!-- Every wrist shot of a model or a brand: an image-only grid, opened from the page's photo count -->
+  <div id="page-shots" class="page page-model">
+    <div id="shots-grid-view">
+      <div class="shots-head">
+        <button type="button" class="shots-back" onclick="closeShotsGallery()">‹ Back</button>
+        <div class="grow-clip"><div id="shots-title" class="shots-title" data-i18n-skip></div><div id="shots-count" class="text-meta"></div></div>
+      </div>
+      <div id="shots-grid" class="shots-grid"></div>
+      <div id="shots-sentinel" class="shots-sentinel"></div>
+    </div>
+    <div id="shots-full" class="hidden">
+      <div class="shots-head"><button type="button" class="shots-back" onclick="closeShotFull()">‹ Back</button></div>
+      <img id="shots-full-img" class="shots-full-img" alt="">
+    </div>
+  </div>
+
   <div id="page-explore" class="page">
     <div id="explore-brands" class="u-gap-2 u-pb-2 u-mb-2 u-ovs-touch u-d-flex" style="overflow-x:auto;"></div>
     <div class="form-group stack-3">
@@ -4422,7 +4447,7 @@
             <div class="help-step-num">2</div>
             <div class="help-step-body">
               <div class="help-step-title">Model pages</div>
-              <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members&#8217; wrists</strong>, tap a photo to open that post &#8212; or tap the photo count to filter the feed to every public post featuring that model.</div>
+              <div class="help-step-desc">Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members&#8217; wrists</strong>, tap a photo to open that post, tap the title to see those posts in the feed, or tap the photo count to browse every photo.</div>
             </div>
           </div>
           <div class="help-step">
@@ -8577,7 +8602,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.19.50';
+const APP_VERSION = '15.20.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13406,6 +13431,8 @@ function modelFeedLabel(brand, name) {
 }
 
 function _modelFeedQuery(from, to) {
+  // A brand filter (viewBrandFeed) rides the same path with its own RPC.
+  if (feedModelFilter.isBrand) return db.rpc('brand_feed_page', { p_brand: feedModelFilter.brand, p_offset: from, p_limit: to - from + 1 });
   return db.rpc('model_feed_page', { p_model_id: feedModelFilter.id, p_offset: from, p_limit: to - from + 1 });
 }
 
@@ -13438,6 +13465,85 @@ function viewModelFeed(modelId, brand, name) {
   if (btn) nav(btn);
 }
 
+
+// The brand page's section title: the Feed filtered to every post the viewer may
+// see featuring a watch of that brand. Same filter slot and lifecycle as the model filter.
+function viewBrandFeed(brand) {
+  if (!brand || !currentUser) return;
+  feedUserFilter = null; _userFeedOffset = 0;
+  feedModelFilter = { id: 'brand:' + brand, isBrand: true, brand, name: '' };
+  feedItems = []; feedLoadedAt = 0; feedError = false; _feedCaughtUpIdx = null;
+  if (!_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'brand_posts_feed', meta: { brand } }).then(() => {});
+  const btn = document.querySelector("nav button[data-page='feed']");
+  if (btn) nav(btn);
+}
+
+// ── Wrist-shot gallery (2026-11-15) ── the photo count on a model or brand page.
+// Image-only, three across, loading 60 at a time as the end comes into view
+// (wrist_shots_page RPC: the same photos the page shows, for this viewer). A tap
+// shows that photo full width; Back returns to the grid where it was.
+const SHOTS_PAGE = 60;
+let _shots = null;   // { modelId, brand, from, fromY, items, done, loading, gridY }
+let _shotsObserver = null;
+function openShotsGallery(opts) {
+  const active = document.querySelector('.page.active');
+  _shots = { modelId: opts.modelId || null, brand: opts.brand || null, from: active ? active.id : 'page-explore',
+    fromY: window.scrollY || 0, items: [], done: false, loading: false, gridY: 0 };
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-shots').classList.add('active');
+  document.getElementById('shots-title').textContent = opts.title || '';
+  document.getElementById('shots-count').textContent = opts.total ? `${opts.total} photo${Number(opts.total) === 1 ? '' : 's'}` : '';
+  document.getElementById('shots-grid').innerHTML = '';
+  document.getElementById('shots-full').classList.add('hidden');
+  document.getElementById('shots-grid-view').classList.remove('hidden');
+  window.scrollTo(0, 0);
+  if (!_shotsObserver && 'IntersectionObserver' in window) {
+    _shotsObserver = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) loadMoreShots(); }, { rootMargin: '600px' });
+    _shotsObserver.observe(document.getElementById('shots-sentinel'));
+  }
+  loadMoreShots();
+}
+async function loadMoreShots() {
+  const g = _shots;
+  if (!g || g.loading || g.done || !document.getElementById('page-shots').classList.contains('active')) return;
+  g.loading = true;
+  const { data, error } = await db.rpc('wrist_shots_page', { p_model_id: g.modelId, p_brand: g.modelId ? null : g.brand, p_offset: g.items.length, p_limit: SHOTS_PAGE });
+  if (_shots !== g) return;   // another gallery was opened meanwhile
+  g.loading = false;
+  if (error) { g.done = true; toast('Could not load photos', 'error'); return; }
+  const rows = Array.isArray(data) ? data : [];
+  const start = g.items.length;
+  g.items.push(...rows);
+  if (rows.length < SHOTS_PAGE) g.done = true;
+  document.getElementById('shots-grid').insertAdjacentHTML('beforeend', rows.map((p, i) =>
+    `<button type="button" class="shots-cell" data-i="${start + i}" onclick="openShotFull(Number(this.dataset.i))" aria-label="Open photo"><img ${WRModelPage.imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join(''));
+  // A tall screen can show the whole first page with the end still in view: keep going.
+  if (!g.done) requestAnimationFrame(() => { const s = document.getElementById('shots-sentinel').getBoundingClientRect(); if (s.top < window.innerHeight + 600) loadMoreShots(); });
+}
+function openShotFull(i) {
+  const g = _shots, p = g && g.items[i];
+  if (!p) return;
+  g.gridY = window.scrollY || 0;
+  document.getElementById('shots-full-img').src = p.url;
+  document.getElementById('shots-grid-view').classList.add('hidden');
+  document.getElementById('shots-full').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+function closeShotFull() {
+  const y = _shots ? _shots.gridY : 0;
+  document.getElementById('shots-full').classList.add('hidden');
+  document.getElementById('shots-full-img').removeAttribute('src');
+  document.getElementById('shots-grid-view').classList.remove('hidden');
+  requestAnimationFrame(() => window.scrollTo(0, y));
+}
+// Back to the model or brand page the gallery was opened from (still drawn).
+function closeShotsGallery() {
+  const g = _shots; _shots = null;
+  const from = g && document.getElementById(g.from) ? g.from : 'page-explore';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(from).classList.add('active');
+  requestAnimationFrame(() => window.scrollTo(0, g ? g.fromY : 0));
+}
 
 // ── Scope-filtered feed ──────────────────────────────────────────────────────
 // The feed's scope dropdown: All posts / People I follow / Close friends / My
@@ -28051,6 +28157,7 @@ function renderModelPage() {
     measure: id => openPushRoute('measure', id),
     openPost: id => scrollToFeedPost(id),
     openModelFeed: (id, brand, name) => viewModelFeed(id, brand, name),
+    openShots: () => openShotsGallery({ modelId: _mpCtx.modelId, title: `${_mpCtx.m.brand} ${_mpCtx.m.name}`, total: (_mpCtx.st || {}).shots_total }),
     openProfile: uid => viewUserProfile(uid),
     follow: (uid, btn) => followByPrivacy(uid, btn),
     isFollowing: uid => following.has(uid),
@@ -28108,6 +28215,8 @@ function renderBrandPageApp() {
     back: goBackFromBrand, share: shareBrandPage,
     openModel: id => openModelPage(id),
     openPost: id => scrollToFeedPost(id),
+    openBrandFeed: brand => viewBrandFeed(brand),
+    openShots: () => openShotsGallery({ brand: _bpCtx.b.brand, title: _bpCtx.b.brand, total: _bpCtx.d.shots_total }),
     track: (ev, props) => { if (window.posthog) posthog.capture(ev, props); },
   });
 }

@@ -5,7 +5,7 @@
 //   ctx: { m, o, st, facts, loggedIn, publicMode, canMeasure }
 //   h:   { back, share, openModel(id, slug), brandExplore(brand), requestEdit(kind),
 //          openWatch(id), measure(id), addToCollection(b, n), addToWishlist(b, n),
-//          openPost(id), openModelFeed(id, brand, name), openProfile(uid, username),
+//          openPost(id), openModelFeed(id, brand, name), openShots(), openProfile(uid, username),
 //          follow(uid, btn), isFollowing(uid), openApp, track(event, props) }
 // One scroll, no tabs (2026-09-26 cut-down): your watch vs members → story →
 // wrist shots → owners → references / calibres / spec → more from the brand.
@@ -224,7 +224,7 @@ function renderModelPage(el, ctx, h) {
   // ── Wrist shots (public posts) ──
   const shots = (st.shots || []).slice(0, 6);
   const shotsHtml = shots.length ? `<section class="mp-sec" id="mp-shots">
-      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><button type="button" class="mp-link" data-mp="shots-all">${plural(st.shots_total || shots.length, 'photo')}</button></div>
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">${publicMode ? 'On members’ wrists' : '<button type="button" class="mp-hbtn" data-mp="shots-feed">On members’ wrists</button>'}</h2><button type="button" class="mp-link" data-mp="shots-all">${plural(st.shots_total || shots.length, 'photo')}</button></div>
       <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-mp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
       ${!publicMode && Number(st.shots_shared) > 0 ? '<div class="mp-note">Includes posts shared with you. Others see only what they’re allowed to.</div>' : ''}
     </section>` : '';
@@ -342,12 +342,17 @@ function renderModelPage(el, ctx, h) {
         case 'watch': H.openWatch && H.openWatch(d.id); break;
         case 'measure': H.measure && H.measure(d.id); break;
         case 'post': H.openPost && H.openPost(d.id); if (H.track) H.track('model_shot_open', { model: mm.slug }); break;
-        // See-all next to the single-shot taps: the app filters the Feed to this
-        // model; the public page (no feed) falls back to the homepage / sign-in.
-        case 'shots-all':
+        // The section title filters the Feed to this model; the photo count opens
+        // the image-only grid. The public page has neither: its count falls back
+        // to the homepage / sign-in.
+        case 'shots-feed':
           if (H.openModelFeed) H.openModelFeed(mm.id, mm.brand, mm.name);
-          else if (H.openApp) H.openApp();
           if (H.track) H.track('model_shots_feed', { model: mm.slug });
+          break;
+        case 'shots-all':
+          if (H.openShots) H.openShots();
+          else if (H.openApp) H.openApp();
+          if (H.track) H.track('model_shots_grid', { model: mm.slug });
           break;
         case 'owner': H.openProfile && H.openProfile(d.uid, d.username); break;
         case 'follow': e.stopPropagation(); H.follow && H.follow(d.uid, t); if (H.track) H.track('model_owner_follow', { model: mm.slug }); break;
@@ -382,7 +387,7 @@ function renderModelPage(el, ctx, h) {
 // ── Brand page (2026-11-15) ── the app's #page-brand and the public /b/<slug>/.
 //   WRModelPage.renderBrand(el, ctx, h)
 //   ctx: { b (brand_page().brand, translated by the host), d (the rest of brand_page()), publicMode }
-//   h:   { back, share, openModel(id, slug), openPost(id), openApp, track(event, props) }
+//   h:   { back, share, openModel(id, slug), openPost(id), openBrandFeed(brand), openShots(), openApp, track(event, props) }
 // One scroll: hero → description → how members' watches run → story → models
 // with a photo → the other models → wrist shots.
 const BP_MORE = 8;   // models without a photo shown before the show-all link
@@ -459,7 +464,9 @@ function renderBrandPage(el, ctx, h) {
 
   const shots = (d.shots || []).slice(0, 9);
   const shotsHtml = shots.length ? `<section class="mp-sec" id="bp-shots">
-      <div class="mp-sec-hrow"><h2 class="mp-sec-h">On members’ wrists</h2><span class="mp-sub">${plural(d.shots_total || shots.length, 'photo')}</span></div>
+      <div class="mp-sec-hrow"><h2 class="mp-sec-h">${publicMode ? 'On members’ wrists' : '<button type="button" class="mp-hbtn" data-bp="shots-feed">On members’ wrists</button>'}</h2>${publicMode
+        ? `<span class="mp-sub">${plural(d.shots_total || shots.length, 'photo')}</span>`
+        : `<button type="button" class="mp-link" data-bp="shots-all">${plural(d.shots_total || shots.length, 'photo')}</button>`}</div>
       <div class="mp-shots">${shots.map(p => `<button type="button" class="mp-shot" data-bp="post" data-id="${escAttr(p.id)}" aria-label="Open post"><img ${imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join('')}</div>
       ${!publicMode && Number(d.shots_shared) > 0 ? '<div class="mp-note">Includes posts shared with you. Others see only what they’re allowed to.</div>' : ''}
     </section>` : '';
@@ -484,6 +491,8 @@ function renderBrandPage(el, ctx, h) {
           break;
         }
         case 'all': el._bpAll = true; renderBrandPage(el, c, H); break;
+        case 'shots-feed': if (H.track) H.track('brand_shots_feed', { brand: slug }); H.openBrandFeed && H.openBrandFeed((c.b || {}).brand); break;
+        case 'shots-all': if (H.track) H.track('brand_shots_grid', { brand: slug }); H.openShots && H.openShots(); break;
         case 'model': if (H.track) H.track('brand_model_open', { brand: slug, model: dd.slug }); H.openModel && H.openModel(dd.id, dd.slug); break;
         case 'post': if (H.track) H.track('brand_shot_open', { brand: slug }); H.openPost && H.openPost(dd.id); break;
         case 'app': if (H.track) H.track('brand_app_cta', { brand: slug }); H.openApp && H.openApp(); break;
@@ -597,6 +606,8 @@ function renderBrandPage(el, ctx, h) {
     .mp-act-primary { font-weight:var(--fw-semibold); color:var(--black); background:var(--gold); border:0; }
     .mp-act-ghost { color:var(--text); background:transparent; border:1px solid var(--border); }
     .mp-act-ghost:disabled { color:var(--muted); }
+    .mp-hbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .mp-hbtn::after { content: '›'; margin-left: var(--space-1-5); color: var(--gold-text); }
     /* brand page */
     #page-brand { max-width: var(--size-120); margin: 0 auto; padding: 0 0 var(--space-2); }
     .bp-history { white-space: pre-line; -webkit-line-clamp: 6; }
@@ -618,7 +629,7 @@ function renderBrandPage(el, ctx, h) {
   window.WRModelPage = {
     render(el, ctx, h) { injectStyles(); return renderModelPage(el, ctx, h); },
     renderBrand(el, ctx, h) { injectStyles(); return renderBrandPage(el, ctx, h); },
-    fmtRate, featuredFactIndex, rateStrip, agoText,
+    fmtRate, featuredFactIndex, rateStrip, agoText, imgSrcAttrs,
     css: CSS,   // scripts/gen-sitemap.mjs inlines it into the static /w/<slug>/ snapshots
   };
 })();

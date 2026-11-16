@@ -828,7 +828,6 @@
  "Essentials": "Essenziali",
  "Est. value": "Valore stim.",
  "Evaluated": "Evaluated",
- "Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members’ wrists</strong>, tap a photo to open that post — or tap the photo count to filter the feed to every public post featuring that model.": "Ogni modello ha la sua pagina: foto, storia e curiosità, specifiche e chi su WRotate ne possiede uno. Da un orologio della tua collezione, tocca <strong>Vedi questo modello</strong> per andarci direttamente. In <strong>Al polso dei membri</strong>, tocca una foto per aprire quel post — oppure tocca il numero di foto per filtrare il feed su tutti i post pubblici con quel modello.",
  "Every watch measured. Full audit complete.": "Ogni orologio misurato. Audit completo.",
  "Every watch, every wear log, every wishlist item —": "Ogni orologio, ogni utilizzo registrato, ogni elemento della lista dei desideri —",
  "Every wear surfaces a <strong>fun fact</strong> about that watch — a fresh bit of trivia each day you wear it. It shows when you log, and rides along on your post so others can read it too — tap it to read the whole thing.": "Ogni utilizzo porta con sé una <strong>curiosità</strong> su quell'orologio — un aneddoto nuovo ogni giorno in cui lo indossi. Appare quando registri e accompagna il tuo post, così possono leggerla anche gli altri — toccala per leggerla tutta.",
@@ -2800,5 +2799,8 @@
  "Many brands have a page of their own, with the brand’s story, the models members own, how members’ watches from that brand run, and their wrist shots. In <strong>Watches</strong>, pick a brand or search its name and tap the card that appears above the models. Tap any model on the brand page to go to its page.": "Molti marchi hanno una pagina tutta loro, con la storia del marchio, i modelli posseduti dai membri, come vanno gli orologi di quel marchio dei membri e le loro foto al polso. In <strong>Orologi</strong>, scegli un marchio o cerca il suo nome e tocca la scheda che appare sopra i modelli. Tocca un modello nella pagina del marchio per andare alla sua pagina.",
  "Could not open the brand page": "Impossibile aprire la pagina del marchio",
  "History, accuracy and photos ›": "Storia, precisione e foto ›",
- "Includes posts shared with you. Others see only what they’re allowed to.": "Include post condivisi con te. Gli altri vedono solo ciò che possono vedere."
+ "Includes posts shared with you. Others see only what they’re allowed to.": "Include post condivisi con te. Gli altri vedono solo ciò che possono vedere.",
+ "Every model has its own page: photos, history and fun facts, specs, and who on WRotate owns one. From a watch in your own collection, tap <strong>See this model</strong> to jump straight there. Under <strong>On members’ wrists</strong>, tap a photo to open that post, tap the title to see those posts in the feed, or tap the photo count to browse every photo.": "Ogni modello ha la sua pagina: foto, storia e curiosità, specifiche e chi su WRotate ne possiede uno. Da un orologio della tua collezione, tocca <strong>Vedi questo modello</strong> per andarci direttamente. Sotto <strong>Al polso dei membri</strong>, tocca una foto per aprire quel post, tocca il titolo per vedere quei post nel feed o tocca il numero di foto per sfogliare tutte le foto.",
+ "Could not load photos": "Impossibile caricare le foto",
+ "Open photo": "Apri foto"
 }

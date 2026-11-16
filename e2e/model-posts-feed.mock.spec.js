@@ -68,12 +68,12 @@ async function boot(page) {
   return rpcCalls;
 }
 
-test('photos count links to the feed filtered to this model, and All posts clears it', async ({ page }) => {
+test('the section title links to the feed filtered to this model, and All posts clears it', async ({ page }) => {
   const rpcCalls = await boot(page);
 
-  const link = page.locator('#mp-shots [data-mp="shots-all"]');
-  await expect(link).toHaveCount(1);
-  await expect(link).toContainText('21 photos');
+  await expect(page.locator('#mp-shots [data-mp="shots-all"]')).toContainText('21 photos');
+  const link = page.locator('#mp-shots [data-mp="shots-feed"]');
+  await expect(link).toHaveText('On members’ wrists');
   await link.click();
 
   // Lands on the Feed tab with the scope chip naming the model.
@@ -117,11 +117,46 @@ test('on the public w/ page the photos count falls back to the homepage (sign-in
 
 test('leaving the feed for another tab drops the model filter', async ({ page }) => {
   await boot(page);
-  await page.locator('#mp-shots [data-mp="shots-all"]').click();
+  await page.locator('#mp-shots [data-mp="shots-feed"]').click();
   await expect(page.locator('#feed-scope-chip')).toContainText('Rolex Submariner posts');
 
   await page.click('nav button[data-page="collection"]');
   await page.click('nav button[data-page="feed"]');
   await expect(page.locator('#feed-scope-chip')).toContainText('All posts');
   await expect(page.locator('#feedcard-log-unrelated')).toBeVisible();
+});
+
+test('photos count opens the image-only grid: loads more on scroll, a photo opens full, Back steps out', async ({ page }) => {
+  await boot(page);
+  const calls = [];
+  await page.route('**/rest/v1/rpc/wrist_shots_page*', async route => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    calls.push(body);
+    const n = body.p_offset === 0 ? 60 : 5;
+    const rows = Array.from({ length: n }, (_, i) => ({ id: `s-${body.p_offset + i}`, url: `https://example.com/shot-${body.p_offset + i}.jpg` }));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) });
+  });
+  await page.locator('#mp-shots [data-mp="shots-all"]').click();
+  const gal = page.locator('#page-shots');
+  await expect(gal).toHaveClass(/active/);
+  await expect(gal.locator('#shots-title')).toHaveText('Rolex Submariner');
+  await expect(gal.locator('#shots-count')).toHaveText('21 photos');
+  // First page, then the next one as the end comes into view; a short page ends it.
+  await expect(gal.locator('.shots-cell')).toHaveCount(60);
+  expect(calls[0]).toMatchObject({ p_model_id: MODEL_ID, p_brand: null, p_offset: 0 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(gal.locator('.shots-cell')).toHaveCount(65);
+  expect(calls[1].p_offset).toBe(60);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(300);
+  expect(calls.length).toBe(2);
+  // A photo opens full; Back returns to the grid, Back again to the model page.
+  await gal.locator('.shots-cell').nth(3).click();
+  await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-3.jpg');
+  await expect(gal.locator('#shots-grid-view')).toBeHidden();
+  await gal.locator('#shots-full .shots-back').click();
+  await expect(gal.locator('#shots-grid-view')).toBeVisible();
+  await expect(gal.locator('.shots-cell')).toHaveCount(65);
+  await gal.locator('#shots-grid-view .shots-back').click();
+  await expect(page.locator('#page-model')).toHaveClass(/active/);
 });

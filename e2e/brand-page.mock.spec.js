@@ -85,6 +85,19 @@ test('All N models opens the brand page; models open and Back walks the way back
   await expect(bp.locator('#bp-shots .mp-shot')).toHaveCount(2);
   await expect(bp.locator('#bp-shots')).toContainText('25 photos');
   await expect(bp.locator('#bp-shots')).toContainText('Includes posts shared with you');
+  // the photo count opens the image-only grid for the brand; Back returns here
+  let shotArgs = null;
+  await page.route('**/rest/v1/rpc/wrist_shots_page*', async route => {
+    shotArgs = JSON.parse(route.request().postData() || '{}');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'log-1', url: 'https://example.com/w1.jpg' }]) });
+  });
+  await bp.locator('#bp-shots [data-bp=shots-all]').click();
+  await expect(page.locator('#page-shots')).toHaveClass(/active/);
+  await expect(page.locator('#shots-title')).toHaveText('Tudor');
+  await expect(page.locator('#page-shots .shots-cell')).toHaveCount(1);
+  expect(shotArgs).toMatchObject({ p_model_id: null, p_brand: 'Tudor', p_offset: 0 });
+  await page.locator('#shots-grid-view .shots-back').click();
+  await expect(bp).toHaveClass(/active/);
   // no public CTA inside the app
   await expect(bp.locator('.mp-actions')).toHaveCount(0);
 
@@ -159,4 +172,18 @@ test('Watches: the search shows the card for the brand it names', async ({ page 
   await expect(card).toContainText('Timex');
   await search.fill('pelagos');
   await expect(card).toHaveCount(0);
+});
+
+test('brand page: the section title opens the feed filtered to the brand', async ({ page }) => {
+  await openModel(page, BRAND);
+  let args = null;
+  await page.route('**/rest/v1/rpc/brand_feed_page*', async route => {
+    args = JSON.parse(route.request().postData() || '{}');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.locator('#page-model [data-mp=brand]').click();
+  await page.locator('#page-brand [data-bp=shots-feed]').click();
+  await expect(page.locator('#page-feed')).toHaveClass(/active/);
+  await expect(page.locator('#feed-scope-chip')).toContainText('Tudor posts');
+  expect(args).toMatchObject({ p_brand: 'Tudor', p_offset: 0 });
 });
