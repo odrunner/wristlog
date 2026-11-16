@@ -154,6 +154,21 @@ test('photos count opens the image-only grid: loads more on scroll, a photo open
   await gal.locator('.shots-cell').nth(3).click();
   await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-3.jpg');
   await expect(gal.locator('#shots-grid-view')).toBeHidden();
+  // Swipe left for the next photo, right for the previous; the first one has no previous.
+  const swipe = dx => page.evaluate(d => {
+    const el = document.getElementById('shots-full');
+    const t = x => ({ touches: [{ clientX: x, clientY: 300 }], changedTouches: [{ clientX: x, clientY: 300 }] });
+    el.dispatchEvent(Object.assign(new Event('touchstart'), t(200)));
+    el.dispatchEvent(Object.assign(new Event('touchend'), t(200 + d)));
+  }, dx);
+  await swipe(-120);
+  await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-4.jpg');
+  await swipe(120); await swipe(120);
+  await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-2.jpg');
+  await page.keyboard.press('ArrowRight');
+  await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-3.jpg');
+  await swipe(-20);                                   // too short to count
+  await expect(gal.locator('#shots-full-img')).toHaveAttribute('src', 'https://example.com/shot-3.jpg');
   await gal.locator('#shots-full .shots-back').click();
   await expect(gal.locator('#shots-grid-view')).toBeVisible();
   await expect(gal.locator('.shots-cell')).toHaveCount(65);

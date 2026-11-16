@@ -8602,7 +8602,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.20.10';
+const APP_VERSION = '15.20.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13488,7 +13488,7 @@ let _shotsObserver = null;
 function openShotsGallery(opts) {
   const active = document.querySelector('.page.active');
   _shots = { modelId: opts.modelId || null, brand: opts.brand || null, from: active ? active.id : 'page-explore',
-    fromY: window.scrollY || 0, items: [], done: false, loading: false, gridY: 0 };
+    fromY: window.scrollY || 0, items: [], done: false, loading: false, gridY: 0, fullIdx: null, fullFrom: null };
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-shots').classList.add('active');
   document.getElementById('shots-title').textContent = opts.title || '';
@@ -13503,7 +13503,7 @@ function openShotsGallery(opts) {
   }
   loadMoreShots();
 }
-async function loadMoreShots() {
+async function loadMoreShots() {   // also called while a photo is shown full (swiping near the end)
   const g = _shots;
   if (!g || g.loading || g.done || !document.getElementById('page-shots').classList.contains('active')) return;
   g.loading = true;
@@ -13518,23 +13518,59 @@ async function loadMoreShots() {
   document.getElementById('shots-grid').insertAdjacentHTML('beforeend', rows.map((p, i) =>
     `<button type="button" class="shots-cell" data-i="${start + i}" onclick="openShotFull(Number(this.dataset.i))" aria-label="Open photo"><img ${WRModelPage.imgSrcAttrs(p.url, 240, 240)} alt="" loading="lazy"></button>`).join(''));
   // A tall screen can show the whole first page with the end still in view: keep going.
-  if (!g.done) requestAnimationFrame(() => { const s = document.getElementById('shots-sentinel').getBoundingClientRect(); if (s.top < window.innerHeight + 600) loadMoreShots(); });
+  if (!g.done && g.fullIdx == null) requestAnimationFrame(() => { const s = document.getElementById('shots-sentinel').getBoundingClientRect(); if (s.top < window.innerHeight + 600) loadMoreShots(); });
 }
 function openShotFull(i) {
   const g = _shots, p = g && g.items[i];
   if (!p) return;
   g.gridY = window.scrollY || 0;
+  g.fullIdx = g.fullFrom = i;
   document.getElementById('shots-full-img').src = p.url;
   document.getElementById('shots-grid-view').classList.add('hidden');
   document.getElementById('shots-full').classList.remove('hidden');
   window.scrollTo(0, 0);
+  _bindShotSwipe();
+}
+// Swipe left / right (or the arrow keys) for the next / previous photo. Nearing
+// the end of what is loaded fetches the next batch, so swiping never dead-ends early.
+function shotFullStep(d) {
+  const g = _shots;
+  if (!g || g.fullIdx == null) return;
+  const i = g.fullIdx + d;
+  if (i < 0 || i >= g.items.length) return;
+  g.fullIdx = i;
+  document.getElementById('shots-full-img').src = g.items[i].url;
+  if (i >= g.items.length - 6 && !g.done) loadMoreShots();
+}
+let _shotSwipeBound = false;
+function _bindShotSwipe() {
+  if (_shotSwipeBound) return;
+  _shotSwipeBound = true;
+  const el = document.getElementById('shots-full');
+  let x0 = 0, y0 = 0;
+  el.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    // (written without a less-than sign: the label extractor reads "> … <" in script as markup)
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) shotFullStep(-Math.sign(dx));
+  }, { passive: true });
+  document.addEventListener('keydown', e => {
+    if (!_shots || _shots.fullIdx == null || document.getElementById('shots-full').classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight') shotFullStep(1); else if (e.key === 'ArrowLeft') shotFullStep(-1);
+  });
 }
 function closeShotFull() {
-  const y = _shots ? _shots.gridY : 0;
+  const g = _shots, y = g ? g.gridY : 0;
+  const moved = g && g.fullIdx !== g.fullFrom ? g.fullIdx : null;
+  if (g) g.fullIdx = null;
   document.getElementById('shots-full').classList.add('hidden');
   document.getElementById('shots-full-img').removeAttribute('src');
   document.getElementById('shots-grid-view').classList.remove('hidden');
-  requestAnimationFrame(() => window.scrollTo(0, y));
+  // Back to where the grid was; after swiping, to the photo you ended on.
+  requestAnimationFrame(() => {
+    const cell = moved != null && document.querySelector(`#shots-grid .shots-cell[data-i="${moved}"]`);
+    if (cell) cell.scrollIntoView({ block: 'center' }); else window.scrollTo(0, y);
+  });
 }
 // Back to the model or brand page the gallery was opened from (still drawn).
 function closeShotsGallery() {
