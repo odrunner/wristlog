@@ -44,6 +44,7 @@ INSERT INTO public.brand_pages (brand, slug)
 SELECT brand, trim(both '-' from regexp_replace(lower(brand), '[^a-z0-9]+', '-', 'g'))
 FROM public.watch_models
 WHERE merged_into IS NULL AND description IS NOT NULL AND hero_image IS NOT NULL
+  AND brand <> 'Omega x Swatch'   -- a collaboration, not a brand (dropped 2026-11-15)
 GROUP BY brand
 ON CONFLICT (brand) DO NOTHING;
 
