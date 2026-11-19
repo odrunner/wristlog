@@ -10,6 +10,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildWatchDesc,
+  claudeAnswerText,
   describeEmptyAnswer,
   extractJson,
   geminiAttemptTimeouts,
@@ -319,20 +320,21 @@ Rules:
       }
 
       const result = await resp.json();
-      const textBlock = result.content?.find((b: { type: string }) => b.type === "text");
+      // Every text block, not the first: see claudeAnswerText.
+      const answerText = claudeAnswerText(result.content);
       // extractJson throws on malformed/truncated JSON (Claude runs with a 2048
       // max_tokens cap, so a long answer can be cut mid-object). Without this
       // guard the throw skips the parse_failed branch below and surfaces a raw
       // SyntaxError from the outer catch, losing the raw text we need to debug.
       try {
-        parsed = extractJson(textBlock?.text ?? "");
+        parsed = extractJson(answerText);
       } catch (_e) {
         parsed = null;
       }
 
       if (!parsed) {
-        console.error("[watch-value] Could not parse response:", textBlock?.text);
-        return new Response(JSON.stringify({ error: "parse_failed", raw: textBlock?.text?.slice(0, 500) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+        console.error("[watch-value] Could not parse response:", answerText);
+        return new Response(JSON.stringify({ error: "parse_failed", raw: answerText.slice(0, 500) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
       }
       parsed._engine = "claude";
     }

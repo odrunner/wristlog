@@ -6,6 +6,21 @@ export function extractJson(text: string) {
   return m ? JSON.parse(m[0]) : null;
 }
 
+// All the text in a Claude response, in order.
+//
+// With web search Claude answers in several text blocks: a note before it
+// searches ("Let me search more specifically."), then the answer, itself split
+// wherever a citation attaches. Taking only the first block read the note and
+// missed the price (2026-11-13 and 2026-11-17: Claude billed, member shown an
+// error). Tool-use and search-result blocks carry no `text` and are skipped.
+export function claudeAnswerText(content: unknown): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((b) => b && b.type === "text" && typeof b.text === "string")
+    .map((b) => b.text as string)
+    .join("");
+}
+
 // Most cuts we'll try before giving up. Each attempt re-parses the prefix, so
 // an adversarially comma-heavy blob shouldn't turn salvage into a hot loop.
 const MAX_SALVAGE_ATTEMPTS = 50;
