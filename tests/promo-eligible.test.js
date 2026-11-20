@@ -6,7 +6,7 @@ const CFG = {
   enabled: true, first_position: 2, repeat_every: 0, max_per_session: 1,
   default_max_impressions: 3, suppress_after_modal: true,
 };
-const CTX = { wearCount: 0, wishlistCount: 0, followingCount: 0, clubCount: 0, measureCount: 0, rankedEver: false, isIos: true };
+const CTX = { wearCount: 0, wishlistCount: 0, followingCount: 0, clubCount: 0, measureCount: 0, rankedEver: false, canMeasure: true };
 const slot = (o = {}) => ({
   id: 's1', heading: 'H', audience: 'all', priority: 0, status: 'active',
   starts_at: null, ends_at: null, max_impressions: null,

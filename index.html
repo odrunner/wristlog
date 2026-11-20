@@ -8610,7 +8610,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.21.25';
+const APP_VERSION = '19.21.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14176,10 +14176,10 @@ const PROMO_AUDIENCES = {
   all:             ()    => true,
   never_logged:    (c)   => (c.wearCount || 0) === 0,
   no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
-  // iOS-only: #nav-measure-btn is hidden on web, so this CTA would go nowhere.
-  never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
-  // iOS-only for the same reason: Accuracy History's back button lands on Measure.
-  has_measured:    (c)   => !!c.isIos && (c.measureCount || 0) > 0,
+  // Apps only (iOS + Android): #nav-measure-btn is hidden on web, so this CTA would go nowhere.
+  never_measured:  (c)   => !!c.canMeasure && (c.measureCount || 0) === 0,
+  // Apps only for the same reason: Accuracy History's back button lands on Measure.
+  has_measured:    (c)   => !!c.canMeasure && (c.measureCount || 0) > 0,
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,
@@ -15371,7 +15371,10 @@ function promoCtx() {
     rankedEver:     Object.keys(eloRatings || {}).length > 0,
     daysSinceSignup: myProfile?.created_at
       ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
-    isIos:          !!window._iosAppVersion,
+    // The same test that reveals the Measure tab (bootApp), so it is true in
+    // the iOS and Android apps and false on the web. It was `_iosAppVersion`
+    // until 2026-11-19, which left Android members out of both audiences.
+    canMeasure:     _tgHasNative(),
     isInternal:     _promoIsInternal,
     // Null except in the first week of a month with a month worth showing —
     // eligiblePromoSlots() reads it as the whole existence gate for a recap
@@ -25309,7 +25312,7 @@ function fillCampaignBody(text) {
 // appears in the admin UI automatically and the two can never drift.
 const PROMO_AUDIENCE_LABELS = {
   all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
-  never_measured: 'Never measured (iOS only)', has_measured: 'Has measured a watch (iOS only)', no_clubs: 'In no club',
+  never_measured: 'Never measured (iOS + Android apps)', has_measured: 'Has measured a watch (iOS + Android apps)', no_clubs: 'In no club',
   follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
   internal_only: 'Internal accounts only (testing)',
 };
@@ -38501,7 +38504,7 @@ async function bootApp(user) {
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   _bootGate.then(() => { if (currentUser?.id === user.id) loadExperiments(); });
-  // Show Measure tab only when native timegrapher bridge is available (iOS app)
+  // Show Measure tab only when native timegrapher bridge is available (iOS and Android apps)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
   // Draw last visit's feed before any network — loadFeed() (via initApp's

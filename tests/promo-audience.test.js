@@ -7,7 +7,7 @@ import { PROMO_AUDIENCES, promoAudienceMatches } from '../wrotate_test.js';
 const POSITIVE = new Set(['all', 'has_measured']);
 const FULL = {
   watchCount: 5, wearCount: 40, wishlistCount: 3, followingCount: 9,
-  measureCount: 7, clubCount: 2, rankedEver: true, daysSinceSignup: 90, isIos: true,
+  measureCount: 7, clubCount: 2, rankedEver: true, daysSinceSignup: 90, canMeasure: true,
 };
 
 describe('promoAudienceMatches', () => {
@@ -38,16 +38,16 @@ describe('promoAudienceMatches', () => {
     expect(promoAudienceMatches('no_wishlist', { ...FULL, wishlistCount: 0 })).toBe(true);
   });
 
-  it('never_measured only targets iOS — Measure is hidden on web, so the CTA would be dead', () => {
-    expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, isIos: true })).toBe(true);
-    expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, isIos: false })).toBe(false);
+  it('never_measured only targets the apps (iOS + Android) — Measure is hidden on web, so the CTA would be dead', () => {
+    expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, canMeasure: true })).toBe(true);
+    expect(promoAudienceMatches('never_measured', { ...FULL, measureCount: 0, canMeasure: false })).toBe(false);
   });
 
-  it('has_measured targets iOS members with a reading', () => {
+  it('has_measured targets app members with a reading', () => {
     expect(promoAudienceMatches('has_measured', FULL)).toBe(true);
-    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 1, isIos: true })).toBe(true);
-    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 0, isIos: true })).toBe(false);
-    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 4, isIos: false })).toBe(false);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 1, canMeasure: true })).toBe(true);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 0, canMeasure: true })).toBe(false);
+    expect(promoAudienceMatches('has_measured', { ...FULL, measureCount: 4, canMeasure: false })).toBe(false);
   });
 
   it('no_clubs targets people in no club', () => {
