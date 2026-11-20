@@ -154,6 +154,7 @@ test.describe('admin Promos tab — load/edit (mocked)', () => {
       audience: 'no_wishlist',
       priority: 5,
       max_impressions: null,
+      ask_vote: true,
       status: 'draft',
     };
     const out = await page.evaluate((slot) => {
@@ -173,10 +174,14 @@ test.describe('admin Promos tab — load/edit (mocked)', () => {
         audience: val('promo-audience'),
         priority: val('promo-priority'),
         maxImpressions: val('promo-max-impressions'),
+        askVote: document.getElementById('promo-ask-vote').checked,
+        askVoteSaved: window.promoFormSlot().ask_vote,
         editingId: _editingPromoId,
         saveLabel: document.getElementById('promo-save-btn').textContent,
       };
     }, slot);
+    expect(out.askVote).toBe(true);
+    expect(out.askVoteSaved).toBe(true);
     expect(out.eyebrow).toBe('New');
     expect(out.heading).toBe('Rank your collection');
     expect(out.body).toBe('<b>Try it</b>');

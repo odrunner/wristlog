@@ -2295,6 +2295,7 @@
       background: color-mix(in srgb, var(--gold-text) 8%, transparent);
     }
     .promo-recap-vote--done { font-size: var(--fs-sm); color: var(--muted); font-style: italic; }
+    .promo-card-body .promo-recap-vote { margin-top: var(--space-3); }
     .promo-recap .promo-cta {
       width: 100%; margin: 0; background: var(--gold-text); color: var(--promo-cta-fg);
       border: none; border-radius: var(--radius); padding: var(--space-3-5);
@@ -3972,6 +3973,13 @@
         <div class="draft-form-row">
           <label for="promo-feedback-prompt">…or the question to ask (used when action is "Open feedback form" — blank uses the heading)</label>
           <input type="text" id="promo-feedback-prompt" placeholder="What one thing would make WRotate better for you?" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-ask-vote">Feedback</label>
+          <label class="radio-option">
+            <input type="checkbox" id="promo-ask-vote" onchange="updatePromoPreview()">
+            <span>Ask "What do you think of this feature?" with thumbs up / down (classic card only)</span>
+          </label>
         </div>
 
         <div class="draft-form-row">
@@ -8602,7 +8610,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.46';
+const APP_VERSION = '19.21.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14858,8 +14866,13 @@ function recapThumb(w, cls) {
 // July's must not answer for August's (it did, 2026-09-01 — "Glad you liked
 // it" on a card the voter had never seen). A row with no readable timestamp
 // counts, the same rule as eligiblePromoSlots().
+//
+// A classic card that asks the same question (promo_slots.ask_vote) is one
+// card for its whole run, so any vote on it is the answer — no window.
 function recapVoteOf(slotId) {
-  const recap = currentMonthRecap();
+  const slot = (_promoSlots || []).find((s) => s.id === slotId);
+  const monthly = !slot || promoVariantOf(slot) === 'recap';
+  const recap = monthly ? currentMonthRecap() : null;
   const since = recap ? recap.windowStart : 0;
   for (const e of (_promoEvents || [])) {
     if (e.slot_id !== slotId || (e.event !== 'thumbs_up' && e.event !== 'thumbs_down')) continue;
@@ -15260,6 +15273,7 @@ function renderPromoCard(slot) {
       <div class="promo-heading">${heading}</div>
       ${body}
       ${cta}
+      ${slot.ask_vote ? recapVoteHtml(slot.id) : ''}
     </div>
   </div>`;
 }
@@ -25373,6 +25387,7 @@ function promoFormSlot() {
     priority: parseInt(val('promo-priority') || '0'),
     max_impressions: val('promo-max-impressions') ? parseInt(val('promo-max-impressions')) : null,
     first_position: val('promo-position') ? parseInt(val('promo-position')) : null,
+    ask_vote: !!document.getElementById('promo-ask-vote')?.checked,
     starts_at: val('promo-starts') ? new Date(val('promo-starts')).toISOString() : null,
     ends_at:   val('promo-ends')   ? new Date(val('promo-ends')).toISOString()   : null,
   };
@@ -25441,6 +25456,8 @@ function loadPromoIntoForm(slot) {
     (slot.max_impressions === null || slot.max_impressions === undefined) ? '' : slot.max_impressions);
   set('promo-position',
     (slot.first_position === null || slot.first_position === undefined) ? '' : slot.first_position);
+  const askVote = document.getElementById('promo-ask-vote');
+  if (askVote) askVote.checked = !!slot.ask_vote;
 
   _editingPromoId = slot.id;
   updatePromoFormMode();
@@ -25490,6 +25507,8 @@ function clearPromoForm() {
   set('promo-priority', '0');
   set('promo-max-impressions', '');
   set('promo-position', '');
+  const askVote = document.getElementById('promo-ask-vote');
+  if (askVote) askVote.checked = false;
 
   _editingPromoId = null;
   updatePromoFormMode();

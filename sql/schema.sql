@@ -399,7 +399,8 @@ CREATE TABLE IF NOT EXISTS public.promo_slots (
     first_position integer,
     updated_at timestamp with time zone,
     variant text DEFAULT 'classic'::text NOT NULL,
-    size text DEFAULT 'prompt'::text NOT NULL
+    size text DEFAULT 'prompt'::text NOT NULL,
+    ask_vote boolean DEFAULT false NOT NULL
 );
 CREATE TABLE IF NOT EXISTS public.rate_limits (
     user_id uuid NOT NULL,

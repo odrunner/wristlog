@@ -11,13 +11,15 @@ import fs from 'fs';
 fs.mkdirSync('email-assets', { recursive: true });
 
 const W = (id, brand, name) => ({ ...SAMPLE_WATCHES[0], id, brand, name });
+// Brands chosen to share nothing with the owner's own collection — the first
+// capture (Omega / Rolex / Grand Seiko / Tudor / Hamilton) read as their account.
 const WATCHES = [
-  W('w1', 'Omega', 'Speedmaster Professional'),
-  W('w2', 'Rolex', 'Explorer'),
-  W('w3', 'Grand Seiko', 'SBGA211'),
-  W('w4', 'Tudor', 'Black Bay 58'),
-  W('w5', 'Seiko', 'SKX007'),
-  W('w6', 'Hamilton', 'Khaki Field Mechanical'),
+  W('w1', 'Oris', 'Aquis Date'),
+  W('w2', 'Sinn', '556 I'),
+  W('w3', 'Longines', 'Spirit'),
+  W('w4', 'Zenith', 'Chronomaster Sport'),
+  W('w5', 'Tissot', 'PRX Powermatic 80'),
+  W('w6', 'Nomos', 'Tangente'),
 ];
 const ago = (days, h = 9) => { const d = new Date(); d.setDate(d.getDate() - days); d.setHours(h, 0, 0, 0); return d.toISOString(); };
 // [watch, [[daysAgo, rate], ...]] — newest first per watch.

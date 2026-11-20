@@ -192,6 +192,46 @@ test.describe('renderPromoCard', () => {
 // are variant-blind), escapes the heading, and falls back to the classic card
 // for anything unrecognized — which is what every row written before these
 // columns existed is.
+// promo_slots.ask_vote: a classic feature announcement can carry the same
+// thumbs up / down the month-in-review card has.
+test.describe('renderPromoCard ask_vote', () => {
+  test('no vote row unless the slot asks for one', async ({ page }) => {
+    expect(await html(page, SLOT)).not.toContain('data-recap-vote');
+    expect(await html(page, { ...SLOT, ask_vote: true })).toContain('What do you think of this feature?');
+  });
+
+  test('a thumbs up is logged once and replaces the question; an old vote still counts', async ({ page }) => {
+    await page.goto('/');
+    const res = await page.evaluate((s) => {
+      const logged = [];
+      window.logPromoEvent = (slot_id, event) => {
+        logged.push({ slot_id, event });
+        _promoEvents.push({ slot_id, event, created_at: new Date().toISOString() });
+      };
+      _promoEvents = [];
+      _promoSlots = [{ ...s, id: 'v1', ask_vote: true }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(_promoSlots[0]));
+      const card = document.getElementById('promocard-v1');
+      const asked = card.querySelectorAll('[data-recap-vote]').length;
+      card.querySelector('[data-recap-vote="thumbs_up"]').click();
+      voteOnRecap('v1', 'thumbs_down');                 // a second opinion is ignored
+      const after = { buttons: card.querySelectorAll('[data-recap-vote]').length,
+        done: card.querySelector('.promo-recap-vote--done')?.textContent.trim() };
+      card.remove();
+      // Unlike the monthly recap, this card is one card for its whole run: a
+      // vote from months ago is still the answer.
+      _promoEvents = [{ slot_id: 'v1', event: 'thumbs_down', created_at: '2020-01-01T00:00:00Z' }];
+      const old = window.renderPromoCard(_promoSlots[0]);
+      return { asked, logged, after, oldAsksAgain: old.includes('data-recap-vote') };
+    }, SLOT);
+    expect(res.asked).toBe(2);
+    expect(res.logged).toEqual([{ slot_id: 'v1', event: 'thumbs_up' }]);
+    expect(res.after.buttons).toBe(0);
+    expect(res.after.done).toContain('Glad you liked it');
+    expect(res.oldAsksAgain).toBe(false);
+  });
+});
+
 test.describe('renderPromoCard variants', () => {
   const dom = (page, slot) => page.evaluate((s) => {
     const host = document.createElement('div');
