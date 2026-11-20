@@ -7,3 +7,7 @@
 "No Connection" = "No Connection";
 "Check your internet connection and try again." = "Check your internet connection and try again.";
 "Try Again" = "Try Again";
+
+/* Age block screen (AgeGate.swift, AgeBlockView) */
+"WRotate is not available" = "WRotate is not available";
+"WRotate is not intended for children under 13." = "WRotate is not intended for children under 13.";

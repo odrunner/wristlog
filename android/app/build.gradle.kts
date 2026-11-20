@@ -75,6 +75,8 @@ dependencies {
     implementation("androidx.activity:activity:1.9.3")
     implementation("androidx.browser:browser:1.8.0")
     implementation("com.google.android.play:review:2.0.2")
+    // Age bracket from Play, asked only where a law makes sharing mandatory (see AgeGate).
+    implementation("com.google.android.play:age-signals:0.0.6")
     // play:review drags in fragment:1.1.0, which release lint rejects for the ActivityResult APIs.
     implementation("androidx.fragment:fragment:1.6.2")
     implementation("androidx.exifinterface:exifinterface:1.3.7")

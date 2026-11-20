@@ -8,4 +8,6 @@
     <string name="offline_title">Sem ligação</string>
     <string name="offline_message">Verifica a tua ligação à internet e tenta de novo.</string>
     <string name="offline_retry">Tentar de novo</string>
+    <string name="age_block_title">O WRotate não está disponível</string>
+    <string name="age_block_message">O WRotate não se destina a menores de 13 anos.</string>
 </resources>

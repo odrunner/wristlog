@@ -25,6 +25,17 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.play.agesignals.AgeSignalsAccessRequest
+import com.google.android.play.agesignals.AgeSignalsAccessResult
+import com.google.android.play.agesignals.AgeSignalsManager
+import com.google.android.play.agesignals.AgeSignalsManagerFactory
+import com.google.android.play.agesignals.AgeSignalsRequest
+import com.google.android.play.agesignals.AgeSignalsResult
+import com.google.android.play.agesignals.ApplicableAgeFeaturesRequest
+import com.google.android.play.agesignals.ApplicableAgeFeaturesResult
+import com.google.android.play.agesignals.model.AgeSignalsStatus
+import com.google.android.play.agesignals.model.ApplicableAgeFeature
+import com.google.android.play.agesignals.testing.FakeAgeSignalsManager
 import com.wrotate.engine.TimegrapherCore
 import org.json.JSONObject
 import java.io.File
@@ -174,6 +185,8 @@ class ShellActivity : ComponentActivity() {
         val root = android.widget.FrameLayout(this).apply { addView(webView) }
         errorOverlay = buildErrorOverlay()
         root.addView(errorOverlay)
+        ageBlockOverlay = buildAgeBlockOverlay()
+        root.addView(ageBlockOverlay)
         setContentView(root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -203,9 +216,13 @@ class ShellActivity : ComponentActivity() {
         )
 
         val restored = savedInstanceState != null && webView.restoreState(savedInstanceState) != null
-        if (!restored) webView.loadUrl(SITE_URL)
+        // A device already known to belong to an under-13 user never loads the site; the check
+        // below still runs, so a corrected age in Play lifts the block on the next launch.
+        if (agePrefs.getBoolean("blocked", false)) showAgeBlock(true)
+        else if (!restored) webView.loadUrl(SITE_URL)
         handleAuthIntent(intent)
         handlePushTapIntent(intent)
+        checkAge()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -405,6 +422,108 @@ class ShellActivity : ComponentActivity() {
         })
         column.visibility = android.view.View.GONE
         return column
+    }
+
+    // ── Age check (Play Age Signals) ──────────────────────────────────────────
+    // Decisions live in [AgeGate]. Asked once per launch; a user outside the regulated regions
+    // costs one local call and sees nothing. Every failure leaves the app as it was.
+    private lateinit var ageBlockOverlay: android.view.View
+    private val agePrefs get() = getSharedPreferences("age", MODE_PRIVATE)
+
+    private fun checkAge() {
+        try {
+            val manager = ageSignalsManager()
+            manager.getApplicableAgeFeatures(ApplicableAgeFeaturesRequest.builder().build())
+                .addOnSuccessListener(this) { applicable ->
+                    if (!AgeGate.sharingIsMandatory(applicable.features())) return@addOnSuccessListener
+                    val access = AgeSignalsAccessRequest.builder().setActivity(this).build()
+                    manager.requestAgeSignalsAccess(access).addOnSuccessListener(this) { result ->
+                        if (!AgeGate.shared(result.ageSignalsStatus())) return@addOnSuccessListener
+                        manager.checkAgeSignals(AgeSignalsRequest.builder().build())
+                            .addOnSuccessListener(this) { signals ->
+                                applyAgeVerdict(AgeGate.verdict(signals.ageLower(), signals.ageUpper()))
+                            }
+                    }
+                }
+        } catch (e: Exception) {
+        }
+    }
+
+    private fun applyAgeVerdict(verdict: AgeGate.Verdict) {
+        val wasBlocked = agePrefs.getBoolean("blocked", false)
+        when (verdict) {
+            AgeGate.Verdict.BLOCK -> {
+                agePrefs.edit().putBoolean("blocked", true).apply()
+                showAgeBlock(true)
+            }
+            AgeGate.Verdict.ALLOW -> if (wasBlocked) {
+                agePrefs.edit().remove("blocked").apply()
+                showAgeBlock(false)
+                webView.loadUrl(SITE_URL)
+            }
+            AgeGate.Verdict.UNKNOWN -> {}
+        }
+    }
+
+    private fun showAgeBlock(on: Boolean) {
+        if (on) {
+            webView.stopLoading()
+            webView.loadUrl("about:blank") // sign-in, feed and messages are gone, not just covered
+        }
+        webView.visibility = if (on) android.view.View.INVISIBLE else android.view.View.VISIBLE
+        ageBlockOverlay.visibility = if (on) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    private fun buildAgeBlockOverlay(): android.view.View {
+        val dp = resources.displayMetrics.density
+        val pad = (32 * dp).toInt()
+        val column = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(0xFFFFFFFF.toInt())
+            setPadding(pad, pad, pad, pad)
+            isClickable = true
+        }
+        column.addView(android.widget.TextView(this).apply {
+            text = getString(R.string.age_block_title)
+            textSize = 20f
+            gravity = android.view.Gravity.CENTER
+            setTextColor(0xFF222222.toInt())
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        })
+        column.addView(android.widget.TextView(this).apply {
+            text = getString(R.string.age_block_message)
+            textSize = 14f
+            gravity = android.view.Gravity.CENTER
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, (8 * dp).toInt(), 0, 0)
+        })
+        column.visibility = android.view.View.GONE
+        return column
+    }
+
+    /** Debug builds only: `--es age_test child|teen|adult` on the launch intent replays a Play
+     *  answer through the real flow, so the block screen can be seen outside a regulated region. */
+    private fun ageSignalsManager(): AgeSignalsManager {
+        val test = if (BuildConfig.DEBUG) intent?.getStringExtra("age_test") else null
+        val bracket = when (test) {
+            "child" -> 0 to 12
+            "teen" -> 13 to 15
+            "adult" -> 18 to null
+            else -> return AgeSignalsManagerFactory.create(applicationContext)
+        }
+        return FakeAgeSignalsManager().apply {
+            setNextApplicableAgeFeaturesResult(
+                ApplicableAgeFeaturesResult.builder()
+                    .setFeatures(setOf(ApplicableAgeFeature.MANDATORY_SHARING)).build(),
+            )
+            setNextAgeSignalsAccessResult(
+                AgeSignalsAccessResult.builder().setAgeSignalsStatus(AgeSignalsStatus.SHARED).build(),
+            )
+            setNextAgeSignalsResult(
+                AgeSignalsResult.builder().setAgeLower(bracket.first).setAgeUpper(bracket.second).build(),
+            )
+        }
     }
 
     // ── Push (FCM) ────────────────────────────────────────────────────────────

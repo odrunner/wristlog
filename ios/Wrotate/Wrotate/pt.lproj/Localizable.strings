@@ -7,3 +7,7 @@
 "No Connection" = "Sem ligação";
 "Check your internet connection and try again." = "Verifica a tua ligação à internet e tenta de novo.";
 "Try Again" = "Tentar de novo";
+
+/* Age block screen (AgeGate.swift, AgeBlockView) */
+"WRotate is not available" = "O WRotate não está disponível";
+"WRotate is not intended for children under 13." = "O WRotate não se destina a menores de 13 anos.";

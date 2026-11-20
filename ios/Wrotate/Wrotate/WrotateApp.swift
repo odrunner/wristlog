@@ -7,8 +7,10 @@ struct WrotateApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(networkMonitor)
+            AgeGated {
+                ContentView()
+                    .environment(networkMonitor)
+            }
         }
     }
 }

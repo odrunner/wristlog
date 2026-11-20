@@ -19,6 +19,8 @@
 		     r.us-west-2.awstrack.me, forwarding the Host header). -->
 		<string>applinks:click.wrotate.com</string>
 	</array>
+	<key>com.apple.developer.declared-age-range</key>
+	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.wrotate.Wrotate</string>

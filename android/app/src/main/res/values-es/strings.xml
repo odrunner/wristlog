@@ -8,4 +8,6 @@
     <string name="offline_title">Sin conexión</string>
     <string name="offline_message">Revisa tu conexión a internet e inténtalo de nuevo.</string>
     <string name="offline_retry">Reintentar</string>
+    <string name="age_block_title">WRotate no está disponible</string>
+    <string name="age_block_message">WRotate no está pensado para menores de 13 años.</string>
 </resources>
