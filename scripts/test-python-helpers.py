@@ -135,6 +135,16 @@ class EngineStatsInternalSplit(unittest.TestCase):
         self.assertEqual((internal["gemini"], internal["claude"]), (0, 1))
         self.assertEqual(len(internal["reasons"]), 1)
 
+    def test_not_found_is_counted_as_its_own_outcome(self):
+        """watch-value has no second engine: engine=none is neither success nor fallback."""
+        ext, _ = self._split()([
+            f"[watch-value] user={self.EXT} Casio -> $1 engine=gemini",
+            f"[watch-value] user={self.EXT} Gemini exception, not found: aborted",
+            f"[watch-value] user={self.EXT} Seiko -> not found engine=none",
+        ], {self.INT})
+        self.assertEqual((ext["gemini"], ext["claude"], ext["notfound"]), (1, 0, 1))
+        self.assertEqual(len(ext["reasons"]), 1)
+
     def test_unattributed_lines_count_as_external(self):
         """Logs from before the user= change, or any line we cannot attribute.
 
@@ -188,10 +198,32 @@ class FallbackAlertThreshold(unittest.TestCase):
               "reasons": [self._stall(u) for u in (self.U1, self.U2, self.U3)]}
         self.assertEqual(self._fn("should_alert")(st), "transient")
 
-    def test_rate_over_five_percent_alerts(self):
+    def test_one_accounts_batch_does_not_alert_whatever_the_rate(self):
+        """2026-11-18 exactly: one member's 38-watch refresh, 2 unanswered (5.3%).
+
+        One account meeting a busy minute at Google is one batch, not an outage.
+        """
+        NF = "[watch-value] {u} Gemini {k}, not found: {d}"
+        st = {"gemini": 36, "claude": 0, "notfound": 2, "reasons": [
+            NF.format(u=self.U1, k="exception", d="The signal has been aborted"),
+            NF.format(u=self.U1, k="error", d="503 { upstream busy }")]}
+        self.assertIsNone(self._fn("should_alert")(st))
+
+    def test_two_accounts_over_five_percent_do_not_alert(self):
         st = {"gemini": 27, "claude": 3,
               "reasons": [self._stall(self.U1)] * 2 + [self._stall(self.U2)]}
+        self.assertIsNone(self._fn("should_alert")(st))
+
+    def test_not_found_lines_across_three_accounts_alert(self):
+        st = {"gemini": 30, "claude": 0, "notfound": 3, "reasons": [
+            f"[watch-value] {u} Gemini exception, not found: The signal has been aborted"
+            for u in (self.U1, self.U2, self.U3)]}
         self.assertEqual(self._fn("should_alert")(st), "transient")
+
+    def test_not_found_client_error_still_pages(self):
+        st = {"gemini": 6, "claude": 0, "notfound": 1, "reasons": [
+            f"[watch-value] {self.U1} Gemini error, not found: 400 bad request"]}
+        self.assertEqual(self._fn("should_alert")(st), "defect")
 
     def test_low_volume_does_not_trip_the_rate(self):
         """1 of 3 is 33% but proves nothing — the rate needs volume behind it."""

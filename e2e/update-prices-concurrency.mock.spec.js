@@ -137,4 +137,34 @@ test.describe('Update Prices concurrency (mocked)', () => {
       expect(typeof x.t).toBe('number');
     }
   });
+
+  // watch-value has no second engine (2026-11-19): a lookup Gemini cannot
+  // answer comes back 200 with no estimate. The row says so, offers nothing to
+  // save, and the price the member already had stays in the Current column.
+  test('a lookup with no answer shows Not found and offers nothing to save', async ({ page }) => {
+    const few = manyWatches.slice(0, 2);
+    let n = 0;
+
+    await mockSupabase(page, { watches: few, logs: [] });
+    await injectSession(page);
+    await page.route('**/functions/v1/watch-value', (route) => {
+      const found = n++ === 0;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(found
+          ? { estimated_value_usd: { low: 100, mid: 200, high: 300 }, confidence: 'high' }
+          : { error: 'not_found', estimated_value_usd: null }),
+      });
+    });
+
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.evaluate(() => { openUpdatePrices(); });
+
+    await expect(page.locator('#update-prices-status')).toContainText('Done — 1 prices found', { timeout: 30_000 });
+    await expect(page.locator('#update-prices-rows')).toContainText('Not found');
+    await expect(page.locator('#update-prices-rows')).not.toContainText('Error');
+    await expect(page.locator('#update-prices-rows .upr-toggle')).toHaveCount(1);
+  });
 });

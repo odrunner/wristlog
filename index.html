@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=ab88a500', it: 'i18n/it.js?v=69b3b66e', fr: 'i18n/fr.js?v=84682f3e', tr: 'i18n/tr.js?v=ef9f0a41', de: 'i18n/de.js?v=b24bbee2', pt: 'i18n/pt.js?v=ca38716b' };
+      var FILES = { es: 'i18n/es.js?v=9011d3ff', it: 'i18n/it.js?v=af2b8ae5', fr: 'i18n/fr.js?v=0f354445', tr: 'i18n/tr.js?v=ebc8fd9d', de: 'i18n/de.js?v=ac23be4e', pt: 'i18n/pt.js?v=cb96021c' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -8602,7 +8602,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.19.30';
+const APP_VERSION = '19.17.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26844,7 +26844,8 @@ async function openUpdatePrices() {
       const valCell = document.getElementById('upr-val-' + w.id);
       const chkCell = document.getElementById('upr-chk-' + w.id);
       if (!mid) {
-        valCell.innerHTML = '<span class="text-muted">N/A</span>';
+        // No price came back. Nothing is saved, so the Current column's price stays.
+        valCell.innerHTML = '<span class="text-muted">Not found</span>';
       } else if (data.cached) {
         const cachedDate = data.looked_up_at || w.marketPriceDate;
         const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;

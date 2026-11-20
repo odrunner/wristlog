@@ -6,21 +6,6 @@ export function extractJson(text: string) {
   return m ? JSON.parse(m[0]) : null;
 }
 
-// All the text in a Claude response, in order.
-//
-// With web search Claude answers in several text blocks: a note before it
-// searches ("Let me search more specifically."), then the answer, itself split
-// wherever a citation attaches. Taking only the first block read the note and
-// missed the price (2026-11-13 and 2026-11-17: Claude billed, member shown an
-// error). Tool-use and search-result blocks carry no `text` and are skipped.
-export function claudeAnswerText(content: unknown): string {
-  if (!Array.isArray(content)) return "";
-  return content
-    .filter((b) => b && b.type === "text" && typeof b.text === "string")
-    .map((b) => b.text as string)
-    .join("");
-}
-
 // Most cuts we'll try before giving up. Each attempt re-parses the prefix, so
 // an adversarially comma-heavy blob shouldn't turn salvage into a hot loop.
 const MAX_SALVAGE_ATTEMPTS = 50;
@@ -31,7 +16,7 @@ const MAX_SALVAGE_ATTEMPTS = 50;
 // budget, or the answer degenerates into a repetition loop — and both leave a
 // prefix whose leading fields, estimated_value_usd included, are already
 // complete. extractJson is all-or-nothing, so a single missing brace used to
-// throw that away and buy a Claude re-run instead.
+// throw that away and report "not found" instead.
 //
 // Walks the text tracking string state and the open-bracket stack, collecting
 // every offset where the document could be truncated and legally closed (just
@@ -178,7 +163,7 @@ export function describeEmptyAnswer(result: unknown, max = 1500): string {
 // and none returned a source — while the same watch without the reference
 // answered 3 of 3 on Gemini (2026-11-14, $450-650 high, vs Claude's $400-700).
 // An empty answer that DID find sources is a different failure; leave it to
-// the Claude fallback rather than guess.
+// "not found" rather than guess.
 export function shouldRetryWithoutRef(result: unknown, text: string, reference: string): boolean {
   if (!reference.trim() || text.trim() !== "") return false;
   const r = (result ?? {}) as { candidates?: { groundingMetadata?: { groundingChunks?: unknown } }[] };

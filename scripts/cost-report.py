@@ -473,7 +473,7 @@ def split_engine_rows(messages, internal_ids):
     can be tested without touching the network.
     """
     def blank():
-        return {"gemini": 0, "claude": 0, "reasons": []}
+        return {"gemini": 0, "claude": 0, "notfound": 0, "reasons": []}
 
     ext, internal = blank(), blank()
     for msg in messages:
@@ -485,6 +485,10 @@ def split_engine_rows(messages, internal_ids):
             bucket["gemini"] += 1
         elif "engine=claude" in msg:
             bucket["claude"] += 1
+        elif "engine=none" in msg:
+            # watch-value has no second engine since 2026-11-19: a lookup Gemini
+            # cannot answer ends as "not found" and the member keeps their price.
+            bucket["notfound"] += 1
         if any(k in msg for k in ("Gemini error", "Gemini parse failed", "Gemini exception")):
             bucket["reasons"].append(msg.replace("\n", " ")[:300])
     return ext, internal
@@ -556,21 +560,23 @@ def internal_suffix(st):
                 "<b>unknown</b> &mdash; could not read internal_accounts, so any "
                 "test traffic is counted above.</span>")
     ia = st.get("internal") or {}
-    n = ia.get("gemini", 0) + ia.get("claude", 0)
+    n = ia.get("gemini", 0) + ia.get("claude", 0) + ia.get("notfound", 0)
     if n:
         # Shown, not discarded: `od` is an internal account and the app's heaviest
         # real user, so their failures still matter — they just are not a signal
         # about everyone else.
         fb = ia.get("claude", 0)
+        nf = ia.get("notfound", 0)
         out += (f'<br><span style="color:#8b949e">&nbsp;&nbsp;internal: {n} call'
-                f'{"s" if n != 1 else ""}, {fb} fallback{"s" if fb != 1 else ""} '
-                "(excluded above).</span>")
+                f'{"s" if n != 1 else ""}, {fb} fallback{"s" if fb != 1 else ""}'
+                + (f', {nf} not found' if nf else "") +
+                " (excluded above).</span>")
     return out
 
 
 # A hung upstream call is not a defect. Gemini stalls on ~1-2% of calls at
-# random; the 35s abort catches it, Claude answers, and the user still gets a
-# price. Every abort investigated 2026-08-24..28 looked the same — on 08-28 the
+# random; the 35s abort catches it. identify-watch then falls back to Claude;
+# watch-value (since 2026-11-19) answers "not found" and the old price stays. Every abort investigated 2026-08-24..28 looked the same — on 08-28 the
 # "2 of 15 calls" was ONE stall that a user happened to retry into, and that
 # exact query then ran 8 times without incident. A parse failure or an HTTP
 # error is a different animal: both times those appeared they were real bugs
@@ -589,8 +595,6 @@ TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 # a red banner — alerting on normal, absorbed behaviour is how three mornings
 # went to investigating a working system.
 TRANSIENT_MIN_USERS = 3        # distinct accounts in one day
-TRANSIENT_MIN_RATE = 0.05      # share of the day's calls
-TRANSIENT_RATE_MIN_CALLS = 20  # ...rate ignored below this volume
 
 
 def classify_failures(reasons):
@@ -629,10 +633,11 @@ def should_alert(st):
         # A counted fallback with no failure line logged is unexplained, so treat
         # it as a defect rather than assuming it was a stall.
         return "defect" if st["claude"] else None
-    total = st["gemini"] + st["claude"]
+    # Upstream weather pages only when it is spread across accounts. The old
+    # second rule (>5% of a day's calls) fired on 2026-11-18 for ONE member's
+    # 38-watch refresh that met a busy minute at Google: 2 of 38. One account
+    # is one batch, not an outage.
     if c["users"] >= TRANSIENT_MIN_USERS:
-        return "transient"
-    if total >= TRANSIENT_RATE_MIN_CALLS and st["claude"] / total > TRANSIENT_MIN_RATE:
         return "transient"
     return None
 
@@ -642,7 +647,8 @@ def engine_line(label, st):
     if st is None:
         return f'<span style="color:#d29922">{label}: <b>unknown</b> &mdash; logs unreadable this run.</span>'
     suffix = internal_suffix(st)
-    if st["gemini"] + st["claude"] == 0:
+    notfound = st.get("notfound", 0)
+    if st["gemini"] + st["claude"] + notfound == 0:
         # identify-watch only started logging `engine=` on 2026-08-19, so older
         # days have failure lines but no success lines. Reporting a bare "no
         # calls" next to a red fallback alert would read as a contradiction.
@@ -652,6 +658,11 @@ def engine_line(label, st):
                     f'{"s" if n != 1 else ""} logged, but no success counts '
                     "(this day predates the <code>engine=</code> log).</span>") + suffix
         return f"{label}: no external calls this day." + suffix
+    if label == "watch-value":
+        # No Claude fallback here since 2026-11-19 — an unanswered lookup is
+        # "not found" and costs nothing more.
+        return (f"{label}: <b>{st['gemini']}</b> Gemini, "
+                f"<b>{notfound}</b> not found.") + suffix
     return (f"{label}: <b>{st['gemini']}</b> Gemini, "
             f"<b>{st['claude']}</b> Claude fallback.") + suffix
 
@@ -828,7 +839,8 @@ def split_dollars(total, weights):
 def write_history(day, total, searches, engines=None):
     line = f"{day} | wrotate ${total:.2f} | searches {searches}"
     if engines is not None:
-        line += f" | gemini {engines['gemini']} | claude-fallback {engines['claude']}"
+        line += (f" | gemini {engines['gemini']} | claude-fallback {engines['claude']}"
+                 f" | not-found {engines.get('notfound', 0)}")
     lines = []
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE) as f:
@@ -1048,7 +1060,8 @@ def main():
             if st is None:
                 print(f"{lbl} engine: UNKNOWN — could not read the function logs")
             else:
-                print(f"{lbl} engine: {st['gemini']} gemini, {st['claude']} claude fallback")
+                print(f"{lbl} engine: {st['gemini']} gemini, {st['claude']} claude fallback, "
+                      f"{st.get('notfound', 0)} not found")
                 for r in st["reasons"][:5]:
                     print(f"   ! {r}")
     print(f"web searches: {y_searches}  ({search_origin(y_searches, engines)})")
@@ -1090,20 +1103,20 @@ def main():
             if not kind:
                 continue
             c = classify_failures(st["reasons"])
-            total = st["gemini"] + st["claude"]
+            total = st["gemini"] + st["claude"] + st.get("notfound", 0)
             if kind == "defect":
                 shown = c["defect"]
                 n = len(shown)
-                headline = (f"<b>{lbl}: {n} Gemini failure{'s' if n != 1 else ''} "
-                            "fell back to Claude.</b> Not a stall &mdash; worth a look."
+                headline = (f"<b>{lbl}: {n} Gemini failure{'s' if n != 1 else ''}.</b> "
+                            "Not a stall &mdash; worth a look."
                             if n else
                             f"<b>{lbl} fell back to Claude on {st['claude']} of "
                             f"{total} calls with no failure logged.</b>")
             else:
                 shown = c["transient"]
-                headline = (f"<b>{lbl}: {st['claude']} of {total} calls stalled on "
-                            f"Gemini, across {c['users']} accounts.</b> Above the "
-                            "usual ~1-2%, so this is more than random stalls.")
+                headline = (f"<b>{lbl}: {len(shown)} of {total} calls stalled on "
+                            f"Gemini, across {c['users']} accounts.</b> Several "
+                            "accounts at once, so this is more than random stalls.")
             why = "".join(f"<li><code>{r}</code></li>" for r in shown[:5])
             alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
                        f"{headline}</p>"

@@ -1,7 +1,6 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
 import {
   buildWatchDesc,
-  claudeAnswerText,
   describeEmptyAnswer,
   extractJson,
   geminiAttemptTimeouts,
@@ -346,36 +345,4 @@ Deno.test("pickReplay — a stored answer without a usable mid is not replayed",
   assertEquals(pickReplay(rowAt(T0, { result: {} }), RQ, T0 + 1000), null);
   assertEquals(pickReplay(rowAt(T0, { result: "x" }), RQ, T0 + 1000), null);
   assertEquals(pickReplay(rowAt(T0, { result: null }), RQ, T0 + 1000), null);
-});
-
-// Claude with web search answers in several text blocks: a note before it
-// searches, then the answer, itself split wherever a citation attaches. Reading
-// only the first block lost the price twice (2026-11-13 "…Let me search more
-// specifically.", 2026-11-17 "Based on my research, here is what I found…"):
-// Claude was paid for and the member got an error.
-Deno.test("claudeAnswerText joins every text block so the JSON after a preamble is found", () => {
-  const content = [
-    { type: "text", text: "The searches returned no results. Let me search more specifically." },
-    { type: "server_tool_use", id: "x", name: "web_search", input: { query: "q" } },
-    { type: "web_search_tool_result", tool_use_id: "x", content: [] },
-    { type: "text", text: 'Based on my research:\n\n{"estimated_value_usd": {"low": 50, ' },
-    { type: "text", text: '"mid": 75, "high": 100}, ', citations: [{ url: "https://example.com" }] },
-    { type: "text", text: '"confidence": "medium"}' },
-  ];
-  const text = claudeAnswerText(content);
-  assertEquals(extractJson(text), {
-    estimated_value_usd: { low: 50, mid: 75, high: 100 },
-    confidence: "medium",
-  });
-});
-
-Deno.test("claudeAnswerText returns a single text block unchanged", () => {
-  assertEquals(claudeAnswerText([{ type: "text", text: '{"a":1}' }]), '{"a":1}');
-});
-
-Deno.test("claudeAnswerText is empty for missing or text-less content", () => {
-  assertEquals(claudeAnswerText(undefined), "");
-  assertEquals(claudeAnswerText(null), "");
-  assertEquals(claudeAnswerText("nope"), "");
-  assertEquals(claudeAnswerText([{ type: "server_tool_use" }, { type: "text" }, null]), "");
 });

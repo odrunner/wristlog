@@ -1,16 +1,15 @@
 // Supabase Edge Function: watch-value
-// Uses Claude web search to look up current market value for a watch.
+// Uses Gemini with grounded search to look up current market value for a watch.
 // Called from the app when a user taps "Check Value" on a watch.
 //
 // Required Supabase secrets:
-//   ANTHROPIC_API_KEY — for Claude web search
+//   GEMINI_API_KEY — for the lookup
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — auto-provided
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildWatchDesc,
-  claudeAnswerText,
   describeEmptyAnswer,
   extractJson,
   geminiAttemptTimeouts,
@@ -24,7 +23,6 @@ import {
 import { serviceKey } from "../_shared/keys.ts";
 import { clampText, isDemoUser } from "../_shared/ai-guard.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = serviceKey();
@@ -190,20 +188,24 @@ Rules:
       // every hang and buys nothing, because Gemini never recovers after ~35s.
       //
       // Batch (update-prices) lookups get ONE shorter second attempt after an
-      // abort/network failure before the ~100x costlier Claude fallback: a hang
+      // abort/network failure before giving up: a hang
       // is a per-request fluke (2026-10-12: the 38 batch calls around two hung
       // ones all answered in 10-30s), and nobody is waiting on a single batch
       // row. An HTTP error or a parse failure is never retried as-is — both
       // times those appeared they were real bugs, and the same request fails
       // the same way (the no-sources pass below changes the request). The retry log line must NOT say "Gemini exception/error" —
       // cost-report.py counts those as failures, and a recovered stall isn't one.
+      //
+      // There is NO second engine (since 2026-11-19). A lookup Gemini cannot
+      // answer ends as "not found" and the member keeps the price they had —
+      // the Claude + web search fallback cost ~100x a Gemini call to rescue
+      // ~4% of lookups, and was most of the day-to-day swing in the bill.
       const attemptTimeouts = geminiAttemptTimeouts(source);
       //
       // One more pass, only when Gemini searched, found zero sources and wrote
       // nothing for a lookup that has a reference number: the same lookup with
       // the reference dropped (see shouldRetryWithoutRef). An empty answer comes
-      // back in ~4s, so this costs a person ~15s where the Claude fallback costs
-      // ~30s and ~100x the money.
+      // back in ~4s, so this costs a person ~15s.
       const noRefDesc = buildWatchDesc({ brand, model, year, condition });
       const passes = [prompt];
       for (let pass = 0; pass < passes.length && !parsed; pass++) {
@@ -244,11 +246,10 @@ Rules:
               }
               if (parsed && !parsed.estimated_value_usd) parsed = null;
               // A MAX_TOKENS response still carries a complete estimate up front —
-              // both 2026-08-08 fallbacks did. Recover it rather than pay for a
-              // Claude re-run of a lookup Gemini had already answered.
-              // Require a usable mid: the UI keys off it entirely, so salvaging a
-              // range with only `low` would render "N/A" — worse than the Claude
-              // re-run this is replacing.
+              // both 2026-08-08 ones did. Recover it rather than report "not
+              // found" for a lookup Gemini had already answered.
+              // Require a usable mid: the UI keys off it entirely, so a range
+              // with only `low` would render as not found anyway.
               if (!parsed) {
                 const salvaged = salvageJson(text);
                 const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
@@ -275,13 +276,13 @@ Rules:
                 } else {
                   const usage = geminiResult.usageMetadata ?? {};
                   console.error(
-                    `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
+                    `[watch-value] user=${user.id} Gemini parse failed, not found. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
                   );
                 }
               }
             } else {
               const errText = await geminiResponse.text();
-              console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
+              console.error(`[watch-value] user=${user.id} Gemini error, not found:`, geminiResponse.status, errText.slice(0, 300));
             }
             break; // got an HTTP response — handled above, a retry can't help
           } catch (geminiErr) {
@@ -289,54 +290,24 @@ Rules:
               console.log(`[watch-value] user=${user.id} Gemini stalled (attempt ${attempt + 1}/${attemptTimeouts.length}), retrying: ${(geminiErr as Error).message}`);
               continue;
             }
-            console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
+            console.error(`[watch-value] user=${user.id} Gemini exception, not found:`, (geminiErr as Error).message);
           }
         }
       }
     }
 
-    // Fallback: Claude Sonnet + web search (previous primary engine)
+    // No answer: say so and stop. Nothing is saved, so the price the member
+    // already has stays. 200 on purpose — every caller already treats an answer
+    // with no mid as "no price found", including pages cached before this.
+    // The log line carries engine=none: cost-report.py counts it.
     if (!parsed) {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-beta": "web-search-2025-03-05",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 2048,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error("[watch-value] Claude API error:", resp.status, errText);
-        return new Response(JSON.stringify({ error: "api_failed", status: resp.status }), { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
-      }
-
-      const result = await resp.json();
-      // Every text block, not the first: see claudeAnswerText.
-      const answerText = claudeAnswerText(result.content);
-      // extractJson throws on malformed/truncated JSON (Claude runs with a 2048
-      // max_tokens cap, so a long answer can be cut mid-object). Without this
-      // guard the throw skips the parse_failed branch below and surfaces a raw
-      // SyntaxError from the outer catch, losing the raw text we need to debug.
-      try {
-        parsed = extractJson(answerText);
-      } catch (_e) {
-        parsed = null;
-      }
-
-      if (!parsed) {
-        console.error("[watch-value] Could not parse response:", answerText);
-        return new Response(JSON.stringify({ error: "parse_failed", raw: answerText.slice(0, 500) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
-      }
-      parsed._engine = "claude";
+      console.log(`[watch-value] user=${user.id} ${watchDesc} → not found engine=none`);
+      return new Response(JSON.stringify({
+        error: "not_found",
+        estimated_value_usd: null,
+        query: { brand, model, reference, condition, year },
+        looked_up_at: new Date().toISOString(),
+      }), { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 
     // Strip false precision from the estimate range (e.g. $4,801.5 → $4,800).
