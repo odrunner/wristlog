@@ -3674,7 +3674,6 @@
     <div id="admin-tab-feedback" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="row-between u-mb-3">
         <div class="eyebrow">Feedback</div>
-        <button class="btn btn-ghost btn-xs" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
       <div class="chips stack-3" id="admin-filter-chips">
         <button type="button" class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</button>
@@ -3690,7 +3689,6 @@
     <div id="admin-tab-reports" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="row-between u-mb-3">
         <div class="eyebrow">Content Reports</div>
-        <button class="btn btn-ghost btn-xs" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
       <div class="chips stack-3" id="report-filter-chips">
         <button type="button" class="chip selected" data-filter="all" onclick="filterReports('all')">All</button>
@@ -3705,7 +3703,6 @@
     <div id="admin-tab-official" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="row-between u-mb-3">
         <div class="eyebrow">Official Posts</div>
-        <button class="btn btn-ghost btn-xs" onclick="loadOfficialDrafts()">↻ Refresh</button>
       </div>
 
       <!-- URL extraction form -->
@@ -8610,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.07.40';
+const APP_VERSION = '21.08.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

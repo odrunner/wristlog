@@ -344,6 +344,9 @@ describe('Admin stats cache (sql/2026-08-15-admin-stats-cache.sql)', () => {
     expect(html).not.toContain('onclick="renderAdminTraffic(true)"');
     expect(html).toContain('onclick="loadAdminStats()">↻ Retry');
   });
+  it('no admin tab carries a ↻ Refresh button', () => {
+    expect(html).not.toContain('↻ Refresh</button>');
+  });
   it('the Usage tab starts all its query batches before awaiting the first', () => {
     const fn = html.slice(html.indexOf('async function loadAdminStats()'), html.indexOf('await idsP;'));
     expect(fn).toContain('const b2P = _adminStatsBatch2();');
