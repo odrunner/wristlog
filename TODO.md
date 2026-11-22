@@ -8,7 +8,7 @@ Each open item is one action a single session can pick up. Order = priority. Det
 
 ## Waiting on you
 - **Upload Android 1.9 (vC9)** — bundle built 2026-11-14 with the translated shell strings: `android/app/build/outputs/bundle/release/app-release.aab`.
-- **Build + submit iOS 2.11** — translated permission prompts, quick actions, offline screen. In Xcode confirm the `.lproj` folders are in both targets; check the three with the phone in German.
+- **iOS 2.11 — SUBMITTED to App Review 2026-11-22** (nothing to do until Apple answers; the build steps below are kept for reference). Carries the translated permission prompts, quick actions, offline screen, the age check, and the dark loading screen (`a1b57278`). In Xcode confirm the `.lproj` folders are in both targets; check the three with the phone in German.
   - **Age check rides this build** (`AgeGate.swift`, added 2026-11-20; must be live before 2027-01-01 for California). Build steps for it:
     1. Xcode with the iOS 26.4 SDK or newer (the check uses `requiredRegulatoryFeatures`).
     2. Target Wrotate → Signing & Capabilities: confirm "Declared Age Range" is listed. If not, + Capability → Declared Age Range. The entitlement key in `Wrotate.entitlements` (`com.apple.developer.declared-age-range`) was typed from memory — let Xcode correct it if it differs.
