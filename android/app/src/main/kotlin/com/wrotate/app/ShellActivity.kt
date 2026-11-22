@@ -244,6 +244,7 @@ class ShellActivity : ComponentActivity() {
         PendingShare(load = { SharedImageStore.loadB64(this) }, clear = { SharedImageStore.clear(this) })
     }
     @Volatile private var pendingQuickAction: String? = null
+    @Volatile private var pendingGo: String? = null
     @Volatile private var pendingPushTap: Pair<String, String?>? = null
 
     private fun drainPending() {
@@ -256,6 +257,10 @@ class ShellActivity : ComponentActivity() {
             pendingQuickAction = null
             QuickActions.dispatchJs(action)?.let { webView.evaluateJavascript(it, null) }
         }
+        pendingGo?.let { key ->
+            pendingGo = null
+            GoLink.dispatchJs(key)?.let { webView.evaluateJavascript(it, null) }
+        }
         pendingShare.drain { js, onResult -> webView.evaluateJavascript(js) { onResult(it) } }
     }
 
@@ -267,6 +272,8 @@ class ShellActivity : ComponentActivity() {
         // Held here, drained by onResume (which always follows onNewIntent) or onPageFinished —
         // draining immediately as well double-evaluated the pending share.
         QuickActions.parse(data.toString())?.let { pendingQuickAction = it }
+        // An email button that names a screen (https://wrotate.com/open?…&go=<key>).
+        GoLink.parse(data.toString())?.let { pendingGo = it }
     }
 
     private fun handlePushTapIntent(intent: Intent?) {

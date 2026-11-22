@@ -8,6 +8,9 @@ struct ContentView: View {
     @State private var hasError = false
     @State private var webViewRef: WKWebView?
     @State private var lastBackgrounded: Date?
+    /// The screen an email button asked for (`/open?…&go=<key>`), held until the page can take it.
+    @State private var pendingGo: String?
+    @State private var pendingGoAt = Date.distantPast
     // Reload the WebView on foreground after this much idle, so shipped web updates
     // reach the app. The WebView loads wrotate.com once and keeps that JS otherwise,
     // so a resident app can run code from many deploys ago until manually refreshed.
@@ -63,8 +66,20 @@ struct ContentView: View {
             // domains ending in "wrotate.com" (audit SEC-23-6).
             guard target.scheme == "https", let host = target.host,
                   Self.appLinkHosts.contains(host) else { return }
-            // /open — app is already open, nothing to do
-            if target.path == "/open" || target.path == "/open.html" { return }
+            // /open — the app is already open. An email button may also name the
+            // screen it is about (go=<key>, e.g. open_measure): hand that to the page,
+            // which looks the key up in its own list and ignores one it does not know.
+            // Passed as an argument and pinned to a plain-key shape, like the ids below.
+            if target.path == "/open" || target.path == "/open.html" {
+                if let go = URLComponents(url: target, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "go" })?.value,
+                   Self.matches(go, #"^[a-z_]{1,40}$"#) {
+                    pendingGo = go
+                    pendingGoAt = Date()
+                    if !isLoading { dispatchPendingGo() }
+                }
+                return
+            }
             // Deep link to specific post or collection. Values from the link are
             // passed as ARGUMENTS, never spliced into the script text: a crafted
             // id/u used to break out of the quotes and run arbitrary JS in the
@@ -192,7 +207,26 @@ struct ContentView: View {
     private func drainPending() {
         dispatchPendingQuickAction()
         dispatchPendingNotification()
+        dispatchPendingGo()
         handleSharedImage()
+    }
+
+    /// Hand an email button's destination to the page. A cold start delivers the link
+    /// before the page exists, so it waits here; the key is only dropped once the page
+    /// says it took it (`runGoLink` returns true — it queues the key itself when the
+    /// member is not signed in yet), so a page that is mid-load gets it on the next drain.
+    private func dispatchPendingGo() {
+        guard let go = pendingGo else { return }
+        // A tap is only worth honouring while the member is still looking at the result
+        // of it: never jump screens on some later load because a key was left waiting.
+        guard Date().timeIntervalSince(pendingGoAt) < 60 else { pendingGo = nil; return }
+        webViewRef?.callAsyncJavaScript(
+            "return (typeof runGoLink === 'function') ? runGoLink(k) : null;",
+            arguments: ["k": go], in: nil, in: .page) { result in
+                // true = taken, false = the page does not know this key. Either way it is
+                // settled; only "no such function yet" (nil / an error) is worth a retry.
+                if case .success(let value) = result, value is Bool { pendingGo = nil }
+            }
     }
 
     private func handleSharedImage() {

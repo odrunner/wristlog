@@ -8607,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.10.11';
+const APP_VERSION = '22.10.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25900,6 +25900,13 @@ async function loadCampaigns() {
         </select>
       </div>
       <div class="draft-form-row u-mb-1-5">
+        <label>Button action</label>
+        <select id="camp-cta-${c.id}" class="u-fs-base">
+          <option value="" ${!c.cta_action ? 'selected' : ''}>Open the Feed</option>
+          ${Object.keys(PROMO_ACTIONS).map(k => `<option value="${escAttr(k)}" ${c.cta_action === k ? 'selected' : ''}>${escHtml(PROMO_ACTION_LABELS[k] || k)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="draft-form-row u-mb-1-5">
         <label>Backfill per day (0 = off) — also emails existing members who signed up before the delay window, newest first, this many per daily run</label>
         <input type="number" id="camp-backfill-${c.id}" value="${c.backfill_daily || 0}" min="0" max="100" class="u-fs-base u-w-16">
       </div>
@@ -26011,6 +26018,8 @@ async function saveCampaign(id) {
   if (skipEl) update.skip_if_done = skipEl.value || null;
   const requireEl = document.getElementById('camp-require-' + id);
   if (requireEl) update.require_state = requireEl.value || null;
+  const ctaEl = document.getElementById('camp-cta-' + id);
+  if (ctaEl) update.cta_action = ctaEl.value || null;
   const backfillEl = document.getElementById('camp-backfill-' + id);
   if (backfillEl) update.backfill_daily = Math.max(0, parseInt(backfillEl.value, 10) || 0);
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
@@ -34609,6 +34618,52 @@ function requestBrand(name) {
   document.getElementById('feedback-modal').classList.remove('hidden');
 }
 
+// ── Email button that names a screen: /open?…&go=<key> ─────────────────────
+// An onboarding email about measuring ends in a button; without this it opened
+// the Feed whatever the email was about. `go` carries a key from PROMO_ACTIONS
+// (the registry promo cards already use) and nothing else: no url:/feedback:
+// payloads, and the same hasOwnProperty guard, because the value arrives over a
+// link anyone can craft. An unknown key does nothing.
+//
+// Three ways in: the web page reads the parameter at the end of bootApp()
+// (maybeRunGoFromLink); the iOS and Android shells, which receive the link
+// themselves and never reload the page for it, call runGoLink(key). A key that
+// arrives before the signed-in app is up waits in _goLinkPending.
+let _goLinkPending = null;
+let _goLinkReady = false;
+function runGoLink(key) {
+  if (typeof key !== 'string' || !Object.prototype.hasOwnProperty.call(PROMO_ACTIONS, key)) return false;
+  if (!_goLinkReady || !currentUser) { _goLinkPending = key; return true; }
+  _goLinkPending = null;
+  try { PROMO_ACTIONS[key](); }
+  catch (e) { console.warn('[WRotate] go link failed:', key, e?.message); return false; }
+  if (window.posthog) posthog.capture('email_link_opened', { action: key });
+  // Also counted in the DB so the admin Usage tab can show it (PostHog is not readable there).
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'email_link_opened', meta: { action: key } }).then(() => {});
+  return true;
+}
+function maybeRunGoFromLink() {
+  let raw = null, hasFeedback = false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    raw = params.get('go');
+    hasFeedback = params.get('feedback') !== null;
+    if (raw !== null) {
+      // Strip it at once: a refresh must not jump to the same screen again.
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('go');
+      window.history.replaceState({}, '', clean.pathname + clean.search + clean.hash);
+    }
+  } catch (_) {}
+  _goLinkReady = true;
+  // A link asking a feedback question opens its modal; it does not also navigate.
+  const key = hasFeedback ? null : (raw || _goLinkPending);
+  if (hasFeedback) _goLinkPending = null;
+  if (!key) return;
+  // Deferred like the feedback link: land after the feed has painted.
+  setTimeout(() => runGoLink(key), 600);
+}
+
 // Opens the prompted feedback modal from a ?feedback= link, so an email CTA can
 // ask the same question a promo card asks. Runs once, at the end of bootApp() —
 // the modal needs a signed-in app behind it, not the auth screen.
@@ -35161,6 +35216,7 @@ function clearUserState() {
   // Follow suggestions + feed-source flags: A's list was served to B for 10 min and B's "shown" events were suppressed.
   _followSugg = null; _followSuggAt = 0; _followSuggLoading = null; _followSuggShown.clear();
   _feedViaRpc = false; feedPartial = false;
+  _goLinkReady = false; _goLinkPending = null; // an email link opened for A must not fire for B
   _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
   // Promo session state — same rule. signOut() never reloads the page, so
   // account A's spent max_per_session budget, impressions and modal flag
@@ -38598,7 +38654,9 @@ async function bootApp(user) {
     });
   }
   // Last, and after loadPromoSlots(): an email CTA asking for feedback should
-  // take precedence over a promo card asking the same thing.
+  // take precedence over a promo card asking the same thing. The go link is
+  // read first so it can see (and yield to) a feedback parameter.
+  maybeRunGoFromLink();
   maybeOpenFeedbackFromLink();
 }
 

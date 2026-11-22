@@ -392,7 +392,7 @@ async function deliver(
       // Tag by campaign NAME, not the rendered subject: a personalized subject
       // ("A fun fact about {{watchPhrase}}") differs per recipient and would
       // scatter one drip across hundreds of utm_campaign buckets.
-      const html = buildHtmlEmail(subject, personalizedBody, url, campaign.name, lang);
+      const html = buildHtmlEmail(subject, personalizedBody, url, campaign.name, lang, campaign.cta_action ?? null);
       return {
         from: FROM_EMAIL,
         to: [r.email],

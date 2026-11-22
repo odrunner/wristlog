@@ -19,6 +19,18 @@ export function campaignSlug(text: string | null | undefined): string {
 // The tagged CTA target. /open, never the bare root:
 // .well-known/apple-app-site-association EXCLUDES "/" and "/index.html", so a
 // root link hands the tap to Safari instead of the installed app.
-export function campaignLink(slug: string, medium = "campaign"): string {
-  return `https://wrotate.com/open?utm_source=email&utm_medium=${medium}&utm_campaign=${encodeURIComponent(slug)}`;
+export function campaignLink(slug: string, medium = "campaign", go: string | null | undefined = null): string {
+  const key = goKey(go);
+  return `https://wrotate.com/open?utm_source=email&utm_medium=${medium}&utm_campaign=${encodeURIComponent(slug)}${key ? `&go=${key}` : ""}`;
+}
+
+// The screen an email button opens (email_campaigns.cta_action): a key from
+// the app's PROMO_ACTIONS registry, e.g. "open_measure". The page looks the
+// key up and ignores one it does not know, and the iOS/Android shells pass it
+// through, so the only job here is to keep anything that is not a plain key
+// out of the link. Empty/unknown shape -> no parameter, the button opens the
+// Feed as it always has.
+export function goKey(go: string | null | undefined): string {
+  const k = String(go ?? "").trim();
+  return /^[a-z_]{1,40}$/.test(k) ? k : "";
 }

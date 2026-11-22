@@ -513,3 +513,23 @@ Deno.test("keepRequired: has_watch / has_two_watches / no_watch split a cohort b
   // has_watch and no_watch never both claim a member.
   assertEquals(ids("has_watch").filter((i) => ids("no_watch").includes(i)), []);
 });
+
+// ---- the button's destination (email_campaigns.cta_action) ----
+Deno.test("buildHtmlEmail — no cta_action leaves the button link exactly as it was", () => {
+  const before = 'href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=onboarding-3-measure"';
+  assertEquals(buildHtmlEmail("S", "<p>b</p>", "https://u/x", "Onboarding 3 — Measure").includes(before), true);
+  assertEquals(buildHtmlEmail("S", "<p>b</p>", "https://u/x", "Onboarding 3 — Measure", "en", null).includes(before), true);
+  assertEquals(buildHtmlEmail("S", "<p>b</p>", "https://u/x", "Onboarding 3 — Measure", "en", "").includes(before), true);
+});
+
+Deno.test("buildHtmlEmail — a cta_action rides the button link as go=<key>, still on /open", () => {
+  const out = buildHtmlEmail("S", "<p>b</p>", "https://u/x", "Onboarding 3 — Measure", "de", "open_measure");
+  assertEquals(out.includes('href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=onboarding-3-measure&go=open_measure"'), true);
+});
+
+Deno.test("buildHtmlEmail — anything that is not a plain key never reaches the link", () => {
+  for (const bad of ["url:https://evil.example", "open_measure&x=1", 'x"><script>', "Open Measure", "a".repeat(41), "feedback:hi"]) {
+    const out = buildHtmlEmail("S", "<p>b</p>", "https://u/x", "c", "en", bad);
+    assertEquals(out.includes("&go="), false, bad);
+  }
+});

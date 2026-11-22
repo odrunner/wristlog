@@ -62,11 +62,13 @@ export {
 // Pass an empty unsubUrl to omit the footer row: broadcast_queue rows are
 // stored footer-less because send-broadcast's drain appends its own
 // unsubFooter() (with a freshly signed URL) at send time.
-export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "email", lang: Lang = "en"): string {
+export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "email", lang: Lang = "en", go: string | null = null): string {
   const SH = SHELL_STRINGS[lang];
   // Per-campaign utm tag. Defaulted rather than required so the broadcast
   // preview path (which passes no campaign) still renders a valid link.
-  const ctaHref = campaignLink(campaignSlug(campaign));
+  // `go` (email_campaigns.cta_action) names the screen the button opens; without
+  // it the link is byte-identical to what it was before the column existed.
+  const ctaHref = campaignLink(campaignSlug(campaign), "campaign", go);
   const unsubLine = `${aiNote(lang)}<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">${SH.unsub}</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">${SH.manage}</a>`;
   const footerRow = unsubUrl
     ? `
