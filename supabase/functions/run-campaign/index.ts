@@ -14,6 +14,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { excludeBounced, fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   buildHtmlEmail,
+  countByUser,
   dropDone,
   FALLBACK_FACT,
   filterEligible,
@@ -26,6 +27,8 @@ import {
   pickBackfill,
   pickFeaturedWatch,
   pickPoolFact,
+  keepRequired,
+  requireRule,
   signupWindow,
   skipTable,
   splitAlreadySent,
@@ -447,6 +450,36 @@ async function deliver(
   return { sent, failed, trackingFailed };
 }
 
+// Audience rule (email_campaigns.require_state): keep only the members the
+// campaign is for. Returns null when the rule cannot be applied — an unknown
+// key or a failed read — and the caller sends to nobody this run. `ids` narrows
+// the read to a small cohort (window pass); omit it for the backfill, where
+// hundreds of ids would blow the URL length and a paged full read is bounded.
+async function applyRequire<T extends { id: string }>(
+  supabase: Db,
+  campaign: Campaign,
+  users: T[],
+  ids?: string[],
+): Promise<T[] | null> {
+  const rule = requireRule(campaign.require_state);
+  if (rule === null) return users;
+  if (rule === undefined) {
+    console.error(`[run-campaign] "${campaign.name}": unknown require_state "${campaign.require_state}" — sending to nobody`);
+    return null;
+  }
+  const { data, error } = await fetchAllRows<{ user_id: string }>((from, to) => {
+    let q = supabase.from(rule.table).select("user_id");
+    if (ids) q = q.in("user_id", ids);
+    // id breaks ties so a member's rows cannot straddle a page boundary twice.
+    return q.order("user_id", { ascending: true }).order("id", { ascending: true }).range(from, to);
+  });
+  if (error) {
+    console.error(`[run-campaign] "${campaign.name}": require query (${rule.table}) failed — skipping:`, error);
+    return null;
+  }
+  return keepRequired(users, rule, countByUser(data || []));
+}
+
 // Original per-campaign pass: users who signed up exactly delay_days ago
 // (24h window). Behavior unchanged from the pre-backfill version.
 async function windowPass(
@@ -496,6 +529,15 @@ async function windowPass(
       console.log(`[run-campaign] "${name}": all eligible already did the action`);
       return { sent: 0, skipped: beforeSkip, failed: 0, trackingFailed: false };
     }
+  }
+
+  const beforeRequire = users.length;
+  const required = await applyRequire(supabase, campaign, users, users.map((u) => u.id));
+  if (required === null) return { sent: 0, skipped: beforeRequire, failed: 0, trackingFailed: false };
+  users = required;
+  if (!users.length) {
+    console.log(`[run-campaign] "${name}": nobody in the window is in this campaign's audience`);
+    return { sent: 0, skipped: beforeRequire, failed: 0, trackingFailed: false };
   }
 
   // Check which users already received this campaign. Fail safe: an empty list
@@ -577,6 +619,10 @@ async function backfillPass(
     }
     candidates = dropDone(candidates, (doneRows || []).map((r) => r.user_id));
   }
+
+  const requiredBf = await applyRequire(supabase, campaign, candidates);
+  if (requiredBf === null) return { sent: 0, skipped: candidates.length, failed: 0, trackingFailed: false };
+  candidates = requiredBf;
 
   // Everyone already sent this campaign. Paged: grows past 1000 as the
   // backfill completes. Fail safe: an error here would re-send to everyone.

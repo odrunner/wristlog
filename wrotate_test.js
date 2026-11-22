@@ -140,8 +140,8 @@ export function campaignSubject(subj) {
   return subj;
 }
 
-// The eight live onboarding drips, in send order (days 1, 2, 3, 5, 7, 10, 14,
-// 21 — expanded 2026-10-17, sql/2026-10-17-onboarding-drip-expansion.sql). The
+// The ten live onboarding drips, in send order (days below; expanded
+// 2026-10-17, sql/2026-10-17-onboarding-drip-expansion.sql). The
 // fun-fact entry is email_campaigns "Onboarding 2 — Start your streak" (subject
 // "A fun fact about {{watchPhrase}}"), which replaced "Start tracking your
 // wears" — that one is retired now and belongs in "Older campaigns" with its
@@ -149,17 +149,21 @@ export function campaignSubject(subj) {
 // 2026-08-28 broadcast ("Show your collection to anyone, with one link") so the
 // two don't merge into one row.
 const CAMPAIGN_ONBOARDING = [
-  'Add your first watch',
   '3 things you can do with WRotate',
+  'Add your first watch',
   CAMPAIGN_FUNFACT_DRIP,
   'Show your collection with one link',
+  'Look up any watch',
   'How accurate is your watch?',
+  'See how every watch you own is running',
   'What if you sold two to fund the grail?',
   'Which watch is really your favorite?',
   'Which watch is next?',
 ];
 // The day each of those drips is sent (email_campaigns.delay_days), same order.
-const CAMPAIGN_DRIP_DAYS = [1, 2, 3, 5, 7, 10, 14, 21];
+// Retargeted 2026-11-21 (sql/2026-11-21-onboarding-drip-targeting.sql): each
+// drip now has an audience, so no member receives all ten.
+const CAMPAIGN_DRIP_DAYS = [1, 3, 4, 5, 6, 7, 9, 12, 14, 21];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
 const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];

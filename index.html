@@ -8607,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.08.31';
+const APP_VERSION = '21.20.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8854,8 +8854,8 @@ function campaignSubject(subj) {
   return subj;
 }
 
-// The eight live onboarding drips, in send order (days 1, 2, 3, 5, 7, 10, 14,
-// 21 — expanded 2026-10-17, sql/2026-10-17-onboarding-drip-expansion.sql). The
+// The ten live onboarding drips, in send order (days below; expanded
+// 2026-10-17, sql/2026-10-17-onboarding-drip-expansion.sql). The
 // fun-fact entry is email_campaigns "Onboarding 2 — Start your streak" (subject
 // "A fun fact about {{watchPhrase}}"), which replaced "Start tracking your
 // wears" — that one is retired now and belongs in "Older campaigns" with its
@@ -8863,17 +8863,21 @@ function campaignSubject(subj) {
 // 2026-08-28 broadcast ("Show your collection to anyone, with one link") so the
 // two don't merge into one row here.
 const CAMPAIGN_ONBOARDING = [
-  'Add your first watch',
   '3 things you can do with WRotate',
+  'Add your first watch',
   CAMPAIGN_FUNFACT_DRIP,
   'Show your collection with one link',
+  'Look up any watch',
   'How accurate is your watch?',
+  'See how every watch you own is running',
   'What if you sold two to fund the grail?',
   'Which watch is really your favorite?',
   'Which watch is next?',
 ];
 // The day each of those drips is sent (email_campaigns.delay_days), same order.
-const CAMPAIGN_DRIP_DAYS = [1, 2, 3, 5, 7, 10, 14, 21];
+// Retargeted 2026-11-21 (sql/2026-11-21-onboarding-drip-targeting.sql): each
+// drip now has an audience, so no member receives all ten.
+const CAMPAIGN_DRIP_DAYS = [1, 3, 4, 5, 6, 7, 9, 12, 14, 21];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
 const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];
@@ -25864,6 +25868,17 @@ async function loadCampaigns() {
           <option value="has_watch" ${c.skip_if_done === 'has_watch' ? 'selected' : ''}>Has added a watch</option>
           <option value="has_log" ${c.skip_if_done === 'has_log' ? 'selected' : ''}>Has logged activity</option>
           <option value="has_measurement" ${c.skip_if_done === 'has_measurement' ? 'selected' : ''}>Has measured a watch</option>
+          <option value="has_wishlist" ${c.skip_if_done === 'has_wishlist' ? 'selected' : ''}>Has a wishlist</option>
+        </select>
+      </div>
+      <div class="draft-form-row u-mb-1-5">
+        <label>Only send to members who…</label>
+        <select id="camp-require-${c.id}" class="u-fs-base">
+          <option value="" ${!c.require_state ? 'selected' : ''}>Anyone</option>
+          <option value="has_watch" ${c.require_state === 'has_watch' ? 'selected' : ''}>Have at least one watch</option>
+          <option value="has_two_watches" ${c.require_state === 'has_two_watches' ? 'selected' : ''}>Have two or more watches</option>
+          <option value="no_watch" ${c.require_state === 'no_watch' ? 'selected' : ''}>Have no watches yet</option>
+          <option value="has_measurement" ${c.require_state === 'has_measurement' ? 'selected' : ''}>Have kept a measurement</option>
         </select>
       </div>
       <div class="draft-form-row u-mb-1-5">
@@ -25976,6 +25991,8 @@ async function saveCampaign(id) {
   if (delayEl) update.delay_days = parseInt(delayEl.value) || camp?.delay_days || 2;
   const skipEl = document.getElementById('camp-skip-' + id);
   if (skipEl) update.skip_if_done = skipEl.value || null;
+  const requireEl = document.getElementById('camp-require-' + id);
+  if (requireEl) update.require_state = requireEl.value || null;
   const backfillEl = document.getElementById('camp-backfill-' + id);
   if (backfillEl) update.backfill_daily = Math.max(0, parseInt(backfillEl.value, 10) || 0);
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }

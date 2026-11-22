@@ -1,7 +1,10 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
   buildHtmlEmail,
+  countByUser,
   dropDone,
+  keepRequired,
+  requireRule,
   escapeHtml,
   FALLBACK_FACT,
   filterEligible,
@@ -473,4 +476,40 @@ Deno.test("watchPhraseIn — own watch vs the curated fallback, per language", (
   assertEquals(watchPhraseIn("en", "Seiko SKX007", true), "your Seiko SKX007");
   assertEquals(watchPhraseIn("en", "Omega Speedmaster", false), "the Omega Speedmaster");
   assertEquals(watchPhraseIn("constructor", "X", true), "your X");
+});
+
+// ---- audience rule (require_state) ----
+Deno.test("requireRule: no key means no rule, an unknown key is undefined (send to nobody)", () => {
+  assertEquals(requireRule(null), null);
+  assertEquals(requireRule(undefined), null);
+  assertEquals(requireRule(""), null);
+  assertEquals(requireRule("has_bogus"), undefined);
+  // A key that only exists on Object.prototype is not a rule.
+  assertEquals(requireRule("toString"), undefined);
+});
+
+Deno.test("requireRule maps the known keys", () => {
+  assertEquals(requireRule("has_watch"), { table: "watches", min: 1 });
+  assertEquals(requireRule("has_two_watches"), { table: "watches", min: 2 });
+  assertEquals(requireRule("no_watch"), { table: "watches", max: 0 });
+  assertEquals(requireRule("has_measurement"), { table: "timegrapher_results", min: 1 });
+});
+
+Deno.test("countByUser counts rows per member", () => {
+  const m = countByUser([{ user_id: "a" }, { user_id: "b" }, { user_id: "a" }]);
+  assertEquals(m.get("a"), 2);
+  assertEquals(m.get("b"), 1);
+  assertEquals(m.get("c"), undefined);
+  assertEquals(countByUser([]).size, 0);
+});
+
+Deno.test("keepRequired: has_watch / has_two_watches / no_watch split a cohort by watch count", () => {
+  const users = [{ id: "none" }, { id: "one" }, { id: "two" }];
+  const counts = countByUser([{ user_id: "one" }, { user_id: "two" }, { user_id: "two" }]);
+  const ids = (key: string) => keepRequired(users, requireRule(key)!, counts).map((u) => u.id);
+  assertEquals(ids("has_watch"), ["one", "two"]);
+  assertEquals(ids("has_two_watches"), ["two"]);
+  assertEquals(ids("no_watch"), ["none"]);
+  // has_watch and no_watch never both claim a member.
+  assertEquals(ids("has_watch").filter((i) => ids("no_watch").includes(i)), []);
 });

@@ -122,6 +122,46 @@ export function skipTable(skipKey: string | null | undefined): string | null {
   return KNOWN_SKIPS[skipKey] ?? null;
 }
 
+// Audience rule: who a campaign is FOR (email_campaigns.require_state), the
+// counterpart of skip_if_done. A feature email about sharing a collection is
+// noise for a member with no watches, so it is only sent to members who can
+// use it. `min`/`max` bound the member's row count in `table`.
+export type RequireRule = { table: string; min?: number; max?: number };
+export const KNOWN_REQUIRES: Record<string, RequireRule> = {
+  has_watch: { table: "watches", min: 1 },
+  has_two_watches: { table: "watches", min: 2 },
+  no_watch: { table: "watches", max: 0 },
+  has_measurement: { table: "timegrapher_results", min: 1 },
+};
+
+// null = no rule (send to everyone). undefined = a rule we do not know: the
+// caller must send to NOBODY — unlike an unknown skip key, guessing here would
+// mail the very people the rule was written to leave alone.
+export function requireRule(key: string | null | undefined): RequireRule | null | undefined {
+  if (!key) return null;
+  return Object.prototype.hasOwnProperty.call(KNOWN_REQUIRES, key) ? KNOWN_REQUIRES[key] : undefined;
+}
+
+// Rows per user from a list of { user_id } rows.
+export function countByUser(rows: Iterable<{ user_id: string }>): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const r of rows || []) m.set(r.user_id, (m.get(r.user_id) || 0) + 1);
+  return m;
+}
+
+export function keepRequired<T extends { id: string }>(
+  users: T[],
+  rule: RequireRule,
+  counts: Map<string, number>,
+): T[] {
+  return users.filter((u) => {
+    const n = counts.get(u.id) || 0;
+    if (rule.min != null && n < rule.min) return false;
+    if (rule.max != null && n > rule.max) return false;
+    return true;
+  });
+}
+
 export function dropDone<T extends { id: string }>(
   users: T[],
   doneIds: Iterable<string>,

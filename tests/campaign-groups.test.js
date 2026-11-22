@@ -32,11 +32,12 @@ describe('campaignSubject — emails tagged with a message id', () => {
     expect(campaignGroupOf(campaignSubject('msg:mention'), new Set()).group).toBe(1);
   });
   it('files a translated onboarding drip under that day\'s English subject', () => {
-    expect(campaignSubject('msg:drip_d1')).toBe('Add your first watch');
-    expect(campaignSubject('msg:drip_d3')).toBe('A fun fact about your watch');
+    expect(campaignSubject('msg:drip_d1')).toBe('3 things you can do with WRotate');
+    expect(campaignSubject('msg:drip_d3')).toBe('Add your first watch');
+    expect(campaignSubject('msg:drip_d4')).toBe('A fun fact about your watch');
     expect(campaignSubject('msg:drip_d21')).toBe('Which watch is next?');
     expect(campaignGroupOf(campaignSubject('msg:drip_d7'), new Set()).group).toBe(0);
-    expect(campaignSubject('msg:drip_d4')).toBe('msg:drip_d4');
+    expect(campaignSubject('msg:drip_d2')).toBe('msg:drip_d2');
   });
   it('shows an unknown id as itself rather than guessing', () => {
     expect(campaignSubject('msg:brand_new')).toBe('msg:brand_new');
@@ -102,11 +103,13 @@ describe('campaignSubject', () => {
 
 describe('campaignGroupOf', () => {
   const ONBOARDING = [
-    'Add your first watch',
     '3 things you can do with WRotate',
+    'Add your first watch',
     CAMPAIGN_FUNFACT_DRIP,
     'Show your collection with one link',
+    'Look up any watch',
     'How accurate is your watch?',
+    'See how every watch you own is running',
     'What if you sold two to fund the grail?',
     'Which watch is really your favorite?',
   ];
@@ -249,21 +252,23 @@ describe('index.html mirrors the campaign constants', () => {
     expect(arrayIn('CAMPAIGN_RECURRING')).toEqual(["What's on your wrist today?"]);
   });
 
-  it('the day-3 onboarding slot is the fun-fact drip constant, not a retired subject', () => {
+  it('the third onboarding slot is the fun-fact drip constant, not a retired subject', () => {
     expect(arrayIn('CAMPAIGN_ONBOARDING')[2]).toBe('CAMPAIGN_FUNFACT_DRIP');
   });
 
-  it('onboarding lists all eight drips in send order', () => {
+  it('onboarding lists all ten drips in send order', () => {
     // Order is the display order in the admin Onboarding group — the numbering
     // ("8. Which watch is next?") comes from this array's index, so a drip added
     // to email_campaigns but not here renders as an unnumbered "Older campaign".
-    // Days 1, 2, 3, 5, 7, 10, 14, 21 (sql/2026-10-17-onboarding-drip-expansion.sql).
+    // Days 1, 3, 4, 5, 6, 7, 9, 12, 14, 21 (sql/2026-11-21-onboarding-drip-targeting.sql).
     expect(arrayIn('CAMPAIGN_ONBOARDING')).toEqual([
-      'Add your first watch',
       '3 things you can do with WRotate',
+      'Add your first watch',
       'CAMPAIGN_FUNFACT_DRIP',
       'Show your collection with one link',
+      'Look up any watch',
       'How accurate is your watch?',
+      'See how every watch you own is running',
       'What if you sold two to fund the grail?',
       'Which watch is really your favorite?',
       'Which watch is next?',
