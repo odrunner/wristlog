@@ -8,6 +8,7 @@ Each open item is one action a single session can pick up. Order = priority. Det
 
 ## Waiting on you
 - **Upload Android 1.9 (vC9)** — bundle rebuilt 2026-11-22 (translated shell strings, the age check, and the "correct your date of birth" line on the under-13 screen): `android/app/build/outputs/bundle/release/app-release.aab`.
+- **iOS 2.12 — queued, nothing to build yet** (decided 2026-11-22): the under-13 screen gains the "correct the date of birth on your Apple Account" line in all seven languages (`AgeGate.swift` + `Localizable.strings`). `main` is labelled 2.12 from this change on; if Apple rejects 2.11, the resubmission can carry it.
 - **iOS 2.11 — SUBMITTED to App Review 2026-11-22** (nothing to do until Apple answers; the build steps below are kept for reference). Carries the translated permission prompts, quick actions, offline screen, the age check, and the dark loading screen (`a1b57278`). In Xcode confirm the `.lproj` folders are in both targets; check the three with the phone in German.
   - **Age check rides this build** (`AgeGate.swift`, added 2026-11-20; must be live before 2027-01-01 for California). Build steps for it:
     1. Xcode with the iOS 26.4 SDK or newer (the check uses `requiredRegulatoryFeatures`).

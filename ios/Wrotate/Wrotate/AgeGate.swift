@@ -103,6 +103,14 @@ struct AgeBlockView: View {
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.44, green: 0.44, blue: 0.54))
                     .multilineTextAlignment(.center)
+
+                // An adult on a mis-dated account must not be left at a dead end: the check
+                // runs on every launch, so a corrected date of birth lifts the block by itself.
+                Text("If this is not right, correct the date of birth on your Apple Account, then open WRotate again.")
+                    .font(.subheadline)
+                    .foregroundColor(Color(red: 0.44, green: 0.44, blue: 0.54))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 8)
             }
             .padding(.horizontal, 40)
         }

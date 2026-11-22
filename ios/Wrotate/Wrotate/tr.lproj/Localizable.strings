@@ -11,3 +11,4 @@
 /* Age block screen (AgeGate.swift, AgeBlockView) */
 "WRotate is not available" = "WRotate kullanılamıyor";
 "WRotate is not intended for children under 13." = "WRotate 13 yaşından küçük çocuklar için tasarlanmamıştır.";
+"If this is not right, correct the date of birth on your Apple Account, then open WRotate again." = "Bu doğru değilse Apple Hesabındaki doğum tarihini düzelt, ardından WRotate'i yeniden aç.";
