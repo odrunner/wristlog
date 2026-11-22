@@ -97,6 +97,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             lastBackgrounded = Date()
             // Renew the login token on the way out so the NEXT launch doesn't wait on it.
+            ShellTheme.capture(from: webViewRef) // a theme changed this session
             SessionRefresher.shared.refreshOnBackground(webView: webViewRef)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
@@ -272,10 +273,46 @@ struct ContentView: View {
 
 // MARK: - Loading View
 
+/// The member's theme choice, remembered natively so the loading screen can match it
+/// BEFORE the page exists. The choice lives in the page's localStorage
+/// (`wrotate_theme`: dark | light | os), which native code cannot read until the
+/// page has loaded — so it is copied here after every load and on backgrounding,
+/// and the next launch reads the copy. Without it a dark-theme member got a
+/// full-brightness light loading screen on every launch (reported 2026-11-22).
+enum ShellTheme {
+    private static let key = "wr_theme"
+
+    static var preference: String {
+        UserDefaults.standard.string(forKey: key) ?? "light" // the page's own default
+    }
+
+    /// Same resolution as the page: "os" follows the system, anything else is literal.
+    static func isDark(system: ColorScheme) -> Bool {
+        isDark(preference: preference, systemDark: system == .dark)
+    }
+
+    static func isDark(preference: String, systemDark: Bool) -> Bool {
+        preference == "os" ? systemDark : preference == "dark"
+    }
+
+    static func capture(from webView: WKWebView?) {
+        let js = "(function(){try{return localStorage.getItem('wrotate_theme')||(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light')}catch(e){return ''}})()"
+        webView?.evaluateJavaScript(js) { value, _ in
+            guard let t = value as? String, ["dark", "light", "os"].contains(t) else { return }
+            UserDefaults.standard.set(t, forKey: key)
+        }
+    }
+}
+
 struct LoadingView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let dark = ShellTheme.isDark(system: colorScheme)
         ZStack {
-            Color(red: 0.96, green: 0.96, blue: 0.97) // #f5f5f8 light bg
+            (dark
+                ? Color(red: 0.043, green: 0.043, blue: 0.063) // #0b0b10 dark --bg
+                : Color(red: 0.96, green: 0.96, blue: 0.97))   // #f5f5f8 light bg
                 .ignoresSafeArea()
 
             VStack(spacing: 20) {
@@ -287,7 +324,9 @@ struct LoadingView: View {
                 Text("WRotate")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(Color(red: 0.09, green: 0.09, blue: 0.12)) // #16161e
+                    .foregroundColor(dark
+                        ? Color(red: 0.90, green: 0.90, blue: 0.94)   // #e6e6f0 dark --text
+                        : Color(red: 0.09, green: 0.09, blue: 0.12))  // #16161e
 
                 ProgressView()
                     .tint(Color(red: 0.79, green: 0.66, blue: 0.30))

@@ -137,6 +137,7 @@ struct WebView: UIViewRepresentable {
             parent.isLoading = false
             parent.hasError = false
             refreshControl?.endRefreshing()
+            ShellTheme.capture(from: webView) // so the next launch's loading screen matches
 
             // Inject JS bridge for auth state → native push registration.
             // The version comes from the bundle (MARKETING_VERSION) so an Xcode-only bump
