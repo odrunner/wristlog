@@ -93,3 +93,24 @@ describe('prerendered model snapshots (w/<slug>/)', () => {
     }
   });
 });
+
+// A merged model that HAD a static page keeps its address: gen-sitemap.mjs
+// turns the folder into a forwarding page instead of deleting it. Deleting it
+// made /w/rolex-datejust-36/ a "page not found" overnight (weekly QA 2026-11-22).
+describe('merged model keeps its static address', () => {
+  const gen = readFileSync(join(root, 'scripts', 'gen-sitemap.mjs'), 'utf8');
+  it('the generator writes a forwarding page for a merged slug rather than removing it', () => {
+    expect(gen).toContain('writeFileSync(p, movedHtml(t));');
+    expect(gen).toMatch(/if \(t && keep\.has\(t\.target\)\)/);
+  });
+  it('/w/rolex-datejust-36/ forwards to the Datejust page, without script, and stays out of the sitemap', () => {
+    const p = join(root, 'w', 'rolex-datejust-36', 'index.html');
+    expect(existsSync(p)).toBe(true);
+    const html = readFileSync(p, 'utf8');
+    expect(html).toContain('<meta http-equiv="refresh" content="0;url=/w/rolex-datejust/">');
+    expect(html).toContain('<link rel="canonical" href="https://wrotate.com/w/rolex-datejust/">');
+    expect(html).not.toContain('<script');
+    expect(existsSync(join(root, 'w', 'rolex-datejust', 'index.html'))).toBe(true);
+    expect(sitemap).not.toContain('/w/rolex-datejust-36/');
+  });
+});

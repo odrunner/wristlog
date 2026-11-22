@@ -10,4 +10,5 @@
     <string name="offline_retry">Erneut versuchen</string>
     <string name="age_block_title">WRotate ist nicht verfügbar</string>
     <string name="age_block_message">WRotate ist nicht für Kinder unter 13 Jahren bestimmt.</string>
+    <string name="age_block_fix">Falls das nicht stimmt, korrigiere das Geburtsdatum in deinem Google-Konto und öffne WRotate erneut.</string>
 </resources>

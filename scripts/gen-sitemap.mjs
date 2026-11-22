@@ -490,18 +490,61 @@ for (const d of readdirSync(join(root, 'b'), { withFileTypes: true })) {
   if (existsSync(p) && readFileSync(p, 'utf8').includes(GEN_MARK)) rmSync(join(root, 'b', d.name), { recursive: true });
 }
 
-// Remove snapshots for models that dropped out (merged, un-enriched) — only
-// dirs whose index.html carries the generation marker, never hand-made files.
+// Snapshots for models that dropped out. A slug that was MERGED into a model
+// that has a page keeps its address: the folder becomes a small forwarding
+// page (no script — an instant meta refresh, which search engines read as a
+// permanent redirect, plus a canonical to the surviving page). Before
+// 2026-11-22 the folder was deleted, and /w/rolex-datejust-36/ went from an
+// indexed page to "page not found" overnight. Anything else that dropped out
+// (un-enriched, or merged into a model with no page) is removed — only dirs
+// whose index.html carries the generation marker, never hand-made files.
+const MERGED_SQL = `WITH RECURSIVE t AS (
+    SELECT slug AS old_slug, merged_into, 1 AS depth FROM watch_models WHERE merged_into IS NOT NULL
+    UNION ALL
+    SELECT t.old_slug, m.merged_into, t.depth + 1 FROM t JOIN watch_models m ON m.id = t.merged_into
+    WHERE m.merged_into IS NOT NULL AND t.depth < 10)
+  SELECT t.old_slug, m.slug AS target, m.brand, m.name
+  FROM t JOIN watch_models m ON m.id = t.merged_into WHERE m.merged_into IS NULL`;
+const rawM = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '--read-only', MERGED_SQL], {
+  cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
+});
+const mergedTo = new Map((JSON.parse(rawM.slice(rawM.indexOf('{'))).rows || [])
+  .filter(r => /^[a-z0-9-]+$/.test(r.old_slug || '') && /^[a-z0-9-]+$/.test(r.target || ''))
+  .map(r => [r.old_slug, r]));
+
+function movedHtml(t) {
+  const to = `/w/${t.target}/`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- ${GEN_MARK} — do not hand-edit; re-run it instead. -->
+<title>${esc(`${t.brand} ${t.name} — WRotate`)}</title>
+<link rel="canonical" href="https://wrotate.com${to}">
+<meta http-equiv="refresh" content="0;url=${to}">
+</head>
+<body>
+<p><a href="${to}">${esc(`${t.brand} ${t.name}`)}</a></p>
+</body>
+</html>
+`;
+}
+
 const keep = written;
-let removed = 0;
+let removed = 0, moved = 0;
 for (const d of readdirSync(join(root, 'w'), { withFileTypes: true })) {
   if (!d.isDirectory() || d.name === 'all' || keep.has(d.name)) continue;
   const p = join(root, 'w', d.name, 'index.html');
-  if (existsSync(p) && readFileSync(p, 'utf8').includes(GEN_MARK)) {
+  if (!existsSync(p) || !readFileSync(p, 'utf8').includes(GEN_MARK)) continue;
+  const t = mergedTo.get(d.name);
+  if (t && keep.has(t.target)) {
+    writeFileSync(p, movedHtml(t));
+    moved++;
+  } else {
     rmSync(join(root, 'w', d.name), { recursive: true });
     removed++;
   }
 }
 
 console.log(`brand pages: ${brandsBuilt} built`);
-console.log(`sitemap.xml written: 5 static pages + ${brandRows.length} brand pages + ${rows.length} model pages · w/all/index.html written (${brands.size} brands) · ${built} snapshots built${skipped ? `, ${skipped} skipped (no longer resolve)` : ''}${removed ? `, ${removed} stale removed` : ''}`);
+console.log(`sitemap.xml written: 5 static pages + ${brandRows.length} brand pages + ${rows.length} model pages · w/all/index.html written (${brands.size} brands) · ${built} snapshots built${skipped ? `, ${skipped} skipped (no longer resolve)` : ''}${moved ? `, ${moved} forwarding to a merged model` : ''}${removed ? `, ${removed} stale removed` : ''}`);

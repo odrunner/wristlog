@@ -8607,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.09.51';
+const APP_VERSION = '22.10.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12961,6 +12961,9 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
+  // The cards on screen may be the own-posts fallback of the previous load.
+  // If this load fails too, they are still "yours", not "earlier posts".
+  const _wasPartial = feedPartial;
   feedPartial = false;
   // Fresh full load → reset pagination so "load more" starts clean.
   feedHasMore = true;
@@ -13101,7 +13104,9 @@ async function loadFeed() {
       // "couldn't refresh" chip over them. With nothing to show, fall back to
       // own posts only, and mark the load partial so the 60 s "loaded
       // recently" guard can't pin a feed that is missing everyone else.
-      if (feedItems.length) throw e;
+      // Cards that are themselves the fallback are not "earlier posts": run
+      // the fallback again so the chip keeps saying whose posts these are.
+      if (feedItems.length && !_wasPartial) throw e;
       const res = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 4000);
@@ -23546,9 +23551,14 @@ function nav(btn) {
     if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'explore_viewed' }).then(() => {});
   }
   if (page === 'feed')     {
-    // If feed is still showing skeleton (stuck load), force a fresh attempt
+    // Skeletons still on screen: make sure the 60 s "loaded recently" guard
+    // cannot skip this attempt. A load that is merely in flight is left alone
+    // — clearing feedLoading here started a second load under the first, and
+    // in an outage the second one relabelled the first one's own-posts
+    // fallback "showing earlier posts". loadFeed() itself re-enters a load
+    // that has outlived FEED_LOAD_BUDGET_MS.
     const fl = document.getElementById('feed-list');
-    if (fl && fl.querySelector('.feed-skeleton-item')) { feedLoading = false; feedLoadedAt = 0; }
+    if (fl && fl.querySelector('.feed-skeleton-item')) feedLoadedAt = 0;
     loadFeed(); loadNotifications();
     renderOnboardingChecklist();
   }
@@ -24167,6 +24177,14 @@ async function approveOfficialDraft(draftId) {
     // Step 1: use stored image URL (already in Supabase Storage from extraction/upload)
     const logId = crypto.randomUUID();
     let storedUrl = draft.image_url || null; // already a Supabase Storage URL
+    // A pasted address from another site cannot be a post photo: the database
+    // only accepts photos on WRotate's own storage (logs_photo_url_own_hosts),
+    // so a visitor's browser is never sent to someone else's server.
+    if (storedUrl && !storagePathFrom(storedUrl)) {
+      toast('Upload the image as a file first — a post can only show photos stored on WRotate', 'error');
+      renderOfficialDrafts();
+      return;
+    }
     // Step 2: create the log entry
     const attribution = draft.source_url ? `\nSource: ${draft.source_url}` : '';
     const caption = (draft.caption || '') + attribution;

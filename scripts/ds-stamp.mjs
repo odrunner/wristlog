@@ -22,7 +22,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // loads both hashed URLs, so they are stamped like the hand-written pages.
 export const MODEL_SNAPSHOTS = readdirSync(join(root, 'w'), { withFileTypes: true })
   .filter(d => d.isDirectory() && d.name !== 'all' && existsSync(join(root, 'w', d.name, 'index.html')))
-  .map(d => `w/${d.name}/index.html`);
+  .map(d => `w/${d.name}/index.html`)
+  // A merged model's folder is a bare forwarding page (meta refresh, no
+  // stylesheet, no script) — nothing in it to stamp.
+  .filter(f => !readFileSync(join(root, f), 'utf8').includes('http-equiv="refresh"'));
 // Generated brand pages (same generator): every b/<slug>/index.html.
 export const BRAND_SNAPSHOTS = !existsSync(join(root, 'b')) ? [] : readdirSync(join(root, 'b'), { withFileTypes: true })
   .filter(d => d.isDirectory() && existsSync(join(root, 'b', d.name, 'index.html')))

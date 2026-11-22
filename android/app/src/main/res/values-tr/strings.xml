@@ -10,4 +10,5 @@
     <string name="offline_retry">Tekrar dene</string>
     <string name="age_block_title">WRotate kullanılamıyor</string>
     <string name="age_block_message">WRotate 13 yaşından küçük çocuklar için tasarlanmamıştır.</string>
+    <string name="age_block_fix">Bu doğru değilse Google Hesabındaki doğum tarihini düzelt, ardından WRotate\'i yeniden aç.</string>
 </resources>

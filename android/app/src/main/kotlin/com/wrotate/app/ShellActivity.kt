@@ -498,6 +498,15 @@ class ShellActivity : ComponentActivity() {
             setTextColor(0xFF666666.toInt())
             setPadding(0, (8 * dp).toInt(), 0, 0)
         })
+        // An adult on a mis-dated account must not be left at a dead end: checkAge() runs on
+        // every launch, so a corrected date of birth lifts the block by itself.
+        column.addView(android.widget.TextView(this).apply {
+            text = getString(R.string.age_block_fix)
+            textSize = 14f
+            gravity = android.view.Gravity.CENTER
+            setTextColor(0xFF666666.toInt())
+            setPadding(0, (16 * dp).toInt(), 0, 0)
+        })
         column.visibility = android.view.View.GONE
         return column
     }
