@@ -7,6 +7,8 @@
 //      2026-09-11): one message ever, seven days after the FIRST kept reading, on that
 //      watch, quoting its rate. Push when the token is backed by a real grant, email
 //      otherwise. Arms are assigned by the RPC at this moment; control gets nothing.
+//   3. Same hour, the day-3 and day-14 steps of that follow-up (experiment remeasure_steps,
+//      2026-11-26): one message per step, same audience rule, ledger remeasure_step_sends.
 // Deploy with --no-verify-jwt (auth handled here). Secrets: CAMPAIGN_TRIGGER_SECRET,
 // APNS_KEY_P8/KEY_ID/TEAM_ID, SUPABASE_URL/SERVICE_ROLE_KEY (auto), UNSUBSCRIBE_HMAC_SECRET.
 //
@@ -23,9 +25,10 @@ import { fetchLangs } from "../_shared/lang.ts";
 import { fetchTrackedUids, TRACKED_CONFIG_SET } from "../_shared/tracked.ts";
 import {
   apnsHost, buildHtmlEmail, buildMeasurePush, buildRemeasureD7Email, buildRemeasureD7Push,
+  buildRemeasureStepEmail, buildRemeasureStepPush,
   createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
 } from "./lib.ts";
-import type { MeasureTarget, RemeasureD7Target } from "./lib.ts";
+import type { MeasureTarget, RemeasureD7Target, RemeasureStepTarget } from "./lib.ts";
 import { serviceKey } from "../_shared/keys.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -90,9 +93,18 @@ serve(async (req) => {
     if (d7err) console.error("[send-measure-reminders] remeasure_d7 target query failed:", d7err);
     const d7rows = (d7data ?? []) as RemeasureD7Target[];
 
+    // ── Phase 3: day-3 / day-14 steps (local 7pm, experiment remeasure_steps) ──
+    const { data: stepData, error: stepErr } = await supabase.rpc("remeasure_step_targets", { p_dry: dry });
+    if (stepErr) console.error("[send-measure-reminders] remeasure_steps target query failed:", stepErr);
+    const stepRows = ((stepData ?? []) as RemeasureStepTarget[]).filter((r) => buildRemeasureStepPush(r) !== null);
+
     if (dry) {
       return new Response(JSON.stringify({
         dry_run: true,
+        step_candidates: stepRows.map((r) => ({
+          user_id: r.user_id, watch_id: r.watch_id, step: r.step, variant: r.variant, channel: r.channel,
+          message: r.channel === "push" ? buildRemeasureStepPush(r)!.body : buildRemeasureStepEmail(r)!.subject,
+        })),
         candidates: rows.map((r) => ({ user_id: r.user_id, watch_id: r.watch_id, message: buildMeasurePush(r).body })),
         d7_candidates: d7rows.map((r) => ({
           user_id: r.user_id, watch_id: r.watch_id, variant: r.variant, channel: r.channel,
@@ -102,7 +114,7 @@ serve(async (req) => {
     }
 
     // Each message goes out in the language its recipient chose in the app.
-    const langs = await fetchLangs(supabase, [...rows, ...d7rows].map((r) => r.user_id));
+    const langs = await fetchLangs(supabase, [...rows, ...d7rows, ...stepRows].map((r) => r.user_id));
 
     let d7pushed = 0, d7emailed = 0, d7failed = 0, d7skipped = 0;
     if (d7rows.length) {
@@ -166,6 +178,61 @@ serve(async (req) => {
       }
     }
 
+    // Phase 3 sends. Same claim-then-send-then-release order as day 7, keyed (user, step).
+    let stPushed = 0, stEmailed = 0, stFailed = 0, stSkipped = 0;
+    if (stepRows.length) {
+      const emailRows = stepRows.filter((r) => r.channel === "email");
+      const bounced = emailRows.length ? await fetchBouncedEmails(supabase) : new Set<string>();
+      const tracked = emailRows.length ? await fetchTrackedUids(supabase, emailRows.map((r) => r.user_id)) : new Set<string>();
+      for (const t of stepRows) {
+        const lang = langs.get(t.user_id) ?? "en";
+        let claimed = false;
+        const release = async () => {
+          if (!claimed) return;
+          const { error: relErr } = await supabase.from("remeasure_step_sends").delete().eq("user_id", t.user_id).eq("step", t.step);
+          if (relErr) console.error(`[send-measure-reminders] step claim release failed, user ${t.user_id}:`, relErr);
+        };
+        try {
+          const to = (t.email ?? "").trim();
+          if (t.channel === "email" && (!to || bounced.has(to.toLowerCase()))) { stSkipped++; continue; }
+          const { error: claimErr } = await supabase.from("remeasure_step_sends")
+            .insert({ user_id: t.user_id, step: t.step, watch_id: t.watch_id, channel: t.channel, sent_on: t.local_today });
+          if (claimErr) {
+            stFailed++;
+            console.error(`[send-measure-reminders] step claim failed, not sending to ${t.user_id}:`, claimErr);
+            continue;
+          }
+          claimed = true;
+          if (t.channel === "push") {
+            if (!await pushUser(t.user_id, buildRemeasureStepPush(t, lang)!, "measure", t.watch_id)) { stFailed++; await release(); continue; }
+            stPushed++;
+          } else {
+            const sig = await hmacSign(t.user_id, "reminders", UNSUB_KEY);
+            const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
+            const mail = buildRemeasureStepEmail(t, lang)!;
+            const result = await sendEmail({
+              from: FROM_EMAIL,
+              to: [to],
+              subject: mail.subject,
+              html: buildHtmlEmail(mail.subject, mail.body, url, `remeasure-d${t.step}`, lang),
+              msgKey: `remeasure_d${t.step}`,
+              headers: {
+                "List-Unsubscribe": `<${url}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+              ...(tracked.has(t.user_id) ? { configSet: TRACKED_CONFIG_SET } : {}),
+            });
+            if (!result.ok) { stFailed++; await release(); continue; }
+            stEmailed++;
+          }
+        } catch (e) {
+          stFailed++;
+          await release();
+          console.error(`[send-measure-reminders] step user ${t.user_id} failed:`, e);
+        }
+      }
+    }
+
     let pushed = 0, failed = 0;
     for (const t of rows) {
       try {
@@ -183,6 +250,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       pushed, failed, candidates: rows.length, ...(error ? { phase1_error: String(error.message) } : {}),
       d7: { pushed: d7pushed, emailed: d7emailed, failed: d7failed, skipped: d7skipped, candidates: d7rows.length },
+      steps: { pushed: stPushed, emailed: stEmailed, failed: stFailed, skipped: stSkipped, candidates: stepRows.length },
     }), { status: 200 });
   } catch (err) {
     console.error("[send-measure-reminders] Error:", err);

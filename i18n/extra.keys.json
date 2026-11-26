@@ -144,5 +144,13 @@
  "Not authorized",
  "Missing authorization",
  "Someone",
- "Following@btn"
+ "Following@btn",
+ "See whether this reading holds",
+ "Right now your reminders arrive quietly. Turn on notifications and we will remind you to measure this watch again, so you can see whether its rate holds.",
+ "No reading yet. Try this, then tap Retry:",
+ "The room is very noisy. Move somewhere quieter.",
+ "There is background noise. Move somewhere quieter.",
+ "Rest the watch directly on the microphone at the bottom edge of the phone, crown side down. Take off any phone case.",
+ "Keep the watch and the phone still until the reading settles.",
+ "Set BPH to Auto. Your watch may beat at a different rate than the one selected."
 ]

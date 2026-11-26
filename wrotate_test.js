@@ -109,7 +109,7 @@ const CAMPAIGN_MSG_KEYS = {
   mention: 'Mentions',
   club_invite: 'Clubs', club_join_request: 'Clubs', club_join_accepted: 'Clubs', club_promoted: 'Clubs',
   wear_reminder: "What's on your wrist today?",
-  remeasure_d7: 'Did it hold its rate?',
+  remeasure_d7: 'Did it hold its rate?', remeasure_d3: 'Did it hold its rate?', remeasure_d14: 'Did it hold its rate?',
   share_comment: 'Comments on shared pages',
 };
 export function campaignSubject(subj) {
@@ -152,17 +152,18 @@ const CAMPAIGN_ONBOARDING = [
   '3 things you can do with WRotate',
   'Add your first watch',
   CAMPAIGN_FUNFACT_DRIP,
-  'Show your collection with one link',
+  'What are your watches worth today?',
   'Look up any watch',
   'How accurate is your watch?',
   'See how every watch you own is running',
-  'What if you sold two to fund the grail?',
-  'Which watch is really your favorite?',
-  'Which watch is next?',
+  'Look up your own watch',
+  'Let us fill in the details of your watches',
+  'Add a watch with one photo',
 ];
 // The day each of those drips is sent (email_campaigns.delay_days), same order.
 // Retargeted 2026-11-21 (sql/2026-11-21-onboarding-drip-targeting.sql): each
-// drip now has an audience, so no member receives all ten.
+// drip now has an audience, so no member receives all ten. Days 5, 12, 14 and 21
+// were rewritten 2026-11-26 (sql/2026-11-26-onboarding-drip-rewrite.sql).
 const CAMPAIGN_DRIP_DAYS = [1, 3, 4, 5, 6, 7, 9, 12, 14, 21];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
@@ -2172,12 +2173,30 @@ export function badgeRevealNames(names, shown = 8) {
 // The one-shot OS dialog: 'dialog' when the user has ACTED on a quiet (provisional)
 // notification, 'card' (benefit card first, once) at the next wear log / kept reading while
 // delivery is still quiet, null otherwise. Never at sign-in.
-export function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen }) {
+export function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen, repeat, cardCount, lastCardAt, now }) {
   if (asked) return null;
   if (authStatus !== 'provisional') return null;
   if (!iosAtLeast(iosVersion, '2.6')) return null;
   if (openedFromPush) return 'dialog';
+  // Experiment push_ask_repeat: up to three cards, at least 14 days apart, instead of one ever.
+  if (repeat) return (cardCount || 0) < 3 && (!lastCardAt || now - lastCardAt >= 14 * 86400000) ? 'card' : null;
   return cardSeen ? null : 'card';
+}
+
+// Measurement retry coach (A/B msr_retry_coach). Did this run end without a reading in a
+// way worth coaching? `coach` widens it to a weak or lost signal.
+export function msrRunFailed(stopReason, coach) {
+  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout' || stopReason === 'duration_cap') return true;
+  return !!coach && (stopReason === 'weak_signal' || stopReason === 'no_ticks_signal_lost');
+}
+// The coach's steps, most likely fix first. Keys, not text: the caller translates.
+export function msrCoachTips({ manualBph, noise, stopReason }) {
+  const tips = [];
+  if (noise > 0.08) tips.push(noise > 0.15 ? 'noise_very_high' : 'noise_high');
+  tips.push('place');
+  if (stopReason === 'weak_signal' || stopReason === 'no_ticks_signal_lost') tips.push('still');
+  if (manualBph) tips.push('auto_bph');
+  return tips.slice(0, 3);
 }
 
 // Suggested follows (A/B follow_suggest). Reason line under each tile.
@@ -4313,6 +4332,16 @@ export function rateStrip(members, you, med) {
 }
 
 // "Measured 3 days ago" on the model page's your-watch card.
+// "Apple" + "Apple Watch" reads "Apple Apple Watch": a model whose name already
+// opens with its brand is shown by the name alone.
+export function modelFullName(brand, name) {
+  const b = String(brand || '').trim(), n = String(name || '').trim();
+  if (!b) return n;
+  const lb = b.toLowerCase(), ln = n.toLowerCase();
+  if (ln === lb || ln.startsWith(lb + ' ')) return n;
+  return n ? `${b} ${n}` : b;
+}
+
 export function agoText(iso, now = new Date()) {
   const t = Date.parse(iso || '');
   if (!Number.isFinite(t)) return '';

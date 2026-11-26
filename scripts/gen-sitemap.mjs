@@ -186,7 +186,7 @@ function metaDescription(m, totalOwners, acc) {
   const stats = [];
   if (acc && acc.med != null) stats.push(`median ${MP.fmtRate(acc.med)} from ${acc.n_members} members' timegrapher measurements`);
   if (totalOwners) stats.push(`${totalOwners} owner${totalOwners === 1 ? '' : 's'} on WRotate`);
-  const lead = `${m.brand} ${m.name}: real-world accuracy${stats.length ? ` — ${stats.join(', ')}` : ' and owners on WRotate'}.`;
+  const lead = `${MP.modelFullName(m.brand, m.name)}: real-world accuracy${stats.length ? ` — ${stats.join(', ')}` : ' and owners on WRotate'}.`;
   const excerpt = String(m.description || '').trim();
   let out = excerpt ? `${lead} ${excerpt}` : lead;
   if (out.length > 300) out = out.slice(0, 299).replace(/\s+\S*$/, '') + '…';
@@ -231,7 +231,7 @@ function pageScript(slug) {
     const handlers = {
       back() { if (history.length > 1) history.back(); else location.href = 'https://wrotate.com'; },
       async share() {
-        const url = location.href, title = ctx.m.brand + ' ' + ctx.m.name + ' on WRotate';
+        const url = location.href, title = WRModelPage.modelFullName(ctx.m.brand, ctx.m.name) + ' on WRotate';
         if (navigator.share) { try { await navigator.share({ title: title, url: url }); } catch (e) {} }
         else { try { await navigator.clipboard.writeText(url); } catch (e) {} }
       },
@@ -269,7 +269,7 @@ if (!CSP) throw new Error('could not lift the CSP meta from w/index.html');
 
 function snapshotHtml(slug, ctx) {
   const m = ctx.m;
-  const title = `${m.brand} ${m.name} — accuracy &amp; who wears it | WRotate`;
+  const title = `${MP.modelFullName(m.brand, m.name)} — accuracy &amp; who wears it | WRotate`;
   const desc = metaDescription(m, ctx.o.total_owners, (ctx.st || {}).accuracy);
   const canon = `https://wrotate.com/w/${slug}/`;
   const shim = { innerHTML: '', addEventListener: () => {}, querySelector: () => null };
@@ -290,7 +290,7 @@ function snapshotHtml(slug, ctx) {
   <meta property="og:site_name" content="WRotate">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canon}">
-  <meta property="og:title" content="${esc(`${m.brand} ${m.name} — WRotate`)}">
+  <meta property="og:title" content="${esc(`${MP.modelFullName(m.brand, m.name)} — WRotate`)}">
   <meta property="og:description" content="${esc(desc)}">
   <meta property="og:image" content="${esc(m.hero_image || 'https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG')}">
   ${THEME_SCRIPT}
@@ -519,12 +519,12 @@ function movedHtml(t) {
 <head>
 <meta charset="UTF-8">
 <!-- ${GEN_MARK} — do not hand-edit; re-run it instead. -->
-<title>${esc(`${t.brand} ${t.name} — WRotate`)}</title>
+<title>${esc(`${MP.modelFullName(t.brand, t.name)} — WRotate`)}</title>
 <link rel="canonical" href="https://wrotate.com${to}">
 <meta http-equiv="refresh" content="0;url=${to}">
 </head>
 <body>
-<p><a href="${to}">${esc(`${t.brand} ${t.name}`)}</a></p>
+<p><a href="${to}">${esc(`${MP.modelFullName(t.brand, t.name)}`)}</a></p>
 </body>
 </html>
 `;

@@ -2805,5 +2805,13 @@
  "Open photo": "Fotoğrafı aç",
  "First, your profile": "Önce profilin",
  "This is about you, not your watch. Your name and username are how other members find you. You can change them later.": "Bu seninle ilgili, saatinle değil. Adın ve kullanıcı adın, diğer üyelerin seni bulmasını sağlar. Bunları sonra değiştirebilirsin.",
- "Not found": "Bulunamadı"
+ "Not found": "Bulunamadı",
+ "See whether this reading holds": "Bu ölçüm aynı kalıyor mu, gör",
+ "Right now your reminders arrive quietly. Turn on notifications and we will remind you to measure this watch again, so you can see whether its rate holds.": "Şu anda hatırlatmaların sessizce geliyor. Bildirimleri aç, bu saati yeniden ölçmeni hatırlatalım; böylece hızının aynı kalıp kalmadığını görürsün.",
+ "No reading yet. Try this, then tap Retry:": "Henüz ölçüm yok. Şunları dene, sonra Tekrar dene'ye dokun:",
+ "The room is very noisy. Move somewhere quieter.": "Oda çok gürültülü. Daha sessiz bir yere geç.",
+ "There is background noise. Move somewhere quieter.": "Arka planda gürültü var. Daha sessiz bir yere geç.",
+ "Rest the watch directly on the microphone at the bottom edge of the phone, crown side down. Take off any phone case.": "Saati, kurma kolu aşağı bakacak şekilde, telefonun alt kenarındaki mikrofonun tam üstüne koy. Telefon kılıfını çıkar.",
+ "Keep the watch and the phone still until the reading settles.": "Ölçüm oturana kadar saati ve telefonu sabit tut.",
+ "Set BPH to Auto. Your watch may beat at a different rate than the one selected.": "BPH'yi Auto yap. Saatin seçilenden farklı bir frekansta çalışıyor olabilir."
 }

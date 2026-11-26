@@ -85,6 +85,30 @@ export function buildRemeasureD7Email(t: { brand: string | null; name: string | 
   };
 }
 
+// Day-3 and day-14 steps of the same follow-up — experiment remeasure_steps (2026-11-26).
+// Same audience rule as day 7 (first kept reading, nothing converged on that watch since
+// day 1), one message per step, rows from remeasure_step_targets(). An unknown step
+// builds nothing, so a new step in SQL can never send the wrong text.
+export type RemeasureStepTarget = RemeasureD7Target & { step: number };
+export const REMEASURE_STEPS = [3, 14] as const;
+const isStep = (n: number): n is 3 | 14 => (REMEASURE_STEPS as readonly number[]).includes(n);
+
+export function buildRemeasureStepPush(t: { step: number; brand: string | null; name: string | null; rate: number | string }, lang: Lang = "en"): { title: string; body: string } | null {
+  if (!isStep(t.step)) return null;
+  const S = MEASURE_STRINGS[lang];
+  return { title: "WRotate", body: capFirst(fill(t.step === 3 ? S.s3push : S.s14push, { w: d7Label(t, lang), r: fmtRate(Number(t.rate)) })) };
+}
+
+export function buildRemeasureStepEmail(t: { step: number; brand: string | null; name: string | null; rate: number | string }, lang: Lang = "en"): { subject: string; body: string } | null {
+  if (!isStep(t.step)) return null;
+  const S = MEASURE_STRINGS[lang];
+  const label = d7Label(t, lang);
+  return {
+    subject: capFirst(fill(t.step === 3 ? S.s3subject : S.s14subject, { w: label })),
+    body: fill(t.step === 3 ? S.s3body : S.s14body, { w: escHtml(label), r: fmtRate(Number(t.rate)) }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Email helpers — copied from supabase/functions/send-wear-reminders/lib.ts
 // (self-contained; no cross-function imports per repo convention). The CTA links to

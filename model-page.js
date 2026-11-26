@@ -84,6 +84,16 @@ function rateStrip(members, you, med) {
   return { lo, hi, step, ticks, dots, you: Number.isFinite(y) ? pct(y) : null, med: Number.isFinite(m) ? pct(m) : null };
 }
 
+// "Apple" + "Apple Watch" reads "Apple Apple Watch": a model whose name already
+// opens with its brand is shown by the name alone.
+function modelFullName(brand, name) {
+  const b = String(brand || '').trim(), n = String(name || '').trim();
+  if (!b) return n;
+  const lb = b.toLowerCase(), ln = n.toLowerCase();
+  if (ln === lb || ln.startsWith(lb + ' ')) return n;
+  return n ? `${b} ${n}` : b;
+}
+
 function agoText(iso, now = new Date()) {
   const t = Date.parse(iso || '');
   if (!Number.isFinite(t)) return '';
@@ -629,7 +639,7 @@ function renderBrandPage(el, ctx, h) {
   window.WRModelPage = {
     render(el, ctx, h) { injectStyles(); return renderModelPage(el, ctx, h); },
     renderBrand(el, ctx, h) { injectStyles(); return renderBrandPage(el, ctx, h); },
-    fmtRate, featuredFactIndex, rateStrip, agoText, imgSrcAttrs,
+    fmtRate, featuredFactIndex, rateStrip, agoText, imgSrcAttrs, modelFullName,
     css: CSS,   // scripts/gen-sitemap.mjs inlines it into the static /w/<slug>/ snapshots
   };
 })();

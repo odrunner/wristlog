@@ -10,6 +10,9 @@ export interface MeasureStrings {
   watch: string;
   first: string; drift: string; same: string; faster: string; slower: string;
   d7push: string; d7subject: string; d7body: string; d7button: string;
+  // Day-3 and day-14 steps of the same follow-up (experiment remeasure_steps, 2026-11-26).
+  s3push: string; s3subject: string; s3body: string;
+  s14push: string; s14subject: string; s14body: string;
 }
 
 export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
@@ -22,6 +25,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "Did your {w} hold its rate?",
     d7body: "A week ago your <strong>{w}</strong> measured <strong>{r}</strong>. Measure it again in WRotate to see whether it's holding — two readings make a trend, one is just a number.",
     d7button: "Measure it again",
+    s3push: "Your {w} ran {r} three days ago. Measure again to see if it holds.",
+    s3subject: "Three days on: is your {w} still on pace?",
+    s3body: "Three days ago your <strong>{w}</strong> measured <strong>{r}</strong>. A watch's rate shifts with wear, position and how fully it is wound. Measure it again in WRotate and see how far it has moved.",
+    s14push: "Two weeks since your {w} ran {r}. Measure again to start its accuracy history.",
+    s14subject: "Two weeks on: how is your {w} running?",
+    s14body: "Two weeks ago your <strong>{w}</strong> measured <strong>{r}</strong>. Measure it again in WRotate and the two readings start its accuracy history, so you can see whether it is gaining, losing or holding steady.",
   },
   es: {
     watch: "reloj",
@@ -32,6 +41,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "¿Tu {w} mantuvo su marcha?",
     d7body: "Hace una semana tu <strong>{w}</strong> midió <strong>{r}</strong>. Mídelo de nuevo en WRotate para ver si se mantiene: dos lecturas marcan una tendencia, una sola es solo un número.",
     d7button: "Medir de nuevo",
+    s3push: "Tu {w} marchó a {r} hace tres días. Mídelo de nuevo para ver si se mantiene.",
+    s3subject: "Tres días después: ¿tu {w} sigue igual?",
+    s3body: "Hace tres días tu <strong>{w}</strong> midió <strong>{r}</strong>. La marcha de un reloj cambia con el uso, la posición y la cuerda que tenga. Mídelo de nuevo en WRotate y mira cuánto ha cambiado.",
+    s14push: "Hace dos semanas tu {w} marchó a {r}. Mídelo de nuevo para empezar su historial de precisión.",
+    s14subject: "Dos semanas después: ¿cómo marcha tu {w}?",
+    s14body: "Hace dos semanas tu <strong>{w}</strong> midió <strong>{r}</strong>. Mídelo de nuevo en WRotate y las dos lecturas empiezan su historial de precisión, para que veas si adelanta, atrasa o se mantiene.",
   },
   it: {
     watch: "orologio",
@@ -42,6 +57,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "Il tuo {w} ha mantenuto la marcia?",
     d7body: "Una settimana fa il tuo <strong>{w}</strong> misurava <strong>{r}</strong>. Misuralo di nuovo in WRotate per vedere se tiene: due letture fanno una tendenza, una sola è solo un numero.",
     d7button: "Misuralo di nuovo",
+    s3push: "Tre giorni fa il tuo {w} marciava a {r}. Misuralo di nuovo per vedere se tiene.",
+    s3subject: "Tre giorni dopo: il tuo {w} tiene il passo?",
+    s3body: "Tre giorni fa il tuo <strong>{w}</strong> misurava <strong>{r}</strong>. La marcia di un orologio cambia con l'uso, la posizione e la carica. Misuralo di nuovo in WRotate e guarda di quanto si è spostata.",
+    s14push: "Due settimane fa il tuo {w} marciava a {r}. Misuralo di nuovo per iniziare la sua cronologia di precisione.",
+    s14subject: "Due settimane dopo: come va il tuo {w}?",
+    s14body: "Due settimane fa il tuo <strong>{w}</strong> misurava <strong>{r}</strong>. Misuralo di nuovo in WRotate e le due letture avviano la sua cronologia di precisione, così vedi se anticipa, ritarda o resta stabile.",
   },
   fr: {
     watch: "montre",
@@ -52,6 +73,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "Votre {w} a-t-elle tenu sa marche ?",
     d7body: "Il y a une semaine, votre <strong>{w}</strong> affichait <strong>{r}</strong>. Mesurez-la à nouveau dans WRotate pour voir si elle tient : deux mesures font une tendance, une seule n'est qu'un chiffre.",
     d7button: "Mesurer à nouveau",
+    s3push: "Votre {w} tournait à {r} il y a trois jours. Mesurez-la à nouveau pour voir si elle tient.",
+    s3subject: "Trois jours après : votre {w} tient-elle le rythme ?",
+    s3body: "Il y a trois jours, votre <strong>{w}</strong> affichait <strong>{r}</strong>. La marche d'une montre varie avec le porté, la position et le niveau de remontage. Mesurez-la à nouveau dans WRotate pour voir de combien elle a bougé.",
+    s14push: "Votre {w} tournait à {r} il y a deux semaines. Mesurez-la à nouveau pour commencer son historique de précision.",
+    s14subject: "Deux semaines après : comment tourne votre {w} ?",
+    s14body: "Il y a deux semaines, votre <strong>{w}</strong> affichait <strong>{r}</strong>. Mesurez-la à nouveau dans WRotate : les deux mesures lancent son historique de précision, pour voir si elle avance, retarde ou reste stable.",
   },
   tr: {
     watch: "saatin",
@@ -62,6 +89,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "{w} aynı kaldı mı?",
     d7body: "Bir hafta önce <strong>{w}</strong> için <strong>{r}</strong> ölçtün. Aynı kalıp kalmadığını görmek için WRotate'te yeniden ölç: iki ölçüm bir eğilim gösterir, tek ölçüm yalnızca bir sayıdır.",
     d7button: "Yeniden ölç",
+    s3push: "{w} üç gün önce {r} gidiyordu. Aynı mı diye görmek için yeniden ölç.",
+    s3subject: "{w} üç gün sonra aynı mı?",
+    s3body: "Üç gün önce <strong>{w}</strong> için <strong>{r}</strong> ölçtün. Bir saatin hızı kullanıma, konuma ve kurulma düzeyine göre değişir. Ne kadar değiştiğini görmek için WRotate'te yeniden ölç.",
+    s14push: "{w} iki hafta önce {r} gidiyordu. Doğruluk geçmişini başlatmak için yeniden ölç.",
+    s14subject: "{w} iki hafta sonra nasıl gidiyor?",
+    s14body: "İki hafta önce <strong>{w}</strong> için <strong>{r}</strong> ölçtün. WRotate'te yeniden ölç; iki ölçüm doğruluk geçmişini başlatır ve ileri mi gittiğini, geri mi kaldığını yoksa sabit mi kaldığını görürsün.",
   },
   de: {
     watch: "Uhr",
@@ -72,6 +105,12 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "Hält deine {w} ihren Gang?",
     d7body: "Vor einer Woche hast du bei deiner <strong>{w}</strong> <strong>{r}</strong> gemessen. Miss sie in WRotate noch einmal, um zu sehen, ob sie den Wert hält: Zwei Messungen ergeben einen Trend, eine ist nur eine Zahl.",
     d7button: "Noch einmal messen",
+    s3push: "Deine {w} lief vor drei Tagen mit {r}. Miss noch einmal, um zu sehen, ob sie den Wert hält.",
+    s3subject: "Drei Tage später: Hält deine {w} ihren Gang?",
+    s3body: "Vor drei Tagen hast du bei deiner <strong>{w}</strong> <strong>{r}</strong> gemessen. Der Gang einer Uhr ändert sich mit dem Tragen, der Lage und dem Aufzug. Miss sie in WRotate noch einmal und sieh, wie weit er sich verschoben hat.",
+    s14push: "Deine {w} lief vor zwei Wochen mit {r}. Miss noch einmal und beginne ihren Genauigkeitsverlauf.",
+    s14subject: "Zwei Wochen später: Wie läuft deine {w}?",
+    s14body: "Vor zwei Wochen hast du bei deiner <strong>{w}</strong> <strong>{r}</strong> gemessen. Miss sie in WRotate noch einmal: Mit zwei Messungen beginnt ihr Genauigkeitsverlauf, und du siehst, ob sie vorgeht, nachgeht oder stabil läuft.",
   },
   pt: {
     watch: "relógio",
@@ -82,5 +121,11 @@ export const MEASURE_STRINGS: Record<Lang, MeasureStrings> = {
     d7subject: "O teu {w} manteve a marcha?",
     d7body: "Há uma semana o teu <strong>{w}</strong> marcava <strong>{r}</strong>. Mede-o outra vez no WRotate para ver se se mantém: duas leituras fazem uma tendência, uma é só um número.",
     d7button: "Medir outra vez",
+    s3push: "Há três dias o teu {w} marcava {r}. Mede outra vez para ver se se mantém.",
+    s3subject: "Três dias depois: o teu {w} mantém a marcha?",
+    s3body: "Há três dias o teu <strong>{w}</strong> marcava <strong>{r}</strong>. A marcha de um relógio muda com o uso, a posição e a corda. Mede-o outra vez no WRotate e vê quanto mudou.",
+    s14push: "Há duas semanas o teu {w} marcava {r}. Mede outra vez para começar o histórico de precisão.",
+    s14subject: "Duas semanas depois: como anda o teu {w}?",
+    s14body: "Há duas semanas o teu <strong>{w}</strong> marcava <strong>{r}</strong>. Mede-o outra vez no WRotate e as duas leituras começam o histórico de precisão, para veres se adianta, atrasa ou se mantém.",
   },
 };

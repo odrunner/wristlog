@@ -31,3 +31,30 @@ describe('deferredPushAskMode', () => {
     expect(deferredPushAskMode({ ...base, iosVersion: undefined })).toBe(null);
   });
 });
+
+// Experiment push_ask_repeat (2026-11-26): the card may return, up to three times, 14 days apart.
+describe('deferredPushAskMode — repeat (push_ask_repeat treatment)', () => {
+  const DAY = 86400000, now = 1800000000000;
+  const rep = { ...base, repeat: true, now };
+  it('shows the card even when the old one-time card was already seen', () => {
+    expect(deferredPushAskMode({ ...rep, cardSeen: true })).toBe('card');
+    expect(deferredPushAskMode({ ...rep, cardSeen: true, cardCount: 0, lastCardAt: 0 })).toBe('card');
+  });
+  it('waits 14 days between cards', () => {
+    expect(deferredPushAskMode({ ...rep, cardCount: 1, lastCardAt: now - 13 * DAY })).toBe(null);
+    expect(deferredPushAskMode({ ...rep, cardCount: 1, lastCardAt: now - 14 * DAY })).toBe('card');
+    expect(deferredPushAskMode({ ...rep, cardCount: 2, lastCardAt: now - 30 * DAY })).toBe('card');
+  });
+  it('stops after three cards', () => {
+    expect(deferredPushAskMode({ ...rep, cardCount: 3, lastCardAt: now - 90 * DAY })).toBe(null);
+  });
+  it('the earlier rules still win: asked, not provisional, old build, opened from push', () => {
+    expect(deferredPushAskMode({ ...rep, asked: true })).toBe(null);
+    expect(deferredPushAskMode({ ...rep, authStatus: 'authorized' })).toBe(null);
+    expect(deferredPushAskMode({ ...rep, iosVersion: '2.5' })).toBe(null);
+    expect(deferredPushAskMode({ ...rep, openedFromPush: true, cardCount: 3 })).toBe('dialog');
+  });
+  it('control is unchanged by the extra fields', () => {
+    expect(deferredPushAskMode({ ...base, cardSeen: true, cardCount: 0, lastCardAt: 0, now })).toBe(null);
+  });
+});

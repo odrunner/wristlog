@@ -1,6 +1,6 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import { buildMeasurePush, fmtRate } from "./lib.ts";
-import { buildHtmlEmail, buildRemeasureD7Email, buildRemeasureD7Push, hmacSign, unsubUrl } from "./lib.ts";
+import { buildHtmlEmail, buildRemeasureD7Email, buildRemeasureD7Push, buildRemeasureStepEmail, buildRemeasureStepPush, hmacSign, unsubUrl } from "./lib.ts";
 import { buildAlertPayload, routeFor, versionAtLeast } from "./lib.ts";
 
 Deno.test("fmtRate — sign and one decimal", () => {
@@ -114,4 +114,35 @@ Deno.test("measure reminders — dates and the no-name watch read naturally per 
   assertEquals(buildMeasurePush(drift, "de").body, "Deine Omega läuft mit +4.2 s/d: 2.0 s/d schneller als im September. Tippe, um neu zu messen.");
   assertEquals(buildHtmlEmail("s", "b", "https://u", "remeasure-d7", "fr").includes(">Mesurer à nouveau</a>"), true);
   assertEquals(buildHtmlEmail("s", "b", "https://u"), buildHtmlEmail("s", "b", "https://u", "remeasure-d7", "en"));
+});
+
+// ── Day-3 / day-14 steps (experiment remeasure_steps) ────────────────────────────
+Deno.test("remeasure steps — English text per step, unknown step builds nothing", () => {
+  const t = { brand: "Omega", name: "Speedmaster", rate: "4.24" };
+  assertEquals(buildRemeasureStepPush({ ...t, step: 3 })!.body, "Your Omega Speedmaster ran +4.2 s/d three days ago. Measure again to see if it holds.");
+  assertEquals(buildRemeasureStepPush({ ...t, step: 14 })!.body, "Two weeks since your Omega Speedmaster ran +4.2 s/d. Measure again to start its accuracy history.");
+  assertEquals(buildRemeasureStepEmail({ ...t, step: 3 })!.subject, "Three days on: is your Omega Speedmaster still on pace?");
+  assertEquals(buildRemeasureStepEmail({ ...t, step: 14 })!.subject, "Two weeks on: how is your Omega Speedmaster running?");
+  assertEquals(buildRemeasureStepPush({ ...t, step: 7 }), null);
+  assertEquals(buildRemeasureStepEmail({ ...t, step: 5 }), null);
+  const esc = buildRemeasureStepEmail({ brand: "A&B", name: "<Diver>", rate: 0.02, step: 14 })!;
+  assertStringIncludes(esc.body, "A&amp;B &lt;Diver&gt;");
+  assertEquals(esc.subject.includes("A&B <Diver>"), true);
+});
+
+Deno.test("remeasure steps — every language names the watch and rate with no hole", () => {
+  const t = { brand: "Omega", name: "Speedmaster", rate: "4.2" };
+  for (const lang of LANGS) {
+    for (const step of [3, 14]) {
+      const texts = [buildRemeasureStepPush({ ...t, step }, lang)!.body, buildRemeasureStepEmail({ ...t, step }, lang)!.subject, buildRemeasureStepEmail({ ...t, step }, lang)!.body];
+      for (const x of texts) {
+        assertEquals(/[{}]/.test(x), false, `${lang}: leftover hole in "${x}"`);
+        assertEquals(x.includes("Omega Speedmaster"), true, `${lang}: watch missing in "${x}"`);
+      }
+      assertEquals(texts[0].includes("+4.2 s/d"), true);
+      assertEquals(texts[2].includes("+4.2 s/d"), true);
+      if (lang !== "en") assertEquals(texts[0] === buildRemeasureStepPush({ ...t, step })!.body, false);
+    }
+  }
+  assertEquals(buildRemeasureStepPush({ brand: null, name: null, rate: 1, step: 3 }, "tr")!.body.startsWith("Saatin üç gün önce"), true);
 });

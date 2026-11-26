@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmtRate, featuredFactIndex, rateStrip, agoText } from '../wrotate_test.js';
+import { fmtRate, featuredFactIndex, rateStrip, agoText, modelFullName } from '../wrotate_test.js';
 
 describe('fmtRate', () => {
   it('signs and formats', () => {
@@ -79,5 +79,22 @@ describe('agoText', () => {
   it('empty for missing or bad dates', () => {
     expect(agoText(null, now)).toBe('');
     expect(agoText('not a date', now)).toBe('');
+  });
+});
+
+describe('modelFullName', () => {
+  it('prefixes the brand unless the name already opens with it', () => {
+    expect(modelFullName('Rolex', 'Submariner')).toBe('Rolex Submariner');
+    expect(modelFullName('Apple', 'Apple Watch')).toBe('Apple Watch');
+    expect(modelFullName('Swatch', 'swatch')).toBe('swatch');
+    expect(modelFullName('Omega', 'omega Seamaster')).toBe('omega Seamaster');
+    // A name that merely starts with the same letters is not the brand
+    expect(modelFullName('Avia', 'Aviator')).toBe('Avia Aviator');
+  });
+  it('copes with a missing half', () => {
+    expect(modelFullName('', 'Speedmaster')).toBe('Speedmaster');
+    expect(modelFullName(null, null)).toBe('');
+    expect(modelFullName('Omega', '')).toBe('Omega');
+    expect(modelFullName(' Omega ', ' Speedmaster ')).toBe('Omega Speedmaster');
   });
 });

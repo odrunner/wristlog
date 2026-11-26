@@ -50,7 +50,7 @@
     <footer id="site-footer"><a href="/w/all/">Browse all watch models</a></footer>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js" integrity="sha384-NRo2jhGGHu91p1IOcVC3UWI5Vnd+xGXfD/8N7Hr9+aGTK0d/Pl0i+kUZsB/zIlrK" crossorigin="anonymous"></script>
-  <script src="/model-page.js?v=8b2d4991"></script>
+  <script src="/model-page.js?v=ba3460ac"></script>
   <script>
     const SUPABASE_URL = 'https://api.wrotate.com';
     const SUPABASE_KEY = 'sb_publishable_pxXMl4LD0xTLEqNKCZyQ5Q_qQfhNYbz';
@@ -93,7 +93,7 @@
     const handlers = {
       back() { if (history.length > 1) history.back(); else location.href = 'https://wrotate.com'; },
       async share() {
-        const url = location.href, title = `${ctx.m.brand} ${ctx.m.name} on WRotate`;
+        const url = location.href, title = `${WRModelPage.modelFullName(ctx.m.brand, ctx.m.name)} on WRotate`;
         if (navigator.share) { try { await navigator.share({ title, url }); } catch (e) {} }
         else { try { await navigator.clipboard.writeText(url); } catch (e) {} }
       },
@@ -114,7 +114,7 @@
       // that in the address bar so copies/shares carry the surviving URL.
       if (m.slug && m.slug !== slug) history.replaceState(null, '', '/w/?m=' + encodeURIComponent(m.slug));
       const { data: st } = await db.rpc('model_stats', { p_model_id: m.id });
-      document.title = `${m.brand} ${m.name} — WRotate`;
+      document.title = `${WRModelPage.modelFullName(m.brand, m.name)} — WRotate`;
       const canon = document.createElement('link');
       canon.rel = 'canonical';
       // Content-bearing models have a static, crawlable twin at /w/<slug>/
@@ -124,7 +124,7 @@
         ? `https://wrotate.com/w/${encodeURIComponent(m.slug)}/`
         : `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
       document.head.appendChild(canon);
-      document.getElementById('og-title').content = `${m.brand} ${m.name} — WRotate`;
+      document.getElementById('og-title').content = `${WRModelPage.modelFullName(m.brand, m.name)} — WRotate`;
       if (m.hero_image) document.getElementById('og-image').content = m.hero_image;
       ctx = { m, o: data.owners || { total_owners: 0, visible: [] }, st: st || {}, facts: data.teasers || [], loggedIn: false, publicMode: true };
       show(null); render();

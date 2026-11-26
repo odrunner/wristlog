@@ -35,7 +35,7 @@ describe('campaignSubject — emails tagged with a message id', () => {
     expect(campaignSubject('msg:drip_d1')).toBe('3 things you can do with WRotate');
     expect(campaignSubject('msg:drip_d3')).toBe('Add your first watch');
     expect(campaignSubject('msg:drip_d4')).toBe('A fun fact about your watch');
-    expect(campaignSubject('msg:drip_d21')).toBe('Which watch is next?');
+    expect(campaignSubject('msg:drip_d21')).toBe('Add a watch with one photo');
     expect(campaignGroupOf(campaignSubject('msg:drip_d7'), new Set()).group).toBe(0);
     expect(campaignSubject('msg:drip_d2')).toBe('msg:drip_d2');
   });
@@ -106,12 +106,12 @@ describe('campaignGroupOf', () => {
     '3 things you can do with WRotate',
     'Add your first watch',
     CAMPAIGN_FUNFACT_DRIP,
-    'Show your collection with one link',
+    'What are your watches worth today?',
     'Look up any watch',
     'How accurate is your watch?',
     'See how every watch you own is running',
-    'What if you sold two to fund the grail?',
-    'Which watch is really your favorite?',
+    'Look up your own watch',
+    'Let us fill in the details of your watches',
   ];
 
   it('puts the onboarding drips in group 0, in order', () => {
@@ -258,20 +258,20 @@ describe('index.html mirrors the campaign constants', () => {
 
   it('onboarding lists all ten drips in send order', () => {
     // Order is the display order in the admin Onboarding group — the numbering
-    // ("8. Which watch is next?") comes from this array's index, so a drip added
+    // ("8. Add a watch with one photo") comes from this array's index, so a drip added
     // to email_campaigns but not here renders as an unnumbered "Older campaign".
     // Days 1, 3, 4, 5, 6, 7, 9, 12, 14, 21 (sql/2026-11-21-onboarding-drip-targeting.sql).
     expect(arrayIn('CAMPAIGN_ONBOARDING')).toEqual([
       '3 things you can do with WRotate',
       'Add your first watch',
       'CAMPAIGN_FUNFACT_DRIP',
-      'Show your collection with one link',
+      'What are your watches worth today?',
       'Look up any watch',
       'How accurate is your watch?',
       'See how every watch you own is running',
-      'What if you sold two to fund the grail?',
-      'Which watch is really your favorite?',
-      'Which watch is next?',
+      'Look up your own watch',
+      'Let us fill in the details of your watches',
+      'Add a watch with one photo',
     ]);
   });
 

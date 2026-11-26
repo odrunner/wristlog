@@ -50,7 +50,7 @@ const VERBATIM = [
   'feedSortDate', 'compareFeedLogs', 'feedCaughtUpIndex', 'feedMaxCreatedAt',
   'feedCacheKey', 'serializeFeedCache', 'parseFeedCache', 'carryFeedEnrichment', 'bootTimingPayload', 'earlyFeedUsable', 'firstLoadCardHtml',
   'socialCacheKey', 'serializeSocialCache', 'parseSocialCache', 'socialSignature', 'shouldRefreshOnBackground', 'feedPageToState', 'experimentSpeedHtml', 'knobTrialProgressHtml',
-  'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'deferredPushAskMode', 'followSuggestReason', 'followSuggestVisible',
+  'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'deferredPushAskMode', 'msrRunFailed', 'msrCoachTips', 'followSuggestReason', 'followSuggestVisible',
   'fillCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',
   'npIdentifyWait', 'siblingWithCap', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',

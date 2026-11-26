@@ -2804,5 +2804,13 @@
  "Open photo": "Foto öffnen",
  "First, your profile": "Zuerst dein Profil",
  "This is about you, not your watch. Your name and username are how other members find you. You can change them later.": "Hier geht es um dich, nicht um deine Uhr. Über deinen Namen und deinen Benutzernamen finden dich andere Mitglieder. Du kannst beides später ändern.",
- "Not found": "Nicht gefunden"
+ "Not found": "Nicht gefunden",
+ "See whether this reading holds": "Sieh, ob dieser Wert hält",
+ "Right now your reminders arrive quietly. Turn on notifications and we will remind you to measure this watch again, so you can see whether its rate holds.": "Im Moment kommen deine Erinnerungen leise an. Schalte Mitteilungen ein und wir erinnern dich daran, diese Uhr noch einmal zu messen, damit du siehst, ob sie ihren Gang hält.",
+ "No reading yet. Try this, then tap Retry:": "Noch kein Messwert. Probiere das und tippe dann auf Erneut versuchen:",
+ "The room is very noisy. Move somewhere quieter.": "Der Raum ist sehr laut. Geh an einen ruhigeren Ort.",
+ "There is background noise. Move somewhere quieter.": "Es gibt Hintergrundgeräusche. Geh an einen ruhigeren Ort.",
+ "Rest the watch directly on the microphone at the bottom edge of the phone, crown side down. Take off any phone case.": "Lege die Uhr direkt auf das Mikrofon an der Unterkante des Telefons, Krone nach unten. Nimm die Handyhülle ab.",
+ "Keep the watch and the phone still until the reading settles.": "Halte Uhr und Telefon ruhig, bis sich der Messwert einpendelt.",
+ "Set BPH to Auto. Your watch may beat at a different rate than the one selected.": "Stelle BPH auf Auto. Deine Uhr schlägt vielleicht mit einer anderen Frequenz als der gewählten."
 }

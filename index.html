@@ -79,7 +79,7 @@
        is in the filename, so upgrading it means renaming here, in SITE_FILES,
        in sw.js PRECACHE and in tests/page-weight.test.js -->
   <script src="/supabase-js-2.98.0.min.js"></script>
-  <script src="/model-page.js?v=8b2d4991"></script>
+  <script src="/model-page.js?v=ba3460ac"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Safe storage accessor. Reading localStorage THROWS rather than returning null
        in several real configurations: Safari with "Block all cookies", some corporate
@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=9011d3ff', it: 'i18n/it.js?v=af2b8ae5', fr: 'i18n/fr.js?v=0f354445', tr: 'i18n/tr.js?v=ebc8fd9d', de: 'i18n/de.js?v=ac23be4e', pt: 'i18n/pt.js?v=cb96021c' };
+      var FILES = { es: 'i18n/es.js?v=70a4c000', it: 'i18n/it.js?v=079ec885', fr: 'i18n/fr.js?v=73fe8feb', tr: 'i18n/tr.js?v=335b7e38', de: 'i18n/de.js?v=eaf9062b', pt: 'i18n/pt.js?v=407dd9dd' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -3266,7 +3266,7 @@
   <div class="modal u-maxw-85 u-ta-center u-pt-8 u-pr-7 u-pb-8 u-pl-7">
     <div class="eyebrow stack-4">Reminders</div>
     <div id="push-ask-title" class="title-lg u-mb-2">Get the 5pm nudge on your lock screen</div>
-    <div class="text-body u-mb-6">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
+    <div id="push-ask-body" class="text-body u-mb-6">Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.</div>
     <div class="u-gap-2 u-d-flex">
       <button class="btn btn-ghost btn-grow btn-ghost-muted" onclick="pushAskNotNow()">Not now</button>
       <button class="btn btn-ghost btn-grow btn-ghost-gold" onclick="pushAskTurnOn()">Turn on</button>
@@ -8607,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.10.22';
+const APP_VERSION = '26.12.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8823,7 +8823,7 @@ const CAMPAIGN_MSG_KEYS = {
   mention: 'Mentions',
   club_invite: 'Clubs', club_join_request: 'Clubs', club_join_accepted: 'Clubs', club_promoted: 'Clubs',
   wear_reminder: "What's on your wrist today?",
-  remeasure_d7: 'Did it hold its rate?',
+  remeasure_d7: 'Did it hold its rate?', remeasure_d3: 'Did it hold its rate?', remeasure_d14: 'Did it hold its rate?',
   share_comment: 'Comments on shared pages',
 };
 function campaignSubject(subj) {
@@ -8866,17 +8866,18 @@ const CAMPAIGN_ONBOARDING = [
   '3 things you can do with WRotate',
   'Add your first watch',
   CAMPAIGN_FUNFACT_DRIP,
-  'Show your collection with one link',
+  'What are your watches worth today?',
   'Look up any watch',
   'How accurate is your watch?',
   'See how every watch you own is running',
-  'What if you sold two to fund the grail?',
-  'Which watch is really your favorite?',
-  'Which watch is next?',
+  'Look up your own watch',
+  'Let us fill in the details of your watches',
+  'Add a watch with one photo',
 ];
 // The day each of those drips is sent (email_campaigns.delay_days), same order.
 // Retargeted 2026-11-21 (sql/2026-11-21-onboarding-drip-targeting.sql): each
-// drip now has an audience, so no member receives all ten.
+// drip now has an audience, so no member receives all ten. Days 5, 12, 14 and 21
+// were rewritten 2026-11-26 (sql/2026-11-26-onboarding-drip-rewrite.sql).
 const CAMPAIGN_DRIP_DAYS = [1, 3, 4, 5, 6, 7, 9, 12, 14, 21];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
@@ -15999,6 +16000,13 @@ function _pushBridgeAvailable() {
 function onPushAuthStatus(status) {
   window._pushAuthStatus = status;
   renderPushSettingRow();
+  // Metric for push_ask_repeat: this device went from quiet delivery to real notifications.
+  // Written once; a device that was authorized from the start never counts.
+  if (status === 'provisional') safeLS.set('wr_push_was_quiet', '1');
+  if (status === 'authorized' && safeLS.get('wr_push_was_quiet') === '1' && safeLS.get('wr_push_on_logged') !== '1' && currentUser && !_isDemoMode) {
+    safeLS.set('wr_push_on_logged', '1');
+    _bootGate.then(() => db.from('feature_events').insert({ user_id: currentUser.id, event: 'push_turned_on', meta: {} })).then(() => {}, () => {});
+  }
   if (currentUser && !_isDemoMode) {
     // iOS keeps the exact 2-arg call shape: it must work against BOTH the old and the new RPC
     // signature, whichever is live when this page deploys (deploy order stops mattering).
@@ -16013,52 +16021,83 @@ function onPushAuthStatus(status) {
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 // 'dialog' = spend the one-shot OS dialog now (the user tapped a quiet notification, so
 // intent is proven); 'card' = show the benefit card first (once, at the next wear log or
-// kept reading while delivery is still quiet); null = nothing.
-function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen }) {
+// kept reading while delivery is still quiet); null = nothing. With `repeat` (experiment
+// push_ask_repeat, 2026-11-26: the one-time card was accepted by 6 of 95) the card may
+// come back, counted from the experiment's own counter so members who saw the old card
+// are asked again.
+function deferredPushAskMode({ authStatus, openedFromPush, iosVersion, asked, cardSeen, repeat, cardCount, lastCardAt, now }) {
   if (asked) return null;
   if (authStatus !== 'provisional') return null;
   if (!iosAtLeast(iosVersion, '2.6')) return null;
   if (openedFromPush) return 'dialog';
+  // Experiment push_ask_repeat: up to three cards, at least 14 days apart, instead of one ever.
+  if (repeat) return (cardCount || 0) < 3 && (!lastCardAt || now - lastCardAt >= 14 * 86400000) ? 'card' : null;
   return cardSeen ? null : 'card';
 }
 const PUSH_HARD_ASKED = 'wr_push_hard_asked';
 const PUSH_CARD_SEEN = 'wr_push_card_seen';
+const PUSH_CARD_COUNT = 'wr_push_card_n';     // push_ask_repeat: cards shown so far
+const PUSH_CARD_AT = 'wr_push_card_at';       // push_ask_repeat: when the last one was shown (ms)
+// What the card says. 'reading' is used only in the push_ask_repeat treatment, right after a
+// kept reading: it promises the re-measure reminders (day-7 nudge, drift reminder), which
+// are the notifications that member will actually get.
+const PUSH_ASK_COPY = {
+  wear: { title: 'Get the 5pm nudge on your lock screen', body: 'Right now your reminders arrive quietly. Turn on notifications and the 5pm nudge names the watch you wore last — one tap to log it again.' },
+  reading: { title: 'See whether this reading holds', body: 'Right now your reminders arrive quietly. Turn on notifications and we will remind you to measure this watch again, so you can see whether its rate holds.' },
+};
+let _pushAskSource = 'push_ask';
 function _requestFullPush() {
   safeLS.set(PUSH_HARD_ASKED, '1');
   try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {}
 }
 // Returns true when it showed something, so callers hold back the review prompt.
-function maybeDeferredPushAsk() {
+// `ctx` is the moment: 'wear' (a wear was logged) or 'reading' (a reading was kept).
+function maybeDeferredPushAsk(ctx) {
   if (!_pushBridge()) return false;
+  const repeat = experiment('push_ask_repeat');
+  const prevCount = parseInt(safeLS.get(PUSH_CARD_COUNT), 10) || 0;
+  const prevAt = parseInt(safeLS.get(PUSH_CARD_AT), 10) || 0;
   const mode = deferredPushAskMode({
     authStatus: window._pushAuthStatus || 'notDetermined',
     openedFromPush: !!window._openedFromPush,
     iosVersion: window._iosAppVersion,
     asked: safeLS.get(PUSH_HARD_ASKED) === '1',
     cardSeen: safeLS.get(PUSH_CARD_SEEN) === '1',
+    repeat, cardCount: prevCount, lastCardAt: prevAt, now: Date.now(),
   });
   if (!mode) return false;
   if (mode === 'dialog') { _requestFullPush(); return true; }
+  const hadSeen = safeLS.get(PUSH_CARD_SEEN) === '1';
   safeLS.set(PUSH_CARD_SEEN, '1');
+  if (repeat) { safeLS.set(PUSH_CARD_COUNT, String(prevCount + 1)); safeLS.set(PUSH_CARD_AT, String(Date.now())); }
+  const useReading = repeat && ctx === 'reading';
   // Small delay so the save toast lands first (same rhythm as the review prompt).
   setTimeout(() => {
     const m = document.getElementById('push-ask-modal');
     if (!m) return;
-    // Never over another modal or the Ranking Game; un-spend the one-shot so it shows next time.
-    if (_screenBusy()) { safeLS.remove(PUSH_CARD_SEEN); return; }
+    // Never over another modal or the Ranking Game; un-spend this showing so it comes next time.
+    if (_screenBusy()) {
+      if (!hadSeen) safeLS.remove(PUSH_CARD_SEEN);
+      if (repeat) { safeLS.set(PUSH_CARD_COUNT, String(prevCount)); safeLS.set(PUSH_CARD_AT, String(prevAt)); }
+      return;
+    }
+    const copy = PUSH_ASK_COPY[useReading ? 'reading' : 'wear'];
+    document.getElementById('push-ask-title').textContent = tx(copy.title);
+    document.getElementById('push-ask-body').textContent = tx(copy.body);
+    _pushAskSource = useReading ? 'push_ask_reading' : 'push_ask';
     m.classList.remove('hidden');
-    _logPostCtaEvent('shown', 'push_ask');
+    _logPostCtaEvent('shown', _pushAskSource);
   }, 1200);
   return true;
 }
 function pushAskTurnOn() {
   document.getElementById('push-ask-modal').classList.add('hidden');
-  _logPostCtaEvent('clicked', 'push_ask');
+  _logPostCtaEvent('clicked', _pushAskSource);
   _requestFullPush();
 }
 function pushAskNotNow() {
   document.getElementById('push-ask-modal').classList.add('hidden');
-  _logPostCtaEvent('dismissed', 'push_ask');
+  _logPostCtaEvent('dismissed', _pushAskSource);
 }
 // Settings row: reflects OS status, lets the user enable / manage.
 function renderPushSettingRow() {
@@ -25222,7 +25261,7 @@ async function saveLog() {
   haptic('success');
   // Push ask first: a quiet-delivery user's next log is the moment to earn the lock-screen
   // reminder; the review prompt yields to it (both are modals).
-  const _pushAsked = !isUpdate && maybeDeferredPushAsk();
+  const _pushAsked = !isUpdate && maybeDeferredPushAsk('wear');
   if (!isUpdate && !_pushAsked && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = tx('Log This Wear'); } }
@@ -28295,7 +28334,7 @@ function renderModelPage() {
     measure: id => openPushRoute('measure', id),
     openPost: id => scrollToFeedPost(id),
     openModelFeed: (id, brand, name) => viewModelFeed(id, brand, name),
-    openShots: () => openShotsGallery({ modelId: _mpCtx.modelId, title: `${_mpCtx.m.brand} ${_mpCtx.m.name}`, total: (_mpCtx.st || {}).shots_total }),
+    openShots: () => openShotsGallery({ modelId: _mpCtx.modelId, title: WRModelPage.modelFullName(_mpCtx.m.brand, _mpCtx.m.name), total: (_mpCtx.st || {}).shots_total }),
     openProfile: uid => viewUserProfile(uid),
     follow: (uid, btn) => followByPrivacy(uid, btn),
     isFollowing: uid => following.has(uid),
@@ -28395,7 +28434,7 @@ async function shareModelPage() {
   if (!_mpCtx) return;
   const { m } = _mpCtx;
   const url = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug || '')}`;
-  const title = tx('{watch} on WRotate', { watch: `${m.brand} ${m.name}` });
+  const title = tx('{watch} on WRotate', { watch: WRModelPage.modelFullName(m.brand, m.name) });
   if (navigator.share) { try { await navigator.share({ title, url }); } catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); } }
   else { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch (e) { toast(url); } }
 }
@@ -28405,7 +28444,7 @@ function mpRequestEdit(kind) {
   const { m, modelId } = _mpCtx;
   openFeedback();
   const ta = document.getElementById('fb-desc');
-  if (ta) ta.value = `Model page — ${m.brand} ${m.name} (${kind}, id ${modelId}):\n`;
+  if (ta) ta.value = `Model page — ${WRModelPage.modelFullName(m.brand, m.name)} (${kind}, id ${modelId}):\n`;
 }
 
 function addModelToCollection(brand, name) {
@@ -28639,7 +28678,7 @@ function quickLog(watchId) {
   toast('Wear logged!');
   setTimeout(() => maybeShowEnhanceNudge(watches.find(x => x.id === watchId) || null, 'wear'), 1500);
   haptic('success');
-  maybeDeferredPushAsk();
+  maybeDeferredPushAsk('wear');
   // Fire-and-forget fun fact (mirrors saveLog / saveNewPost) — never blocks logging.
   attachFunFact(qEntry, watches.find(x => x.id === watchId) || null).then(factText => { if (factText) toast(factText); });
 }
@@ -36817,8 +36856,33 @@ function updateMsrModeIndicator() {
   }
 }
 
-function showTroubleshootTips() {
-  if (_msrConsecutiveFailures < 2) return;
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Did this run end without a reading in a way worth coaching? `coach` (experiment
+// msr_retry_coach) widens it to a weak or lost signal.
+function msrRunFailed(stopReason, coach) {
+  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout' || stopReason === 'duration_cap') return true;
+  return !!coach && (stopReason === 'weak_signal' || stopReason === 'no_ticks_signal_lost');
+}
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// The coach's steps, most likely fix first. Keys, not text: the caller translates.
+function msrCoachTips({ manualBph, noise, stopReason }) {
+  const tips = [];
+  if (noise > 0.08) tips.push(noise > 0.15 ? 'noise_very_high' : 'noise_high');
+  tips.push('place');
+  if (stopReason === 'weak_signal' || stopReason === 'no_ticks_signal_lost') tips.push('still');
+  if (manualBph) tips.push('auto_bph');
+  return tips.slice(0, 3);
+}
+const MSR_COACH_TEXT = {
+  noise_very_high: 'The room is very noisy. Move somewhere quieter.',
+  noise_high: 'There is background noise. Move somewhere quieter.',
+  place: 'Rest the watch directly on the microphone at the bottom edge of the phone, crown side down. Take off any phone case.',
+  still: 'Keep the watch and the phone still until the reading settles.',
+  auto_bph: 'Set BPH to Auto. Your watch may beat at a different rate than the one selected.',
+};
+function showTroubleshootTips(stopReason) {
+  const coach = experiment('msr_retry_coach');
+  if (_msrConsecutiveFailures < (coach ? 1 : 2)) return;
   const el = document.getElementById('msr-troubleshoot');
   if (!el) return;
   const tips = [];
@@ -36826,6 +36890,23 @@ function showTroubleshootTips() {
   const avgNoise = _msrNoiseSamples.length >= 3 ? _msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length : 0;
   const noisy = avgNoise > 0.08;
   const isManualBph = bphVal > 0;
+
+  if (coach) {
+    const keys = msrCoachTips({ manualBph: isManualBph, noise: avgNoise, stopReason });
+    el.textContent = '';
+    const head = document.createElement('b');
+    head.textContent = tx('No reading yet. Try this, then tap Retry:');
+    el.appendChild(head);
+    keys.forEach((k, i) => {
+      el.appendChild(document.createElement('br'));
+      el.appendChild(document.createTextNode((i + 1) + '. ' + tx(MSR_COACH_TEXT[k])));
+    });
+    el.style.display = '';
+    const st = document.getElementById('msr-status-text');
+    if (st) st.style.display = 'none';
+    if (currentUser && !_isDemoMode) db.from('feature_events').insert({ user_id: currentUser.id, event: 'msr_coach_shown', meta: { reason: stopReason || null, n: _msrConsecutiveFailures } }).then(() => {}, () => {});
+    return;
+  }
 
   if (isManualBph) {
     tips.push('Try <b>Auto</b> BPH — your watch may use a different frequency than ' + bphVal.toLocaleString());
@@ -37940,9 +38021,13 @@ function stopMsrListen(reason) {
     : (_msrScatterData.length === 0) ? 'no_ticks'
     : 'user_stopped'
   );
-  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout' || stopReason === 'duration_cap') {
+  // Experiment msr_retry_coach (2026-11-26): 46% of first-ever sessions end with no reading
+  // and those members return at 26% vs 66%. Treatment coaches on the FIRST failed run and
+  // also after a weak or lost signal; control waits for two failures of the older kinds.
+  const _coach = experiment('msr_retry_coach');
+  if (msrRunFailed(stopReason, _coach)) {
     _msrConsecutiveFailures++;
-    setTimeout(() => showTroubleshootTips(), 500);
+    setTimeout(() => showTroubleshootTips(stopReason), 500);
   } else if (stopReason === 'converged') {
     _msrConsecutiveFailures = 0;
   }
@@ -38343,7 +38428,7 @@ function dismissMsrShareCta() {
   closeMeasureModal();
   // A reading was just kept → the one-shot full permission dialog (or its benefit card)
   // is worth spending now (no-op unless provisional + 2.6).
-  maybeDeferredPushAsk();
+  maybeDeferredPushAsk('reading');
 }
 
 // ── Measurement share-to-feed auto-popup ────────────────────────────────────

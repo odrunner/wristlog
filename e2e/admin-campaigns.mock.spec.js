@@ -13,7 +13,7 @@ const DATA = {
     { subject: 'Add your first watch', sent: 100, delivered: 98, opened: 40, clicked: 5 },
     { subject: 'A fun fact about your Seiko Sekonda', sent: 1, delivered: 1, opened: 0, clicked: 0 },
     { subject: 'A fun fact about the Omega Speedmaster', sent: 1, delivered: 1, opened: 1, clicked: 0 },
-    { subject: 'Which watch is really your favorite?', sent: 362, delivered: 358, opened: 90, clicked: 8 },
+    { subject: 'Let us fill in the details of your watches', sent: 362, delivered: 358, opened: 90, clicked: 8 },
     { subject: 'SA commented on your post', sent: 61, delivered: 60, opened: 20, clicked: 2 },
     { subject: 'SA also commented', sent: 52, delivered: 50, opened: 18, clicked: 1 },
     { subject: 'masont wants to follow you', sent: 30, delivered: 29, opened: 10, clicked: 0 },
@@ -98,7 +98,7 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
     const labels = await renderLabels(page);
     expect(labels).toContain('2. Add your first watch');
     expect(labels).toContain('3. A fun fact about your watch');
-    expect(labels).toContain('9. Which watch is really your favorite?');
+    expect(labels).toContain('9. Let us fill in the details of your watches');
     // The personalized variants collapsed rather than rendering one row each.
     expect(labels).not.toContain('A fun fact about your Seiko Sekonda');
     expect(labels).not.toContain('A fun fact about the Omega Speedmaster');
