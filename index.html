@@ -166,7 +166,7 @@
        which also stamps the ?v= hash below (docs/i18n.md). -->
   <script>
     (function () {
-      var FILES = { es: 'i18n/es.js?v=70a4c000', it: 'i18n/it.js?v=079ec885', fr: 'i18n/fr.js?v=73fe8feb', tr: 'i18n/tr.js?v=335b7e38', de: 'i18n/de.js?v=eaf9062b', pt: 'i18n/pt.js?v=407dd9dd' };
+      var FILES = { es: 'i18n/es.js?v=e896ada1', it: 'i18n/it.js?v=629b084c', fr: 'i18n/fr.js?v=50da344f', tr: 'i18n/tr.js?v=e39b57a3', de: 'i18n/de.js?v=cba92cbd', pt: 'i18n/pt.js?v=c1846f00' };
       var m = /[?&]lang=([a-z]{2})\b/.exec(location.search);
       if (m) safeLS.set('wr_lang', m[1]);
       var lang = safeLS.get('wr_lang');
@@ -8607,7 +8607,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.12.34';
+const APP_VERSION = '26.16.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -36876,7 +36876,7 @@ function msrCoachTips({ manualBph, noise, stopReason }) {
 const MSR_COACH_TEXT = {
   noise_very_high: 'The room is very noisy. Move somewhere quieter.',
   noise_high: 'There is background noise. Move somewhere quieter.',
-  place: 'Rest the watch directly on the microphone at the bottom edge of the phone, crown side down. Take off any phone case.',
+  place: 'Rest the watch on the microphone at the bottom edge of the phone, with the back of the watch against it. Take off any phone case.',
   still: 'Keep the watch and the phone still until the reading settles.',
   auto_bph: 'Set BPH to Auto. Your watch may beat at a different rate than the one selected.',
 };
@@ -36915,7 +36915,7 @@ function showTroubleshootTips(stopReason) {
     const level = avgNoise > 0.15 ? 'very high' : 'high';
     tips.push('Background noise is <b>' + level + '</b> — move somewhere quieter');
   } else {
-    tips.push('Place the watch <b>directly on the microphone</b>, crown side down. Remove any phone case');
+    tips.push('Place the watch <b>directly on the microphone</b>, with its back against it. Remove any phone case');
   }
 
   el.innerHTML = tips.map(t => '• ' + t).join('<br>');
